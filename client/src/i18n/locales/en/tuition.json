@@ -162,5 +162,20 @@
     "done": "Refund recorded",
     "error": "Refund failed",
     "confirmText": "Refund for student <strong>{{name}}</strong> (collected <strong>{{paid}}</strong>). The refund will reduce the outstanding balance."
+  },
+  "receipt": {
+    "title": "Tuition Receipt",
+    "subtitle": "TUITION RECEIPT",
+    "student": "Student",
+    "class": "Class",
+    "amount": "Total",
+    "paid": "Paid",
+    "remaining": "Remaining",
+    "note": "Note",
+    "date": "Date {date}",
+    "cashier": "Cashier",
+    "payer": "Payer",
+    "print": "Print receipt",
+    "defaultCenter": "Center"
   }
 }

@@ -162,5 +162,20 @@
     "done": "Đã ghi nhận hoàn tiền",
     "error": "Hoàn tiền thất bại",
     "confirmText": "Hoàn tiền cho học viên <strong>{{name}}</strong> (đã thu <strong>{{paid}}</strong>). Số tiền hoàn sẽ trừ vào công nợ."
+  },
+  "receipt": {
+    "title": "Biên lai thu học phí",
+    "subtitle": "BIÊN LAI THU HỌC PHÍ",
+    "student": "Học viên",
+    "class": "Lớp",
+    "amount": "Tổng tiền",
+    "paid": "Đã thu",
+    "remaining": "Còn lại",
+    "note": "Ghi chú",
+    "date": "Ngày {date}",
+    "cashier": "Người thu tiền",
+    "payer": "Người nộp tiền",
+    "print": "In biên lai",
+    "defaultCenter": "Trung tâm"
   }
 }

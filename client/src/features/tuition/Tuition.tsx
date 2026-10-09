@@ -14,6 +14,7 @@ import { Pagination, type PaginationMeta } from '../../shared/components/Paginat
 import { Icon } from '../../shared/components/icons';
 import { formatVND, formatDate } from '../../shared/types';
 import './Tuition.css';
+import { ReceiptModal } from '../../shared/components/ReceiptModal';
 
 export function remindKind(dueDate: string | null): 'overdue' | 'upcoming' {
   const today = new Date().toISOString().slice(0, 10);
@@ -160,6 +161,7 @@ function InvoiceList() {
   const [loading, setLoading] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
   const [paying, setPaying] = useState<InvoiceItem | null>(null);
+  const [receipt, setReceipt] = useState<InvoiceItem | null>(null);
   const [crediting, setCrediting] = useState<InvoiceItem | null>(null);
   const [refunding, setRefunding] = useState<InvoiceItem | null>(null);
   const [remindingId, setRemindingId] = useState<number | null>(null);
@@ -323,6 +325,13 @@ function InvoiceList() {
                             {t('refund.action')}
                           </button>
                         )}
+                        <button
+                          className="btn btn-sm btn-ghost-dark"
+                          onClick={() => setReceipt(inv)}
+                          title={t('receipt.title')}
+                        >
+                          {t('receipt.print')}
+                        </button>
                       </span>
                     </td>
                   </tr>
@@ -352,6 +361,13 @@ function InvoiceList() {
             setPaying(null);
             void load();
           }}
+        />
+      )}
+      {receipt && (
+        <ReceiptModal
+          invoice={receipt}
+          centerName={t('receipt.defaultCenter')}
+          onClose={() => setReceipt(null)}
         />
       )}
       {refunding && (

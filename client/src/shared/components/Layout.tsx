@@ -170,7 +170,8 @@ export function Layout() {
       <aside
         className={`sidebar${drawerOpen ? ' open' : ''}`}
         aria-label={t('nav.main')}
-        aria-hidden={!drawerOpen && undefined}
+        aria-hidden={!drawerOpen || undefined}
+        inert={!drawerOpen || undefined}
       >
         <div className="brand">
           <div className="brand-logo">E</div>
