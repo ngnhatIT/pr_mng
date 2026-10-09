@@ -5,6 +5,7 @@ import { listCenters, hasFeature, Center } from '../utils/plans';
 import { logger } from '../shared/logger';
 import { DAY_MS } from '../shared/time';
 import { publishScheduled } from '../modules/homework/homework.service';
+import { withAdvisoryLock } from '../shared/advisoryLock';
 
 const log = logger.scope('reminders');
 
@@ -26,23 +27,6 @@ function nowVN(): { hhmm: string; today: string } {
 }
 
 /** Advisory lock chống 2 instance cùng chạy vòng nhắc (multi-instance deploy) */
-async function tryAdvisoryLock(key: string): Promise<boolean> {
-  try {
-    const r = await db.query('SELECT pg_try_advisory_lock(hashtext($1)) as locked', [key]);
-    return (r.rows[0] as { locked: boolean } | undefined)?.locked === true;
-  } catch {
-    return true; // không lấy được lock info → cứ chạy (fail-open, giữ hành vi cũ)
-  }
-}
-
-async function releaseAdvisoryLock(key: string): Promise<void> {
-  try {
-    await db.query('SELECT pg_advisory_unlock(hashtext($1))', [key]);
-  } catch {
-    /* bỏ qua */
-  }
-}
-
 /** Ngày đã chạy tự động theo từng center — tránh chạy trùng trong ngày */
 const autoRunDays = new Set<string>();
 
@@ -127,12 +111,7 @@ export async function runReminderOnce(centerId?: number): Promise<RunOnceResult>
 
   // Chống 2 instance cùng gửi trùng (multi-instance): chỉ 1 bên giữ lock được chạy
   const lockKey = `reminder-run:${typeof centerId === 'number' ? centerId : 'all'}`;
-  const locked = await tryAdvisoryLock(lockKey);
-  if (!locked) {
-    log.info('Bỏ qua vòng nhắc: instance khác đang chạy', { lockKey });
-    return result;
-  }
-  try {
+  const outcome = await withAdvisoryLock(lockKey, async () => {
     // Giới hạn số ZNS mỗi lần chạy để kiểm soát chi phí (500 hóa đơn = 500 tin tính tiền)
     const MAX_PER_RUN = 100;
     let sentCount = 0;
@@ -172,8 +151,9 @@ export async function runReminderOnce(centerId?: number): Promise<RunOnceResult>
       await process(overdue, 'overdue');
       await process(upcoming, 'upcoming');
     }
-  } finally {
-    await releaseAdvisoryLock(lockKey);
+  });
+  if (outcome.status === 'locked') {
+    log.info('Bỏ qua vòng nhắc: instance khác đang chạy', { lockKey });
   }
   return result;
 }

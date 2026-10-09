@@ -1,6 +1,7 @@
 import { Router, Response } from 'express';
 import { db, setCenterSetting, toISODate, addDays } from '../../db';
 import { AuthRequest, reqCenterId } from '../../middleware/auth';
+import { withAdvisoryLock } from '../../shared/advisoryLock';
 import { requirePermission } from '../authorization/authorization.middleware';
 import {
   getZaloConfig,
@@ -212,17 +213,7 @@ router.post(
     // Anti-spam: không gửi lại cùng loại trong 1 giờ (endpoint thủ công bypass dedupe 3 ngày của scheduler)
     // Dùng advisory lock để chống race: 2 request đồng thời chỉ 1 được gửi
     const lockKey = `remind:${id}:${kind}`;
-    const lockRes = (await db.query('SELECT pg_try_advisory_lock(hashtext($1)) as locked', [lockKey])) as {
-      rows: { locked: boolean }[];
-    };
-    if (!lockRes.rows[0]?.locked) {
-      res.status(429).json({
-        error: 'Đang có yêu cầu nhắc khác cho hóa đơn này. Vui lòng thử lại sau.',
-        code: 'REMINDER_IN_PROGRESS',
-      });
-      return;
-    }
-    try {
+    const lockOutcome = await withAdvisoryLock(lockKey, async () => {
       const recent = (await db
         .prepare(
           `SELECT 1 FROM reminders
@@ -238,10 +229,17 @@ router.post(
         return;
       }
       const r = await sendTuitionReminder(id, kind, cid ?? undefined);
-      res.json(r);
-    } finally {
-      await db.query('SELECT pg_advisory_unlock(hashtext($1))', [lockKey]).catch(() => {});
+      return r;
+    });
+    if (lockOutcome.status === 'locked') {
+      res.status(429).json({
+        error: 'Đang có yêu cầu nhắc khác cho hóa đơn này. Vui lòng thử lại sau.',
+        code: 'REMINDER_IN_PROGRESS',
+      });
+      return;
     }
+    if (lockOutcome.status === 'error') throw lockOutcome.error;
+    res.json(lockOutcome.result);
   })
 );
 export default router;
