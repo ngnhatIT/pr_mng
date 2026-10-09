@@ -4,7 +4,7 @@ import { db } from '../../db';
 import { AuthRequest, reqCenterId } from '../../middleware/auth';
 import { requirePermission } from '../authorization/authorization.middleware';
 import { asyncHandler } from '../../shared/http';
-import { validate, v } from '../../shared/validate';
+import { validate, v, paramId } from '../../shared/validate';
 import { listTeachers } from './teachers.service';
 import { audit, actorFromReq } from '../../shared/audit';
 import { assertStrongPassword } from '../../shared/password';
@@ -45,7 +45,7 @@ router.put(
   requirePermission('teachers.update'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const cid = reqCenterId(req);
-    const id = Number(req.params.id);
+    const id = paramId(req.params);
     const cur = (await db.prepare('SELECT center_id, name FROM teachers WHERE id = ?').get(id)) as
       { center_id: number | null; name: string } | undefined;
     if (!cur || (cid !== null && cur.center_id !== cid)) {
@@ -74,7 +74,7 @@ router.delete(
   requirePermission('teachers.delete'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const cid = reqCenterId(req);
-    const id = Number(req.params.id);
+    const id = paramId(req.params);
     const cur = (await db.prepare('SELECT center_id, name FROM teachers WHERE id = ?').get(id)) as
       { center_id: number | null; name: string } | undefined;
     if (!cur || (cid !== null && cur.center_id !== cid)) {
@@ -92,10 +92,12 @@ router.delete(
       });
       return;
     }
-    await db.prepare('UPDATE classes SET teacher_id = NULL WHERE teacher_id = ?').run(id);
-    await db.prepare('DELETE FROM teacher_checkins WHERE teacher_id = ?').run(id);
-    await db.prepare('DELETE FROM salary_rules WHERE teacher_id = ?').run(id);
-    await db.prepare('DELETE FROM teachers WHERE id = ?').run(id);
+    await db.transaction(async (tx) => {
+      await tx.prepare('UPDATE classes SET teacher_id = NULL WHERE teacher_id = ?').run(id);
+      await tx.prepare('DELETE FROM teacher_checkins WHERE teacher_id = ?').run(id);
+      await tx.prepare('DELETE FROM salary_rules WHERE teacher_id = ?').run(id);
+      await tx.prepare('DELETE FROM teachers WHERE id = ?').run(id);
+    });
     void audit({
       centerId: cid,
       actor: actorFromReq(req),
@@ -114,7 +116,7 @@ router.post(
   requirePermission('users.create'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const cid = reqCenterId(req);
-    const id = Number(req.params.id);
+    const id = paramId(req.params);
     const teacher = (await db.prepare('SELECT * FROM teachers WHERE id = ?').get(id)) as
       { id: number; name: string; center_id: number | null } | undefined;
     if (!teacher || (cid !== null && teacher.center_id !== cid)) {
