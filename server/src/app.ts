@@ -10,7 +10,7 @@ import { errorHandler, notFoundHandler, asyncHandler } from './shared/http';
 import { getUploadDir } from './shared/upload';
 import { checkUploadAccess } from './shared/uploadAccess';
 import { registerZaloListeners } from './shared/events/zalo.listeners';
-import { apiRateLimit, writeRateLimit, parentRateLimit, fileServeRateLimit } from './middleware/rateLimit';
+import { apiRateLimit, writeRateLimit, parentRateLimit, fileServeRateLimit, publicRateLimit } from './middleware/rateLimit';
 import { db } from './db';
 import { env } from './config/env';
 import { setupSwagger } from './docs/swagger';
@@ -121,6 +121,7 @@ export function createApp(): Express {
   // Client error reporting (public, rate-limited): nhận lỗi crash từ ErrorBoundary
   v1.post(
     '/client-errors',
+    publicRateLimit(20),
     asyncHandler(async (req: express.Request, res: express.Response) => {
       const { scope, message, stack, url } = (req.body ?? {}) as Record<string, string>;
       logger.warn('Client error', {
