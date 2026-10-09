@@ -1,4 +1,5 @@
-import { Router, Request, Response } from 'express';
+import { Router } from 'express';
+import { requirePermission } from '../authorization/authorization.middleware';
 import { db } from '../../db';
 import { asyncHandler } from '../../shared/http';
 
@@ -18,7 +19,8 @@ export function trackRequest(route: string): void {
 
 router.get(
   '/',
-  asyncHandler(async (_req: Request, res: Response) => {
+  requirePermission('system.manage'),
+  asyncHandler(async (_req, res) => {
     const mem = process.memoryUsage();
     let dbSize = 0;
     let tableCount = 0;

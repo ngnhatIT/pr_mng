@@ -1,6 +1,7 @@
 import { Router, Response } from 'express';
 import { db, setCenterSetting, toISODate, addDays } from '../../db';
-import { AuthRequest, adminOnly, reqCenterId } from '../../middleware/auth';
+import { AuthRequest, reqCenterId } from '../../middleware/auth';
+import { requirePermission } from '../authorization/authorization.middleware';
 import {
   getZaloConfig,
   maskAccessToken,
@@ -24,7 +25,7 @@ const cidOf = async (req: AuthRequest): Promise<number | undefined> =>
 // GET /api/zalo/config
 router.get(
   '/zalo/config',
-  adminOnly,
+  requirePermission('notifications.manage'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const cfg = await getZaloConfig(await cidOf(req));
     res.json({ ...cfg, zalo_access_token: maskAccessToken(cfg.zalo_access_token) });
@@ -34,7 +35,7 @@ router.get(
 // PUT /api/zalo/config
 router.put(
   '/zalo/config',
-  adminOnly,
+  requirePermission('notifications.manage'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const cid = await cidOf(req);
     if (cid === undefined) {
@@ -70,7 +71,7 @@ router.put(
 // POST /api/zalo/test { phone }
 router.post(
   '/zalo/test',
-  adminOnly,
+  requirePermission('notifications.manage'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const cfg = await getZaloConfig(await cidOf(req));
     const phone = normalizePhone(req.body?.phone as string | undefined);
@@ -136,7 +137,7 @@ router.post(
 // POST /api/zalo/run-once — chỉ chạy cho trung tâm của user
 router.post(
   '/zalo/run-once',
-  adminOnly,
+  requirePermission('notifications.manage'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const r = await runReminderOnce(await cidOf(req));
     res.json({
@@ -154,6 +155,7 @@ router.post(
 // GET /api/reminders?limit=100 — lọc theo trung tâm (superadmin xem tất cả)
 router.get(
   '/reminders',
+  requirePermission('notifications.view'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const cid = reqCenterId(req);
     const limit = Math.min(500, Math.max(1, Number(req.query.limit) || 100));
@@ -176,6 +178,7 @@ router.get(
 // POST /api/invoices/:id/remind { kind: 'overdue' | 'upcoming' }
 router.post(
   '/invoices/:id/remind',
+  requirePermission('notifications.send'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const cid = reqCenterId(req);
     const id = Number(req.params.id);

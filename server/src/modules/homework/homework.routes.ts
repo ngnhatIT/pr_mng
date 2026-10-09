@@ -1,5 +1,6 @@
 import { Router, Response } from 'express';
-import { AuthRequest, reqCenterId, staffOnly } from '../../middleware/auth';
+import { AuthRequest, reqCenterId } from '../../middleware/auth';
+import { requirePermission } from '../authorization/authorization.middleware';
 import { asyncHandler } from '../../shared/http';
 import { AppError } from '../../shared/errors';
 import { validate, v } from '../../shared/validate';
@@ -91,6 +92,7 @@ function ctxFrom(req: AuthRequest): ScopeCtx {
 /** Danh sách bài tập (filter: lớp, tìm kiếm, hạn, trạng thái, loại) */
 router.get(
   '/',
+  requirePermission('homework.view'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const { class_id = '', search = '', due = '', status = '', kind = '', page, limit } = req.query as Record<string, string>;
     // Mặc định ẩn nháp? Không — staff thấy tất cả, phân biệt bằng status badge
@@ -113,6 +115,7 @@ router.get(
 /** Thống kê nhanh */
 router.get(
   '/stats',
+  requirePermission('homework.view'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     res.json(getHomeworkStats(ctxFrom(req)));
   })
@@ -121,6 +124,7 @@ router.get(
 /** Phân tích: hoàn thành & điểm TB theo lớp */
 router.get(
   '/analytics',
+  requirePermission('homework.view'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     res.json(getHomeworkAnalytics(ctxFrom(req)));
   })
@@ -129,7 +133,7 @@ router.get(
 /** Giao bài tập (1 lần cho nhiều lớp) */
 router.post(
   '/',
-  staffOnly,
+  requirePermission('homework.create'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const input = prepareCreateInput(req.body as Record<string, unknown>);
     const validIds = await getScopedClasses(req, input.class_ids);
@@ -176,6 +180,7 @@ router.post(
 /** Chi tiết bài tập (kèm đính kèm) */
 router.get(
   '/:id',
+  requirePermission('homework.view'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const id = Number(req.params.id);
     await requireHomework(req, id);
@@ -186,7 +191,7 @@ router.get(
 /** Tái sử dụng bài tập (copy thành nháp mới) */
 router.post(
   '/:id/reuse',
-  staffOnly,
+  requirePermission('homework.create'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const id = Number(req.params.id);
     await requireHomework(req, id);
@@ -198,7 +203,7 @@ router.post(
 /** Xuất bản ngay (từ nháp/hẹn giờ) */
 router.post(
   '/:id/publish',
-  staffOnly,
+  requirePermission('homework.create'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const id = Number(req.params.id);
     await requireHomework(req, id);
@@ -210,7 +215,7 @@ router.post(
 /** Gỡ đăng (published → draft) — đăng nhầm có thể thu hồi */
 router.post(
   '/:id/unpublish',
-  staffOnly,
+  requirePermission('homework.create'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const id = Number(req.params.id);
     const hw = await requireHomework(req, id);
@@ -231,7 +236,7 @@ router.post(
 /** Bảng điểm của bài tập */
 router.get(
   '/:id/scores',
-  staffOnly,
+  requirePermission('homework.grade'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const id = Number(req.params.id);
     await requireHomework(req, id);
@@ -242,7 +247,7 @@ router.get(
 /** Chấm điểm 1 học viên */
 router.post(
   '/:id/scores',
-  staffOnly,
+  requirePermission('homework.grade'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const id = Number(req.params.id);
     await requireHomework(req, id);
@@ -263,7 +268,7 @@ router.post(
 /** Lịch sử làm quiz */
 router.get(
   '/:id/quiz/attempts',
-  staffOnly,
+  requirePermission('homework.grade'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const id = Number(req.params.id);
     await requireHomework(req, id);
@@ -274,7 +279,7 @@ router.get(
 /** Lấy đề quiz đầy đủ kèm đáp án đúng (staff — để sửa đề) */
 router.get(
   '/:id/quiz/edit',
-  staffOnly,
+  requirePermission('homework.create'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const id = Number(req.params.id);
     await requireHomework(req, id);
@@ -285,7 +290,7 @@ router.get(
 /** Lưu bộ câu hỏi quiz */
 router.put(
   '/:id/quiz',
-  staffOnly,
+  requirePermission('homework.create'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const id = Number(req.params.id);
     await requireHomework(req, id);
@@ -302,7 +307,7 @@ router.put(
 
 router.get(
   '/bank/questions',
-  staffOnly,
+  requirePermission('homework.view'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const { search = '', tag = '' } = req.query as Record<string, string>;
     res.json({
@@ -314,7 +319,7 @@ router.get(
 
 router.post(
   '/bank/questions',
-  staffOnly,
+  requirePermission('homework.create'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const { tag, question, points, options } = req.body as {
       tag: string; question: string; points: number; options: { text: string; is_correct: boolean }[];
@@ -328,7 +333,7 @@ router.post(
 
 router.delete(
   '/bank/questions/:bid',
-  staffOnly,
+  requirePermission('homework.delete'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     deleteBankQuestion(Number(req.params.bid), reqCenterId(req));
     res.json({ ok: true });
@@ -338,7 +343,7 @@ router.delete(
 /** Import câu hỏi từ ngân hàng vào quiz */
 router.post(
   '/:id/quiz/import',
-  staffOnly,
+  requirePermission('homework.create'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const id = Number(req.params.id);
     await requireHomework(req, id);
@@ -356,7 +361,7 @@ router.post(
 /** Staff xem bài nộp của 1 bài tập */
 router.get(
   '/:id/submissions',
-  staffOnly,
+  requirePermission('homework.grade'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const id = Number(req.params.id);
     await requireHomework(req, id);
@@ -369,7 +374,7 @@ router.get(
 
 router.get(
   '/rubrics/list',
-  staffOnly,
+  requirePermission('homework.view'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     res.json(listRubrics(reqCenterId(req)));
   })
@@ -377,7 +382,7 @@ router.get(
 
 router.post(
   '/rubrics/list',
-  staffOnly,
+  requirePermission('homework.create'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const { name, criteria } = req.body as { name: string; criteria: { name: string; max_score: number }[] };
     if (!Array.isArray(criteria)) {
@@ -389,7 +394,7 @@ router.post(
 
 router.delete(
   '/rubrics/:rid',
-  staffOnly,
+  requirePermission('homework.delete'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const r = await getRubric(Number(req.params.rid), reqCenterId(req));
     if (!r) {
@@ -403,7 +408,7 @@ router.delete(
 /** Sửa bài tập */
 router.put(
   '/:id',
-  staffOnly,
+  requirePermission('homework.create'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const id = Number(req.params.id);
     await requireHomework(req, id);
@@ -438,7 +443,7 @@ router.put(
 /** Xóa bài tập */
 router.delete(
   '/:id',
-  staffOnly,
+  requirePermission('homework.delete'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const id = Number(req.params.id);
     const hw = await requireHomework(req, id);

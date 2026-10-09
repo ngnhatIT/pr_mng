@@ -1,5 +1,6 @@
 import { Router, Response } from 'express';
 import { AuthRequest, reqCenterId } from '../../middleware/auth';
+import { requirePermission } from '../authorization/authorization.middleware';
 import { asyncHandler } from '../../shared/http';
 import { validate, v, paramId } from '../../shared/validate';
 import * as invoiceService from './invoices.service';
@@ -9,6 +10,7 @@ const router = Router();
 
 router.get(
   '/',
+  requirePermission('invoices.view'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const { status, search, page, limit } = req.query as {
       status?: string;
@@ -23,6 +25,7 @@ router.get(
 // Công nợ: học viên còn nợ (chưa thanh toán hết)
 router.get(
   '/debt',
+  requirePermission('invoices.view'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const { page, limit } = req.query as { page?: string; limit?: string };
     res.json(await invoiceService.getDebtReport(reqCenterId(req), { page, limit }));
@@ -32,6 +35,7 @@ router.get(
 /** Tổng quan công nợ (không phân trang) — cho header/tổng số. */
 router.get(
   '/debt-summary',
+  requirePermission('invoices.view'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     res.json(await invoiceService.getDebtSummary(reqCenterId(req)));
   })
@@ -39,6 +43,7 @@ router.get(
 
 router.get(
   '/:id',
+  requirePermission('invoices.view'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     res.json(await invoiceService.getInvoiceDetail(reqCenterId(req), paramId(req.params)));
   })
@@ -46,6 +51,7 @@ router.get(
 
 router.post(
   '/',
+  requirePermission('invoices.create'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const input = validate(req.body, {
       student_id: v.number({ required: true, integer: true, label: 'Học viên' }),
@@ -71,6 +77,7 @@ router.post(
 
 router.put(
   '/:id',
+  requirePermission('invoices.update'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const input = validate(req.body, {
       amount: v.number({ required: true, label: 'Số tiền' }),
@@ -94,6 +101,7 @@ router.put(
 
 router.delete(
   '/:id',
+  requirePermission('invoices.delete'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     invoiceService.deleteInvoice(reqCenterId(req), paramId(req.params), actorFromReq(req));
     res.json({ ok: true });
@@ -103,6 +111,7 @@ router.delete(
 // Thu tiền cho phiếu thu
 router.post(
   '/:id/payments',
+  requirePermission('payments.collect'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const input = validate(req.body, {
       amount: v.number({ required: true, label: 'Số tiền' }),
@@ -128,6 +137,7 @@ router.post(
 // Áp dụng credits của phụ huynh để trừ tiền hóa đơn
 router.post(
   '/:id/apply-credit',
+  requirePermission('payments.collect'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const { credit_id } = validate(req.body, {
       credit_id: v.number({ required: true, integer: true, label: 'Credit' }),

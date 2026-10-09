@@ -1,13 +1,13 @@
 import { Router, Response } from 'express';
 import { db, toISODate } from '../../db';
-import { AuthRequest, teacherOnly } from '../../middleware/auth';
+import { AuthRequest } from '../../middleware/auth';
+import { requirePermission } from '../authorization/authorization.middleware';
 import { calcPayroll, currentMonth, MONTH_RE } from '../payroll/payroll.service';
 import { asyncHandler } from '../../shared/http';
 
 const router = Router();
 
-/** Portal giáo viên — yêu cầu vai trò teacher (admin/superadmin cũng xem được) */
-router.use(teacherOnly);
+/** Portal giáo viên — phân quyền theo permission (teacher: scope own; admin/superadmin: full). */
 
 /** Lấy teacher_id hiệu lực (giáo viên tự xem; admin xem hộ qua query) */
 function effTeacherId(req: AuthRequest): number | null {
@@ -19,6 +19,7 @@ function effTeacherId(req: AuthRequest): number | null {
 /** Các buổi dạy hôm nay */
 router.get(
   '/today',
+  requirePermission('sessions.view'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const tid = effTeacherId(req);
     if (!tid) {
@@ -51,6 +52,7 @@ router.get(
 /** Giáo viên điểm danh bằng mã check-in của buổi học */
 router.post(
   '/checkin',
+  requirePermission('attendance.take'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const tid = req.user?.teacher_id;
     if (!tid) {
@@ -85,6 +87,7 @@ router.post(
 /** Bảng lương của chính giáo viên */
 router.get(
   '/payroll',
+  requirePermission('payroll.view_self'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const tid = effTeacherId(req);
     if (!tid) {

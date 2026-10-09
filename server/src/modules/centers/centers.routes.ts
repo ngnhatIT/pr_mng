@@ -1,12 +1,13 @@
 import { Router, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import { db } from '../../db';
-import { AuthRequest, superadminOnly } from '../../middleware/auth';
+import { AuthRequest } from '../../middleware/auth';
+import { requirePermission } from '../authorization/authorization.middleware';
 import { PLANS, listCenters, getCenter, Center } from '../../utils/plans';
 import { asyncHandler } from '../../shared/http';
 
 const router = Router();
-router.use(superadminOnly);
+router.use(requirePermission('system.manage'));
 
 async function withCounts(c: Center) {
   const studentCount = (

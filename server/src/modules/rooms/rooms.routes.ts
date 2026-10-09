@@ -1,6 +1,7 @@
 import { Router, Response } from 'express';
 import { db } from '../../db';
 import { AuthRequest, reqCenterId } from '../../middleware/auth';
+import { requirePermission } from '../authorization/authorization.middleware';
 import { getDefaultCenter } from '../../utils/plans';
 import { asyncHandler } from '../../shared/http';
 import { listRooms } from './rooms.service';
@@ -17,6 +18,7 @@ async function effCid(req: AuthRequest): Promise<number | null> {
 /** Danh sách phòng học kèm số lớp đang dùng */
 router.get(
   '/',
+  requirePermission('rooms.view'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const isSuper = req.user?.role === 'superadmin';
     const cid = isSuper ? null : await effCid(req);
@@ -28,6 +30,7 @@ router.get(
 /** Thêm phòng học */
 router.post(
   '/',
+  requirePermission('rooms.manage'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const cid = await effCid(req);
     const { name, capacity } = req.body as { name?: string; capacity?: number };
@@ -55,6 +58,7 @@ async function getScopedRoom(req: AuthRequest, id: number) {
 /** Sửa phòng học */
 router.put(
   '/:id',
+  requirePermission('rooms.manage'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const id = Number(req.params.id);
     const room = getScopedRoom(req, id);
@@ -80,6 +84,7 @@ router.put(
 /** Xóa phòng học */
 router.delete(
   '/:id',
+  requirePermission('rooms.manage'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const id = Number(req.params.id);
     const room = getScopedRoom(req, id);

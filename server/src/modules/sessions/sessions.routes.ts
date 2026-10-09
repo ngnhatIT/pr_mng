@@ -1,5 +1,6 @@
 import { Router, Response } from 'express';
-import { AuthRequest, staffOnly, reqCenterId } from '../../middleware/auth';
+import { AuthRequest, reqCenterId } from '../../middleware/auth';
+import { requirePermission } from '../authorization/authorization.middleware';
 import { asyncHandler } from '../../shared/http';
 import { validate, v, paramId } from '../../shared/validate';
 import * as sessionService from './sessions.service';
@@ -19,6 +20,7 @@ function scopeOf(req: AuthRequest): ScopeCtx {
 // Lấy danh sách buổi học của lớp (tự sinh từ lịch nếu chưa có)
 router.get(
   '/classes/:classId/sessions',
+  requirePermission('sessions.view'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     res.json(await sessionService.listClassSessions(scopeOf(req), paramId(req.params, 'classId')));
   })
@@ -27,6 +29,7 @@ router.get(
 // Tạo buổi học thủ công
 router.post(
   '/sessions',
+  requirePermission('sessions.manage'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const input = validate(req.body, {
       class_id: v.number({ required: true, integer: true, label: 'Lớp học' }),
@@ -45,6 +48,7 @@ router.post(
 // Cập nhật chủ đề buổi học
 router.put(
   '/sessions/:id',
+  requirePermission('sessions.manage'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const { topic } = validate(req.body, {
       topic: v.string({ max: 255, label: 'Chủ đề' }),
@@ -56,6 +60,7 @@ router.put(
 // Xóa buổi học
 router.delete(
   '/sessions/:id',
+  requirePermission('sessions.manage'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     sessionService.deleteSession(scopeOf(req), paramId(req.params));
     res.json({ ok: true });
@@ -65,6 +70,7 @@ router.delete(
 // Lấy điểm danh của buổi học (kèm danh sách học viên của lớp)
 router.get(
   '/sessions/:id/attendance',
+  requirePermission('attendance.view'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     res.json(await sessionService.getSessionAttendance(scopeOf(req), paramId(req.params)));
   })
@@ -73,6 +79,7 @@ router.get(
 // Lưu điểm danh (upsert) — vắng mặt thì thông báo phụ huynh
 router.post(
   '/sessions/:id/attendance',
+  requirePermission('attendance.take'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const { records } = validate(req.body, {
       records: v.any({ required: true, label: 'Dữ liệu điểm danh' }),
@@ -89,7 +96,7 @@ router.post(
 // Sinh mã điểm danh cho buổi học (staff)
 router.post(
   '/sessions/:id/checkin-code',
-  staffOnly,
+  requirePermission('sessions.manage'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     res.json(await sessionService.generateCheckinCode(scopeOf(req), paramId(req.params)));
   })

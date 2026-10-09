@@ -1,5 +1,6 @@
 import { Router, Response } from 'express';
-import { AuthRequest, requireAuth, staffOnly, adminOnly, reqCenterId } from '../../middleware/auth';
+import { AuthRequest, requireAuth, reqCenterId } from '../../middleware/auth';
+import { requirePermission } from '../authorization/authorization.middleware';
 import { asyncHandler } from '../../shared/http';
 import { validate, v, paramId } from '../../shared/validate';
 import * as paymentService from './payments.service';
@@ -24,7 +25,7 @@ router.use(requireAuth);
 /** Các khoản phụ huynh báo đã chuyển khoản, chờ nhân viên duyệt (staff) */
 router.get(
   '/pending',
-  staffOnly,
+  requirePermission('payments.approve'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const { page, limit } = req.query as { page?: string; limit?: string };
     res.json(await paymentService.listPendingPayments(reqCenterId(req), { page, limit }));
@@ -34,7 +35,7 @@ router.get(
 /** Duyệt khoản thanh toán chờ (staff) */
 router.post(
   '/pending/:id/approve',
-  staffOnly,
+  requirePermission('payments.approve'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const { status } = await paymentService.approvePendingPayment(paramId(req.params), actorFromReq(req));
     res.json({ ok: true, status });
@@ -44,7 +45,7 @@ router.post(
 /** Từ chối khoản thanh toán chờ (staff) */
 router.post(
   '/pending/:id/reject',
-  staffOnly,
+  requirePermission('payments.approve'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     paymentService.rejectPendingPayment(paramId(req.params), actorFromReq(req));
     res.json({ ok: true });
@@ -54,7 +55,7 @@ router.post(
 /** Xem cấu hình thanh toán (admin) — hashsecret được che */
 router.get(
   '/config',
-  adminOnly,
+  requirePermission('payment_config.manage'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     res.json(await paymentService.getPaymentConfig(reqCenterId(req)));
   })
@@ -63,7 +64,7 @@ router.get(
 /** Lưu cấu hình thanh toán (admin) */
 router.put(
   '/config',
-  adminOnly,
+  requirePermission('payment_config.manage'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const body = validate(req.body, {
       pay_bank_code: v.string({ max: 20, label: 'Mã ngân hàng' }),

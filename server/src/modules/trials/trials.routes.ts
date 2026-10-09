@@ -1,6 +1,7 @@
 import { Router, Response } from 'express';
 import { db } from '../../db';
 import { AuthRequest, reqCenterId } from '../../middleware/auth';
+import { requirePermission } from '../authorization/authorization.middleware';
 import { asyncHandler } from '../../shared/http';
 import { listTrials, TRIAL_STATUS } from './trials.service';
 
@@ -9,6 +10,7 @@ const router = Router();
 /** Danh sách đăng ký học thử */
 router.get(
   '/',
+  requirePermission('trials.view'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const {
       status = '',
@@ -26,6 +28,7 @@ router.get(
 /** Cập nhật trạng thái */
 router.put(
   '/:id',
+  requirePermission('trials.manage'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const cid = reqCenterId(req);
     const id = Number(req.params.id);
@@ -57,6 +60,7 @@ async function genStudentCode(): Promise<string> {
 /** Chuyển đăng ký học thử thành học viên chính thức */
 router.post(
   '/:id/convert',
+  requirePermission('trials.manage'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const cid = reqCenterId(req);
     const id = Number(req.params.id);

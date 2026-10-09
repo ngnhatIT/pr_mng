@@ -1,5 +1,6 @@
 import { Router, Response } from 'express';
-import { AuthRequest, reqCenterId, staffOnly } from '../../middleware/auth';
+import { AuthRequest, reqCenterId } from '../../middleware/auth';
+import { requirePermission } from '../authorization/authorization.middleware';
 import { asyncHandler } from '../../shared/http';
 import { validate, v, paramId } from '../../shared/validate';
 import * as studentService from './students.service';
@@ -20,6 +21,7 @@ const studentSchema = {
 
 router.get(
   '/',
+  requirePermission('students.view'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const { search, status, page, limit } = req.query as {
       search?: string;
@@ -33,6 +35,7 @@ router.get(
 
 router.get(
   '/:id',
+  requirePermission('students.view'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     res.json(await studentService.getStudentDetail(reqCenterId(req), paramId(req.params)));
   })
@@ -40,7 +43,7 @@ router.get(
 
 router.post(
   '/',
-  staffOnly,
+  requirePermission('students.create'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const input = validate(req.body, studentSchema);
     const created = await studentService.createStudent(reqCenterId(req), req.user?.role === 'superadmin', {
@@ -59,7 +62,7 @@ router.post(
 
 router.put(
   '/:id',
-  staffOnly,
+  requirePermission('students.update'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const rest = validate(req.body, studentSchema);
     delete (rest as { code?: string }).code; // code không được sửa sau khi tạo
@@ -78,7 +81,7 @@ router.put(
 
 router.delete(
   '/:id',
-  staffOnly,
+  requirePermission('students.delete'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     studentService.deleteStudent(reqCenterId(req), paramId(req.params), actorFromReq(req));
     res.json({ ok: true });

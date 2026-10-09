@@ -1,12 +1,14 @@
 import { Router, Response } from 'express';
 import { db, toISODate, formatSchedule } from '../../db';
 import { AuthRequest, reqCenterId } from '../../middleware/auth';
+import { requirePermission } from '../authorization/authorization.middleware';
 import { asyncHandler } from '../../shared/http';
 
 const router = Router();
 
 router.get(
   '/',
+  requirePermission('reports.view'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const today = toISODate(new Date());
     const monthPrefix = today.slice(0, 7); // YYYY-MM

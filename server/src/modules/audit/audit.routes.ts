@@ -1,5 +1,6 @@
 import { Router, Response } from 'express';
-import { AuthRequest, reqCenterId, adminOnly } from '../../middleware/auth';
+import { AuthRequest, reqCenterId } from '../../middleware/auth';
+import { requirePermission } from '../authorization/authorization.middleware';
 import { asyncHandler } from '../../shared/http';
 import { v, validate } from '../../shared/validate';
 import * as auditService from './audit.service';
@@ -12,7 +13,7 @@ const router = Router();
  */
 router.get(
   '/',
-  adminOnly,
+  requirePermission('audit.view'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const q = validate(req.query, {
       action: v.string({ label: 'Hành động' }),

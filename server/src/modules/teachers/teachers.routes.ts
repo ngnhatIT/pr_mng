@@ -1,7 +1,8 @@
 import { Router, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import { db } from '../../db';
-import { AuthRequest, reqCenterId, adminOnly } from '../../middleware/auth';
+import { AuthRequest, reqCenterId } from '../../middleware/auth';
+import { requirePermission } from '../authorization/authorization.middleware';
 import { asyncHandler } from '../../shared/http';
 import { validate, v } from '../../shared/validate';
 import { listTeachers } from './teachers.service';
@@ -11,6 +12,7 @@ const router = Router();
 
 router.get(
   '/',
+  requirePermission('teachers.view'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const { page, limit } = req.query as { page?: string; limit?: string };
     res.json(listTeachers(reqCenterId(req), { page, limit }));
@@ -19,6 +21,7 @@ router.get(
 
 router.post(
   '/',
+  requirePermission('teachers.create'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const cid = reqCenterId(req);
     const { name, phone, email, subject } = validate(req.body, {
@@ -35,6 +38,7 @@ router.post(
 
 router.put(
   '/:id',
+  requirePermission('teachers.update'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const cid = reqCenterId(req);
     const id = Number(req.params.id);
@@ -62,6 +66,7 @@ router.put(
 
 router.delete(
   '/:id',
+  requirePermission('teachers.delete'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const cid = reqCenterId(req);
     const id = Number(req.params.id);
@@ -90,7 +95,7 @@ router.delete(
 /** Tạo tài khoản đăng nhập cho giáo viên (admin): POST /api/teachers/:id/account {username, password} */
 router.post(
   '/:id/account',
-  adminOnly,
+  requirePermission('users.create'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const cid = reqCenterId(req);
     const id = Number(req.params.id);

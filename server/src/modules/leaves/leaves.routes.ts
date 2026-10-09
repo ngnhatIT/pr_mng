@@ -1,6 +1,7 @@
 import { Router, Response } from 'express';
 import { db, toISODate } from '../../db';
-import { AuthRequest, staffOnly, reqCenterId } from '../../middleware/auth';
+import { AuthRequest, reqCenterId } from '../../middleware/auth';
+import { requirePermission } from '../authorization/authorization.middleware';
 import { notifyParents } from '../../services/notify';
 import { asyncHandler } from '../../shared/http';
 import { listLeaves } from './leaves.service';
@@ -10,6 +11,7 @@ const router = Router();
 /** Danh sách đơn xin nghỉ (staff) */
 router.get(
   '/',
+  requirePermission('leaves.view'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const {
       status = '',
@@ -47,7 +49,7 @@ async function getLeave(id: number) {
 /** Duyệt đơn xin nghỉ (staff) — kèm gợi ý buổi học bù */
 router.post(
   '/:id/approve',
-  staffOnly,
+  requirePermission('leaves.manage'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const cid = reqCenterId(req);
     const id = Number(req.params.id);
@@ -86,7 +88,7 @@ router.post(
 /** Từ chối đơn xin nghỉ (staff) */
 router.post(
   '/:id/reject',
-  staffOnly,
+  requirePermission('leaves.manage'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const cid = reqCenterId(req);
     const id = Number(req.params.id);

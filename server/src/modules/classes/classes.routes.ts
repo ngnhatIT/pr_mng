@@ -1,5 +1,6 @@
 import { Router, Response } from 'express';
 import { AuthRequest, reqCenterId } from '../../middleware/auth';
+import { requirePermission } from '../authorization/authorization.middleware';
 import { asyncHandler } from '../../shared/http';
 import { validate, v, paramId } from '../../shared/validate';
 import * as classService from './classes.service';
@@ -19,6 +20,7 @@ function scopeOf(req: AuthRequest): ScopeCtx {
 
 router.get(
   '/',
+  requirePermission('classes.view'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const { page, limit } = req.query as { page?: string; limit?: string };
     res.json(await classService.listClasses(scopeOf(req), { page, limit }));
@@ -27,6 +29,7 @@ router.get(
 
 router.get(
   '/:id',
+  requirePermission('classes.view'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     res.json(await classService.getClassDetail(scopeOf(req), paramId(req.params)));
   })
@@ -34,6 +37,7 @@ router.get(
 
 router.post(
   '/',
+  requirePermission('classes.create'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const input = validate(req.body, {
       name: v.string({ required: true, max: 150, label: 'Tên lớp học' }),
@@ -53,6 +57,7 @@ router.post(
 
 router.put(
   '/:id',
+  requirePermission('classes.update'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const input = validate(req.body, {
       name: v.string({ required: true, max: 150, label: 'Tên lớp học' }),
@@ -71,6 +76,7 @@ router.put(
 
 router.delete(
   '/:id',
+  requirePermission('classes.delete'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     classService.deleteClass(scopeOf(req), paramId(req.params), actorFromReq(req));
     res.json({ ok: true });
@@ -79,6 +85,7 @@ router.delete(
 
 router.post(
   '/:id/enroll',
+  requirePermission('classes.enroll'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const { student_id } = validate(req.body, {
       student_id: v.number({ required: true, integer: true, label: 'Học viên' }),
@@ -90,6 +97,7 @@ router.post(
 
 router.delete(
   '/enrollments/:enrollmentId',
+  requirePermission('classes.enroll'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     classService.unenroll(scopeOf(req), paramId(req.params, 'enrollmentId'));
     res.json({ ok: true });

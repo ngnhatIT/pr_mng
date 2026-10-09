@@ -1,6 +1,7 @@
 import { Router, Response } from 'express';
 import { db } from '../../db';
 import { AuthRequest, reqCenterId } from '../../middleware/auth';
+import { requirePermission } from '../authorization/authorization.middleware';
 import { asyncHandler } from '../../shared/http';
 import { listGrades, type ScopeCtx } from './grades.service';
 
@@ -9,6 +10,7 @@ const router = Router();
 /** Danh sách điểm */
 router.get(
   '/',
+  requirePermission('grades.view'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const {
       student_id = '',
@@ -33,6 +35,7 @@ router.get(
 /** Nhập điểm */
 router.post(
   '/',
+  requirePermission('grades.manage'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const cid = reqCenterId(req);
     const { student_id, class_id, title, score, max_score, comment } = req.body as Record<string, unknown>;
@@ -95,6 +98,7 @@ router.post(
 /** Xóa điểm */
 router.delete(
   '/:id',
+  requirePermission('grades.manage'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const cid = reqCenterId(req);
     const id = Number(req.params.id);

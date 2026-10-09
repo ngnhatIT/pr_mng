@@ -1,11 +1,12 @@
 import { Router, Response } from 'express';
 import { db } from '../../db';
-import { AuthRequest, reqCenterId, staffOnly } from '../../middleware/auth';
+import { AuthRequest, reqCenterId } from '../../middleware/auth';
+import { requirePermission } from '../authorization/authorization.middleware';
 import { asyncHandler } from '../../shared/http';
 import { listReferrals } from './referrals.service';
 
 const router = Router();
-router.use(staffOnly);
+router.use(requirePermission('referrals.view'));
 
 /* ------------------------- Danh sách giới thiệu ------------------------- */
 

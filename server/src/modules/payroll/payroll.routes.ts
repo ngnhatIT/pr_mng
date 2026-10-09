@@ -1,6 +1,7 @@
 import { Router, Response } from 'express';
 import { db } from '../../db';
-import { AuthRequest, staffOnly, adminOnly, reqCenterId } from '../../middleware/auth';
+import { AuthRequest, reqCenterId } from '../../middleware/auth';
+import { requirePermission } from '../authorization/authorization.middleware';
 import { asyncHandler } from '../../shared/http';
 import { calcPayroll, currentMonth, MONTH_RE } from './payroll.service';
 
@@ -16,7 +17,7 @@ interface PayrollRow {
 /** Bảng lương tháng (staff) */
 router.get(
   '/',
-  staffOnly,
+  requirePermission('payroll.view'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const cid = reqCenterId(req);
     const q = String((req.query as { month?: string }).month || '');
@@ -35,7 +36,7 @@ router.get(
 /** Lưu định mức lương theo buổi (admin) */
 router.put(
   '/rules',
-  adminOnly,
+  requirePermission('payroll.manage'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const cid = reqCenterId(req);
     const { teacher_id, per_session_amount } = req.body as {

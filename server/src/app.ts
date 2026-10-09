@@ -37,6 +37,7 @@ import reviewRoutes from './modules/reviews/reviews.routes';
 import centerRoutes from './modules/centers/centers.routes';
 import auditRoutes from './modules/audit/audit.routes';
 import metricsRoutes from './modules/metrics/metrics.routes';
+import rolesRoutes from './modules/authorization/roles.routes';
 
 /**
  * Factory tạo Express app.
@@ -167,6 +168,7 @@ export function createApp(): Express {
   v1.use('/centers', requireAuth, centerRoutes); // superadminOnly nội bộ
   v1.use('/audit-logs', requireAuth, denyParents, auditRoutes); // adminOnly nội bộ
   v1.use('/metrics', requireAuth, denyParents, metricsRoutes); // adminOnly: Prometheus metrics
+  v1.use('/roles', requireAuth, denyParents, rolesRoutes); // quản trị phân quyền
 
   // Mount versioned API + legacy alias (backward compat với client cũ)
   app.use('/api/v1', v1);

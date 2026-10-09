@@ -1,11 +1,12 @@
 import { Router, Response } from 'express';
 import { db } from '../../db';
-import { AuthRequest, reqCenterId, staffOnly } from '../../middleware/auth';
+import { AuthRequest, reqCenterId } from '../../middleware/auth';
+import { requirePermission } from '../authorization/authorization.middleware';
 import { asyncHandler } from '../../shared/http';
 import { listLeads, LEAD_STATUS } from './leads.service';
 
 const router = Router();
-router.use(staffOnly);
+router.use(requirePermission('leads.view'));
 
 interface LeadRow {
   id: number;
@@ -51,6 +52,7 @@ router.get(
 // POST /api/leads
 router.post(
   '/',
+  requirePermission('leads.manage'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const cid = reqCenterId(req);
     if (cid === null) {
@@ -86,6 +88,7 @@ router.post(
 // PUT /api/leads/:id
 router.put(
   '/:id',
+  requirePermission('leads.manage'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const cid = reqCenterId(req);
     const id = Number(req.params.id);
@@ -145,6 +148,7 @@ router.put(
 // DELETE /api/leads/:id
 router.delete(
   '/:id',
+  requirePermission('leads.manage'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const cid = reqCenterId(req);
     const id = Number(req.params.id);
@@ -163,6 +167,7 @@ router.delete(
 // POST /api/leads/:id/convert { class_id? }
 router.post(
   '/:id/convert',
+  requirePermission('leads.manage'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const cid = reqCenterId(req);
     const id = Number(req.params.id);

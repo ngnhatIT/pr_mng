@@ -1,11 +1,12 @@
 import { Router, Response } from 'express';
 import { db } from '../../db';
-import { AuthRequest, reqCenterId, staffOnly } from '../../middleware/auth';
+import { AuthRequest, reqCenterId } from '../../middleware/auth';
+import { requirePermission } from '../authorization/authorization.middleware';
 import { asyncHandler } from '../../shared/http';
 import { listReviews } from './reviews.service';
 
 const router = Router();
-router.use(staffOnly);
+router.use(requirePermission('reviews.view'));
 
 interface ReviewRow {
   id: number;
@@ -44,6 +45,7 @@ router.get(
 // POST /api/reviews/:id/approve
 router.post(
   '/:id/approve',
+  requirePermission('reviews.manage'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const cid = reqCenterId(req);
     const id = Number(req.params.id);
@@ -61,6 +63,7 @@ router.post(
 // POST /api/reviews/:id/reject
 router.post(
   '/:id/reject',
+  requirePermission('reviews.manage'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const cid = reqCenterId(req);
     const id = Number(req.params.id);
@@ -80,6 +83,7 @@ router.post(
 // DELETE /api/reviews/:id
 router.delete(
   '/:id',
+  requirePermission('reviews.manage'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const cid = reqCenterId(req);
     const id = Number(req.params.id);
