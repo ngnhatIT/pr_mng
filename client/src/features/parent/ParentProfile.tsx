@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Trans, useTranslation } from 'react-i18next';
-import { getUser, clearAuth } from '../../shared/api/client';
+import { getUser, logout as doLogout } from '../../shared/api/client';
 import { parentApi } from './parent.api';
 import { useToast } from '../../shared/ui/toast';
 import { Icon } from '../../shared/components/icons';
@@ -22,7 +22,7 @@ export function ParentProfile() {
   }, []);
 
   const logout = () => {
-    clearAuth();
+    void doLogout();
     toast(t('profile.loggedOut'), 'info');
     navigate('/parent/login');
   };

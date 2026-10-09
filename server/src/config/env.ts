@@ -77,6 +77,12 @@ export const env = {
 
   /** Số bản backup giữ lại khi xoay vòng. */
   BACKUP_KEEP: optionalInt('BACKUP_KEEP', 7),
+
+  /** Access token sống bao lâu (chuỗi jwt, vd: '1h', '30m'). Mặc định 1 giờ. */
+  ACCESS_TOKEN_TTL: optional('ACCESS_TOKEN_TTL', '1h'),
+
+  /** Refresh token sống bao nhiêu ngày. Mặc định 30 ngày. */
+  REFRESH_TOKEN_DAYS: optionalInt('REFRESH_TOKEN_DAYS', 30),
 } as const;
 
 // Giữ hàm required export để module nào cần biến bắt buộc riêng thì dùng

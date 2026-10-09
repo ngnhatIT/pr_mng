@@ -1,6 +1,7 @@
 import bcrypt from 'bcryptjs';
 import { db, toISODate, confirmedPaid, getCenterSetting, formatSchedule } from '../../db';
-import { signToken, AuthUser, DUMMY_PASSWORD_HASH } from '../../middleware/auth';
+import { AuthUser, DUMMY_PASSWORD_HASH } from '../../middleware/auth';
+import { issueTokenPair, TokenPair } from '../auth/refresh.service';
 import { ensureParentReferralCode } from '../../services/referrals';
 import { buildVnpayUrl } from '../../services/vnpay';
 import { normalizePhone } from '../../services/zalo';
@@ -42,7 +43,7 @@ export interface ChildSummary extends LinkedStudent {
 
 /* --------------------------------- Helpers --------------------------------- */
 
-function issueToken(p: ParentPublic): string {
+async function issueTokenPairForParent(p: ParentPublic): Promise<TokenPair> {
   const payload: AuthUser = {
     id: p.id,
     username: p.phone,
@@ -52,7 +53,7 @@ function issueToken(p: ParentPublic): string {
     center_id: p.center_id,
     parent_id: p.id,
   };
-  return signToken(payload);
+  return issueTokenPair(payload);
 }
 
 /** Học viên phải thuộc parent (chống xem trộm con người khác). */
@@ -111,7 +112,7 @@ export async function registerParent(input: {
   password?: string;
   name?: string;
   center_id?: number;
-}): Promise<{ token: string; parent: ParentPublic }> {
+}): Promise<TokenPair & { parent: ParentPublic }> {
   const normalized = normalizePhone(input.phone);
   if (!normalized) throw AppError.badRequest('Số điện thoại không hợp lệ');
   if (!input.password || input.password.length < 4)
@@ -143,14 +144,14 @@ export async function registerParent(input: {
     referral_code: await ensureParentReferralCode(parentId),
     center_id: center.id,
   };
-  return { token: issueToken(parent), parent };
+  return { ...(await issueTokenPairForParent(parent)), parent };
 }
 
 export async function loginParent(input: {
   phone?: string;
   password?: string;
   center_id?: number;
-}): Promise<{ token: string; parent: ParentPublic }> {
+}): Promise<TokenPair & { parent: ParentPublic }> {
   const normalized = normalizePhone(input.phone);
   if (!normalized || !input.password) throw AppError.badRequest('Vui lòng nhập số điện thoại và mật khẩu');
 
@@ -177,7 +178,7 @@ export async function loginParent(input: {
     referral_code: await ensureParentReferralCode(parent.id),
     center_id: parent.center_id,
   };
-  return { token: issueToken(out), parent: out };
+  return { ...(await issueTokenPairForParent(out)), parent: out };
 }
 
 /* ------------------------------ Con & liên kết ------------------------------ */

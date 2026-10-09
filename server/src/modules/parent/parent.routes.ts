@@ -6,6 +6,7 @@ import { AppError } from '../../shared/errors';
 import { uploadSingle, cleanupUploadedFile } from '../../shared/upload';
 import { validate, v, paramId } from '../../shared/validate';
 import * as parentService from './parent.service';
+import { rotateRefreshToken, revokeRefreshToken } from '../auth/refresh.service';
 
 const router = Router();
 
@@ -48,6 +49,30 @@ router.post(
       center_id: v.number({ required: false, label: 'Trung tâm' }),
     });
     res.json(await parentService.loginParent(input));
+  })
+);
+
+/** Đổi refresh token lấy cặp token mới (rotation). */
+router.post(
+  '/refresh',
+  loginRateLimit,
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const { refresh_token } = validate(req.body, {
+      refresh_token: v.string({ required: true, label: 'Refresh token' }),
+    });
+    res.json(
+      await rotateRefreshToken(refresh_token, { ip: req.ip, userAgent: req.get('user-agent') ?? undefined })
+    );
+  })
+);
+
+/** Đăng xuất phụ huynh: thu hồi refresh token. */
+router.post(
+  '/logout',
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const { refresh_token } = (req.body ?? {}) as { refresh_token?: string };
+    if (refresh_token) await revokeRefreshToken(refresh_token);
+    res.json({ ok: true });
   })
 );
 

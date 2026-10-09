@@ -23,11 +23,11 @@ export function Login() {
     setBusy(true);
     setError('');
     try {
-      const data = await api<{ token: string; user: User }>('/auth/login', {
+      const data = await api<{ token: string; refresh_token: string; user: User }>('/auth/login', {
         method: 'POST',
         body: JSON.stringify({ username, password }),
       });
-      setAuth(data.token, data.user);
+      setAuth(data.token, data.user, data.refresh_token);
       toast(t('welcome', { name: data.user.name }), 'success');
       // Quay lại deep-link đã lưu (khi bị 401 hoặc vào trang cần login), nếu không thì về home theo role.
       const next = takePostLoginRedirect();

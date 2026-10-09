@@ -25,9 +25,10 @@ export function getUser(): { id: number; username: string; role: string; name: s
 }
 
 /** Lưu phiên đăng nhập (dùng chung cho mọi màn hình login). */
-export function setAuth(token: string, user: unknown): void {
+export function setAuth(token: string, user: unknown, refreshToken?: string): void {
   localStorage.setItem('edu_token', token);
   localStorage.setItem('edu_user', JSON.stringify(user));
+  if (refreshToken) localStorage.setItem('edu_refresh_token', refreshToken);
   sessionExpiredNotified = false;
 }
 
@@ -35,6 +36,55 @@ export function setAuth(token: string, user: unknown): void {
 export function clearAuth(): void {
   localStorage.removeItem('edu_token');
   localStorage.removeItem('edu_user');
+  localStorage.removeItem('edu_refresh_token');
+}
+
+/** Đăng xuất: thu hồi refresh token trên server (best-effort) rồi xóa local. */
+export async function logout(): Promise<void> {
+  const rt = localStorage.getItem('edu_refresh_token');
+  const user = getUser();
+  if (rt && user) {
+    const path = user.role === 'parent' ? '/parent/logout' : '/auth/logout';
+    try {
+      await fetch(API_BASE + path, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refresh_token: rt }),
+      });
+    } catch {
+      /* best-effort */
+    }
+  }
+  clearAuth();
+}
+
+/** Đổi refresh token lấy cặp token mới. Dùng chung promise để chống refresh dồn dập. */
+let refreshPromise: Promise<boolean> | null = null;
+function tryRefresh(): Promise<boolean> {
+  if (refreshPromise) return refreshPromise;
+  refreshPromise = (async () => {
+    try {
+      const rt = localStorage.getItem('edu_refresh_token');
+      const user = getUser();
+      if (!rt || !user) return false;
+      const path = user.role === 'parent' ? '/parent/refresh' : '/auth/refresh';
+      const res = await fetch(API_BASE + path, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refresh_token: rt }),
+      });
+      if (!res.ok) return false;
+      const data = (await res.json()) as { token: string; refresh_token: string };
+      if (!data.token || !data.refresh_token) return false;
+      setAuth(data.token, user, data.refresh_token);
+      return true;
+    } catch {
+      return false;
+    } finally {
+      refreshPromise = null;
+    }
+  })();
+  return refreshPromise;
 }
 
 /** Lấy deep-link đã lưu trước khi bị đá về login (đã validate), rồi xóa. */
@@ -53,9 +103,12 @@ function tApi(key: string): string {
   return i18n.t(key, { ns: 'common' });
 }
 
+const REFRESH_RETRIED = Symbol('refreshRetried');
+
 export async function api<T>(path: string, options: RequestInit = {}): Promise<T> {
   const token = getToken();
   const isForm = typeof FormData !== 'undefined' && options.body instanceof FormData;
+  const isRefreshRetry = (options as Record<symbol, boolean>)[REFRESH_RETRIED] === true;
 
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), isForm ? UPLOAD_TIMEOUT_MS : TIMEOUT_MS);
@@ -82,6 +135,10 @@ export async function api<T>(path: string, options: RequestInit = {}): Promise<T
   }
 
   if (res.status === 401) {
+    // Thử refresh token 1 lần trước khi đá về login (access token chỉ sống 1 giờ).
+    if (!isRefreshRetry && (await tryRefresh())) {
+      return api<T>(path, { ...options, [REFRESH_RETRIED]: true } as RequestInit);
+    }
     clearAuth();
     const cur = window.location.pathname;
     const loginPath = cur.startsWith('/parent') ? '/parent/login' : '/login';

@@ -440,7 +440,13 @@ components:
       properties:
         token:
           type: string
-          description: JWT phụ huynh
+          description: JWT phụ huynh (sống ACCESS_TOKEN_TTL)
+        refresh_token:
+          type: string
+          description: Refresh token (opaque, rotation)
+        expires_in:
+          type: integer
+          description: Thời gian sống access token (giây)
         parent:
           type: object
           properties:
@@ -1253,6 +1259,71 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+  /api/v1/auth/refresh:
+    post:
+      tags:
+      - Auth
+      summary: Đổi refresh token lấy cặp token mới (rotation)
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - refresh_token
+              properties:
+                refresh_token:
+                  type: string
+      responses:
+        '200':
+          description: OK — cặp token mới, token cũ bị revoke
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+                    description: JWT access token mới (sống ACCESS_TOKEN_TTL)
+                  refresh_token:
+                    type: string
+                    description: Refresh token mới (token cũ đã bị revoke)
+                  expires_in:
+                    type: integer
+                    description: Thời gian sống access token (giây)
+        '401':
+          description: Refresh token không hợp lệ / hết hạn / bị thu hồi
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/v1/auth/logout:
+    post:
+      tags:
+      - Auth
+      summary: Đăng xuất — thu hồi refresh token
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                refresh_token:
+                  type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
   /api/v1/students:
     get:
       tags:

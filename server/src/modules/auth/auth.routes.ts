@@ -1,11 +1,17 @@
 import { Router, Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import { db } from '../../db';
-import { signToken, AuthUser, DUMMY_PASSWORD_HASH } from '../../middleware/auth';
+import { AuthUser, DUMMY_PASSWORD_HASH } from '../../middleware/auth';
 import { loginRateLimit } from '../../middleware/rateLimit';
 import { asyncHandler } from '../../shared/http';
+import { validate, v } from '../../shared/validate';
+import { issueTokenPair, rotateRefreshToken, revokeRefreshToken } from './refresh.service';
 
 const router = Router();
+
+function reqMeta(req: Request): { ip?: string; userAgent?: string } {
+  return { ip: req.ip, userAgent: req.get('user-agent') ?? undefined };
+}
 
 router.post(
   '/login',
@@ -43,7 +49,31 @@ router.post(
       center_id: user.center_id ?? null,
       teacher_id: user.teacher_id ?? null,
     };
-    res.json({ token: signToken(payload), user: payload });
+    const pair = await issueTokenPair(payload, reqMeta(req));
+    res.json({ ...pair, user: payload });
+  })
+);
+
+/** Đổi refresh token lấy cặp token mới (rotation). */
+router.post(
+  '/refresh',
+  loginRateLimit,
+  asyncHandler(async (req: Request, res: Response) => {
+    const { refresh_token } = validate(req.body, {
+      refresh_token: v.string({ required: true, label: 'Refresh token' }),
+    });
+    const pair = await rotateRefreshToken(refresh_token, reqMeta(req));
+    res.json(pair);
+  })
+);
+
+/** Đăng xuất: thu hồi refresh token hiện tại. */
+router.post(
+  '/logout',
+  asyncHandler(async (req: Request, res: Response) => {
+    const { refresh_token } = (req.body ?? {}) as { refresh_token?: string };
+    if (refresh_token) await revokeRefreshToken(refresh_token);
+    res.json({ ok: true });
   })
 );
 

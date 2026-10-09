@@ -56,19 +56,6 @@ export async function findByIdOr404<T extends ScopedRow = ScopedRow>(
 }
 
 /**
- * Kiểm tra 1 dòng có thuộc center không (không ném lỗi, trả boolean).
- * Dùng khi cần xử lý khác nhau thay vì 404 ngay.
- */
-export function belongsToCenter(
-  row: { center_id: number | null } | undefined,
-  centerId: number | null
-): boolean {
-  if (!row) return false;
-  if (centerId === null) return true; // superadmin
-  return row.center_id === centerId;
-}
-
-/**
  * GHI CHÚ: hàm deleteById cũ đã bị xóa (không có caller nào, và thiếu kiểm
  * tra center_id -> nguy cơ bypass multi-tenant). Cần xóa theo scope thì dùng
  * findByIdOr404 để kiểm tra trước rồi DELETE trực tiếp.

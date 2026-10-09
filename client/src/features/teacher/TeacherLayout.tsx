@@ -1,7 +1,7 @@
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { getUser, clearAuth } from '../../shared/api/client';
+import { getUser, logout as doLogout } from '../../shared/api/client';
 import { Icon, IconName } from '../../shared/components/icons';
 import { ThemeLangSwitch } from '../../shared/ui/ThemeLangSwitch';
 import './TeacherLayout.css';
@@ -28,7 +28,7 @@ export function TeacherLayout() {
   }, [location.pathname, t]);
 
   const logout = () => {
-    clearAuth();
+    void doLogout();
     navigate('/login');
   };
 

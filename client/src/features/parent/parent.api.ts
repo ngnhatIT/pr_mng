@@ -38,9 +38,12 @@ export interface LeaveForm {
 
 export const parentApi = {
   login: (phone: string, password: string) =>
-    http.post<{ token: string; parent: ParentUser }>('/parent/login', { phone, password }),
+    http.post<{ token: string; refresh_token: string; parent: ParentUser }>('/parent/login', {
+      phone,
+      password,
+    }),
   register: (phone: string, password: string, name: string, center_id: number) =>
-    http.post<{ token: string; parent: ParentUser }>('/parent/register', {
+    http.post<{ token: string; refresh_token: string; parent: ParentUser }>('/parent/register', {
       phone,
       password,
       name,

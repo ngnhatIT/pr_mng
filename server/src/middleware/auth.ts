@@ -36,8 +36,11 @@ export interface AuthRequest extends Request {
   file?: Express.Multer.File;
 }
 
-export function signToken(user: AuthUser): string {
-  return jwt.sign(user, JWT_SECRET, { expiresIn: '7d' });
+export function signToken(
+  user: AuthUser,
+  expiresIn: number | `${number}${'s' | 'm' | 'h' | 'd'}` = '1h'
+): string {
+  return jwt.sign(user, JWT_SECRET, { expiresIn });
 }
 
 /** Chạy downstream trong AsyncLocalStorage mang actor '<id>:<role>' để trigger audit ghi changed_by. */

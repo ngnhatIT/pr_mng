@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { getUser } from '../../shared/api/client';
+import { getUser, logout as doLogout } from '../../shared/api/client';
 import { Icon, IconName } from './icons';
 import { ThemeLangSwitch } from '../ui/ThemeLangSwitch';
 import { rolesApi } from '../../features/system/roles.api';
@@ -107,9 +107,7 @@ export function Layout() {
   };
 
   const logout = () => {
-    localStorage.removeItem('edu_token');
-    localStorage.removeItem('edu_user');
-    navigate('/login');
+    void doLogout().then(() => navigate('/login'));
   };
 
   useEffect(() => {

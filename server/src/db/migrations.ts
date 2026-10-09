@@ -86,6 +86,34 @@ const MIGRATIONS: Migration[] = [
       }
     },
   },
+  {
+    version: 5,
+    name: 'refresh_tokens',
+    up: async (tx) => {
+      // Bảng refresh token cho cơ chế rotation (access token rút ngắn còn 1 giờ).
+      // DB mới đã có từ schema.ts -> CREATE TABLE IF NOT EXISTS an toàn cả 2 đường.
+      await tx.exec(`CREATE TABLE IF NOT EXISTS refresh_tokens (
+        id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+        token_hash TEXT NOT NULL UNIQUE,
+        user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+        parent_id INTEGER REFERENCES parents(id) ON DELETE CASCADE,
+        kind TEXT NOT NULL CONSTRAINT chk_refresh_kind CHECK (kind IN ('staff', 'parent')),
+        expires_at TIMESTAMPTZ NOT NULL,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        revoked_at TIMESTAMPTZ,
+        replaced_by TEXT,
+        ip TEXT,
+        user_agent TEXT,
+        CONSTRAINT chk_refresh_owner CHECK (
+          (user_id IS NOT NULL AND parent_id IS NULL) OR
+          (user_id IS NULL AND parent_id IS NOT NULL)
+        )
+      )`);
+      await tx.exec(
+        'CREATE INDEX IF NOT EXISTS idx_refresh_tokens_owner ON refresh_tokens(user_id, parent_id)'
+      );
+    },
+  },
 ];
 
 /** Version migration cao nhất mà code hiện tại biết (để test đối chiếu). */

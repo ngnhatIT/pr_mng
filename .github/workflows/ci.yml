@@ -47,6 +47,7 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm test -w server
+      - run: npm test -w client
 
   build:
     name: Build (server + client)

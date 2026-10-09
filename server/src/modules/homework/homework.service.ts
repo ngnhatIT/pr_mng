@@ -10,7 +10,6 @@ import {
   HomeworkUnpublishedEvent,
   HomeworkDeletedEvent,
   HomeworkGradedEvent,
-  HomeworkCompletedEvent,
 } from '../../shared/events/homework.events';
 
 /* ---------------------------------- Types ---------------------------------- */
@@ -548,32 +547,6 @@ export async function getHomeworkSubmissions(id: number): Promise<unknown[]> {
        WHERE hs.homework_id = ? ORDER BY hs.submitted_at DESC`
     )
     .all(id);
-}
-
-export async function markComplete(homeworkId: number, studentId: number, by = 'parent'): Promise<void> {
-  await db
-    .prepare(
-      `INSERT INTO homework_completions (homework_id, student_id, completed_by)
-     VALUES (?, ?, ?)
-     ON CONFLICT(homework_id, student_id) DO UPDATE SET completed_at = datetime('now'), completed_by = ?`
-    )
-    .run(homeworkId, studentId, by, by);
-  eventBus.emitSync(new HomeworkCompletedEvent(homeworkId, studentId, by));
-}
-
-/** Bỏ đánh dấu hoàn thành. */
-export async function unmarkComplete(homeworkId: number, studentId: number): Promise<void> {
-  await db
-    .prepare('DELETE FROM homework_completions WHERE homework_id = ? AND student_id = ?')
-    .run(homeworkId, studentId);
-}
-
-/** Kiểm tra học viên đã hoàn thành bài tập chưa. */
-export async function isComplete(homeworkId: number, studentId: number): Promise<boolean> {
-  const r = await db
-    .prepare('SELECT 1 FROM homework_completions WHERE homework_id = ? AND student_id = ?')
-    .get(homeworkId, studentId);
-  return !!r;
 }
 
 /* --------------------------------- Chấm điểm --------------------------------- */
