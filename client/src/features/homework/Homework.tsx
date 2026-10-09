@@ -42,6 +42,7 @@ export function Homework() {
   const [loading, setLoading] = useState(false);
   const [editing, setEditing] = useState<HomeworkItem | null | 'new'>(null);
   const [deleting, setDeleting] = useState<HomeworkItem | null>(null);
+  const [unpublishing, setUnpublishing] = useState<HomeworkItem | null>(null);
   const [grading, setGrading] = useState<HomeworkItem | null>(null);
   const [attempts, setAttempts] = useState<HomeworkItem | null>(null);
   const [showBank, setShowBank] = useState(false);
@@ -141,8 +142,14 @@ export function Homework() {
     }
   };
 
-  const doUnpublish = async (h: HomeworkItem) => {
-    if (!confirm(t('toast.unpublishConfirm', { title: h.title }))) return;
+  const doUnpublish = (h: HomeworkItem) => {
+    setUnpublishing(h);
+  };
+
+  const confirmUnpublish = async () => {
+    if (!unpublishing) return;
+    const h = unpublishing;
+    setUnpublishing(null);
     try {
       await homeworkApi.unpublish(h.id);
       toast(t('toast.unpublished'), 'success');
@@ -444,6 +451,14 @@ export function Homework() {
           onClose={() => setDeleting(null)}
           onConfirm={remove}
           danger
+        />
+      )}
+      {unpublishing && (
+        <ConfirmDialog
+          title={t('toast.unpublishTitle')}
+          message={t('toast.unpublishConfirm', { title: unpublishing.title })}
+          onClose={() => setUnpublishing(null)}
+          onConfirm={confirmUnpublish}
         />
       )}
     </div>

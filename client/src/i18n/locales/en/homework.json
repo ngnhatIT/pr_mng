@@ -75,7 +75,8 @@
       "staleSelection": "{{count}} selected questions are no longer in the list"
     },
     "import": "Add {{count}} questions to quiz",
-    "selected": "{{count}} selected"
+    "selected": "{{count}} selected",
+    "deleteTitle": "Delete question"
   },
   "delete": {
     "message": "Delete \"{{title}}\"?",
@@ -303,6 +304,7 @@
     "reused": "Draft created from the old assignment - edit then publish",
     "unpublishConfirm": "Unpublish \"{{title}}\" to drafts? Parents will no longer see it.",
     "unpublishFail": "Unpublish failed",
-    "unpublished": "Moved back to drafts"
+    "unpublished": "Moved back to drafts",
+    "unpublishTitle": "Unpublish homework"
   }
 }

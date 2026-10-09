@@ -67,7 +67,8 @@
       "deleteFail": "Xóa thất bại",
       "loadFail": "Không tải được ngân hàng",
       "staleSelection": "Có {{count}} câu đã chọn không còn trong danh sách"
-    }
+    },
+    "deleteTitle": "Xóa câu hỏi"
   },
   "delete": {
     "message": "Xóa bài tập \"{{title}}\"?",
@@ -275,6 +276,7 @@
     "reused": "Đã tạo bản nháp từ bài tập cũ - chỉnh sửa rồi đăng",
     "unpublishConfirm": "Gỡ đăng \"{{title}}\" về nháp? Phụ huynh sẽ không thấy bài này nữa.",
     "unpublishFail": "Gỡ đăng thất bại",
-    "unpublished": "Đã gỡ về nháp"
+    "unpublished": "Đã gỡ về nháp",
+    "unpublishTitle": "Gỡ đăng bài tập"
   }
 }

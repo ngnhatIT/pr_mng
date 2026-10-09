@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { homeworkApi, type BankQuestion } from './homework.api';
 import { useToast } from '../../shared/ui/toast';
-import { Modal } from '../../shared/components/Modal';
+import { Modal, ConfirmDialog } from '../../shared/components/Modal';
 import { Field } from '../../shared/components/Form';
 import { EmptyState } from '../../shared/components/EmptyState';
 import { Icon } from '../../shared/components/icons';
@@ -23,6 +23,7 @@ export function QuestionBank({
   const [tags, setTags] = useState<string[]>([]);
   const [search, setSearch] = useState('');
   const [tag, setTag] = useState('');
+  const [deletingId, setDeletingId] = useState<number | null>(null);
   const [selected, setSelected] = useState<number[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -51,8 +52,14 @@ export function QuestionBank({
   const toggle = (id: number) =>
     setSelected((s) => (s.includes(id) ? s.filter((x) => x !== id) : [...s, id]));
 
-  const doDelete = async (id: number) => {
-    if (!confirm(t('bank.deleteConfirm'))) return;
+  const doDelete = (id: number) => {
+    setDeletingId(id);
+  };
+
+  const confirmDelete = async () => {
+    if (!deletingId) return;
+    const id = deletingId;
+    setDeletingId(null);
     try {
       await homeworkApi.bankDelete(id);
       void load();
@@ -162,6 +169,15 @@ export function QuestionBank({
             <Icon name="plus" size={15} /> {t('bank.import', { count: selected.length })}
           </button>
         </div>
+      )}
+      {deletingId !== null && (
+        <ConfirmDialog
+          title={t('bank.deleteTitle')}
+          message={t('bank.deleteConfirm')}
+          onClose={() => setDeletingId(null)}
+          onConfirm={confirmDelete}
+          danger
+        />
       )}
     </Modal>
   );
