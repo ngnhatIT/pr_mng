@@ -75,7 +75,8 @@
     "systemAdmin": "System",
     "tagline": "Center management",
     "main": "Main navigation",
-    "skipToContent": "Skip to main content"
+    "skipToContent": "Skip to main content",
+    "changePassword": "Change password"
   },
   "states": {
     "deleteError": "Delete failed",
@@ -126,5 +127,16 @@
     "offline": "No internet connection. Check your Wi-Fi/4G.",
     "backOnline": "Back online."
   },
-  "errorCode": "Error code"
+  "errorCode": "Error code",
+  "changePassword": {
+    "title": "Change password",
+    "old": "Current password",
+    "new": "New password",
+    "confirm": "Confirm new password",
+    "submit": "Change password",
+    "success": "Password changed successfully",
+    "fail": "Failed to change password",
+    "mismatch": "New passwords do not match",
+    "tooShort": "Password must be at least 8 characters"
+  }
 }

@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { getUser, logout as doLogout } from '../../shared/api/client';
 import { Icon, IconName } from './icons';
 import { ThemeLangSwitch } from '../ui/ThemeLangSwitch';
+import { ChangePasswordModal } from './ChangePasswordModal';
 import { rolesApi } from '../../features/system/roles.api';
 
 interface NavItem {
@@ -81,6 +82,7 @@ export function Layout() {
   const location = useLocation();
   const user = getUser();
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [showChangePw, setShowChangePw] = useState(false);
   // Chỉ inert sidebar khi ở mobile và drawer đóng (desktop sidebar luôn hiển thị, không được inert)
   const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' && window.innerWidth <= 768);
   useEffect(() => {
@@ -256,6 +258,14 @@ export function Layout() {
           </div>
           <button
             className="btn btn-icon btn-ghost"
+            onClick={() => setShowChangePw(true)}
+            aria-label={t('nav.changePassword', 'Đổi mật khẩu')}
+            title={t('nav.changePassword', 'Đổi mật khẩu')}
+          >
+            <Icon name="key" size={18} />
+          </button>
+          <button
+            className="btn btn-icon btn-ghost"
             onClick={logout}
             aria-label={t('nav.logout')}
             title={t('nav.logout')}
@@ -267,6 +277,7 @@ export function Layout() {
           <Outlet />
         </main>
       </div>
+      {showChangePw && <ChangePasswordModal onClose={() => setShowChangePw(false)} />}
     </div>
   );
 }

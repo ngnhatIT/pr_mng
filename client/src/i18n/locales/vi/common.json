@@ -75,7 +75,8 @@
     "systemAdmin": "Hệ thống",
     "tagline": "Quản lý trung tâm",
     "main": "Điều hướng chính",
-    "skipToContent": "Bỏ qua tới nội dung chính"
+    "skipToContent": "Bỏ qua tới nội dung chính",
+    "changePassword": "Đổi mật khẩu"
   },
   "states": {
     "deleteError": "Xóa thất bại",
@@ -126,5 +127,16 @@
     "offline": "Mất kết nối mạng. Kiểm tra Wi-Fi/4G của bạn.",
     "backOnline": "Đã kết nối lại."
   },
-  "errorCode": "Mã lỗi"
+  "errorCode": "Mã lỗi",
+  "changePassword": {
+    "title": "Đổi mật khẩu",
+    "old": "Mật khẩu hiện tại",
+    "new": "Mật khẩu mới",
+    "confirm": "Nhập lại mật khẩu mới",
+    "submit": "Đổi mật khẩu",
+    "success": "Đổi mật khẩu thành công",
+    "fail": "Đổi mật khẩu thất bại",
+    "mismatch": "Mật khẩu mới không khớp",
+    "tooShort": "Mật khẩu phải từ 8 ký tự"
+  }
 }
