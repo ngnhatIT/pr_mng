@@ -12,7 +12,7 @@ import Database from 'better-sqlite3';
 
 declare const require: NodeRequire;
 
-const { createSchema, createTriggers, createViews, validateSchema, TABLE_DOCS, SCHEMA_VERSION } =
+const { createSchema, createTriggers, createHistoryTables, createViews, validateSchema, TABLE_DOCS, SCHEMA_VERSION } =
   require('./schema') as typeof import('./schema');
 const { runMigrations } = require('./migrations') as typeof import('./migrations');
 const { runVersionedMigrations } = require('./versionedMigrations') as typeof import('./versionedMigrations');
@@ -26,6 +26,7 @@ function freshDb() {
   runVersionedMigrations(db);
   createIndexes(db);
   createTriggers(db);
+  createHistoryTables(db);
   createViews(db);
   return db;
 }
@@ -167,5 +168,62 @@ describe('schema enterprise', () => {
     db.prepare('INSERT INTO audit_logs (action, entity, entity_id, summary) VALUES (?,?,?,?)').run(
       'student.delete', 'student', 999999, 'Xóa học viên'
     );
+  });
+
+  it('payment_history/invoice_history ghi lại mọi INSERT/UPDATE/DELETE (bất biến)', () => {
+    const centerId = Number(db.prepare("INSERT INTO centers (name) VALUES ('TTH')").run().lastInsertRowid);
+    const stId = Number(db.prepare('INSERT INTO students (code, name, center_id) VALUES (?,?,?)').run('HVH', 'H', centerId).lastInsertRowid);
+    const inId = Number(db.prepare('INSERT INTO invoices (student_id, amount, center_id) VALUES (?,?,?)').run(stId, 1000000, centerId).lastInsertRowid);
+    const pId = Number(db.prepare("INSERT INTO payments (invoice_id, amount, status) VALUES (?,?,'pending')").run(inId, 500000).lastInsertRowid);
+
+    // insert đã được ghi
+    let h = db.prepare('SELECT action FROM payment_history WHERE payment_id = ?').all(pId) as {
+      action: string; old_data?: string | null; new_data?: string | null;
+    }[];
+    assert.deepEqual(h.map((x) => x.action), ['insert']);
+    const ih = db.prepare('SELECT action FROM invoice_history WHERE invoice_id = ?').all(inId) as { action: string }[];
+    assert.deepEqual(ih.map((x) => x.action), ['insert']);
+
+    // update: đổi trạng thái payment + sửa hóa đơn
+    db.prepare("UPDATE payments SET status = 'confirmed' WHERE id = ?").run(pId);
+    db.prepare("UPDATE invoices SET status = 'partial' WHERE id = ?").run(inId);
+    h = db.prepare('SELECT action, old_data, new_data FROM payment_history WHERE payment_id = ? ORDER BY id').all(pId) as {
+      action: string; old_data?: string | null; new_data?: string | null;
+    }[];
+    assert.equal(h.length, 2);
+    assert.equal(h[1].action, 'update');
+    assert.match(h[1].old_data as string, /"status":"pending"/);
+    assert.match(h[1].new_data as string, /"status":"confirmed"/);
+
+    // delete payment: dấu vết còn lại dù payment đã mất
+    db.prepare('DELETE FROM payments WHERE id = ?').run(pId);
+    h = db.prepare('SELECT action FROM payment_history WHERE payment_id = ? ORDER BY id').all(pId) as { action: string }[];
+    assert.deepEqual(h.map((x) => x.action), ['insert', 'update', 'delete']);
+    assert.equal((db.prepare('SELECT COUNT(*) as c FROM payments WHERE id = ?').get(pId) as { c: number }).c, 0);
+  });
+
+  it('version tăng tự động mỗi lần UPDATE (optimistic locking)', () => {
+    const centerId = Number(db.prepare("INSERT INTO centers (name) VALUES ('TTV')").run().lastInsertRowid);
+    const stId = Number(db.prepare('INSERT INTO students (code, name, center_id) VALUES (?,?,?)').run('HVV', 'V', centerId).lastInsertRowid);
+    const get = () => (db.prepare('SELECT version FROM students WHERE id = ?').get(stId) as { version: number }).version;
+    assert.equal(get(), 0);
+    db.prepare('UPDATE students SET note = ? WHERE id = ?').run('a', stId);
+    assert.equal(get(), 1);
+    db.prepare('UPDATE students SET note = ? WHERE id = ?').run('b', stId);
+    assert.equal(get(), 2);
+    // app tự set version (dùng optimistic locking) thì trigger không ghi đè
+    db.prepare('UPDATE students SET note = ?, version = ? WHERE id = ?').run('c', 10, stId);
+    assert.equal(get(), 10);
+  });
+
+  it('updated_at phủ mọi bảng mutable (vd: payments, reminders)', () => {
+    const centerId = Number(db.prepare("INSERT INTO centers (name) VALUES ('TTU')").run().lastInsertRowid);
+    const stId = Number(db.prepare('INSERT INTO students (code, name, center_id) VALUES (?,?,?)').run('HVU', 'U', centerId).lastInsertRowid);
+    const inId = Number(db.prepare('INSERT INTO invoices (student_id, amount, center_id) VALUES (?,?,?)').run(stId, 1000, centerId).lastInsertRowid);
+    const pId = Number(db.prepare('INSERT INTO payments (invoice_id, amount) VALUES (?,?)').run(inId, 1000).lastInsertRowid);
+    db.exec(`UPDATE payments SET updated_at = '2000-01-01 00:00:00' WHERE id = ${pId}`);
+    db.prepare("UPDATE payments SET status = 'confirmed' WHERE id = ?").run(pId);
+    const row = db.prepare('SELECT updated_at FROM payments WHERE id = ?').get(pId) as { updated_at: string };
+    assert.notEqual(row.updated_at, '2000-01-01 00:00:00');
   });
 });

@@ -26,8 +26,7 @@ router.get(
       return;
     }
     const today = toISODate(new Date());
-    const rows = db
-      .prepare(
+    const rows = await db.prepare(
         `SELECT s.id as session_id, s.date, s.class_id, c.name as class_name, s.topic,
          (SELECT COUNT(*) FROM attendance a WHERE a.session_id = s.id) as attendance_count,
          CASE WHEN EXISTS (SELECT 1 FROM teacher_checkins tc WHERE tc.session_id = s.id AND tc.teacher_id = ?)
@@ -64,8 +63,7 @@ router.post(
       return;
     }
     const today = toISODate(new Date());
-    const sess = db
-      .prepare(
+    const sess = await db.prepare(
         `SELECT s.id as session_id, s.date, c.name as class_name
        FROM sessions s JOIN classes c ON c.id = s.class_id
        WHERE s.checkin_code = ? AND s.checkin_date = ? AND c.teacher_id = ?`
@@ -76,7 +74,7 @@ router.post(
       res.status(400).json({ error: 'Mã điểm danh không hợp lệ hoặc đã hết hạn' });
       return;
     }
-    db.prepare('INSERT OR IGNORE INTO teacher_checkins (session_id, teacher_id) VALUES (?, ?)').run(
+    await db.prepare('INSERT OR IGNORE INTO teacher_checkins (session_id, teacher_id) VALUES (?, ?)').run(
       sess.session_id,
       tid
     );

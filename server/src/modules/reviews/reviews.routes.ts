@@ -13,8 +13,8 @@ interface ReviewRow {
 }
 
 /** Lấy review và kiểm tra thuộc trung tâm của user */
-function getReview(id: number, cid: number | null): ReviewRow | undefined {
-  const row = db.prepare('SELECT * FROM reviews WHERE id = ?').get(id) as ReviewRow | undefined;
+async function getReview(id: number, cid: number | null): Promise<ReviewRow | undefined> {
+  const row = await db.prepare('SELECT * FROM reviews WHERE id = ?').get(id) as ReviewRow | undefined;
   if (!row) return undefined;
   if (cid !== null && row.center_id !== cid) return undefined;
   return row;
@@ -52,8 +52,8 @@ router.post(
       res.status(404).json({ error: 'Không tìm thấy đánh giá' });
       return;
     }
-    db.prepare("UPDATE reviews SET status = 'approved' WHERE id = ?").run(id);
-    const row = db.prepare('SELECT * FROM reviews WHERE id = ?').get(id);
+    await db.prepare("UPDATE reviews SET status = 'approved' WHERE id = ?").run(id);
+    const row = await db.prepare('SELECT * FROM reviews WHERE id = ?').get(id);
     res.json(row);
   })
 );
@@ -69,8 +69,8 @@ router.post(
       res.status(404).json({ error: 'Không tìm thấy đánh giá' });
       return;
     }
-    db.prepare("UPDATE reviews SET status = 'rejected' WHERE id = ?").run(id);
-    const row = db.prepare('SELECT * FROM reviews WHERE id = ?').get(id);
+    await db.prepare("UPDATE reviews SET status = 'rejected' WHERE id = ?").run(id);
+    const row = await db.prepare('SELECT * FROM reviews WHERE id = ?').get(id);
     res.json(row);
   })
 );
@@ -88,7 +88,7 @@ router.delete(
       res.status(404).json({ error: 'Không tìm thấy đánh giá' });
       return;
     }
-    db.prepare('DELETE FROM reviews WHERE id = ?').run(id);
+    await db.prepare('DELETE FROM reviews WHERE id = ?').run(id);
     res.json({ ok: true });
   })
 );

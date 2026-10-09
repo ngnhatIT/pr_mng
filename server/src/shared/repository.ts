@@ -6,7 +6,7 @@ import { AppError } from './errors';
  * lặp đi lặp lại khắp các modules.
  *
  * Thay vì mỗi route viết 5 dòng:
- *   const cur = db.prepare('SELECT center_id FROM students WHERE id = ?').get(id);
+ *   const cur = await db.prepare('SELECT center_id FROM students WHERE id = ?').get(id);
  *   if (!cur || (cid !== null && cur.center_id !== cid)) throw AppError.notFound(...);
  *
  * Chỉ cần 1 dòng:
@@ -38,17 +38,17 @@ export interface ScopedRow {
  * - Không tìm thấy hoặc khác center -> ném 404 (tránh lộ sự tồn tại của dữ liệu)
  * - centerId = null (superadmin) -> bỏ qua kiểm tra center
  */
-export function findByIdOr404<T extends ScopedRow = ScopedRow>(
+export async function findByIdOr404<T extends ScopedRow = ScopedRow>(
   table: ScopedTable,
   id: number,
   centerId: number | null,
   notFoundMessage = 'Không tìm thấy dữ liệu'
-): T {
+): Promise<T> {
   // Guard runtime: tên bảng nội suy vào SQL nên phải nằm trong allowlist
   if (!(SCOPED_TABLES as readonly string[]).includes(table)) {
     throw AppError.badRequest('Bảng dữ liệu không hợp lệ');
   }
-  const row = db.prepare(`SELECT * FROM ${table} WHERE id = ?`).get(id) as T | undefined;
+  const row = await db.prepare(`SELECT * FROM ${table} WHERE id = ?`).get(id) as T | undefined;
   if (!row || (centerId !== null && row.center_id !== centerId)) {
     throw AppError.notFound(notFoundMessage);
   }
@@ -69,7 +69,7 @@ export function belongsToCenter(
 }
 
 /** Xóa mềm/mạnh 1 dòng sau khi đã kiểm tra scope. Trả về true nếu đã xóa. */
-export function deleteById(table: ScopedTable, id: number): boolean {
-  const r = db.prepare(`DELETE FROM ${table} WHERE id = ?`).run(id);
+export async function deleteById(table: ScopedTable, id: number): Promise<boolean> {
+  const r = await db.prepare(`DELETE FROM ${table} WHERE id = ?`).run(id);
   return r.changes > 0;
 }

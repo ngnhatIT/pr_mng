@@ -16,7 +16,7 @@ router.get(
       page?: string;
       limit?: string;
     };
-    res.json(invoiceService.listInvoices(reqCenterId(req), { status, search }, { page, limit }));
+    res.json(await invoiceService.listInvoices(reqCenterId(req), { status, search }, { page, limit }));
   })
 );
 
@@ -25,7 +25,7 @@ router.get(
   '/debt',
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const { page, limit } = req.query as { page?: string; limit?: string };
-    res.json(invoiceService.getDebtReport(reqCenterId(req), { page, limit }));
+    res.json(await invoiceService.getDebtReport(reqCenterId(req), { page, limit }));
   })
 );
 
@@ -33,14 +33,14 @@ router.get(
 router.get(
   '/debt-summary',
   asyncHandler(async (req: AuthRequest, res: Response) => {
-    res.json(invoiceService.getDebtSummary(reqCenterId(req)));
+    res.json(await invoiceService.getDebtSummary(reqCenterId(req)));
   })
 );
 
 router.get(
   '/:id',
   asyncHandler(async (req: AuthRequest, res: Response) => {
-    res.json(invoiceService.getInvoiceDetail(reqCenterId(req), paramId(req.params)));
+    res.json(await invoiceService.getInvoiceDetail(reqCenterId(req), paramId(req.params)));
   })
 );
 
@@ -54,7 +54,7 @@ router.post(
       due_date: v.string({ label: 'Hạn nộp' }),
       note: v.string({ max: 500, label: 'Ghi chú' }),
     });
-    const created = invoiceService.createInvoice(
+    const created = await invoiceService.createInvoice(
       reqCenterId(req),
       {
         student_id: input.student_id,
@@ -110,7 +110,7 @@ router.post(
       note: v.string({ max: 500, label: 'Ghi chú' }),
       paid_at: v.string({ label: 'Ngày thu' }),
     });
-    const { status } = invoiceService.recordPayment(
+    const { status } = await invoiceService.recordPayment(
       reqCenterId(req),
       paramId(req.params),
       {
@@ -132,7 +132,7 @@ router.post(
     const { credit_id } = validate(req.body, {
       credit_id: v.number({ required: true, integer: true, label: 'Credit' }),
     });
-    const result = invoiceService.applyCredit(
+    const result = await invoiceService.applyCredit(
       reqCenterId(req),
       paramId(req.params),
       credit_id as number,

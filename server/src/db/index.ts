@@ -1,24 +1,29 @@
-import { db } from './connection';
-import { createSchema, createTriggers, createViews } from './schema';
+import { db } from './pg-compat';
+import { createSchema, createTriggers, createHistoryTables, createViews, SCHEMA_VERSION } from './schema';
 import { createIndexes } from './indexes';
 import { runMigrations } from './migrations';
-import { runVersionedMigrations } from './versionedMigrations';
 import { seedDatabase } from './seed';
 import { backfillCenters } from './helpers';
 
-/* Khởi tạo DB: schema -> migration (cũ) -> migration (versioned) -> indexes
- * -> triggers -> views -> backfill -> seed */
-createSchema(db);
-runMigrations(db);
-runVersionedMigrations(db);
-createIndexes(db);
-createTriggers(db);
-createViews(db);
-backfillCenters();
-seedDatabase();
+/**
+ * Khởi tạo database — BẮT BUỘC await trước khi app phục vụ request
+ * (xem src/index.ts). Thứ tự: schema -> migrations -> indexes
+ * -> triggers -> history -> views -> backfill -> seed.
+ */
+export async function initDatabase(): Promise<void> {
+  await createSchema(db);
+  await runMigrations(db);
+  await createIndexes(db);
+  await createTriggers(db);
+  await createHistoryTables(db);
+  await createViews(db);
+  await backfillCenters();
+  await seedDatabase();
+}
 
 /* Re-export để mọi module dùng: import { db, toISODate } from '../db' */
-export { db } from './connection';
-export type { Db } from './connection';
+export { db, closePool } from './pg-compat';
+export type { Db, Tx, Statement, RunResult } from './pg-compat';
+export { SCHEMA_VERSION };
 export * from './date-utils';
 export * from './helpers';

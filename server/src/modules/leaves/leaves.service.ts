@@ -21,11 +21,11 @@ export interface LeaveQuery {
 /* --------------------------------- Service --------------------------------- */
 
 /** Danh sách đơn xin nghỉ (có phân trang). Scope center qua học viên. */
-export function listLeaves(
+export async function listLeaves(
   centerId: number | null,
   query: LeaveQuery,
   pageOpts: PageOptions = {}
-): Paginated<LeaveRow> {
+):  Promise<Paginated<LeaveRow>> {
   const { status = '' } = query;
   const conds: string[] = [];
   const params: unknown[] = [];
@@ -42,9 +42,8 @@ export function listLeaves(
        LEFT JOIN classes c ON c.id = lr.class_id`;
   const where = conds.length ? `WHERE ${conds.join(' AND ')}` : '';
   const { page, limit, offset } = parsePagination(pageOpts);
-  const total = (db.prepare(`SELECT COUNT(*) as c ${from} ${where}`).get(...params) as { c: number }).c;
-  const rows = db
-    .prepare(
+  const total = (await db.prepare(`SELECT COUNT(*) as c ${from} ${where}`).get(...params) as { c: number }).c;
+  const rows = await db.prepare(
       `SELECT lr.*, s.name as student_name, s.code as student_code, c.name as class_name
        ${from} ${where} ORDER BY lr.id DESC LIMIT ? OFFSET ?`
     )

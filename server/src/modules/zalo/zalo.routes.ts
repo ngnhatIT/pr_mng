@@ -16,7 +16,8 @@ import { asyncHandler } from '../../shared/http';
 const router = Router();
 
 /** center_id hiệu lực cho cấu hình Zalo: center của user, superadmin dùng trung tâm mặc định */
-const cidOf = (req: AuthRequest): number | undefined => reqCenterId(req) ?? getDefaultCenter()?.id;
+const cidOf = async (req: AuthRequest): Promise<number | undefined> =>
+  reqCenterId(req) ?? (await getDefaultCenter())?.id;
 
 /* ------------------------- Cấu hình Zalo (admin) ------------------------- */
 
@@ -25,7 +26,7 @@ router.get(
   '/zalo/config',
   adminOnly,
   asyncHandler(async (req: AuthRequest, res: Response) => {
-    const cfg = getZaloConfig(cidOf(req));
+    const cfg = await getZaloConfig(await cidOf(req));
     res.json({ ...cfg, zalo_access_token: maskAccessToken(cfg.zalo_access_token) });
   })
 );
@@ -35,7 +36,7 @@ router.put(
   '/zalo/config',
   adminOnly,
   asyncHandler(async (req: AuthRequest, res: Response) => {
-    const cid = cidOf(req);
+    const cid = await cidOf(req);
     if (cid === undefined) {
       res.status(400).json({ error: 'Chưa có trung tâm nào để lưu cấu hình' });
       return;
@@ -57,9 +58,9 @@ router.put(
         v = String(Math.floor(n));
       }
       if (k === 'zalo_enabled') v = v === '1' ? '1' : '0';
-      setCenterSetting(cid, k, v.trim());
+      await setCenterSetting(cid, k, v.trim());
     }
-    const cfg = getZaloConfig(cid);
+    const cfg = await getZaloConfig(cid);
     res.json({ ...cfg, zalo_access_token: maskAccessToken(cfg.zalo_access_token) });
   })
 );
@@ -71,7 +72,7 @@ router.post(
   '/zalo/test',
   adminOnly,
   asyncHandler(async (req: AuthRequest, res: Response) => {
-    const cfg = getZaloConfig(cidOf(req));
+    const cfg = await getZaloConfig(await cidOf(req));
     const phone = normalizePhone(req.body?.phone as string | undefined);
     if (!phone) {
       res.status(400).json({ error: 'Số điện thoại không hợp lệ (cần 10 số, bắt đầu bằng 0)' });
@@ -90,13 +91,13 @@ router.post(
       `Học phí 1.500.000đ (mã HD-TEST) đến hạn nộp ngày ${templateData.han_nop}.\n` +
       `Quý khách vui lòng hoàn tất học phí sớm. Xin cảm ơn!`;
 
-    const insertLog = db.prepare(
+    const insertLog = await db.prepare(
       'INSERT INTO reminders (invoice_id, student_id, phone, kind, status, message, response) VALUES (NULL, NULL, ?, ?, ?, ?, ?)'
     );
 
     // Chế độ demo: chưa có token hoặc chưa bật
     if (cfg.zalo_enabled !== '1' || !cfg.zalo_access_token) {
-      insertLog.run(phone, 'test', 'demo', demoMessage, null);
+      await insertLog.run(phone, 'test', 'demo', demoMessage, null);
       res.json({
         demo: true,
         status: 'demo',
@@ -115,7 +116,7 @@ router.post(
       accessToken: cfg.zalo_access_token,
     });
     const status = r.ok ? 'sent' : 'failed';
-    insertLog.run(
+    await insertLog.run(
       phone,
       'test',
       status,
@@ -137,7 +138,7 @@ router.post(
   '/zalo/run-once',
   adminOnly,
   asyncHandler(async (req: AuthRequest, res: Response) => {
-    const r = await runReminderOnce(cidOf(req));
+    const r = await runReminderOnce(await cidOf(req));
     res.json({
       ok: true,
       overdue: r.overdue,
@@ -157,8 +158,7 @@ router.get(
     const cid = reqCenterId(req);
     const limit = Math.min(500, Math.max(1, Number(req.query.limit) || 100));
     const where = cid !== null ? 'WHERE (s.center_id = ? OR r.student_id IS NULL)' : '';
-    const rows = db
-      .prepare(
+    const rows = await db.prepare(
         `SELECT r.*, s.name as student_name, s.code as student_code, i.amount as invoice_amount, i.due_date
        FROM reminders r
        LEFT JOIN students s ON s.id = r.student_id
@@ -180,8 +180,7 @@ router.post(
     const cid = reqCenterId(req);
     const id = Number(req.params.id);
     if (cid !== null) {
-      const inv = db
-        .prepare(
+      const inv = await db.prepare(
           'SELECT i.id FROM invoices i JOIN students s ON s.id = i.student_id WHERE i.id = ? AND s.center_id = ?'
         )
         .get(id, cid);

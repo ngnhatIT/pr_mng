@@ -21,14 +21,14 @@ router.get(
   '/',
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const { page, limit } = req.query as { page?: string; limit?: string };
-    res.json(classService.listClasses(scopeOf(req), { page, limit }));
+    res.json(await classService.listClasses(scopeOf(req), { page, limit }));
   })
 );
 
 router.get(
   '/:id',
   asyncHandler(async (req: AuthRequest, res: Response) => {
-    res.json(classService.getClassDetail(scopeOf(req), paramId(req.params)));
+    res.json(await classService.getClassDetail(scopeOf(req), paramId(req.params)));
   })
 );
 
@@ -46,7 +46,7 @@ router.post(
       status: v.string({ label: 'Trạng thái' }),
       room_id: v.number({ integer: true, label: 'Phòng học' }),
     });
-    const created = classService.createClass(scopeOf(req), input);
+    const created = await classService.createClass(scopeOf(req), input);
     res.status(201).json(created);
   })
 );
@@ -65,7 +65,7 @@ router.put(
       status: v.string({ label: 'Trạng thái' }),
       room_id: v.number({ integer: true, label: 'Phòng học' }),
     });
-    res.json(classService.updateClass(scopeOf(req), paramId(req.params), input));
+    res.json(await classService.updateClass(scopeOf(req), paramId(req.params), input));
   })
 );
 

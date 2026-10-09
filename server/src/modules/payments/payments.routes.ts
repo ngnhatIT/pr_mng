@@ -11,8 +11,8 @@ const router = Router();
  * VNPay return URL — PUBLIC (VNPay gọi về, không có token).
  * Định nghĩa TRƯỚC router.use(requireAuth).
  */
-router.get('/vnpay-return', (req: AuthRequest, res: Response) => {
-  const redirectUrl = paymentService.handleVnpayReturn(
+router.get('/vnpay-return', async (req: AuthRequest, res: Response) => {
+  const redirectUrl = await paymentService.handleVnpayReturn(
     req.query as Record<string, string | string[] | undefined>
   );
   res.redirect(redirectUrl);
@@ -27,7 +27,7 @@ router.get(
   staffOnly,
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const { page, limit } = req.query as { page?: string; limit?: string };
-    res.json(paymentService.listPendingPayments(reqCenterId(req), { page, limit }));
+    res.json(await paymentService.listPendingPayments(reqCenterId(req), { page, limit }));
   })
 );
 
@@ -36,7 +36,7 @@ router.post(
   '/pending/:id/approve',
   staffOnly,
   asyncHandler(async (req: AuthRequest, res: Response) => {
-    const { status } = paymentService.approvePendingPayment(paramId(req.params), actorFromReq(req));
+    const { status } = await paymentService.approvePendingPayment(paramId(req.params), actorFromReq(req));
     res.json({ ok: true, status });
   })
 );
@@ -56,7 +56,7 @@ router.get(
   '/config',
   adminOnly,
   asyncHandler(async (req: AuthRequest, res: Response) => {
-    res.json(paymentService.getPaymentConfig(reqCenterId(req)));
+    res.json(await paymentService.getPaymentConfig(reqCenterId(req)));
   })
 );
 

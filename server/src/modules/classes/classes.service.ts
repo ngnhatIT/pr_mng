@@ -78,17 +78,17 @@ export function parseSchedule(raw: unknown): ScheduleEntry[] {
 }
 
 /** center_id khi tạo lớp: superadmin dùng trung tâm mặc định. */
-function resolveCenterId(ctx: ScopeCtx): number | null {
+async function resolveCenterId(ctx: ScopeCtx): Promise<number | null> {
   if (ctx.centerId !== null) return ctx.centerId;
-  return getDefaultCenter()?.id ?? null;
+  return (await getDefaultCenter())?.id ?? null;
 }
 
 /** Kiểm tra room_id hợp lệ trong scope — trả về id đã chuẩn hóa (hoặc null). */
-function resolveRoomId(ctx: ScopeCtx, roomId: unknown, centerId: number | null): number | null {
+async function resolveRoomId(ctx: ScopeCtx, roomId: unknown, centerId: number | null): Promise<number | null> {
   if (roomId === undefined || roomId === null || roomId === '') return null;
   const id = Number(roomId);
   if (!Number.isFinite(id) || id <= 0) throw AppError.badRequest('Phòng học không hợp lệ');
-  const room = db.prepare('SELECT id, center_id FROM rooms WHERE id = ?').get(id) as
+  const room = await db.prepare('SELECT id, center_id FROM rooms WHERE id = ?').get(id) as
     { id: number; center_id: number | null } | undefined;
   if (!room) throw AppError.notFound('Không tìm thấy phòng học');
   if (ctx.role !== 'superadmin' && centerId !== null && room.center_id !== centerId) {
@@ -106,14 +106,14 @@ interface RoomConflict {
 }
 
 /** Kiểm tra trùng lịch phòng: cùng room, cùng day, khung giờ giao nhau. */
-function findRoomConflict(
+async function findRoomConflict(
   roomId: number,
   schedule: ScheduleEntry[],
   excludeId: number | null,
   centerId: number | null
-): RoomConflict | null {
+): Promise<RoomConflict | null> {
   if (!roomId || schedule.length === 0) return null;
-  const room = db.prepare('SELECT name FROM rooms WHERE id = ?').get(roomId) as { name: string } | undefined;
+  const room = await db.prepare('SELECT name FROM rooms WHERE id = ?').get(roomId) as { name: string } | undefined;
   const roomName = room?.name || '';
   let sql = 'SELECT id, name, schedule FROM classes WHERE room_id = ? AND status = ?';
   const params: unknown[] = [roomId, 'active'];
@@ -125,7 +125,7 @@ function findRoomConflict(
     sql += ' AND id != ?';
     params.push(excludeId);
   }
-  const rows = db.prepare(sql).all(...params) as { id: number; name: string; schedule: string }[];
+  const rows = await db.prepare(sql).all(...params) as { id: number; name: string; schedule: string }[];
   for (const row of rows) {
     let other: ScheduleEntry[];
     try {
@@ -144,13 +144,13 @@ function findRoomConflict(
   return null;
 }
 
-function assertNoRoomConflict(
+async function assertNoRoomConflict(
   roomId: number | null,
   schedule: ScheduleEntry[],
   excludeId: number | null,
   centerId: number | null
-): void {
-  const conflict = findRoomConflict(roomId || 0, schedule, excludeId, centerId);
+):  Promise<void> {
+  const conflict = await findRoomConflict(roomId || 0, schedule, excludeId, centerId);
   if (conflict) {
     throw AppError.badRequest(
       `Phòng "${conflict.roomName}" bị trùng lịch với lớp "${conflict.className}" (${DAY_NAMES[conflict.day]} ${conflict.start}-${conflict.end})`
@@ -159,10 +159,9 @@ function assertNoRoomConflict(
 }
 
 /** Lấy lớp trong scope — ném 404 nếu không thấy (tránh lộ dữ liệu center khác). */
-function getScopedClass(ctx: ScopeCtx, id: number): ClassRow {
+async function getScopedClass(ctx: ScopeCtx, id: number): Promise<ClassRow> {
   const scope = classScopeWhere(ctx);
-  const cls = db
-    .prepare(`SELECT c.* FROM classes c WHERE c.id = ?${scope.clause}`)
+  const cls = await db.prepare(`SELECT c.* FROM classes c WHERE c.id = ?${scope.clause}`)
     .get(id, ...scope.params) as ClassRow | undefined;
   if (!cls) throw AppError.notFound('Không tìm thấy lớp học');
   return cls;
@@ -197,16 +196,15 @@ function normalizeInput(input: ClassInput): {
 
 /* --------------------------------- CRUD lớp --------------------------------- */
 
-export function listClasses(ctx: ScopeCtx, pageOpts: PageOptions = {}): Paginated<unknown> {
+export async function listClasses(ctx: ScopeCtx, pageOpts: PageOptions = {}):  Promise<Paginated<unknown>> {
   const scope = classScopeWhere(ctx);
   const { page, limit, offset } = parsePagination(pageOpts);
   const total = (
-    db.prepare(`SELECT COUNT(*) as c FROM classes c WHERE 1=1${scope.clause}`).get(...scope.params) as {
+    await db.prepare(`SELECT COUNT(*) as c FROM classes c WHERE 1=1${scope.clause}`).get(...scope.params) as {
       c: number;
     }
   ).c;
-  const rows = db
-    .prepare(
+  const rows = await db.prepare(
       `SELECT c.*, t.name as teacher_name, r.name as room_name,
          (SELECT COUNT(*) FROM enrollments e WHERE e.class_id = c.id AND e.status = 'active') as student_count
        FROM classes c LEFT JOIN teachers t ON t.id = c.teacher_id
@@ -218,10 +216,9 @@ export function listClasses(ctx: ScopeCtx, pageOpts: PageOptions = {}): Paginate
   return paginate(rows, total, page, limit);
 }
 
-export function getClassDetail(ctx: ScopeCtx, id: number): Record<string, unknown> {
+export async function getClassDetail(ctx: ScopeCtx, id: number): Promise<Record<string, unknown>> {
   const scope = classScopeWhere(ctx);
-  const cls = db
-    .prepare(
+  const cls = await db.prepare(
       `SELECT c.*, t.name as teacher_name, r.name as room_name FROM classes c
        LEFT JOIN teachers t ON t.id = c.teacher_id
        LEFT JOIN rooms r ON r.id = c.room_id
@@ -229,26 +226,24 @@ export function getClassDetail(ctx: ScopeCtx, id: number): Record<string, unknow
     )
     .get(id, ...scope.params);
   if (!cls) throw AppError.notFound('Không tìm thấy lớp học');
-  const students = db
-    .prepare(
+  const students = await db.prepare(
       `SELECT s.id, s.code, s.name, s.phone, s.status as student_status, e.id as enrollment_id, e.enrolled_at
        FROM enrollments e JOIN students s ON s.id = e.student_id
        WHERE e.class_id = ? AND e.status = 'active' ORDER BY s.name`
     )
     .all(id);
   const sessionCount = (
-    db.prepare('SELECT COUNT(*) as c FROM sessions WHERE class_id = ?').get(id) as { c: number }
+    await db.prepare('SELECT COUNT(*) as c FROM sessions WHERE class_id = ?').get(id) as { c: number }
   ).c;
   return { class: cls, students, sessionCount };
 }
 
-export function createClass(ctx: ScopeCtx, input: ClassInput): unknown {
+export async function createClass(ctx: ScopeCtx, input: ClassInput): Promise<unknown> {
   const n = normalizeInput(input);
-  const centerId = resolveCenterId(ctx);
-  const roomId = resolveRoomId(ctx, input.room_id, centerId);
+  const centerId = await resolveCenterId(ctx);
+  const roomId = await resolveRoomId(ctx, input.room_id, centerId);
   assertNoRoomConflict(roomId, n.schedule, null, centerId);
-  const r = db
-    .prepare(
+  const r = await db.prepare(
       'INSERT INTO classes (name, teacher_id, schedule, start_date, end_date, tuition_fee, max_students, status, center_id, room_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
     )
     .run(
@@ -263,16 +258,16 @@ export function createClass(ctx: ScopeCtx, input: ClassInput): unknown {
       centerId,
       roomId
     );
-  return db.prepare('SELECT * FROM classes WHERE id = ?').get(Number(r.lastInsertRowid));
+  return await db.prepare('SELECT * FROM classes WHERE id = ?').get(Number(r.lastInsertRowid));
 }
 
-export function updateClass(ctx: ScopeCtx, id: number, input: ClassInput): unknown {
-  const existing = getScopedClass(ctx, id);
+export async function updateClass(ctx: ScopeCtx, id: number, input: ClassInput): Promise<unknown> {
+  const existing = await getScopedClass(ctx, id);
   const n = normalizeInput(input);
-  const centerId = (existing.center_id as number | null) ?? resolveCenterId(ctx);
-  const roomId = resolveRoomId(ctx, input.room_id, centerId);
-  assertNoRoomConflict(roomId, n.schedule, id, centerId);
-  db.prepare(
+  const centerId = (existing.center_id as number | null) ?? (await resolveCenterId(ctx));
+  const roomId = await resolveRoomId(ctx, input.room_id, centerId);
+  await assertNoRoomConflict(roomId, n.schedule, id, centerId);
+  await db.prepare(
     'UPDATE classes SET name=?, teacher_id=?, schedule=?, start_date=?, end_date=?, tuition_fee=?, max_students=?, status=?, room_id=? WHERE id=?'
   ).run(
     n.name,
@@ -286,24 +281,23 @@ export function updateClass(ctx: ScopeCtx, id: number, input: ClassInput): unkno
     roomId,
     id
   );
-  return db.prepare('SELECT * FROM classes WHERE id = ?').get(id);
+  return await db.prepare('SELECT * FROM classes WHERE id = ?').get(id);
 }
 
-export function deleteClass(ctx: ScopeCtx, id: number, actor?: AuditActor): void {
-  const cls = getScopedClass(ctx, id);
+export async function deleteClass(ctx: ScopeCtx, id: number, actor?: AuditActor): Promise<void> {
+  const cls = await getScopedClass(ctx, id);
   // Chặn xóa lớp còn bài tập (tránh mất lịch sử chấm điểm thầm lặng)
-  const hwCount = homeworkRepo.countByClass(id);
+  const hwCount = await homeworkRepo.countByClass(id);
   if (hwCount > 0) {
     throw AppError.badRequest(`Lớp còn ${hwCount} bài tập. Hãy xóa bài tập trước khi xóa lớp.`);
   }
-  const tx = db.transaction(() => {
-    const sessIds = db.prepare('SELECT id FROM sessions WHERE class_id = ?').all(id) as { id: number }[];
-    for (const s of sessIds) db.prepare('DELETE FROM attendance WHERE session_id = ?').run(s.id);
-    db.prepare('DELETE FROM sessions WHERE class_id = ?').run(id);
-    db.prepare('DELETE FROM enrollments WHERE class_id = ?').run(id);
-    db.prepare('DELETE FROM classes WHERE id = ?').run(id);
+  await db.transaction(async (tx) => {
+    const sessIds = await tx.prepare('SELECT id FROM sessions WHERE class_id = ?').all(id) as { id: number }[];
+    for (const s of sessIds) await tx.prepare('DELETE FROM attendance WHERE session_id = ?').run(s.id);
+    await tx.prepare('DELETE FROM sessions WHERE class_id = ?').run(id);
+    await tx.prepare('DELETE FROM enrollments WHERE class_id = ?').run(id);
+    await tx.prepare('DELETE FROM classes WHERE id = ?').run(id);
   });
-  tx();
   audit({
     centerId: ctx.centerId,
     actor,
@@ -316,45 +310,41 @@ export function deleteClass(ctx: ScopeCtx, id: number, actor?: AuditActor): void
 
 /* --------------------------------- Ghi danh --------------------------------- */
 
-export function enrollStudent(ctx: ScopeCtx, classId: number, studentId: number): void {
+export async function enrollStudent(ctx: ScopeCtx, classId: number, studentId: number): Promise<void> {
   if (!studentId) throw AppError.badRequest('Thiếu student_id');
-  const cls = getScopedClass(ctx, classId);
-  const student = db.prepare('SELECT id, center_id FROM students WHERE id = ?').get(Number(studentId)) as
+  const cls = await getScopedClass(ctx, classId);
+  const student = await db.prepare('SELECT id, center_id FROM students WHERE id = ?').get(Number(studentId)) as
     { id: number; center_id: number | null } | undefined;
   if (!student || (ctx.centerId !== null && student.center_id !== ctx.centerId)) {
     throw AppError.notFound('Không tìm thấy học viên');
   }
   const count = (
-    db
-      .prepare("SELECT COUNT(*) as c FROM enrollments WHERE class_id = ? AND status = 'active'")
+    await db.prepare("SELECT COUNT(*) as c FROM enrollments WHERE class_id = ? AND status = 'active'")
       .get(classId) as { c: number }
   ).c;
   if (count >= (cls.max_students as number)) throw AppError.badRequest('Lớp học đã đủ sĩ số tối đa');
-  const exists = db
-    .prepare('SELECT 1 FROM enrollments WHERE student_id = ? AND class_id = ? AND status = ?')
+  const exists = await db.prepare('SELECT 1 FROM enrollments WHERE student_id = ? AND class_id = ? AND status = ?')
     .get(studentId, classId, 'active');
   if (exists) throw AppError.badRequest('Học viên đã có trong lớp này');
   // Nếu từng ghi danh rồi nghỉ thì kích hoạt lại, ngược lại thêm mới
-  const old = db
-    .prepare('SELECT id FROM enrollments WHERE student_id = ? AND class_id = ?')
+  const old = await db.prepare('SELECT id FROM enrollments WHERE student_id = ? AND class_id = ?')
     .get(studentId, classId);
   if (old) {
-    db.prepare("UPDATE enrollments SET status = 'active' WHERE student_id = ? AND class_id = ?").run(
+    await db.prepare("UPDATE enrollments SET status = 'active' WHERE student_id = ? AND class_id = ?").run(
       studentId,
       classId
     );
   } else {
-    db.prepare('INSERT INTO enrollments (student_id, class_id) VALUES (?, ?)').run(studentId, classId);
+    await db.prepare('INSERT INTO enrollments (student_id, class_id) VALUES (?, ?)').run(studentId, classId);
   }
 }
 
-export function unenroll(ctx: ScopeCtx, enrollmentId: number): void {
+export async function unenroll(ctx: ScopeCtx, enrollmentId: number): Promise<void> {
   const scope = classScopeWhere(ctx);
-  const cls = db
-    .prepare(
+  const cls = await db.prepare(
       `SELECT c.id FROM enrollments e JOIN classes c ON c.id = e.class_id WHERE e.id = ?${scope.clause}`
     )
     .get(enrollmentId, ...scope.params);
   if (!cls) throw AppError.notFound('Không tìm thấy ghi danh');
-  db.prepare("UPDATE enrollments SET status = 'inactive' WHERE id = ?").run(enrollmentId);
+  await db.prepare("UPDATE enrollments SET status = 'inactive' WHERE id = ?").run(enrollmentId);
 }

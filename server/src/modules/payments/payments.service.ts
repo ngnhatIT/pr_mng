@@ -31,42 +31,44 @@ const CONFIG_KEYS = [
  * Xử lý VNPay return (public — VNPay gọi về, không có token).
  * Trả về URL để redirect (luôn thành công ở tầng HTTP, lỗi thể hiện qua query).
  */
-export function handleVnpayReturn(query: Record<string, string | string[] | undefined>): string {
-  const fail = (reason: string): string => `${RESULT_PAGE}?status=fail&reason=${reason}`;
+export async function handleVnpayReturn(
+  query: Record<string, string | string[] | undefined>
+): Promise<string> {
+  const fail = (reason: string): string =>
+    `${RESULT_PAGE}?status=fail&reason=${reason}`;
   try {
     const txnRef = String(query.vnp_TxnRef || '');
-    const txn = db.prepare('SELECT * FROM payment_txns WHERE ref = ?').get(txnRef) as
+    const txn = (await db.prepare('SELECT * FROM payment_txns WHERE ref = ?').get(txnRef)) as
       { ref: string; invoice_id: number; amount: number; status: string } | undefined;
     if (!txn) return fail('notfound');
 
-    const inv = db.prepare('SELECT id, student_id, amount FROM invoices WHERE id = ?').get(txn.invoice_id) as
+    const inv = (await db.prepare('SELECT id, student_id, amount FROM invoices WHERE id = ?').get(txn.invoice_id)) as
       { id: number; student_id: number; amount: number } | undefined;
     if (!inv) return fail('notfound');
 
-    const student = db.prepare('SELECT id, center_id FROM students WHERE id = ?').get(inv.student_id) as
+    const student = (await db.prepare('SELECT id, center_id FROM students WHERE id = ?').get(inv.student_id)) as
       { id: number; center_id: number | null } | undefined;
     const centerId = student?.center_id ?? 0;
-    const secret = getCenterSetting(centerId, 'pay_vnp_hashsecret');
+    const secret = await getCenterSetting(centerId, 'pay_vnp_hashsecret');
     const result = verifyVnpayReturn(query, secret);
     if (!result.ok) return fail('invalid_signature');
     if (!result.success) {
-      db.prepare("UPDATE payment_txns SET status = 'failed' WHERE ref = ?").run(txnRef);
+      await db.prepare("UPDATE payment_txns SET status = 'failed' WHERE ref = ?").run(txnRef);
       return fail('payment_failed');
     }
     // Kiểm tra số tiền khớp (dung sai ±1đ)
     if (Math.abs(result.amountVnd - txn.amount) > 1) {
-      db.prepare("UPDATE payment_txns SET status = 'failed' WHERE ref = ?").run(txnRef);
+      await db.prepare("UPDATE payment_txns SET status = 'failed' WHERE ref = ?").run(txnRef);
       return fail('payment_failed');
     }
-    const tx = db.transaction(() => {
-      db.prepare("UPDATE payment_txns SET status = 'confirmed' WHERE ref = ?").run(txnRef);
-      db.prepare(
+    await db.transaction(async (tx) => {
+      await tx.prepare("UPDATE payment_txns SET status = 'confirmed' WHERE ref = ?").run(txnRef);
+      await tx.prepare(
         "INSERT INTO payments (invoice_id, amount, method, note, status) VALUES (?, ?, 'vnpay', ?, 'confirmed')"
       ).run(txn.invoice_id, txn.amount, 'VNPay ' + String(query.vnp_TransactionNo || ''));
     });
-    tx();
-    const status = recalcInvoiceStatus(txn.invoice_id);
-    if (status === 'paid') afterInvoicePaid(txn.invoice_id);
+    const status = await recalcInvoiceStatus(txn.invoice_id);
+    if (status === 'paid') await afterInvoicePaid(txn.invoice_id);
     return `${RESULT_PAGE}?status=success&ref=${encodeURIComponent(txnRef)}`;
   } catch {
     return fail('error');
@@ -75,7 +77,7 @@ export function handleVnpayReturn(query: Record<string, string | string[] | unde
 
 /* --------------------------- Duyệt thanh toán --------------------------- */
 
-export function listPendingPayments(centerId: number | null, pageOpts: PageOptions = {}): Paginated<unknown> {
+export async function listPendingPayments(centerId: number | null, pageOpts: PageOptions = {}):  Promise<Paginated<unknown>> {
   const conds = ["p.status = 'pending'"];
   const params: unknown[] = [];
   if (centerId !== null) {
@@ -84,9 +86,8 @@ export function listPendingPayments(centerId: number | null, pageOpts: PageOptio
   }
   const { page, limit, offset } = parsePagination(pageOpts);
   const from = `FROM payments p JOIN invoices i ON i.id = p.invoice_id JOIN students s ON s.id = i.student_id WHERE ${conds.join(' AND ')}`;
-  const total = (db.prepare(`SELECT COUNT(*) as c ${from}`).get(...params) as { c: number }).c;
-  const rows = db
-    .prepare(
+  const total = (await db.prepare(`SELECT COUNT(*) as c ${from}`).get(...params) as { c: number }).c;
+  const rows = await db.prepare(
       `SELECT p.id, p.invoice_id, p.amount, p.paid_at, p.method, p.note,
          s.name as student_name, s.code as student_code
        ${from} ORDER BY p.id DESC LIMIT ? OFFSET ?`
@@ -95,8 +96,8 @@ export function listPendingPayments(centerId: number | null, pageOpts: PageOptio
   return paginate(rows, total, page, limit);
 }
 
-function getPendingPayment(id: number): { id: number; invoice_id: number; amount: number; status: string } {
-  const payment = db.prepare('SELECT * FROM payments WHERE id = ?').get(id) as
+async function getPendingPayment(id: number): Promise<{ id: number; invoice_id: number; amount: number; status: string; }> {
+  const payment = await db.prepare('SELECT * FROM payments WHERE id = ?').get(id) as
     { id: number; invoice_id: number; amount: number; status: string } | undefined;
   if (!payment || payment.status !== 'pending') {
     throw AppError.notFound('Không tìm thấy khoản thanh toán đang chờ duyệt');
@@ -104,7 +105,7 @@ function getPendingPayment(id: number): { id: number; invoice_id: number; amount
   return payment;
 }
 
-function notifyPaymentResult(studentId: number, amount: number, invoiceId: number, approved: boolean): void {
+async function notifyPaymentResult(studentId: number, amount: number, invoiceId: number, approved: boolean): Promise<void> {
   const money = Number(amount).toLocaleString('vi-VN');
   notifyParents(
     studentId,
@@ -116,17 +117,17 @@ function notifyPaymentResult(studentId: number, amount: number, invoiceId: numbe
   );
 }
 
-export function approvePendingPayment(id: number, actor?: AuditActor): { status: string } {
-  const payment = getPendingPayment(id);
-  db.prepare("UPDATE payments SET status = 'confirmed' WHERE id = ?").run(id);
-  const status = recalcInvoiceStatus(payment.invoice_id);
-  if (status === 'paid') afterInvoicePaid(payment.invoice_id);
-  const inv = db.prepare('SELECT student_id FROM invoices WHERE id = ?').get(payment.invoice_id) as
+export async function approvePendingPayment(id: number, actor?: AuditActor): Promise<{ status: string; }> {
+  const payment = await getPendingPayment(id);
+  await db.prepare("UPDATE payments SET status = 'confirmed' WHERE id = ?").run(id);
+  const status = await recalcInvoiceStatus(payment.invoice_id);
+  if (status === 'paid') await afterInvoicePaid(payment.invoice_id);
+  const inv = await db.prepare('SELECT student_id FROM invoices WHERE id = ?').get(payment.invoice_id) as
     { student_id: number } | undefined;
-  if (inv) notifyPaymentResult(inv.student_id, payment.amount, payment.invoice_id, true);
+  if (inv) await notifyPaymentResult(inv.student_id, payment.amount, payment.invoice_id, true);
   const cid = inv
     ? ((
-        db.prepare('SELECT center_id FROM students WHERE id = ?').get(inv.student_id) as
+        await db.prepare('SELECT center_id FROM students WHERE id = ?').get(inv.student_id) as
           { center_id: number | null } | undefined
       )?.center_id ?? null)
     : null;
@@ -143,15 +144,15 @@ export function approvePendingPayment(id: number, actor?: AuditActor): { status:
   return { status };
 }
 
-export function rejectPendingPayment(id: number, actor?: AuditActor): void {
-  const payment = getPendingPayment(id);
-  db.prepare("UPDATE payments SET status = 'rejected' WHERE id = ?").run(id);
-  const inv = db.prepare('SELECT student_id FROM invoices WHERE id = ?').get(payment.invoice_id) as
+export async function rejectPendingPayment(id: number, actor?: AuditActor): Promise<void> {
+  const payment = await getPendingPayment(id);
+  await db.prepare("UPDATE payments SET status = 'rejected' WHERE id = ?").run(id);
+  const inv = await db.prepare('SELECT student_id FROM invoices WHERE id = ?').get(payment.invoice_id) as
     { student_id: number } | undefined;
-  if (inv) notifyPaymentResult(inv.student_id, payment.amount, payment.invoice_id, false);
+  if (inv) await notifyPaymentResult(inv.student_id, payment.amount, payment.invoice_id, false);
   const cid = inv
     ? ((
-        db.prepare('SELECT center_id FROM students WHERE id = ?').get(inv.student_id) as
+        await db.prepare('SELECT center_id FROM students WHERE id = ?').get(inv.student_id) as
           { center_id: number | null } | undefined
       )?.center_id ?? null)
     : null;
@@ -169,30 +170,30 @@ export function rejectPendingPayment(id: number, actor?: AuditActor): void {
 
 /* ---------------------------- Cấu hình thanh toán ---------------------------- */
 
-function resolveConfigCenterId(centerId: number | null): number {
+async function resolveConfigCenterId(centerId: number | null):  Promise<number> {
   if (centerId !== null) return centerId;
-  const c = getDefaultCenter();
+  const c = await getDefaultCenter();
   if (!c) throw AppError.badRequest('Chưa có trung tâm nào trong hệ thống');
   return c.id;
 }
 
 /** Xem cấu hình — hashsecret được che. */
-export function getPaymentConfig(centerId: number | null): Record<string, string> {
-  const cid = resolveConfigCenterId(centerId);
+export async function getPaymentConfig(centerId: number | null): Promise<Record<string, string>> {
+  const cid = await resolveConfigCenterId(centerId);
   const out: Record<string, string> = {};
   for (const k of CONFIG_KEYS) {
-    const v = getCenterSetting(cid, k);
+    const v = await getCenterSetting(cid, k);
     out[k] = k === 'pay_vnp_hashsecret' ? maskAccessToken(v) : v;
   }
   return out;
 }
 
-export function savePaymentConfig(centerId: number | null, body: Record<string, unknown>): void {
-  const cid = resolveConfigCenterId(centerId);
+export async function savePaymentConfig(centerId: number | null, body: Record<string, unknown>): Promise<void> {
+  const cid = await resolveConfigCenterId(centerId);
   for (const k of CONFIG_KEYS) {
     if (!(k in body)) continue;
     let value = String(body[k] ?? '');
     if (k === 'pay_vnp_enabled') value = value === '1' ? '1' : '0';
-    setCenterSetting(cid, k, value);
+    await setCenterSetting(cid, k, value);
   }
 }

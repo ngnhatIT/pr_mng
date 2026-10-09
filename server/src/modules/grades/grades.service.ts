@@ -31,11 +31,11 @@ export interface GradeQuery {
  * - Scope center qua học viên (join students).
  * - Giáo viên chỉ thấy điểm của lớp mình dạy.
  */
-export function listGrades(
+export async function listGrades(
   ctx: ScopeCtx,
   query: GradeQuery,
   pageOpts: PageOptions = {}
-): Paginated<GradeRow> {
+):  Promise<Paginated<GradeRow>> {
   const conds = ['1=1'];
   const params: unknown[] = [];
   if (ctx.centerId !== null) {
@@ -60,9 +60,8 @@ export function listGrades(
        LEFT JOIN classes c ON c.id = g.class_id`;
   const where = `WHERE ${conds.join(' AND ')}`;
   const { page, limit, offset } = parsePagination(pageOpts);
-  const total = (db.prepare(`SELECT COUNT(*) as c ${from} ${where}`).get(...params) as { c: number }).c;
-  const rows = db
-    .prepare(
+  const total = (await db.prepare(`SELECT COUNT(*) as c ${from} ${where}`).get(...params) as { c: number }).c;
+  const rows = await db.prepare(
       `SELECT g.*, s.name as student_name, s.code as student_code, c.name as class_name
        ${from} ${where} ORDER BY g.id DESC LIMIT ? OFFSET ?`
     )

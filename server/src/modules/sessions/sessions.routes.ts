@@ -20,7 +20,7 @@ function scopeOf(req: AuthRequest): ScopeCtx {
 router.get(
   '/classes/:classId/sessions',
   asyncHandler(async (req: AuthRequest, res: Response) => {
-    res.json(sessionService.listClassSessions(scopeOf(req), paramId(req.params, 'classId')));
+    res.json(await sessionService.listClassSessions(scopeOf(req), paramId(req.params, 'classId')));
   })
 );
 
@@ -33,7 +33,7 @@ router.post(
       date: v.string({ required: true, label: 'Ngày học' }),
       topic: v.string({ max: 255, label: 'Chủ đề' }),
     });
-    const created = sessionService.createSession(scopeOf(req), {
+    const created = await sessionService.createSession(scopeOf(req), {
       class_id: input.class_id,
       date: input.date,
       topic: input.topic ?? undefined,
@@ -49,7 +49,7 @@ router.put(
     const { topic } = validate(req.body, {
       topic: v.string({ max: 255, label: 'Chủ đề' }),
     });
-    res.json(sessionService.updateSessionTopic(scopeOf(req), paramId(req.params), topic ?? undefined));
+    res.json(await sessionService.updateSessionTopic(scopeOf(req), paramId(req.params), topic ?? undefined));
   })
 );
 
@@ -66,7 +66,7 @@ router.delete(
 router.get(
   '/sessions/:id/attendance',
   asyncHandler(async (req: AuthRequest, res: Response) => {
-    res.json(sessionService.getSessionAttendance(scopeOf(req), paramId(req.params)));
+    res.json(await sessionService.getSessionAttendance(scopeOf(req), paramId(req.params)));
   })
 );
 
@@ -77,7 +77,7 @@ router.post(
     const { records } = validate(req.body, {
       records: v.any({ required: true, label: 'Dữ liệu điểm danh' }),
     });
-    const result = sessionService.saveAttendance(
+    const result = await sessionService.saveAttendance(
       scopeOf(req),
       paramId(req.params),
       records as { student_id: number; status: string; note?: string }[]
@@ -91,7 +91,7 @@ router.post(
   '/sessions/:id/checkin-code',
   staffOnly,
   asyncHandler(async (req: AuthRequest, res: Response) => {
-    res.json(sessionService.generateCheckinCode(scopeOf(req), paramId(req.params)));
+    res.json(await sessionService.generateCheckinCode(scopeOf(req), paramId(req.params)));
   })
 );
 

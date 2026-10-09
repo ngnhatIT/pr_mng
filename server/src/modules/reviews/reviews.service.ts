@@ -21,11 +21,11 @@ export interface ReviewQuery {
 /* --------------------------------- Service --------------------------------- */
 
 /** Danh sách đánh giá (có phân trang). */
-export function listReviews(
+export async function listReviews(
   centerId: number | null,
   query: ReviewQuery,
   pageOpts: PageOptions = {}
-): Paginated<ReviewRow> {
+):  Promise<Paginated<ReviewRow>> {
   const { status = '' } = query;
   const conds: string[] = [];
   const params: unknown[] = [];
@@ -40,9 +40,8 @@ export function listReviews(
   const from = `FROM reviews r LEFT JOIN parents p ON p.id = r.parent_id`;
   const where = conds.length ? `WHERE ${conds.join(' AND ')}` : '';
   const { page, limit, offset } = parsePagination(pageOpts);
-  const total = (db.prepare(`SELECT COUNT(*) as c ${from} ${where}`).get(...params) as { c: number }).c;
-  const rows = db
-    .prepare(
+  const total = (await db.prepare(`SELECT COUNT(*) as c ${from} ${where}`).get(...params) as { c: number }).c;
+  const rows = await db.prepare(
       `SELECT r.id, r.rating, r.comment, r.status, r.created_at,
          p.name as parent_name, p.phone as parent_phone
        ${from} ${where}

@@ -18,8 +18,8 @@ interface LeadRow {
 }
 
 /** Lấy lead và kiểm tra thuộc trung tâm của user */
-function getLead(id: number, cid: number | null): LeadRow | undefined {
-  const row = db.prepare('SELECT * FROM leads WHERE id = ?').get(id) as LeadRow | undefined;
+async function getLead(id: number, cid: number | null): Promise<LeadRow | undefined> {
+  const row = await db.prepare('SELECT * FROM leads WHERE id = ?').get(id) as LeadRow | undefined;
   if (!row) return undefined;
   if (cid !== null && row.center_id !== cid) return undefined;
   return row;
@@ -74,10 +74,9 @@ router.post(
         : 'new';
     const source = body?.source ? String(body.source).trim() : null;
     const note = body?.note ? String(body.note).trim() : null;
-    const r = db
-      .prepare('INSERT INTO leads (center_id, name, phone, source, status, note) VALUES (?, ?, ?, ?, ?, ?)')
+    const r = await db.prepare('INSERT INTO leads (center_id, name, phone, source, status, note) VALUES (?, ?, ?, ?, ?, ?)')
       .run(cid, name, phone, source, status, note);
-    const row = db.prepare('SELECT * FROM leads WHERE id = ?').get(r.lastInsertRowid);
+    const row = await db.prepare('SELECT * FROM leads WHERE id = ?').get(r.lastInsertRowid);
     res.status(201).json(row);
   })
 );
@@ -134,9 +133,9 @@ router.put(
       params.push(body.note ? String(body.note).trim() : null);
     }
     if (sets.length > 0) {
-      db.prepare(`UPDATE leads SET ${sets.join(', ')} WHERE id = ?`).run(...params, id);
+      await db.prepare(`UPDATE leads SET ${sets.join(', ')} WHERE id = ?`).run(...params, id);
     }
-    const row = db.prepare('SELECT * FROM leads WHERE id = ?').get(id);
+    const row = await db.prepare('SELECT * FROM leads WHERE id = ?').get(id);
     res.json(row);
   })
 );
@@ -154,7 +153,7 @@ router.delete(
       res.status(404).json({ error: 'Không tìm thấy lead' });
       return;
     }
-    db.prepare('DELETE FROM leads WHERE id = ?').run(id);
+    await db.prepare('DELETE FROM leads WHERE id = ?').run(id);
     res.json({ ok: true });
   })
 );
@@ -167,7 +166,7 @@ router.post(
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const cid = reqCenterId(req);
     const id = Number(req.params.id);
-    const lead = getLead(id, cid);
+    const lead = await getLead(id, cid);
     if (!lead) {
       res.status(404).json({ error: 'Không tìm thấy lead' });
       return;
@@ -180,8 +179,7 @@ router.post(
         res.status(400).json({ error: 'Lớp học không hợp lệ' });
         return;
       }
-      const cls = db
-        .prepare(`SELECT id FROM classes WHERE id = ?${cid !== null ? ' AND center_id = ?' : ''}`)
+      const cls = await db.prepare(`SELECT id FROM classes WHERE id = ?${cid !== null ? ' AND center_id = ?' : ''}`)
         .get(...(cid !== null ? [classId, cid] : [classId]));
       if (!cls) {
         res.status(400).json({ error: 'Lớp học không tồn tại' });
@@ -194,17 +192,16 @@ router.post(
       return;
     }
     const code = `HV${Date.now().toString().slice(-6)}`;
-    const r = db
-      .prepare("INSERT INTO students (code, name, phone, status, center_id) VALUES (?, ?, ?, 'studying', ?)")
+    const r = await db.prepare("INSERT INTO students (code, name, phone, status, center_id) VALUES (?, ?, ?, 'studying', ?)")
       .run(code, lead.name, lead.phone, centerId);
     const studentId = Number(r.lastInsertRowid);
     if (classId !== null) {
-      db.prepare('INSERT OR IGNORE INTO enrollments (student_id, class_id) VALUES (?, ?)').run(
+      await db.prepare('INSERT OR IGNORE INTO enrollments (student_id, class_id) VALUES (?, ?)').run(
         studentId,
         classId
       );
     }
-    db.prepare("UPDATE leads SET status = 'enrolled' WHERE id = ?").run(id);
+    await db.prepare("UPDATE leads SET status = 'enrolled' WHERE id = ?").run(id);
     res.json({ ok: true, student_id: studentId });
   })
 );

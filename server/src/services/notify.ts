@@ -10,9 +10,8 @@ export interface ParentContact {
 }
 
 /** Lấy danh sách phụ huynh đã liên kết với học viên (kèm SĐT chuẩn hóa) */
-export function getParentContacts(studentId: number): ParentContact[] {
-  const rows = db
-    .prepare(
+export async function getParentContacts(studentId: number): Promise<ParentContact[]> {
+  const rows = await db.prepare(
       `SELECT p.id as parent_id, p.phone, p.name
        FROM parent_students ps JOIN parents p ON p.id = ps.parent_id
        WHERE ps.student_id = ?`
@@ -27,16 +26,16 @@ export function getParentContacts(studentId: number): ParentContact[] {
  * ghi ở trạng thái 'demo' — trung tâm xem được trong Lịch sử nhắc; khi có template
  * ZNS cho từng loại thì mở rộng gửi thật tại đây.
  */
-export function logParentNotice(opts: {
+export async function logParentNotice(opts: {
   studentId?: number | null;
   invoiceId?: number | null;
   phone?: string | null;
   kind: NoticeKind;
   message: string;
-}): void {
+}): Promise<void> {
   const phone = normalizePhone(opts.phone ?? null);
   try {
-    db.prepare(
+    await db.prepare(
       'INSERT INTO reminders (invoice_id, student_id, phone, kind, status, message, response) VALUES (?, ?, ?, ?, ?, ?, ?)'
     ).run(
       opts.invoiceId ?? null,
@@ -53,13 +52,13 @@ export function logParentNotice(opts: {
 }
 
 /** Gửi (ghi log) thông báo tới mọi phụ huynh của học viên */
-export function notifyParents(
+export async function notifyParents(
   studentId: number,
   kind: NoticeKind,
   message: string,
   invoiceId?: number | null
-): void {
-  const contacts = getParentContacts(studentId);
+): Promise<void> {
+  const contacts = await getParentContacts(studentId);
   for (const c of contacts) {
     logParentNotice({ studentId, invoiceId: invoiceId ?? null, phone: c.phone, kind, message });
   }

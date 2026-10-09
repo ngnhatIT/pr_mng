@@ -6,7 +6,7 @@ Tài liệu dành cho developer tiếp quản / mở rộng dự án.
 
 ```
 educenter-pro-full/
-├── server/          # Backend: Express + TypeScript + SQLite (better-sqlite3)
+├── server/          # Backend: Express + TypeScript + PostgreSQL (pg pool)
 ├── client/          # Frontend: React + Vite + TypeScript
 └── package.json     # Monorepo (npm workspaces)
 ```
@@ -22,7 +22,7 @@ server/src/
 ├── config/
 │   └── env.ts          # MỌI biến môi trường tập trung ở đây, validate lúc khởi động
 ├── db/                 # Tầng dữ liệu
-│   ├── connection.ts   # Singleton better-sqlite3 (WAL mode)
+│   ├── pg-compat.ts    # Pool PostgreSQL + lớp tương thích API (prepare/get/all/run/exec/transaction)
 │   ├── schema.ts       # CREATE TABLE (idempotent)
 │   ├── migrations.ts   # Thêm cột cho DB cũ (idempotent)
 │   ├── date-utils.ts   # Hàm thuần: ngày tháng, lịch học (+ date-utils.test.ts)

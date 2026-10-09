@@ -27,10 +27,9 @@ router.post(
       email: v.string({ max: 100, label: 'Email' }),
       subject: v.string({ max: 100, label: 'Môn dạy' }),
     });
-    const r = db
-      .prepare('INSERT INTO teachers (name, phone, email, subject, center_id) VALUES (?, ?, ?, ?, ?)')
+    const r = await db.prepare('INSERT INTO teachers (name, phone, email, subject, center_id) VALUES (?, ?, ?, ?, ?)')
       .run(name.trim(), phone || null, email || null, subject || null, cid);
-    res.status(201).json(db.prepare('SELECT * FROM teachers WHERE id = ?').get(Number(r.lastInsertRowid)));
+    res.status(201).json(await db.prepare('SELECT * FROM teachers WHERE id = ?').get(Number(r.lastInsertRowid)));
   })
 );
 
@@ -39,7 +38,7 @@ router.put(
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const cid = reqCenterId(req);
     const id = Number(req.params.id);
-    const cur = db.prepare('SELECT center_id, name FROM teachers WHERE id = ?').get(id) as
+    const cur = await db.prepare('SELECT center_id, name FROM teachers WHERE id = ?').get(id) as
       { center_id: number | null; name: string } | undefined;
     if (!cur || (cid !== null && cur.center_id !== cid)) {
       res.status(404).json({ error: 'Không tìm thấy giáo viên' });
@@ -51,14 +50,13 @@ router.put(
       email: v.string({ max: 100, label: 'Email' }),
       subject: v.string({ max: 100, label: 'Môn dạy' }),
     });
-    const r = db
-      .prepare('UPDATE teachers SET name=?, phone=?, email=?, subject=? WHERE id=?')
+    const r = await db.prepare('UPDATE teachers SET name=?, phone=?, email=?, subject=? WHERE id=?')
       .run(name.trim(), phone || null, email || null, subject || null, id);
     if (r.changes === 0) {
       res.status(404).json({ error: 'Không tìm thấy giáo viên' });
       return;
     }
-    res.json(db.prepare('SELECT * FROM teachers WHERE id = ?').get(id));
+    res.json(await db.prepare('SELECT * FROM teachers WHERE id = ?').get(id));
   })
 );
 
@@ -67,16 +65,16 @@ router.delete(
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const cid = reqCenterId(req);
     const id = Number(req.params.id);
-    const cur = db.prepare('SELECT center_id, name FROM teachers WHERE id = ?').get(id) as
+    const cur = await db.prepare('SELECT center_id, name FROM teachers WHERE id = ?').get(id) as
       { center_id: number | null; name: string } | undefined;
     if (!cur || (cid !== null && cur.center_id !== cid)) {
       res.status(404).json({ error: 'Không tìm thấy giáo viên' });
       return;
     }
-    db.prepare('UPDATE classes SET teacher_id = NULL WHERE teacher_id = ?').run(id);
-    db.prepare('DELETE FROM teacher_checkins WHERE teacher_id = ?').run(id);
-    db.prepare('DELETE FROM salary_rules WHERE teacher_id = ?').run(id);
-    db.prepare('DELETE FROM teachers WHERE id = ?').run(id);
+    await db.prepare('UPDATE classes SET teacher_id = NULL WHERE teacher_id = ?').run(id);
+    await db.prepare('DELETE FROM teacher_checkins WHERE teacher_id = ?').run(id);
+    await db.prepare('DELETE FROM salary_rules WHERE teacher_id = ?').run(id);
+    await db.prepare('DELETE FROM teachers WHERE id = ?').run(id);
     audit({
       centerId: cid,
       actor: actorFromReq(req),
@@ -96,7 +94,7 @@ router.post(
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const cid = reqCenterId(req);
     const id = Number(req.params.id);
-    const teacher = db.prepare('SELECT * FROM teachers WHERE id = ?').get(id) as
+    const teacher = await db.prepare('SELECT * FROM teachers WHERE id = ?').get(id) as
       { id: number; name: string; center_id: number | null } | undefined;
     if (!teacher || (cid !== null && teacher.center_id !== cid)) {
       res.status(404).json({ error: 'Không tìm thấy giáo viên' });
@@ -107,19 +105,18 @@ router.post(
       res.status(400).json({ error: 'Tên đăng nhập và mật khẩu (tối thiểu 4 ký tự) là bắt buộc' });
       return;
     }
-    const exists = db.prepare('SELECT 1 FROM users WHERE username = ?').get(username.trim());
+    const exists = await db.prepare('SELECT 1 FROM users WHERE username = ?').get(username.trim());
     if (exists) {
       res.status(400).json({ error: 'Tên đăng nhập đã tồn tại' });
       return;
     }
-    const linked = db.prepare('SELECT 1 FROM users WHERE teacher_id = ?').get(id);
+    const linked = await db.prepare('SELECT 1 FROM users WHERE teacher_id = ?').get(id);
     if (linked) {
       res.status(400).json({ error: 'Giáo viên này đã có tài khoản đăng nhập' });
       return;
     }
     const hash = bcrypt.hashSync(password, 10);
-    const r = db
-      .prepare(
+    const r = await db.prepare(
         'INSERT INTO users (username, password_hash, role, name, center_id, teacher_id) VALUES (?, ?, ?, ?, ?, ?)'
       )
       .run(username.trim(), hash, 'teacher', teacher.name, teacher.center_id, id);

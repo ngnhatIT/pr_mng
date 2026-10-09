@@ -21,7 +21,31 @@ Phần mềm quản lý trung tâm ngoại ngữ / lớp học / gym — bản f
 | `root` | `123456` | Superadmin — quản trị hệ thống đa trung tâm |
 | SĐT `0900000001` | `123456` | Phụ huynh demo (đã liên kết HV001, HV002) — đăng nhập tại `/parent/login` |
 
-Dữ liệu lưu trong file SQLite `server/data.db` (tự tạo + seed khi chạy lần đầu).
+Dữ liệu lưu trong PostgreSQL (tự tạo schema + seed khi chạy lần đầu).
+
+## Database: PostgreSQL
+
+```bash
+# 1. Cài PostgreSQL 16+ và tạo database
+sudo apt install postgresql
+sudo -u postgres psql -c "CREATE USER educenter WITH PASSWORD 'educenter123' SUPERUSER;"
+sudo -u postgres psql -c "CREATE DATABASE educenter OWNER educenter;"
+
+# 2. Cấu hình (copy .env.example thành server/.env)
+DATABASE_URL=postgres://educenter:educenter123@localhost:5432/educenter
+
+# 3. Chạy — schema 44 bảng + 36 trigger tự tạo lần đầu
+npm run dev
+```
+
+Đang dùng SQLite cũ? Migrate dữ liệu:
+
+```bash
+npx tsx scripts/migrate-sqlite-to-pg.ts --sqlite ./server/data.db --pg $DATABASE_URL
+```
+
+Script chỉ đọc SQLite (read-only), ghi PG trong 1 transaction, giữ nguyên id,
+reset sequence và đối chiếu số dòng từng bảng.
 
 ## Giai đoạn 1 — Cổng phụ huynh & vận hành
 
@@ -65,7 +89,7 @@ Luồng "Đã chuyển khoản": phụ huynh bấm báo đã chuyển → khoả
 
 ```bash
 # Cài đặt (chạy 1 lần ở thư mục gốc)
-npm install --nodedir=/usr   # --nodedir chỉ cần khi build better-sqlite3 từ source (môi trường không tải được prebuild)
+npm install
 
 # Chạy dev: server (4000) + client (5173)
 npm run dev

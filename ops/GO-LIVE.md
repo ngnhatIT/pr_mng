@@ -21,11 +21,11 @@ Cập nhật: 2026-10-08 (sau đợt fix bảo mật QC chuyên nghiệp)
 5. **Zalo ZNS**: các template nhắc học phí mới hiện chỉ log ở demo mode → đăng ký template thật với Zalo OA.
 6. **Audit log**: chưa có — nên có để truy vết ai sửa/xóa dữ liệu (nice-to-have cho go-live).
 7. **HTTPS**: production nên chạy sau reverse proxy có TLS (Nginx/Caddy) — chưa có hướng dẫn deploy.
-8. **SQLite single-file**: đủ cho pilot 1 trung tâm; nếu chạy nhiều trung tâm đồng thời với tải cao thì tính đường lên Postgres sau.
+8. **PostgreSQL**: đã dùng PostgreSQL 16+ (pool 20 connections), sẵn sàng cho nhiều trung tâm đồng thời.
 
 ## Khôi phục database khi sự cố
 ```
 # 1. Dừng app
-# 2. cp server/backups/data-YYYYMMDD-HHMMSS.db server/data.db
+# 2. pg_restore -d $DATABASE_URL /backup/educenter-YYYYMMDD.dump
 # 3. Khởi động lại app
 ```

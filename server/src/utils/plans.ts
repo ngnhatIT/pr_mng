@@ -32,17 +32,17 @@ export interface Center {
   created_at: string;
 }
 
-export function getCenter(id: number): Center | undefined {
-  return db.prepare('SELECT * FROM centers WHERE id = ?').get(id) as Center | undefined;
+export async function getCenter(id: number): Promise<Center | undefined> {
+  return await db.prepare('SELECT * FROM centers WHERE id = ?').get(id) as Center | undefined;
 }
 
-export function listCenters(): Center[] {
-  return db.prepare('SELECT * FROM centers ORDER BY id ASC').all() as Center[];
+export async function listCenters(): Promise<Center[]> {
+  return await db.prepare('SELECT * FROM centers ORDER BY id ASC').all() as Center[];
 }
 
 /** Trung tâm mặc định cho các API công khai (trung tâm đầu tiên) */
-export function getDefaultCenter(): Center | undefined {
-  return db.prepare('SELECT * FROM centers ORDER BY id ASC LIMIT 1').get() as Center | undefined;
+export async function getDefaultCenter(): Promise<Center | undefined> {
+  return await db.prepare('SELECT * FROM centers ORDER BY id ASC LIMIT 1').get() as Center | undefined;
 }
 
 /** Gói hiệu lực: hết hạn thì rớt về basic */
@@ -67,14 +67,14 @@ export function hasFeature(center: Center | undefined, key: string): boolean {
  * Xác định trung tâm cho API công khai: ưu tiên subdomain từ Host,
  * ngược lại dùng trung tâm mặc định.
  */
-export function resolvePublicCenter(req: Request): Center | undefined {
+export async function resolvePublicCenter(req: Request):  Promise<Center | undefined> {
   const host = (req.get('host') || '').split(':')[0].toLowerCase();
   if (host && !['localhost', '127.0.0.1'].includes(host)) {
     const sub = host.split('.')[0];
     if (sub && sub !== 'www') {
-      const c = db.prepare('SELECT * FROM centers WHERE subdomain = ?').get(sub) as Center | undefined;
+      const c = await db.prepare('SELECT * FROM centers WHERE subdomain = ?').get(sub) as Center | undefined;
       if (c) return c;
     }
   }
-  return getDefaultCenter();
+  return await getDefaultCenter();
 }

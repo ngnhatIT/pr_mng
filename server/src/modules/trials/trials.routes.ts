@@ -34,21 +34,21 @@ router.put(
       res.status(400).json({ error: 'Trạng thái không hợp lệ' });
       return;
     }
-    const trial = db.prepare('SELECT id, center_id FROM trial_registrations WHERE id = ?').get(id) as
+    const trial = await db.prepare('SELECT id, center_id FROM trial_registrations WHERE id = ?').get(id) as
       { id: number; center_id: number | null } | undefined;
     if (!trial || (cid !== null && trial.center_id !== cid)) {
       res.status(404).json({ error: 'Không tìm thấy đăng ký học thử' });
       return;
     }
-    db.prepare('UPDATE trial_registrations SET status = ? WHERE id = ?').run(status, id);
-    res.json(db.prepare('SELECT * FROM trial_registrations WHERE id = ?').get(id));
+    await db.prepare('UPDATE trial_registrations SET status = ? WHERE id = ?').run(status, id);
+    res.json(await db.prepare('SELECT * FROM trial_registrations WHERE id = ?').get(id));
   })
 );
 
-function genStudentCode(): string {
+async function genStudentCode(): Promise<string> {
   for (let i = 0; i < 10; i++) {
     const code = `HV${Date.now().toString().slice(-6)}`;
-    const exists = db.prepare('SELECT 1 FROM students WHERE code = ?').get(code);
+    const exists = await db.prepare('SELECT 1 FROM students WHERE code = ?').get(code);
     if (!exists) return code;
   }
   return `HV${Date.now().toString().slice(-8)}`;
@@ -60,7 +60,7 @@ router.post(
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const cid = reqCenterId(req);
     const id = Number(req.params.id);
-    const trial = db.prepare('SELECT * FROM trial_registrations WHERE id = ?').get(id) as
+    const trial = await db.prepare('SELECT * FROM trial_registrations WHERE id = ?').get(id) as
       | {
           id: number;
           center_id: number | null;
@@ -78,7 +78,7 @@ router.post(
     const { class_id } = req.body as { class_id?: number };
     let enrollClassId: number | null = null;
     if (class_id) {
-      const cls = db.prepare('SELECT id, center_id FROM classes WHERE id = ?').get(Number(class_id)) as
+      const cls = await db.prepare('SELECT id, center_id FROM classes WHERE id = ?').get(Number(class_id)) as
         { id: number; center_id: number | null } | undefined;
       if (!cls || (cid !== null && cls.center_id !== cid)) {
         res.status(404).json({ error: 'Không tìm thấy lớp học' });
@@ -90,29 +90,27 @@ router.post(
     }
 
     const code = genStudentCode();
-    const tx = db.transaction(() => {
-      const r = db
-        .prepare(
+    const studentId = await db.transaction(async (tx) => {
+      const r = await tx.prepare(
           "INSERT INTO students (code, name, phone, status, center_id) VALUES (?, ?, ?, 'studying', ?)"
         )
         .run(code, trial.name, trial.phone, trial.center_id);
       const studentId = Number(r.lastInsertRowid);
       if (enrollClassId) {
-        db.prepare('INSERT OR IGNORE INTO enrollments (student_id, class_id) VALUES (?, ?)').run(
+        await tx.prepare('INSERT OR IGNORE INTO enrollments (student_id, class_id) VALUES (?, ?)').run(
           studentId,
           enrollClassId
         );
       }
-      db.prepare("UPDATE trial_registrations SET status = 'converted' WHERE id = ?").run(id);
+      await tx.prepare("UPDATE trial_registrations SET status = 'converted' WHERE id = ?").run(id);
       // Gắn referral đang chờ theo SĐT (nếu trial đăng ký bằng mã giới thiệu)
       if (trial.referral_code && trial.phone) {
-        db.prepare(
+        await tx.prepare(
           "UPDATE referrals SET referred_student_id = ? WHERE referred_phone = ? AND status = 'pending' AND referred_student_id IS NULL"
         ).run(studentId, trial.phone);
       }
       return studentId;
     });
-    const studentId = tx();
     res.json({ ok: true, student_id: studentId });
   })
 );

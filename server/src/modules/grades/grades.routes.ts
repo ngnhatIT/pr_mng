@@ -49,7 +49,7 @@ router.post(
       res.status(400).json({ error: 'Điểm số không hợp lệ' });
       return;
     }
-    const student = db.prepare('SELECT id, center_id FROM students WHERE id = ?').get(Number(student_id)) as
+    const student = await db.prepare('SELECT id, center_id FROM students WHERE id = ?').get(Number(student_id)) as
       { id: number; center_id: number | null } | undefined;
     if (!student || (cid !== null && student.center_id !== cid)) {
       res.status(404).json({ error: 'Không tìm thấy học viên' });
@@ -57,8 +57,7 @@ router.post(
     }
     let classId: number | null = null;
     if (class_id) {
-      const cls = db
-        .prepare('SELECT id, center_id, teacher_id FROM classes WHERE id = ?')
+      const cls = await db.prepare('SELECT id, center_id, teacher_id FROM classes WHERE id = ?')
         .get(Number(class_id)) as
         { id: number; center_id: number | null; teacher_id: number | null } | undefined;
       if (!cls || (cid !== null && cls.center_id !== cid)) {
@@ -76,8 +75,7 @@ router.post(
       res.status(400).json({ error: 'Vui lòng chọn lớp học' });
       return;
     }
-    const r = db
-      .prepare(
+    const r = await db.prepare(
         'INSERT INTO grades (center_id, student_id, class_id, title, score, max_score, comment, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
       )
       .run(
@@ -90,7 +88,7 @@ router.post(
         (comment as string) || null,
         req.user!.id
       );
-    res.status(201).json(db.prepare('SELECT * FROM grades WHERE id = ?').get(Number(r.lastInsertRowid)));
+    res.status(201).json(await db.prepare('SELECT * FROM grades WHERE id = ?').get(Number(r.lastInsertRowid)));
   })
 );
 
@@ -100,8 +98,7 @@ router.delete(
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const cid = reqCenterId(req);
     const id = Number(req.params.id);
-    const grade = db
-      .prepare(
+    const grade = await db.prepare(
         `SELECT g.id, s.center_id, c.teacher_id
        FROM grades g
        JOIN students s ON s.id = g.student_id
@@ -117,7 +114,7 @@ router.delete(
       res.status(403).json({ error: 'Bạn chỉ được xóa điểm của lớp mình' });
       return;
     }
-    db.prepare('DELETE FROM grades WHERE id = ?').run(id);
+    await db.prepare('DELETE FROM grades WHERE id = ?').run(id);
     res.json({ ok: true });
   })
 );

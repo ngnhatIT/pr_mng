@@ -14,14 +14,13 @@ export interface TeacherRow {
 /* --------------------------------- Service --------------------------------- */
 
 /** Danh sách giáo viên kèm số lớp đang dạy (có phân trang). */
-export function listTeachers(centerId: number | null, pageOpts: PageOptions = {}): Paginated<TeacherRow> {
+export async function listTeachers(centerId: number | null, pageOpts: PageOptions = {}):  Promise<Paginated<TeacherRow>> {
   const where = centerId !== null ? 'WHERE t.center_id = ?' : '';
   const params: unknown[] = centerId !== null ? [centerId] : [];
   const { page, limit, offset } = parsePagination(pageOpts);
-  const total = (db.prepare(`SELECT COUNT(*) as c FROM teachers t ${where}`).get(...params) as { c: number })
+  const total = (await db.prepare(`SELECT COUNT(*) as c FROM teachers t ${where}`).get(...params) as { c: number })
     .c;
-  const rows = db
-    .prepare(
+  const rows = await db.prepare(
       `SELECT t.*, (SELECT COUNT(*) FROM classes WHERE teacher_id = t.id AND status = 'active') as class_count
        FROM teachers t ${where} ORDER BY t.id DESC LIMIT ? OFFSET ?`
     )

@@ -10,9 +10,8 @@ export interface HomeworkNotifyInfo {
 }
 
 /** Lấy thông tin bài tập để gửi thông báo (1 query chuẩn). */
-export function getHomeworkNotifyInfo(homeworkId: number): HomeworkNotifyInfo | null {
-  const row = db
-    .prepare(
+export async function getHomeworkNotifyInfo(homeworkId: number): Promise<HomeworkNotifyInfo | null> {
+  const row = await db.prepare(
       `SELECT h.id, h.title, c.name as class_name, h.due_date,
         (SELECT COUNT(*) FROM enrollments e WHERE e.class_id = h.class_id AND e.status = 'active') as student_count
        FROM homework h JOIN classes c ON c.id = h.class_id
@@ -28,12 +27,12 @@ export function getHomeworkNotifyInfo(homeworkId: number): HomeworkNotifyInfo | 
  * Thông báo bài tập mới/phát hành tới phụ huynh (Zalo).
  * Không bao giờ throw — thông báo không được làm hỏng nghiệp vụ chính.
  */
-export function notifyHomework(
+export async function notifyHomework(
   centerId: number | null,
   homeworkId: number
-): void {
+):  Promise<void> {
   try {
-    const info = getHomeworkNotifyInfo(homeworkId);
+    const info = await getHomeworkNotifyInfo(homeworkId);
     if (!info) return;
     sendZalo(
       centerId,

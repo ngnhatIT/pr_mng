@@ -16,7 +16,7 @@ router.post(
       res.status(400).json({ error: 'Vui lòng nhập tên đăng nhập và mật khẩu' });
       return;
     }
-    const user = db.prepare('SELECT * FROM users WHERE username = ?').get(username) as
+    const user = await db.prepare('SELECT * FROM users WHERE username = ?').get(username) as
       | {
           id: number;
           username: string;

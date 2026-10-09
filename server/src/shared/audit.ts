@@ -33,9 +33,9 @@ export interface AuditEntry {
   meta?: Record<string, unknown>;
 }
 
-export function audit(entry: AuditEntry): void {
+export async function audit(entry: AuditEntry): Promise<void> {
   try {
-    db.prepare(
+    await db.prepare(
       `INSERT INTO audit_logs (center_id, actor_id, actor_name, actor_role, action, entity, entity_id, summary, meta, ip)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     ).run(

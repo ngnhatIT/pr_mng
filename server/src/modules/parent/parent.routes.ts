@@ -32,7 +32,7 @@ router.post(
       password: v.string({ required: true, min: 4, label: 'Mật khẩu' }),
       name: v.string({ required: true, max: 100, label: 'Họ tên' }),
     });
-    const result = parentService.registerParent(input);
+    const result = await parentService.registerParent(input);
     res.status(201).json(result);
   })
 );
@@ -45,7 +45,7 @@ router.post(
       phone: v.string({ required: true, label: 'Số điện thoại' }),
       password: v.string({ required: true, label: 'Mật khẩu' }),
     });
-    res.json(parentService.loginParent(input));
+    res.json(await parentService.loginParent(input));
   })
 );
 
@@ -59,7 +59,7 @@ router.post(
     const { student_code } = validate(req.body, {
       student_code: v.string({ required: true, label: 'Mã học viên' }),
     });
-    const student = parentService.linkStudent(parentId, centerId, student_code);
+    const student = await parentService.linkStudent(parentId, centerId, student_code);
     res.json({ ok: true, student });
   })
 );
@@ -67,35 +67,35 @@ router.post(
 router.get(
   '/children',
   asyncHandler(async (req: AuthRequest, res: Response) => {
-    res.json(parentService.listChildren(ctx(req).parentId));
+    res.json(await parentService.listChildren(ctx(req).parentId));
   })
 );
 
 router.get(
   '/children/:id/overview',
   asyncHandler(async (req: AuthRequest, res: Response) => {
-    res.json(parentService.getChildOverview(ctx(req).parentId, paramId(req.params)));
+    res.json(await parentService.getChildOverview(ctx(req).parentId, paramId(req.params)));
   })
 );
 
 router.get(
   '/children/:id/grades',
   asyncHandler(async (req: AuthRequest, res: Response) => {
-    res.json(parentService.listChildGrades(ctx(req).parentId, paramId(req.params)));
+    res.json(await parentService.listChildGrades(ctx(req).parentId, paramId(req.params)));
   })
 );
 
 router.get(
   '/invoices/:id/vietqr',
   asyncHandler(async (req: AuthRequest, res: Response) => {
-    res.json(parentService.getVietqrInfo(ctx(req).parentId, paramId(req.params)));
+    res.json(await parentService.getVietqrInfo(ctx(req).parentId, paramId(req.params)));
   })
 );
 
 router.post(
   '/invoices/:id/claim-paid',
   asyncHandler(async (req: AuthRequest, res: Response) => {
-    const result = parentService.claimPaid(ctx(req).parentId, paramId(req.params));
+    const result = await parentService.claimPaid(ctx(req).parentId, paramId(req.params));
     res.status(201).json({ ok: true, ...result });
   })
 );
@@ -105,7 +105,7 @@ router.post(
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const { parentId } = ctx(req);
     const baseUrl = `${req.protocol}://${req.get('host')}`;
-    res.json(parentService.createVnpayPayment(parentId, paramId(req.params), baseUrl, req.ip || ''));
+    res.json(await parentService.createVnpayPayment(parentId, paramId(req.params), baseUrl, req.ip || ''));
   })
 );
 
@@ -119,7 +119,7 @@ router.post(
       to_date: v.string({ label: 'Ngày kết thúc' }),
       reason: v.string({ max: 500, label: 'Lý do' }),
     });
-    const result = parentService.createLeave(ctx(req).parentId, input);
+    const result = await parentService.createLeave(ctx(req).parentId, input);
     res.status(201).json(result);
   })
 );
@@ -127,7 +127,7 @@ router.post(
 router.get(
   '/leaves',
   asyncHandler(async (req: AuthRequest, res: Response) => {
-    res.json(parentService.listLeaves(ctx(req).parentId));
+    res.json(await parentService.listLeaves(ctx(req).parentId));
   })
 );
 
@@ -135,7 +135,7 @@ router.get(
   '/referral',
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const origin = `${req.protocol}://${req.get('host')}`;
-    res.json(parentService.getReferralInfo(ctx(req).parentId, origin));
+    res.json(await parentService.getReferralInfo(ctx(req).parentId, origin));
   })
 );
 
@@ -147,7 +147,7 @@ router.post(
       rating: v.number({ integer: true, min: 1, max: 5, label: 'Đánh giá' }),
       comment: v.string({ max: 1000, label: 'Nhận xét' }),
     });
-    const result = parentService.createReview(parentId, centerId, input);
+    const result = await parentService.createReview(parentId, centerId, input);
     res.status(201).json(result);
   })
 );
@@ -155,7 +155,7 @@ router.post(
 router.get(
   '/reviews',
   asyncHandler(async (req: AuthRequest, res: Response) => {
-    res.json(parentService.listMyReviews(ctx(req).parentId));
+    res.json(await parentService.listMyReviews(ctx(req).parentId));
   })
 );
 
@@ -192,7 +192,7 @@ router.get(
     const { parentId } = ctx(req);
     const homeworkId = paramId(req.params, 'homeworkId');
     const studentId = reqStudentId(req);
-    res.json(parentService.getQuizForChild(parentId, studentId, homeworkId));
+    res.json(await parentService.getQuizForChild(parentId, studentId, homeworkId));
   })
 );
 
@@ -210,7 +210,7 @@ router.post(
       res.status(400).json({ error: 'Bài làm không hợp lệ' });
       return;
     }
-    res.json(parentService.submitChildQuiz(parentId, student_id as number, homeworkId, answers as never));
+    res.json(await parentService.submitChildQuiz(parentId, student_id as number, homeworkId, answers as never));
   })
 );
 
@@ -221,7 +221,7 @@ router.get(
     const { parentId } = ctx(req);
     const homeworkId = paramId(req.params, 'homeworkId');
     const studentId = reqStudentId(req);
-    res.json(parentService.getChildQuizAttempts(parentId, studentId, homeworkId));
+    res.json(await parentService.getChildQuizAttempts(parentId, studentId, homeworkId));
   })
 );
 
@@ -232,7 +232,7 @@ router.get(
     const { parentId } = ctx(req);
     const attemptId = paramId(req.params, 'attemptId');
     const studentId = reqStudentId(req);
-    res.json(parentService.getChildAttemptReview(parentId, studentId, attemptId));
+    res.json(await parentService.getChildAttemptReview(parentId, studentId, attemptId));
   })
 );
 
@@ -274,7 +274,7 @@ router.get(
     const { parentId } = ctx(req);
     const homeworkId = paramId(req.params, 'homeworkId');
     const studentId = reqStudentId(req);
-    res.json(parentService.getChildSubmissions(parentId, studentId, homeworkId));
+    res.json(await parentService.getChildSubmissions(parentId, studentId, homeworkId));
   })
 );
 

@@ -36,8 +36,7 @@ router.get(
     const centerFilter = cid !== null ? 'AND p.center_id = ?' : '';
     const params: unknown[] = cid !== null ? [cid] : [];
     const total = (
-      db
-        .prepare(
+      await db.prepare(
           `SELECT COUNT(*) as c FROM referrals rf
          JOIN parents p ON p.id = rf.referrer_parent_id
          WHERE 1 = 1 ${centerFilter}`
@@ -45,8 +44,7 @@ router.get(
         .get(...params) as { c: number }
     ).c;
     const pending = (
-      db
-        .prepare(
+      await db.prepare(
           `SELECT COUNT(*) as c FROM referrals rf
          JOIN parents p ON p.id = rf.referrer_parent_id
          WHERE rf.status = 'pending' ${centerFilter}`
@@ -54,8 +52,7 @@ router.get(
         .get(...params) as { c: number }
     ).c;
     const rewarded = (
-      db
-        .prepare(
+      await db.prepare(
           `SELECT COUNT(*) as c FROM referrals rf
          JOIN parents p ON p.id = rf.referrer_parent_id
          WHERE rf.status = 'rewarded' ${centerFilter}`
@@ -63,8 +60,7 @@ router.get(
         .get(...params) as { c: number }
     ).c;
     const totalReward = (
-      db
-        .prepare(
+      await db.prepare(
           `SELECT COALESCE(SUM(c.amount), 0) as total FROM credits c
          JOIN parents p ON p.id = c.parent_id
          WHERE c.reason LIKE 'Thưởng giới thiệu%' ${centerFilter}`

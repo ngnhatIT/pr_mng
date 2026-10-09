@@ -21,11 +21,11 @@ export interface ReferralQuery {
 /* --------------------------------- Service --------------------------------- */
 
 /** Danh sách giới thiệu (có phân trang). Scope center qua phụ huynh giới thiệu. */
-export function listReferrals(
+export async function listReferrals(
   centerId: number | null,
   query: ReferralQuery,
   pageOpts: PageOptions = {}
-): Paginated<ReferralRow> {
+):  Promise<Paginated<ReferralRow>> {
   const { status = '' } = query;
   const conds: string[] = [];
   const params: unknown[] = [];
@@ -42,9 +42,8 @@ export function listReferrals(
        LEFT JOIN students s ON s.id = rf.referred_student_id`;
   const where = conds.length ? `WHERE ${conds.join(' AND ')}` : '';
   const { page, limit, offset } = parsePagination(pageOpts);
-  const total = (db.prepare(`SELECT COUNT(*) as c ${from} ${where}`).get(...params) as { c: number }).c;
-  const rows = db
-    .prepare(
+  const total = (await db.prepare(`SELECT COUNT(*) as c ${from} ${where}`).get(...params) as { c: number }).c;
+  const rows = await db.prepare(
       `SELECT rf.id, p.name as referrer_name, p.phone as referrer_phone,
          rf.referred_phone, s.name as referred_student_name,
          rf.status, rf.created_at

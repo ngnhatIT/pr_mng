@@ -10,7 +10,7 @@
  *   export function listStudents(centerId, query, pageOpts) {
  *     const { page, limit, offset } = parsePagination(pageOpts);
  *     const total = countQuery(...);
- *     const rows = db.prepare(`... LIMIT ? OFFSET ?`).all(..., limit, offset);
+ *     const rows = await db.prepare(`... LIMIT ? OFFSET ?`).all(..., limit, offset);
  *     return paginate(rows, total, page, limit);
  *   }
  */

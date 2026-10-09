@@ -19,11 +19,11 @@ export interface TrialQuery {
 /* --------------------------------- Service --------------------------------- */
 
 /** Danh sách đăng ký học thử (có phân trang). */
-export function listTrials(
+export async function listTrials(
   centerId: number | null,
   query: TrialQuery,
   pageOpts: PageOptions = {}
-): Paginated<TrialRow> {
+):  Promise<Paginated<TrialRow>> {
   const { status = '' } = query;
   const conds: string[] = [];
   const params: unknown[] = [];
@@ -38,9 +38,8 @@ export function listTrials(
   const from = `FROM trial_registrations tr LEFT JOIN classes c ON c.id = tr.class_id`;
   const where = conds.length ? `WHERE ${conds.join(' AND ')}` : '';
   const { page, limit, offset } = parsePagination(pageOpts);
-  const total = (db.prepare(`SELECT COUNT(*) as c ${from} ${where}`).get(...params) as { c: number }).c;
-  const rows = db
-    .prepare(`SELECT tr.*, c.name as class_name ${from} ${where} ORDER BY tr.id DESC LIMIT ? OFFSET ?`)
+  const total = (await db.prepare(`SELECT COUNT(*) as c ${from} ${where}`).get(...params) as { c: number }).c;
+  const rows = await db.prepare(`SELECT tr.*, c.name as class_name ${from} ${where} ORDER BY tr.id DESC LIMIT ? OFFSET ?`)
     .all(...params, limit, offset) as TrialRow[];
   return paginate(rows, total, page, limit);
 }

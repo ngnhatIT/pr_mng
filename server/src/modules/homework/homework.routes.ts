@@ -45,11 +45,11 @@ import {
 const router = Router();
 
 /** Kiểm tra các lớp thuộc scope của user (center + teacher) */
-function getScopedClasses(req: AuthRequest, classIds: number[]) {
+async function getScopedClasses(req: AuthRequest, classIds: number[]) {
   const cid = reqCenterId(req);
   const valid: number[] = [];
   for (const id of classIds) {
-    const cls = getClassScope(id);
+    const cls = await getClassScope(id);
     if (!cls) continue;
     if (cid !== null && cls.center_id !== cid) continue;
     if (req.user?.role === 'teacher' && (!req.user.teacher_id || cls.teacher_id !== req.user.teacher_id)) {
@@ -61,16 +61,16 @@ function getScopedClasses(req: AuthRequest, classIds: number[]) {
 }
 
 /** Lấy bài tập thuộc scope của user, throw 404 nếu không có/không có quyền. */
-function requireHomework(req: AuthRequest, id: number) {
-  const hw = getScopedHomework(req, id);
+async function requireHomework(req: AuthRequest, id: number) {
+  const hw = await getScopedHomework(req, id);
   if (!hw) throw AppError.notFound('Không tìm thấy bài tập');
   return hw;
 }
 
 /** Kiểm tra bài tập thuộc scope của user */
-function getScopedHomework(req: AuthRequest, id: number) {
+async function getScopedHomework(req: AuthRequest, id: number) {
   const cid = reqCenterId(req);
-  const hw = getHomeworkWithScope(id);
+  const hw = await getHomeworkWithScope(id);
   if (!hw) return null;
   const hwCid = hw.center_id ?? hw.class_center_id;
   if (cid !== null && hwCid !== cid) return null;
@@ -132,11 +132,11 @@ router.post(
   staffOnly,
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const input = prepareCreateInput(req.body as Record<string, unknown>);
-    const validIds = getScopedClasses(req, input.class_ids);
+    const validIds = await getScopedClasses(req, input.class_ids);
     if (!validIds.length) throw AppError.notFound('Không tìm thấy lớp học hợp lệ');
     // Lọc target students thuộc các lớp được chọn
-    const targetIds = filterValidTargets(validIds, input.target_student_ids);
-    const created = createHomeworkBatch({
+    const targetIds = await filterValidTargets(validIds, input.target_student_ids);
+    const created = await createHomeworkBatch({
       class_ids: validIds,
       title: input.title,
       content: input.content,
@@ -178,7 +178,7 @@ router.get(
   '/:id',
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const id = Number(req.params.id);
-    requireHomework(req, id);
+    await requireHomework(req, id);
     res.json(getHomeworkDetail(id));
   })
 );
@@ -189,8 +189,8 @@ router.post(
   staffOnly,
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const id = Number(req.params.id);
-    requireHomework(req, id);
-    const created = reuseHomework(id, req.user!.id, reqCenterId(req));
+    await requireHomework(req, id);
+    const created = await reuseHomework(id, req.user!.id, reqCenterId(req));
     res.status(201).json({ created: created[0], count: 1 });
   })
 );
@@ -201,7 +201,7 @@ router.post(
   staffOnly,
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const id = Number(req.params.id);
-    requireHomework(req, id);
+    await requireHomework(req, id);
     setHomeworkStatus(id, 'published', reqCenterId(req));
     res.json({ ok: true });
   })
@@ -213,7 +213,7 @@ router.post(
   staffOnly,
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const id = Number(req.params.id);
-    const hw = requireHomework(req, id);
+    const hw = await requireHomework(req, id);
     setHomeworkStatus(id, 'draft', reqCenterId(req));
     audit({
       centerId: reqCenterId(req),
@@ -234,7 +234,7 @@ router.get(
   staffOnly,
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const id = Number(req.params.id);
-    requireHomework(req, id);
+    await requireHomework(req, id);
     res.json(getHomeworkScores(id));
   })
 );
@@ -245,7 +245,7 @@ router.post(
   staffOnly,
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const id = Number(req.params.id);
-    requireHomework(req, id);
+    await requireHomework(req, id);
     const body = validate(req.body, {
       student_id: v.number({ integer: true, min: 1, label: 'Học viên' }),
       score: v.any({ label: 'Điểm' }),
@@ -266,7 +266,7 @@ router.get(
   staffOnly,
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const id = Number(req.params.id);
-    requireHomework(req, id);
+    await requireHomework(req, id);
     res.json(getAllAttempts(id));
   })
 );
@@ -277,7 +277,7 @@ router.get(
   staffOnly,
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const id = Number(req.params.id);
-    requireHomework(req, id);
+    await requireHomework(req, id);
     res.json(getQuizForStaff(id));
   })
 );
@@ -288,7 +288,7 @@ router.put(
   staffOnly,
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const id = Number(req.params.id);
-    requireHomework(req, id);
+    await requireHomework(req, id);
     const { questions } = req.body as { questions: unknown };
     if (!Array.isArray(questions)) {
       throw AppError.badRequest('Thiếu danh sách câu hỏi');
@@ -341,7 +341,7 @@ router.post(
   staffOnly,
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const id = Number(req.params.id);
-    requireHomework(req, id);
+    await requireHomework(req, id);
     const { bank_ids } = req.body as { bank_ids: number[] };
     if (!Array.isArray(bank_ids) || !bank_ids.length) {
       throw AppError.badRequest('Chưa chọn câu hỏi');
@@ -359,7 +359,7 @@ router.get(
   staffOnly,
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const id = Number(req.params.id);
-    requireHomework(req, id);
+    await requireHomework(req, id);
     const rows = getHomeworkSubmissions(id);
     res.json(rows);
   })
@@ -391,11 +391,11 @@ router.delete(
   '/rubrics/:rid',
   staffOnly,
   asyncHandler(async (req: AuthRequest, res: Response) => {
-    const r = getRubric(Number(req.params.rid), reqCenterId(req));
+    const r = await getRubric(Number(req.params.rid), reqCenterId(req));
     if (!r) {
       throw AppError.notFound('Không tìm thấy rubric');
     }
-    deleteRubric(r.id, reqCenterId(req));
+    await deleteRubric(r.id, reqCenterId(req));
     res.json({ ok: true });
   })
 );
@@ -406,7 +406,7 @@ router.put(
   staffOnly,
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const id = Number(req.params.id);
-    requireHomework(req, id);
+    await requireHomework(req, id);
     const body = validate(req.body, {
       title: v.string({ min: 1, max: 200, label: 'Tiêu đề' }),
       content: v.string({ max: 5000, label: 'Nội dung' }),
@@ -441,7 +441,7 @@ router.delete(
   staffOnly,
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const id = Number(req.params.id);
-    const hw = requireHomework(req, id);
+    const hw = await requireHomework(req, id);
     deleteHomework(id, reqCenterId(req));
     audit({
       centerId: reqCenterId(req),

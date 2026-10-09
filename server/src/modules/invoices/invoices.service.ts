@@ -46,9 +46,8 @@ export interface DebtRow {
  * Hóa đơn KHÔNG có center_id riêng — scope đi qua center của học viên sở hữu.
  * Không tìm thấy hoặc khác center -> ném 404 (tránh lộ sự tồn tại).
  */
-function assertInvoiceScope(centerId: number | null, invoiceId: number): void {
-  const row = db
-    .prepare('SELECT s.center_id FROM invoices i JOIN students s ON s.id = i.student_id WHERE i.id = ?')
+async function assertInvoiceScope(centerId: number | null, invoiceId: number): Promise<void> {
+  const row = await db.prepare('SELECT s.center_id FROM invoices i JOIN students s ON s.id = i.student_id WHERE i.id = ?')
     .get(invoiceId) as { center_id: number | null } | undefined;
   if (!row || (centerId !== null && row.center_id !== centerId)) {
     throw AppError.notFound('Không tìm thấy phiếu thu');
@@ -63,11 +62,11 @@ function assertPositiveAmount(amount: unknown): number {
 
 /* --------------------------------- Service --------------------------------- */
 
-export function listInvoices(
+export async function listInvoices(
   centerId: number | null,
   query: { status?: string; search?: string },
   pageOpts: PageOptions = {}
-): Paginated<unknown> {
+):  Promise<Paginated<unknown>> {
   const conds: string[] = [];
   const params: unknown[] = [];
   if (centerId !== null) {
@@ -87,9 +86,8 @@ export function listInvoices(
   const where = conds.length ? `WHERE ${conds.join(' AND ')}` : '';
   const { page, limit, offset } = parsePagination(pageOpts);
   const from = `FROM invoices i JOIN students s ON s.id = i.student_id LEFT JOIN classes c ON c.id = i.class_id ${where}`;
-  const total = (db.prepare(`SELECT COUNT(*) as c ${from}`).get(...params) as { c: number }).c;
-  const rows = db
-    .prepare(
+  const total = (await db.prepare(`SELECT COUNT(*) as c ${from}`).get(...params) as { c: number }).c;
+  const rows = await db.prepare(
       `SELECT i.*, s.name as student_name, s.code as student_code, c.name as class_name,
          COALESCE((SELECT SUM(amount) FROM payments WHERE invoice_id = i.id AND status = 'confirmed'), 0) as paid
        ${from} ORDER BY i.id DESC LIMIT ? OFFSET ?`
@@ -102,7 +100,7 @@ export function listInvoices(
  * Công nợ: học viên còn nợ (chưa thanh toán hết).
  * Kèm invoice_dues: "id:due_date,id:due_date..." để client gửi nhắc Zalo từng hóa đơn.
  */
-export function getDebtReport(centerId: number | null, pageOpts: PageOptions = {}): Paginated<DebtRow> {
+export async function getDebtReport(centerId: number | null, pageOpts: PageOptions = {}):  Promise<Paginated<DebtRow>> {
   const conds = ["i.status != 'paid'"];
   const params: unknown[] = [];
   if (centerId !== null) {
@@ -112,12 +110,11 @@ export function getDebtReport(centerId: number | null, pageOpts: PageOptions = {
   const { page, limit, offset } = parsePagination(pageOpts);
   const base = `FROM invoices i JOIN students s ON s.id = i.student_id WHERE ${conds.join(' AND ')}`;
   const total = (
-    db.prepare(`SELECT COUNT(*) as c FROM (SELECT s.id ${base} GROUP BY s.id)`).get(...params) as {
+    await db.prepare(`SELECT COUNT(*) as c FROM (SELECT s.id ${base} GROUP BY s.id)`).get(...params) as {
       c: number;
     }
   ).c;
-  const rows = db
-    .prepare(
+  const rows = await db.prepare(
       `SELECT s.id, s.code, s.name, s.phone,
          SUM(i.amount) as total,
          COALESCE(SUM((SELECT SUM(amount) FROM payments p WHERE p.invoice_id = i.id AND p.status = 'confirmed')), 0) as paid,
@@ -133,15 +130,14 @@ export function getDebtReport(centerId: number | null, pageOpts: PageOptions = {
 }
 
 /** Tổng quan công nợ toàn trung tâm (không phân trang) — dùng cho header/tổng. */
-export function getDebtSummary(centerId: number | null): { totalDebt: number; debtorCount: number } {
+export async function getDebtSummary(centerId: number | null): Promise<{ totalDebt: number; debtorCount: number; }> {
   const conds = ["i.status != 'paid'"];
   const params: unknown[] = [];
   if (centerId !== null) {
     conds.push('s.center_id = ?');
     params.push(centerId);
   }
-  const row = db
-    .prepare(
+  const row = await db.prepare(
       `SELECT
          COALESCE(SUM(i.amount - COALESCE((SELECT SUM(amount) FROM payments p WHERE p.invoice_id = i.id AND p.status = 'confirmed'), 0)), 0) as totalDebt,
          COUNT(DISTINCT s.id) as debtorCount
@@ -152,30 +148,27 @@ export function getDebtSummary(centerId: number | null): { totalDebt: number; de
   return { totalDebt: row.totalDebt || 0, debtorCount: row.debtorCount || 0 };
 }
 
-export function getInvoiceDetail(centerId: number | null, id: number): Record<string, unknown> {
+export async function getInvoiceDetail(centerId: number | null, id: number): Promise<Record<string, unknown>> {
   assertInvoiceScope(centerId, id);
-  const inv = db
-    .prepare(
+  const inv = await db.prepare(
       `SELECT i.*, s.name as student_name, s.code as student_code, c.name as class_name
        FROM invoices i JOIN students s ON s.id = i.student_id
        LEFT JOIN classes c ON c.id = i.class_id WHERE i.id = ?`
     )
     .get(id);
-  const payments = db.prepare('SELECT * FROM payments WHERE invoice_id = ? ORDER BY paid_at DESC').all(id);
+  const payments = await db.prepare('SELECT * FROM payments WHERE invoice_id = ? ORDER BY paid_at DESC').all(id);
   return { invoice: inv, payments };
 }
 
-export function createInvoice(centerId: number | null, input: InvoiceInput, actor?: AuditActor): unknown {
+export async function createInvoice(centerId: number | null, input: InvoiceInput, actor?: AuditActor): Promise<unknown> {
   if (!input.student_id) throw AppError.badRequest('Vui lòng chọn học viên');
   const amt = assertPositiveAmount(input.amount);
-  const student = db
-    .prepare('SELECT id, center_id FROM students WHERE id = ?')
+  const student = await db.prepare('SELECT id, center_id FROM students WHERE id = ?')
     .get(Number(input.student_id)) as { id: number; center_id: number | null } | undefined;
   if (!student || (centerId !== null && student.center_id !== centerId)) {
     throw AppError.notFound('Không tìm thấy học viên');
   }
-  const r = db
-    .prepare('INSERT INTO invoices (student_id, class_id, amount, due_date, note) VALUES (?, ?, ?, ?, ?)')
+  const r = await db.prepare('INSERT INTO invoices (student_id, class_id, amount, due_date, note) VALUES (?, ?, ?, ?, ?)')
     .run(
       Number(input.student_id),
       input.class_id ? Number(input.class_id) : null,
@@ -183,7 +176,7 @@ export function createInvoice(centerId: number | null, input: InvoiceInput, acto
       input.due_date || null,
       input.note || null
     );
-  const created = db.prepare('SELECT * FROM invoices WHERE id = ?').get(Number(r.lastInsertRowid));
+  const created = await db.prepare('SELECT * FROM invoices WHERE id = ?').get(Number(r.lastInsertRowid));
   audit({
     centerId,
     actor,
@@ -196,15 +189,15 @@ export function createInvoice(centerId: number | null, input: InvoiceInput, acto
   return created;
 }
 
-export function updateInvoice(
+export async function updateInvoice(
   centerId: number | null,
   id: number,
   input: InvoiceUpdateInput,
   actor?: AuditActor
-): unknown {
+): Promise<unknown> {
   assertInvoiceScope(centerId, id);
   const amt = assertPositiveAmount(input.amount);
-  db.prepare('UPDATE invoices SET amount = ?, due_date = ?, note = ? WHERE id = ?').run(
+  await db.prepare('UPDATE invoices SET amount = ?, due_date = ?, note = ? WHERE id = ?').run(
     amt,
     input.due_date || null,
     input.note || null,
@@ -220,15 +213,15 @@ export function updateInvoice(
     summary: `Sửa phiếu thu HD${id}: ${formatVND(amt)}`,
     meta: { amount: amt },
   });
-  return db.prepare('SELECT * FROM invoices WHERE id = ?').get(id);
+  return await db.prepare('SELECT * FROM invoices WHERE id = ?').get(id);
 }
 
-export function deleteInvoice(centerId: number | null, id: number, actor?: AuditActor): void {
+export async function deleteInvoice(centerId: number | null, id: number, actor?: AuditActor): Promise<void> {
   assertInvoiceScope(centerId, id);
-  const inv = db.prepare('SELECT amount FROM invoices WHERE id = ?').get(id) as
+  const inv = await db.prepare('SELECT amount FROM invoices WHERE id = ?').get(id) as
     { amount: number } | undefined;
-  db.prepare('DELETE FROM payments WHERE invoice_id = ?').run(id);
-  db.prepare('DELETE FROM invoices WHERE id = ?').run(id);
+  await db.prepare('DELETE FROM payments WHERE invoice_id = ?').run(id);
+  await db.prepare('DELETE FROM invoices WHERE id = ?').run(id);
   audit({
     centerId,
     actor,
@@ -240,20 +233,19 @@ export function deleteInvoice(centerId: number | null, id: number, actor?: Audit
 }
 
 /** Thu tiền cho phiếu thu — chặn thu vượt số còn nợ; đủ tiền thì kích hoạt thưởng referral. */
-export function recordPayment(
+export async function recordPayment(
   centerId: number | null,
   id: number,
   input: PaymentInput,
   actor?: AuditActor
-): { status: string } {
+): Promise<{ status: string; }> {
   assertInvoiceScope(centerId, id);
-  const inv = db.prepare('SELECT * FROM invoices WHERE id = ?').get(id) as
+  const inv = await db.prepare('SELECT * FROM invoices WHERE id = ?').get(id) as
     { id: number; amount: number } | undefined;
   if (!inv) throw AppError.notFound('Không tìm thấy phiếu thu');
   const amt = assertPositiveAmount(input.amount);
   const paidSoFar = (
-    db
-      .prepare(
+    await db.prepare(
         "SELECT COALESCE(SUM(amount),0) as paid FROM payments WHERE invoice_id = ? AND status = 'confirmed'"
       )
       .get(id) as { paid: number }
@@ -263,15 +255,15 @@ export function recordPayment(
       `Số tiền vượt quá số còn nợ (${(inv.amount - paidSoFar).toLocaleString('vi-VN')}đ)`
     );
   }
-  db.prepare('INSERT INTO payments (invoice_id, amount, paid_at, method, note) VALUES (?, ?, ?, ?, ?)').run(
+  await db.prepare('INSERT INTO payments (invoice_id, amount, paid_at, method, note) VALUES (?, ?, ?, ?, ?)').run(
     id,
     amt,
     input.paid_at || new Date().toISOString().slice(0, 19).replace('T', ' '),
     input.method || 'Tiền mặt',
     input.note || null
   );
-  const status = recalcInvoiceStatus(id);
-  if (status === 'paid') afterInvoicePaid(id);
+  const status = await recalcInvoiceStatus(id);
+  if (status === 'paid') await afterInvoicePaid(id);
   audit({
     centerId,
     actor,
@@ -285,16 +277,16 @@ export function recordPayment(
 }
 
 /** Áp dụng credits của phụ huynh để trừ tiền hóa đơn. */
-export function applyCredit(
+export async function applyCredit(
   centerId: number | null,
   id: number,
   creditId: number,
   actor?: AuditActor
-): { applied: number; status: string } {
+): Promise<{ applied: number; status: string }> {
   assertInvoiceScope(centerId, id);
   if (!creditId) throw AppError.badRequest('Thiếu credit_id');
   try {
-    const result = applyCreditToInvoice(id, Number(creditId));
+    const result = await applyCreditToInvoice(id, Number(creditId));
     audit({
       centerId,
       actor,

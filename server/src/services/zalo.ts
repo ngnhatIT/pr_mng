@@ -28,13 +28,13 @@ const ZALO_DEFAULTS: ZaloConfig = {
 
 export const ZALO_CONFIG_KEYS = Object.keys(ZALO_DEFAULTS) as (keyof ZaloConfig)[];
 
-export function getZaloConfig(centerId?: number): ZaloConfig {
+export async function getZaloConfig(centerId?: number): Promise<ZaloConfig> {
   const cfg = {} as ZaloConfig;
   for (const k of ZALO_CONFIG_KEYS) {
     cfg[k] =
       typeof centerId === 'number'
-        ? getCenterSetting(centerId, k, ZALO_DEFAULTS[k])
-        : getSetting(k, ZALO_DEFAULTS[k]);
+        ? await getCenterSetting(centerId, k, ZALO_DEFAULTS[k])
+        : await getSetting(k, ZALO_DEFAULTS[k]);
   }
   return cfg;
 }
@@ -187,8 +187,7 @@ export async function sendTuitionReminder(
   kind: 'overdue' | 'upcoming',
   centerId?: number
 ): Promise<ReminderResult> {
-  const inv = db
-    .prepare(
+  const inv = await db.prepare(
       `SELECT i.id, i.amount, i.due_date, i.status,
          COALESCE((SELECT SUM(amount) FROM payments WHERE invoice_id = i.id AND status = 'confirmed'), 0) as paid,
          s.id as student_id, s.name as student_name, s.phone as student_phone, s.center_id
@@ -216,7 +215,7 @@ export async function sendTuitionReminder(
     return { demo: false, status: 'failed', message: 'Hóa đơn đã thanh toán đủ', phone: null };
   }
 
-  const cfg = getZaloConfig(centerId ?? inv.center_id ?? undefined);
+  const cfg = await getZaloConfig(centerId ?? inv.center_id ?? undefined);
 
   const phone = normalizePhone(inv.student_phone);
   const invoice: InvoiceForReminder = {
@@ -232,13 +231,13 @@ export async function sendTuitionReminder(
     phone: inv.student_phone,
   };
 
-  const insertLog = db.prepare(
+  const insertLog = await db.prepare(
     'INSERT INTO reminders (invoice_id, student_id, phone, kind, status, message, response) VALUES (?, ?, ?, ?, ?, ?, ?)'
   );
 
   if (!phone) {
     const msg = `Học viên ${inv.student_name} chưa có số điện thoại hợp lệ`;
-    insertLog.run(invoiceId, inv.student_id, inv.student_phone, kind, 'failed', msg, null);
+    await insertLog.run(invoiceId, inv.student_id, inv.student_phone, kind, 'failed', msg, null);
     return { demo: false, status: 'failed', message: msg, phone: inv.student_phone };
   }
 
@@ -249,7 +248,7 @@ export async function sendTuitionReminder(
   const demoMessage = buildDemoMessage(invoice, student, kind, cfg.center_name);
 
   if (demoMode) {
-    insertLog.run(invoiceId, inv.student_id, phone, kind, 'demo', demoMessage, null);
+    await insertLog.run(invoiceId, inv.student_id, phone, kind, 'demo', demoMessage, null);
     return {
       demo: true,
       status: 'demo',
@@ -260,7 +259,7 @@ export async function sendTuitionReminder(
 
   if (!templateId) {
     const msg = 'Chưa cấu hình Template ID cho loại nhắc này';
-    insertLog.run(invoiceId, inv.student_id, phone, kind, 'failed', msg, null);
+    await insertLog.run(invoiceId, inv.student_id, phone, kind, 'failed', msg, null);
     return { demo: false, status: 'failed', message: msg, phone };
   }
 
@@ -273,7 +272,7 @@ export async function sendTuitionReminder(
   });
   const status = r.ok ? 'sent' : 'failed';
   const msg = r.ok ? demoMessage : r.error || 'Gửi thất bại';
-  insertLog.run(
+  await insertLog.run(
     invoiceId,
     inv.student_id,
     phone,
@@ -295,12 +294,12 @@ export async function sendTuitionReminder(
 /* ------------------------- Thông báo bài tập mới ------------------------- */
 
 /** Ghi log thông báo bài tập mới cho phụ huynh (demo/log mode; ZNS cần template duyệt). */
-export function notifyHomeworkPublished(
+export async function notifyHomeworkPublished(
   centerId: number | null,
   homework: { id: number; title: string; class_name: string; due_date: string | null },
   studentCount: number
-): void {
-  const cfg = centerId ? getZaloConfig(centerId) : null;
+): Promise<void> {
+  const cfg = centerId ? await getZaloConfig(centerId) : null;
   const centerName = cfg?.center_name || 'Trung tâm';
   const msg = [
     `[${centerName}] BÀI TẬP MỚI`,
@@ -310,7 +309,7 @@ export function notifyHomeworkPublished(
   ].join('\n');
   // Lưu vào bảng reminders để tra cứu lịch sử (giống nhắc học phí demo mode)
   try {
-    db.prepare(
+    await db.prepare(
       `INSERT INTO reminders (center_id, kind, message, status, created_at)
        VALUES (?, 'homework', ?, 'demo', datetime('now'))`
     ).run(centerId, msg);

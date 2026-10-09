@@ -4,12 +4,13 @@
     "@types/swagger-ui-express": "^4.1.8",
     "@types/yamljs": "^0.2.34",
     "bcryptjs": "^2.4.3",
-    "better-sqlite3": "^13.0.3",
     "cors": "^2.8.5",
+    "dotenv": "^18.0.6",
     "express": "^4.21.2",
     "jsonwebtoken": "^9.0.2",
     "multer": "^2.4.0",
     "node-cron": "^4.6.0",
+    "pg": "^8.23.1",
     "swagger-ui-express": "^5.0.1",
     "yamljs": "^0.3.0"
   },
@@ -21,8 +22,10 @@
     "@types/jsonwebtoken": "^9.0.7",
     "@types/node": "^22.10.2",
     "@types/node-cron": "^3.0.11",
+    "@types/pg": "^8.23.1",
     "tsx": "^4.19.2",
-    "typescript": "^5.7.2"
+    "typescript": "^5.7.2",
+    "better-sqlite3": "^13.0.3"
   },
   "name": "educenter-pro-server",
   "private": true,

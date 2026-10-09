@@ -21,11 +21,11 @@ export interface LeadQuery {
 /* --------------------------------- Service --------------------------------- */
 
 /** Danh sách lead (có phân trang). */
-export function listLeads(
+export async function listLeads(
   centerId: number | null,
   query: LeadQuery,
   pageOpts: PageOptions = {}
-): Paginated<LeadRow> {
+):  Promise<Paginated<LeadRow>> {
   const { status = '', search = '' } = query;
   const conds: string[] = [];
   const params: unknown[] = [];
@@ -44,9 +44,8 @@ export function listLeads(
   }
   const where = conds.length ? `WHERE ${conds.join(' AND ')}` : '';
   const { page, limit, offset } = parsePagination(pageOpts);
-  const total = (db.prepare(`SELECT COUNT(*) as c FROM leads ${where}`).get(...params) as { c: number }).c;
-  const rows = db
-    .prepare(`SELECT * FROM leads ${where} ORDER BY id DESC LIMIT ? OFFSET ?`)
+  const total = (await db.prepare(`SELECT COUNT(*) as c FROM leads ${where}`).get(...params) as { c: number }).c;
+  const rows = await db.prepare(`SELECT * FROM leads ${where} ORDER BY id DESC LIMIT ? OFFSET ?`)
     .all(...params, limit, offset) as LeadRow[];
   return paginate(rows, total, page, limit);
 }

@@ -13,19 +13,18 @@ export interface UploadAccess {
  * - Parent chỉ được xem file của con mình
  * Throw 404/403 nếu không hợp lệ.
  */
-export function checkUploadAccess(
+export async function checkUploadAccess(
   filename: string,
   role: string | undefined,
   userCenterId: number | null,
   userId: number,
   parentId?: number
-): UploadAccess {
+): Promise<UploadAccess> {
   const safe = filename.split('/').pop() || '';
   if (!isValidUploadFilename(safe)) {
     throw AppError.notFound('Không tìm thấy file');
   }
-  const sub = db
-    .prepare(
+  const sub = await db.prepare(
       `SELECT hs.student_id, h.center_id FROM homework_submissions hs
        JOIN homework h ON h.id = hs.homework_id
        WHERE hs.file_url = ?`
@@ -38,8 +37,7 @@ export function checkUploadAccess(
     allowed = true; // staff cùng center
   } else if (role === 'parent') {
     const pid = parentId ?? userId;
-    const link = db
-      .prepare('SELECT 1 FROM parent_students WHERE parent_id = ? AND student_id = ?')
+    const link = await db.prepare('SELECT 1 FROM parent_students WHERE parent_id = ? AND student_id = ?')
       .get(pid, sub.student_id);
     allowed = !!link;
   } else if (role === 'teacher') {

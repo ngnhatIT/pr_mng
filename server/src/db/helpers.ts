@@ -5,11 +5,11 @@ import { toISODate, addDays, ourDayOfWeek, parseISODate, ScheduleEntry, ClassRow
  * Helper nghiệp vụ dùng chung: settings, sinh buổi học, tính trạng thái hóa đơn.
  * (Về lâu dài nên chuyển vào modules/<domain>/*.service.ts)
  */
-export function ensureDemoCenter(): number {
-  const row = db.prepare('SELECT id FROM centers ORDER BY id ASC LIMIT 1').get() as
+export async function ensureDemoCenter(): Promise<number> {
+  const row = (await db.prepare('SELECT id FROM centers ORDER BY id ASC LIMIT 1').get()) as
     { id: number } | undefined;
   if (row) return row.id;
-  const r = db
+  const r = await db
     .prepare(
       "INSERT INTO centers (name, subdomain, phone, address, plan) VALUES ('Trung tâm Demo', 'demo', '0901234567', 'TP. Hồ Chí Minh', 'premium')"
     )
@@ -17,8 +17,8 @@ export function ensureDemoCenter(): number {
   return Number(r.lastInsertRowid);
 }
 
-function backfillCenters(): void {
-  const demoId = ensureDemoCenter();
+async function backfillCenters(): Promise<void> {
+  const demoId = await ensureDemoCenter();
   const tables = [
     'students',
     'teachers',
@@ -34,23 +34,25 @@ function backfillCenters(): void {
   ];
   for (const t of tables) {
     try {
-      db.prepare(`UPDATE ${t} SET center_id = ? WHERE center_id IS NULL`).run(demoId);
+      await db.prepare(`UPDATE ${t} SET center_id = ? WHERE center_id IS NULL`).run(demoId);
     } catch {
       /* bảng có thể chưa có cột trong trường hợp hiếm — bỏ qua */
     }
   }
   // users: gán center cho tất cả trừ superadmin (giữ NULL để bypass)
   try {
-    db.prepare("UPDATE users SET center_id = ? WHERE center_id IS NULL AND role != 'superadmin'").run(demoId);
+    await db.prepare("UPDATE users SET center_id = ? WHERE center_id IS NULL AND role != 'superadmin'").run(demoId);
   } catch {
     /* bỏ qua */
   }
 
   // Copy cấu hình settings toàn cục (cũ) sang center_settings của trung tâm demo
   try {
-    db.prepare(
-      'INSERT OR IGNORE INTO center_settings (center_id, key, value) SELECT ?, key, value FROM settings'
-    ).run(demoId);
+    await db
+      .prepare(
+        'INSERT OR IGNORE INTO center_settings (center_id, key, value) SELECT ?, key, value FROM settings'
+      )
+      .run(demoId);
   } catch {
     /* bỏ qua */
   }
@@ -61,39 +63,43 @@ export { backfillCenters };
 
 /* --------------------- Đọc/ghi cấu hình (bảng settings) --------------------- */
 
-export function getSetting(key: string, fallback = ''): string {
-  const row = db.prepare('SELECT value FROM settings WHERE key = ?').get(key) as
+export async function getSetting(key: string, fallback = ''): Promise<string> {
+  const row = (await db.prepare('SELECT value FROM settings WHERE key = ?').get(key)) as
     { value: string | null } | undefined;
   if (!row || row.value === null || row.value === undefined) return fallback;
   return row.value;
 }
 
-export function setSetting(key: string, value: string): void {
-  db.prepare(
-    'INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value'
-  ).run(key, value);
+export async function setSetting(key: string, value: string): Promise<void> {
+  await db
+    .prepare(
+      'INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value'
+    )
+    .run(key, value);
 }
 
 /* --------------------- Cấu hình theo trung tâm --------------------- */
 
-export function getCenterSetting(centerId: number, key: string, fallback = ''): string {
-  const row = db
+export async function getCenterSetting(centerId: number, key: string, fallback = ''): Promise<string> {
+  const row = (await db
     .prepare('SELECT value FROM center_settings WHERE center_id = ? AND key = ?')
-    .get(centerId, key) as { value: string | null } | undefined;
+    .get(centerId, key)) as { value: string | null } | undefined;
   if (row && row.value !== null && row.value !== undefined) return row.value;
   return getSetting(key, fallback); // fallback về cấu hình toàn cục (tương thích DB cũ)
 }
 
-export function setCenterSetting(centerId: number, key: string, value: string): void {
-  db.prepare(
-    'INSERT INTO center_settings (center_id, key, value) VALUES (?, ?, ?) ON CONFLICT(center_id, key) DO UPDATE SET value = excluded.value'
-  ).run(centerId, key, value);
+export async function setCenterSetting(centerId: number, key: string, value: string): Promise<void> {
+  await db
+    .prepare(
+      'INSERT INTO center_settings (center_id, key, value) VALUES (?, ?, ?) ON CONFLICT(center_id, key) DO UPDATE SET value = excluded.value'
+    )
+    .run(centerId, key, value);
 }
 
 /* --------------------- Sinh buổi học từ lịch của lớp --------------------- */
 
-export function generateSessionsForClass(classId: number): void {
-  const cls = db.prepare('SELECT * FROM classes WHERE id = ?').get(classId) as ClassRow | undefined;
+export async function generateSessionsForClass(classId: number): Promise<void> {
+  const cls = (await db.prepare('SELECT * FROM classes WHERE id = ?').get(classId)) as ClassRow | undefined;
   if (!cls) return;
   let schedule: ScheduleEntry[];
   try {
@@ -108,40 +114,43 @@ export function generateSessionsForClass(classId: number): void {
   if (start > end) return;
   const exists = db.prepare('SELECT 1 FROM sessions WHERE class_id = ? AND date = ?');
   const insert = db.prepare('INSERT INTO sessions (class_id, date, topic) VALUES (?, ?, ?)');
-  const tx = db.transaction(() => {
+  await db.transaction(async (tx) => {
+    const txExists = tx.prepare('SELECT 1 FROM sessions WHERE class_id = ? AND date = ?');
+    const txInsert = tx.prepare('INSERT INTO sessions (class_id, date, topic) VALUES (?, ?, ?)');
     for (let d = new Date(start); d <= end; d = addDays(d, 1)) {
       if (!days.has(ourDayOfWeek(d))) continue;
       const iso = toISODate(d);
-      if (!exists.get(classId, iso)) insert.run(classId, iso, '');
+      if (!(await txExists.get(classId, iso))) await txInsert.run(classId, iso, '');
     }
   });
-  tx();
+  void exists;
+  void insert;
 }
 
 /* ------------------------- Cập nhật trạng thái hóa đơn ------------------------- */
 /* Chỉ tính các khoản đã xác nhận (status='confirmed'); khoản 'pending' chờ duyệt không tính */
 
-export function recalcInvoiceStatus(invoiceId: number): string {
-  const inv = db.prepare('SELECT amount FROM invoices WHERE id = ?').get(invoiceId) as
+export async function recalcInvoiceStatus(invoiceId: number): Promise<string> {
+  const inv = (await db.prepare('SELECT amount FROM invoices WHERE id = ?').get(invoiceId)) as
     { amount: number } | undefined;
   if (!inv) return 'unpaid';
-  const row = db
+  const row = (await db
     .prepare(
       "SELECT COALESCE(SUM(amount),0) as paid FROM payments WHERE invoice_id = ? AND status = 'confirmed'"
     )
-    .get(invoiceId) as { paid: number };
+    .get(invoiceId)) as { paid: number };
   const status = row.paid >= inv.amount - 0.01 ? 'paid' : row.paid > 0 ? 'partial' : 'unpaid';
-  db.prepare('UPDATE invoices SET status = ? WHERE id = ?').run(status, invoiceId);
+  await db.prepare('UPDATE invoices SET status = ? WHERE id = ?').run(status, invoiceId);
   return status;
 }
 
 /** Số tiền đã thanh toán (confirmed) của một hóa đơn */
-export function confirmedPaid(invoiceId: number): number {
-  const row = db
+export async function confirmedPaid(invoiceId: number): Promise<number> {
+  const row = (await db
     .prepare(
       "SELECT COALESCE(SUM(amount),0) as paid FROM payments WHERE invoice_id = ? AND status = 'confirmed'"
     )
-    .get(invoiceId) as { paid: number };
+    .get(invoiceId)) as { paid: number };
   return row.paid;
 }
 

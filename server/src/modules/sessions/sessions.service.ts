@@ -44,9 +44,8 @@ interface ClassScope {
 /* ------------------------------ Scope & validate ------------------------------ */
 
 /** Lấy thông tin lớp của 1 buổi học (để kiểm tra scope). */
-function getSessionClass(sessionId: number): SessionClass | undefined {
-  return db
-    .prepare(
+async function getSessionClass(sessionId: number): Promise<SessionClass | undefined> {
+  return await db.prepare(
       `SELECT s.id as session_id, s.class_id, s.date, s.topic, c.center_id, c.teacher_id, c.name as class_name
        FROM sessions s JOIN classes c ON c.id = s.class_id
        WHERE s.id = ?`
@@ -66,8 +65,8 @@ function checkScope(ctx: ScopeCtx, sc: SessionClass): boolean {
   return true;
 }
 
-function getClassScope(ctx: ScopeCtx, classId: number): ClassScope | null {
-  const cls = db.prepare('SELECT id, center_id, teacher_id FROM classes WHERE id = ?').get(classId) as
+async function getClassScope(ctx: ScopeCtx, classId: number): Promise<ClassScope | null> {
+  const cls = await db.prepare('SELECT id, center_id, teacher_id FROM classes WHERE id = ?').get(classId) as
     ClassScope | undefined;
   if (!cls) return null;
   if (ctx.centerId !== null && cls.center_id !== ctx.centerId) return null;
@@ -78,15 +77,15 @@ function getClassScope(ctx: ScopeCtx, classId: number): ClassScope | null {
 }
 
 /** Lấy buổi học trong scope — ném 404 nếu không thấy (tránh lộ dữ liệu center khác). */
-function getSessionOr404(ctx: ScopeCtx, id: number): SessionClass {
-  const sc = getSessionClass(id);
+async function getSessionOr404(ctx: ScopeCtx, id: number): Promise<SessionClass> {
+  const sc = await getSessionClass(id);
   if (!sc || !checkScope(ctx, sc)) throw AppError.notFound('Không tìm thấy buổi học');
   return sc;
 }
 
 /** Lấy lớp trong scope — ném 404 nếu không thấy. */
-function getClassOr404(ctx: ScopeCtx, classId: number): ClassScope {
-  const cls = getClassScope(ctx, classId);
+async function getClassOr404(ctx: ScopeCtx, classId: number): Promise<ClassScope> {
+  const cls = await getClassScope(ctx, classId);
   if (!cls) throw AppError.notFound('Không tìm thấy lớp học');
   return cls;
 }
@@ -94,11 +93,10 @@ function getClassOr404(ctx: ScopeCtx, classId: number): ClassScope {
 /* --------------------------------- Service --------------------------------- */
 
 /** Lấy danh sách buổi học của lớp (tự sinh từ lịch nếu chưa có). */
-export function listClassSessions(ctx: ScopeCtx, classId: number): unknown[] {
+export async function listClassSessions(ctx: ScopeCtx, classId: number): Promise<unknown[]> {
   getClassOr404(ctx, classId);
   generateSessionsForClass(classId);
-  return db
-    .prepare(
+  return await db.prepare(
       `SELECT s.*, (SELECT COUNT(*) FROM attendance a WHERE a.session_id = s.id) as attendance_count
        FROM sessions s WHERE s.class_id = ? ORDER BY s.date ASC`
     )
@@ -106,38 +104,36 @@ export function listClassSessions(ctx: ScopeCtx, classId: number): unknown[] {
 }
 
 /** Tạo buổi học thủ công. */
-export function createSession(ctx: ScopeCtx, input: SessionInput): unknown {
+export async function createSession(ctx: ScopeCtx, input: SessionInput): Promise<unknown> {
   if (!input.class_id || !input.date || !/^\d{4}-\d{2}-\d{2}$/.test(input.date)) {
     throw AppError.badRequest('Thiếu lớp học hoặc ngày không hợp lệ (YYYY-MM-DD)');
   }
   getClassOr404(ctx, Number(input.class_id));
-  const r = db
-    .prepare('INSERT OR IGNORE INTO sessions (class_id, date, topic) VALUES (?, ?, ?)')
+  const r = await db.prepare('INSERT OR IGNORE INTO sessions (class_id, date, topic) VALUES (?, ?, ?)')
     .run(input.class_id, input.date, input.topic || '');
   if (r.changes === 0) throw AppError.badRequest('Buổi học ngày này đã tồn tại');
-  return db.prepare('SELECT * FROM sessions WHERE id = ?').get(Number(r.lastInsertRowid));
+  return await db.prepare('SELECT * FROM sessions WHERE id = ?').get(Number(r.lastInsertRowid));
 }
 
 /** Cập nhật chủ đề buổi học. */
-export function updateSessionTopic(ctx: ScopeCtx, id: number, topic?: string): unknown {
+export async function updateSessionTopic(ctx: ScopeCtx, id: number, topic?: string): Promise<unknown> {
   getSessionOr404(ctx, id);
-  db.prepare('UPDATE sessions SET topic = ? WHERE id = ?').run(topic || '', id);
-  return db.prepare('SELECT * FROM sessions WHERE id = ?').get(id);
+  await db.prepare('UPDATE sessions SET topic = ? WHERE id = ?').run(topic || '', id);
+  return await db.prepare('SELECT * FROM sessions WHERE id = ?').get(id);
 }
 
 /** Xóa buổi học + điểm danh liên quan. */
-export function deleteSession(ctx: ScopeCtx, id: number): void {
+export async function deleteSession(ctx: ScopeCtx, id: number): Promise<void> {
   getSessionOr404(ctx, id);
-  db.prepare('DELETE FROM attendance WHERE session_id = ?').run(id);
-  db.prepare('DELETE FROM sessions WHERE id = ?').run(id);
+  await db.prepare('DELETE FROM attendance WHERE session_id = ?').run(id);
+  await db.prepare('DELETE FROM sessions WHERE id = ?').run(id);
 }
 
 /** Lấy điểm danh của buổi học (kèm danh sách học viên của lớp). */
-export function getSessionAttendance(ctx: ScopeCtx, id: number): Record<string, unknown> {
-  const sc = getSessionOr404(ctx, id);
-  const sess = db.prepare('SELECT * FROM sessions WHERE id = ?').get(id);
-  const students = db
-    .prepare(
+export async function getSessionAttendance(ctx: ScopeCtx, id: number): Promise<Record<string, unknown>> {
+  const sc = await getSessionOr404(ctx, id);
+  const sess = await db.prepare('SELECT * FROM sessions WHERE id = ?').get(id);
+  const students = await db.prepare(
       `SELECT s.id, s.code, s.name, a.status, a.note
        FROM enrollments e JOIN students s ON s.id = e.student_id
        LEFT JOIN attendance a ON a.session_id = ? AND a.student_id = s.id
@@ -148,31 +144,30 @@ export function getSessionAttendance(ctx: ScopeCtx, id: number): Record<string, 
 }
 
 /** Lưu điểm danh (upsert) — vắng mặt thì thông báo phụ huynh. */
-export function saveAttendance(
+export async function saveAttendance(
   ctx: ScopeCtx,
   id: number,
   records: AttendanceRecord[]
-): { saved: number; date: string } {
+): Promise<{ saved: number; date: string; }> {
   if (!Array.isArray(records)) throw AppError.badRequest('Dữ liệu điểm danh không hợp lệ');
-  const sc = getSessionOr404(ctx, id);
+  const sc = await getSessionOr404(ctx, id);
   const valid = records.filter(
     (r) => r.student_id && (ATTENDANCE_STATUS as readonly string[]).includes(r.status)
   );
-  const upsert = db.prepare(
-    `INSERT INTO attendance (session_id, student_id, status, note) VALUES (?, ?, ?, ?)
-     ON CONFLICT(session_id, student_id) DO UPDATE SET status = excluded.status, note = excluded.note`
-  );
-  const tx = db.transaction(() => {
+  await db.transaction(async (tx) => {
+    const upsert = await tx.prepare(
+      `INSERT INTO attendance (session_id, student_id, status, note) VALUES (?, ?, ?, ?)
+       ON CONFLICT(session_id, student_id) DO UPDATE SET status = excluded.status, note = excluded.note`
+    );
     for (const r of valid) {
-      upsert.run(id, r.student_id, r.status, r.note || null);
+      await upsert.run(id, r.student_id, r.status, r.note || null);
     }
   });
-  tx();
   // Thông báo phụ huynh cho các học viên vắng mặt
-  const nameStmt = db.prepare('SELECT name FROM students WHERE id = ?');
+  const nameStmt = await db.prepare('SELECT name FROM students WHERE id = ?');
   for (const r of valid) {
     if (r.status === 'absent') {
-      const st = nameStmt.get(r.student_id) as { name: string } | undefined;
+      const st = await nameStmt.get(r.student_id) as { name: string } | undefined;
       notifyParents(
         r.student_id,
         'absence',
@@ -185,10 +180,10 @@ export function saveAttendance(
 }
 
 /** Sinh mã điểm danh 6 số cho buổi học (staff). */
-export function generateCheckinCode(ctx: ScopeCtx, id: number): { code: string } {
+export async function generateCheckinCode(ctx: ScopeCtx, id: number): Promise<{ code: string; }> {
   getSessionOr404(ctx, id);
   const code = String(Math.floor(100000 + Math.random() * 900000));
-  db.prepare('UPDATE sessions SET checkin_code = ?, checkin_date = ? WHERE id = ?').run(
+  await db.prepare('UPDATE sessions SET checkin_code = ?, checkin_date = ? WHERE id = ?').run(
     code,
     toISODate(new Date()),
     id

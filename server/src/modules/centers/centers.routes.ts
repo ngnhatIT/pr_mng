@@ -8,15 +8,15 @@ import { asyncHandler } from '../../shared/http';
 const router = Router();
 router.use(superadminOnly);
 
-function withCounts(c: Center) {
+async function withCounts(c: Center) {
   const studentCount = (
-    db.prepare('SELECT COUNT(*) as c FROM students WHERE center_id = ?').get(c.id) as { c: number }
+    await db.prepare('SELECT COUNT(*) as c FROM students WHERE center_id = ?').get(c.id) as { c: number }
   ).c;
   const userCount = (
-    db.prepare('SELECT COUNT(*) as c FROM users WHERE center_id = ?').get(c.id) as { c: number }
+    await db.prepare('SELECT COUNT(*) as c FROM users WHERE center_id = ?').get(c.id) as { c: number }
   ).c;
   const classCount = (
-    db.prepare('SELECT COUNT(*) as c FROM classes WHERE center_id = ?').get(c.id) as { c: number }
+    await db.prepare('SELECT COUNT(*) as c FROM classes WHERE center_id = ?').get(c.id) as { c: number }
   ).c;
   return { ...c, student_count: studentCount, user_count: userCount, class_count: classCount };
 }
@@ -27,7 +27,7 @@ function withCounts(c: Center) {
 router.get(
   '/',
   asyncHandler(async (_req: AuthRequest, res: Response) => {
-    res.json(listCenters().map(withCounts));
+    res.json(await Promise.all((await listCenters()).map(withCounts)));
   })
 );
 
@@ -66,32 +66,30 @@ router.post(
       return;
     }
     if (subdomain) {
-      const dup = db.prepare('SELECT id FROM centers WHERE subdomain = ?').get(subdomain);
+      const dup = await db.prepare('SELECT id FROM centers WHERE subdomain = ?').get(subdomain);
       if (dup) {
         res.status(400).json({ error: 'Subdomain đã được sử dụng' });
         return;
       }
     }
-    const usernameTaken = db.prepare('SELECT id FROM users WHERE username = ?').get(adminUsername);
+    const usernameTaken = await db.prepare('SELECT id FROM users WHERE username = ?').get(adminUsername);
     if (usernameTaken) {
       res.status(400).json({ error: 'Tên đăng nhập admin đã tồn tại' });
       return;
     }
 
-    const create = db.transaction((): number => {
-      const r = db
-        .prepare(
+    const centerId = await db.transaction(async (tx) => {
+      const r = await tx.prepare(
           'INSERT INTO centers (name, subdomain, phone, address, plan, plan_expires_at) VALUES (?, ?, ?, ?, ?, ?)'
         )
         .run(name, subdomain, phone, address, plan, planExpiresAt);
       const centerId = Number(r.lastInsertRowid);
       const hash = bcrypt.hashSync(adminPassword, 10);
-      db.prepare(
+      await tx.prepare(
         "INSERT INTO users (username, password_hash, role, name, center_id) VALUES (?, ?, 'admin', ?, ?)"
       ).run(adminUsername, hash, `Quản trị ${name}`, centerId);
       return centerId;
     });
-    const centerId = create();
     res.status(201).json({ ok: true, center_id: centerId });
   })
 );
@@ -103,7 +101,7 @@ router.put(
   '/:id',
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const id = Number(req.params.id);
-    const center = getCenter(id);
+    const center = await getCenter(id);
     if (!center) {
       res.status(404).json({ error: 'Không tìm thấy trung tâm' });
       return;
@@ -144,9 +142,9 @@ router.put(
       params.push(body.plan_expires_at ? String(body.plan_expires_at).trim() : null);
     }
     if (sets.length > 0) {
-      db.prepare(`UPDATE centers SET ${sets.join(', ')} WHERE id = ?`).run(...params, id);
+      await db.prepare(`UPDATE centers SET ${sets.join(', ')} WHERE id = ?`).run(...params, id);
     }
-    res.json(getCenter(id));
+    res.json(await getCenter(id));
   })
 );
 

@@ -27,14 +27,14 @@ router.get(
       page?: string;
       limit?: string;
     };
-    res.json(studentService.listStudents(reqCenterId(req), { search, status }, { page, limit }));
+    res.json(await studentService.listStudents(reqCenterId(req), { search, status }, { page, limit }));
   })
 );
 
 router.get(
   '/:id',
   asyncHandler(async (req: AuthRequest, res: Response) => {
-    res.json(studentService.getStudentDetail(reqCenterId(req), paramId(req.params)));
+    res.json(await studentService.getStudentDetail(reqCenterId(req), paramId(req.params)));
   })
 );
 
@@ -43,7 +43,7 @@ router.post(
   staffOnly,
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const input = validate(req.body, studentSchema);
-    const created = studentService.createStudent(reqCenterId(req), req.user?.role === 'superadmin', {
+    const created = await studentService.createStudent(reqCenterId(req), req.user?.role === 'superadmin', {
       code: input.code ?? undefined,
       name: input.name,
       phone: input.phone ?? undefined,
@@ -63,7 +63,7 @@ router.put(
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const rest = validate(req.body, studentSchema);
     delete (rest as { code?: string }).code; // code không được sửa sau khi tạo
-    const updated = studentService.updateStudent(reqCenterId(req), paramId(req.params), {
+    const updated = await studentService.updateStudent(reqCenterId(req), paramId(req.params), {
       name: rest.name,
       phone: rest.phone ?? undefined,
       email: rest.email ?? undefined,

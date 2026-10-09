@@ -110,13 +110,13 @@ export function createApp(): Express {
   // Health check công khai — PHẢI đứng trước mọi mount có requireAuth.
   // Chuẩn enterprise: kiểm tra dependencies (DB, disk) chứ không chỉ "server còn sống".
   // Mount ở cả /api/health (legacy) và /api/v1/health (versioned).
-  const healthHandler = (_req: express.Request, res: express.Response) => {
+  const healthHandler = async (_req: express.Request, res: express.Response) => {
     const checks: Record<string, { ok: boolean; detail?: string }> = {};
-    // DB: query đơn giản + kiểm tra WAL mode
+    // DB: query đơn giản + version PostgreSQL
     try {
-      db.prepare('SELECT 1').get();
-      const mode = (db.prepare('PRAGMA journal_mode').get() as { journal_mode: string }).journal_mode;
-      checks.database = { ok: true, detail: `sqlite (${mode})` };
+      await db.prepare('SELECT 1').get();
+      const v = (await db.query('SHOW server_version')) as { rows: { server_version: string }[] };
+      checks.database = { ok: true, detail: `postgresql ${v.rows[0].server_version}` };
     } catch (err) {
       checks.database = { ok: false, detail: String(err) };
     }

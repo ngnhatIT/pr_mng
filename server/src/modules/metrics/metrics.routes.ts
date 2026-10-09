@@ -23,10 +23,10 @@ router.get(
     let dbSize = 0;
     let tableCount = 0;
     try {
-      const pageCount = (db.prepare('PRAGMA page_count').get() as { page_count: number }).page_count;
-      const pageSize = (db.prepare('PRAGMA page_size').get() as { page_size: number }).page_size;
+      const pageCount = (await db.prepare('PRAGMA page_count').get() as { page_count: number }).page_count;
+      const pageSize = (await db.prepare('PRAGMA page_size').get() as { page_size: number }).page_size;
       dbSize = pageCount * pageSize;
-      tableCount = (db.prepare("SELECT COUNT(*) as c FROM sqlite_master WHERE type = 'table'").get() as { c: number }).c;
+      tableCount = (await db.prepare("SELECT COUNT(*) as c FROM sqlite_master WHERE type = 'table'").get() as { c: number }).c;
     } catch {
       /* bỏ qua */
     }

@@ -3,7 +3,7 @@
 ## Yêu cầu
 
 - Node.js 20+ (khuyến nghị LTS)
-- 1GB RAM, 10GB disk (SQLite single-file)
+- 1GB RAM, 10GB disk (PostgreSQL 16+)
 
 ## Các bước
 
@@ -32,7 +32,7 @@ npm start
 # → http://localhost:4000
 ```
 
-Lần chạy đầu tiên tự tạo `server/data.db` + seed tài khoản demo.
+Lần chạy đầu tiên tự tạo schema PostgreSQL (44 bảng + 36 trigger) + seed tài khoản demo.
 
 ### 4. Reverse proxy (Nginx mẫu)
 
@@ -52,9 +52,9 @@ server {
 ### 5. Sau khi lên production
 
 1. **Đổi mật khẩu demo ngay**: `admin`, `teacher1`, `root`, phụ huynh `0900000001`.
-2. **Backup DB**: cron sao lưu `server/data.db` hàng ngày
+2. **Backup DB**: cron pg_dump hàng ngày
    ```bash
-   0 2 * * * cp /opt/educenter/server/data.db /backup/data-$(date +\%F).db
+   0 2 * * * pg_dump -Fc $DATABASE_URL -f /backup/educenter-$(date +\%F).dump
    ```
 3. **VNPay production**: đổi `VNPAY_PAY_URL` trong `server/src/services/vnpay.ts`
    sang `https://www.vnpayment.vn/paymentv2/vpcpay.html` + cấu hình TMN code/hash secret
@@ -64,6 +64,6 @@ server {
 
 ## Giới hạn đã biết
 
-- SQLite single-file: phù hợp 1 trung tâm vừa/nhỏ; khi cần scale đa trung tâm lớn,
+- PostgreSQL: sẵn sàng cho đa trung tâm đồng thời; khi cần scale lớn hơn,
   migrate sang Postgres (tầng `db/` đã tách riêng, service không dính SQL dialect).
 - Chưa có audit log tập trung và backup tự động trong app.

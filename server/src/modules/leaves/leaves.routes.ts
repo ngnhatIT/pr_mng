@@ -24,9 +24,8 @@ router.get(
   })
 );
 
-function getLeave(id: number) {
-  return db
-    .prepare(
+async function getLeave(id: number) {
+  return await db.prepare(
       `SELECT lr.*, s.name as student_name, s.center_id
        FROM leave_requests lr JOIN students s ON s.id = lr.student_id
        WHERE lr.id = ?`
@@ -52,21 +51,20 @@ router.post(
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const cid = reqCenterId(req);
     const id = Number(req.params.id);
-    const leave = getLeave(id);
+    const leave = await getLeave(id);
     if (!leave || (cid !== null && leave.center_id !== cid)) {
       res.status(404).json({ error: 'Không tìm thấy đơn xin nghỉ' });
       return;
     }
     const now = new Date().toISOString().slice(0, 19).replace('T', ' ');
-    db.prepare(
+    await db.prepare(
       "UPDATE leave_requests SET status = 'approved', decided_by = ?, decided_at = ? WHERE id = ?"
     ).run(req.user!.id, now, id);
     // Gợi ý học bù: các buổi từ hôm nay trở đi mà học viên chưa có điểm danh
     let suggestions: { session_id: number; date: string; topic: string | null }[] = [];
     if (leave.class_id) {
       const today = toISODate(new Date());
-      suggestions = db
-        .prepare(
+      suggestions = await db.prepare(
           `SELECT s.id as session_id, s.date, s.topic
          FROM sessions s
          WHERE s.class_id = ? AND s.date >= ?
@@ -92,13 +90,13 @@ router.post(
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const cid = reqCenterId(req);
     const id = Number(req.params.id);
-    const leave = getLeave(id);
+    const leave = await getLeave(id);
     if (!leave || (cid !== null && leave.center_id !== cid)) {
       res.status(404).json({ error: 'Không tìm thấy đơn xin nghỉ' });
       return;
     }
     const now = new Date().toISOString().slice(0, 19).replace('T', ' ');
-    db.prepare(
+    await db.prepare(
       "UPDATE leave_requests SET status = 'rejected', decided_by = ?, decided_at = ? WHERE id = ?"
     ).run(req.user!.id, now, id);
     notifyParents(

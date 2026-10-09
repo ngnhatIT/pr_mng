@@ -18,9 +18,8 @@ export function currentMonth(): string {
  * Tính lương 1 giáo viên trong tháng:
  * số buổi đã điểm danh/check-in × đơn giá buổi dạy.
  */
-export function calcPayroll(teacherId: number, month: string): PayrollResult {
-  const row = db
-    .prepare(
+export async function calcPayroll(teacherId: number, month: string): Promise<PayrollResult> {
+  const row = await db.prepare(
       `SELECT
          (SELECT COUNT(*) FROM sessions s
             JOIN classes c ON c.id = s.class_id

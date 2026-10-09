@@ -8,8 +8,8 @@ import { asyncHandler } from '../../shared/http';
 const router = Router();
 
 /** Chặn các trang landing nếu trung tâm chưa có tính năng 'landing' */
-function landingCenter(req: Request, res: Response): Center | undefined {
-  const center = resolvePublicCenter(req);
+async function landingCenter(req: Request, res: Response): Promise<Center | undefined> {
+  const center = await resolvePublicCenter(req);
   if (!center || !hasFeature(center, 'landing')) {
     res.status(403).json({ error: 'Trung tâm chưa kích hoạt trang công khai' });
     return undefined;
@@ -23,7 +23,7 @@ function landingCenter(req: Request, res: Response): Center | undefined {
 router.get(
   '/center',
   asyncHandler(async (req: Request, res: Response) => {
-    const center = landingCenter(req, res);
+    const center = await landingCenter(req, res);
     if (!center) return;
     res.json({
       id: center.id,
@@ -39,10 +39,9 @@ router.get(
 router.get(
   '/classes',
   asyncHandler(async (req: Request, res: Response) => {
-    const center = landingCenter(req, res);
+    const center = await landingCenter(req, res);
     if (!center) return;
-    const rows = db
-      .prepare(
+    const rows = await db.prepare(
         `SELECT c.id, c.name, t.name as teacher_name, c.schedule, c.tuition_fee, r.name as room_name,
          (SELECT COUNT(*) FROM enrollments e WHERE e.class_id = c.id AND e.status = 'active') as student_count
        FROM classes c
@@ -78,10 +77,9 @@ router.get(
 router.get(
   '/teachers',
   asyncHandler(async (req: Request, res: Response) => {
-    const center = landingCenter(req, res);
+    const center = await landingCenter(req, res);
     if (!center) return;
-    const rows = db
-      .prepare('SELECT id, name, subject FROM teachers WHERE center_id = ? ORDER BY name ASC')
+    const rows = await db.prepare('SELECT id, name, subject FROM teachers WHERE center_id = ? ORDER BY name ASC')
       .all(center.id);
     res.json(rows);
   })
@@ -91,10 +89,9 @@ router.get(
 router.get(
   '/reviews',
   asyncHandler(async (req: Request, res: Response) => {
-    const center = landingCenter(req, res);
+    const center = await landingCenter(req, res);
     if (!center) return;
-    const items = db
-      .prepare(
+    const items = await db.prepare(
         `SELECT r.id, r.rating, r.comment, p.name as parent_name, r.created_at
        FROM reviews r
        LEFT JOIN parents p ON p.id = r.parent_id
@@ -102,8 +99,7 @@ router.get(
        ORDER BY r.id DESC LIMIT 20`
       )
       .all(center.id);
-    const agg = db
-      .prepare(
+    const agg = await db.prepare(
         "SELECT COALESCE(AVG(rating), 0) as avg, COUNT(*) as total FROM reviews WHERE center_id = ? AND status = 'approved'"
       )
       .get(center.id) as { avg: number; total: number };
@@ -122,7 +118,7 @@ router.post(
   '/leads',
   publicRateLimit(20),
   asyncHandler(async (req: Request, res: Response) => {
-    const center = resolvePublicCenter(req);
+    const center = await resolvePublicCenter(req);
     if (!center) {
       res.status(404).json({ error: 'Không xác định được trung tâm' });
       return;
@@ -140,7 +136,7 @@ router.post(
     }
     const source = body?.source ? String(body.source).trim() : null;
     const note = body?.note ? String(body.note).trim() : null;
-    db.prepare(
+    await db.prepare(
       "INSERT INTO leads (center_id, name, phone, source, status, note) VALUES (?, ?, ?, ?, 'new', ?)"
     ).run(center.id, name, phone, source, note);
     res.json({ ok: true });
@@ -152,7 +148,7 @@ router.post(
   '/trials',
   publicRateLimit(20),
   asyncHandler(async (req: Request, res: Response) => {
-    const center = resolvePublicCenter(req);
+    const center = await resolvePublicCenter(req);
     if (!center) {
       res.status(404).json({ error: 'Không xác định được trung tâm' });
       return;
@@ -175,7 +171,7 @@ router.post(
         res.status(400).json({ error: 'Lớp học không hợp lệ' });
         return;
       }
-      const cls = db.prepare('SELECT id FROM classes WHERE id = ? AND center_id = ?').get(classId, center.id);
+      const cls = await db.prepare('SELECT id FROM classes WHERE id = ? AND center_id = ?').get(classId, center.id);
       if (!cls) {
         res.status(400).json({ error: 'Lớp học không tồn tại' });
         return;
@@ -184,17 +180,16 @@ router.post(
     const referralCode = body?.referral_code ? String(body.referral_code).trim() : '';
     let referrer: { id: number } | undefined;
     if (referralCode) {
-      referrer = db
-        .prepare('SELECT id FROM parents WHERE referral_code = ? AND center_id = ?')
+      referrer = await db.prepare('SELECT id FROM parents WHERE referral_code = ? AND center_id = ?')
         .get(referralCode, center.id) as { id: number } | undefined;
     }
     const desiredDate = body?.desired_date ? String(body.desired_date).trim() : null;
     const note = body?.note ? String(body.note).trim() : null;
-    db.prepare(
+    await db.prepare(
       "INSERT INTO trial_registrations (center_id, name, phone, class_id, desired_date, note, referral_code, status) VALUES (?, ?, ?, ?, ?, ?, ?, 'new')"
     ).run(center.id, name, phone, classId, desiredDate, note, referralCode || null);
     if (referrer) {
-      db.prepare(
+      await db.prepare(
         "INSERT INTO referrals (referrer_parent_id, referred_phone, referred_student_id, status) VALUES (?, ?, NULL, 'pending')"
       ).run(referrer.id, phone);
     }
