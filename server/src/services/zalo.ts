@@ -1,6 +1,7 @@
 import { db, getSetting, getCenterSetting } from '../db';
 import { getCenterSettings } from '../db/helpers';
 import { logger } from '../shared/logger';
+import { formatError } from '../shared/errorFormat';
 
 const log = logger.scope('zalo');
 
