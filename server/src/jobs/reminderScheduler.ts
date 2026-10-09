@@ -151,9 +151,11 @@ export async function runReminderOnce(centerId?: number): Promise<RunOnceResult>
               continue;
             }
             const r = lockOutcome.result;
-            if (r.status === 'sent') sentCount++;
-            if (kind === 'overdue') result.overdue++;
-            else result.upcoming++;
+            if (r.status === 'sent') {
+              sentCount++;
+              if (kind === 'overdue') result.overdue++;
+              else result.upcoming++;
+            }
             result.details.push({ invoiceId: inv.id, kind, status: r.status, message: r.message });
             log.info(`Hóa đơn #${inv.id}: ${r.message}`, { center: center.name, kind });
           } catch (err) {
