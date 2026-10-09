@@ -273,6 +273,10 @@ export async function deleteInvoice(centerId: number | null, id: number, actor?:
     throw AppError.badRequest('Không thể xóa phiếu thu đã có thanh toán được xác nhận');
   }
   await db.transaction(async (tx) => {
+    // Lock invoice trước để chống double-delete đồng thời
+    const inv = (await tx.prepare('SELECT id FROM invoices WHERE id = ? FOR UPDATE').get(id)) as
+      { id: number } | undefined;
+    if (!inv) throw AppError.notFound('Không tìm thấy phiếu thu');
     // Hoàn lại credits đã áp dụng (payments method='credit' lưu credit_id trong note)
     const creditPays = (await tx
       .prepare("SELECT amount, note FROM payments WHERE invoice_id = ? AND method = 'credit'")
