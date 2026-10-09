@@ -208,7 +208,7 @@ router.post(
     if (desiredDateRaw) {
       const { validate } = await import('../../shared/validate');
       const parsed = validate({ d: desiredDateRaw }, { d: v.date({ label: 'Ngày mong muốn' }) });
-      desiredDate = parsed.d;
+      desiredDate = parsed.d ?? null;
     }
     const note = body?.note ? String(body.note).trim() : null;
     await db
