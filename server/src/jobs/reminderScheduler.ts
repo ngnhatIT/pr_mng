@@ -46,6 +46,13 @@ async function releaseAdvisoryLock(key: string): Promise<void> {
 /** Ngày đã chạy tự động theo từng center — tránh chạy trùng trong ngày */
 const autoRunDays = new Set<string>();
 
+/** Dọn entries cũ (không phải hôm nay) để tránh rò rỉ bộ nhớ */
+function pruneAutoRunDays(today: string): void {
+  for (const key of autoRunDays) {
+    if (!key.endsWith(`:${today}`)) autoRunDays.delete(key);
+  }
+}
+
 interface DueInvoice {
   id: number;
   due_date: string | null;
@@ -176,6 +183,8 @@ export function startReminderScheduler(): void {
     () => {
       (async () => {
         try {
+          // Dọn entries cũ mỗi phút để tránh rò rỉ bộ nhớ
+          pruneAutoRunDays(nowVN().today);
           // Tự đăng bài tập đã hẹn giờ (Google Classroom: Schedule post)
           const published = await publishScheduled();
           if (published > 0) log.info(`Đã tự đăng ${published} bài tập hẹn giờ`);

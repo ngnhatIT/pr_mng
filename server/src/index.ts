@@ -80,21 +80,24 @@ function startBackupScheduler(): void {
         logger.info('Backup định kỳ hoàn tất', { path: r.path, sizeBytes: r.sizeBytes, kept: r.kept });
       } catch (err: unknown) {
         // Retry 2 lần cách nhau 15 phút (backup fail một đêm = mất cả chu kỳ 24h)
+        // Chạy async không block cron thread (dùng setTimeout thay vì await)
         logger.error('Backup định kỳ THẤT BẠI, thử lại sau 15 phút', { error: String(err) });
-        for (let attempt = 1; attempt <= 2; attempt++) {
-          await new Promise((resolve) => setTimeout(resolve, 15 * 60 * 1000));
-          try {
-            const r = await backupDatabase(dir, env.BACKUP_KEEP);
-            logger.info('Backup retry thành công', { attempt, path: r.path });
-            break;
-          } catch (retryErr: unknown) {
-            logger.error('Backup retry THẤT BẠI', { attempt, error: String(retryErr) });
-            if (attempt === 2) {
-              // Hết retry: gửi cảnh báo webhook (nếu cấu hình) — backup chết lặng rất nguy hiểm
-              await sendAlert('Backup DB thất bại sau 3 lần thử', String(retryErr));
+        void (async () => {
+          for (let attempt = 1; attempt <= 2; attempt++) {
+            await new Promise((resolve) => setTimeout(resolve, 15 * 60 * 1000));
+            try {
+              const r = await backupDatabase(dir, env.BACKUP_KEEP);
+              logger.info('Backup retry thành công', { attempt, path: r.path });
+              break;
+            } catch (retryErr: unknown) {
+              logger.error('Backup retry THẤT BẠI', { attempt, error: String(retryErr) });
+              if (attempt === 2) {
+                // Hết retry: gửi cảnh báo webhook (nếu cấu hình) — backup chết lặng rất nguy hiểm
+                await sendAlert('Backup DB thất bại sau 3 lần thử', String(retryErr));
+              }
             }
           }
-        }
+        })();
       } finally {
         try {
           await db.query('SELECT pg_advisory_unlock(hashtext($1))', ['educenter-backup']);
