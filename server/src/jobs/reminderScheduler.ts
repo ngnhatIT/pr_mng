@@ -139,13 +139,18 @@ export async function runReminderOnce(centerId?: number): Promise<RunOnceResult>
             }
             // Dùng cùng lock key với manual remind (remind:{id}:{kind}) để chống race
             // khi admin bấm nhắc thủ công đúng lúc scheduler đang chạy
-            const r = await withAdvisoryLock(`remind:${inv.id}:${kind}`, async () => {
+            const lockOutcome = await withAdvisoryLock(`remind:${inv.id}:${kind}`, async () => {
               // Re-check sau khi giữ lock (chống interleaving)
               if (await wasRemindedRecently(inv.id, kind)) {
                 return { status: 'skipped' as const, message: 'Đã nhắc gần đây' };
               }
               return sendTuitionReminder(inv.id, kind, center.id);
             });
+            if (lockOutcome.status !== 'done' || !lockOutcome.result) {
+              result.skipped++;
+              continue;
+            }
+            const r = lockOutcome.result;
             if (r.status === 'sent') sentCount++;
             if (kind === 'overdue') result.overdue++;
             else result.upcoming++;
