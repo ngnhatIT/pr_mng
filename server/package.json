@@ -37,5 +37,8 @@
     "test": "npx tsc --project tsconfig.test.json --outDir ./test-dist && TESTDB=\"${TEST_DATABASE_URL:-postgres://educenter:educenter123@localhost:5432/educenter_test}\" && DATABASE_URL=\"$TESTDB\" TEST_DATABASE_URL=\"$TESTDB\" node --test test-dist/db/*.test.js test-dist/modules/*/*.test.js test-dist/services/*.test.js test-dist/shared/*.test.js"
   },
   "type": "commonjs",
-  "version": "1.0.0"
+  "version": "1.0.0",
+  "overrides": {
+    "semver": "^7.5.4"
+  }
 }

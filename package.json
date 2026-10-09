@@ -25,5 +25,8 @@
   "workspaces": [
     "server",
     "client"
-  ]
+  ],
+  "overrides": {
+    "semver": "^7.5.4"
+  }
 }
