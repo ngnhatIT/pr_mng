@@ -127,18 +127,6 @@ export const homeworkRepo = {
 };
 
 /** Xóa file vật lý an toàn (chỉ trong upload dir, bỏ qua lỗi). */
-async function deleteUploadFile(url: string): Promise<void> {
-  if (!url || !url.startsWith('/uploads/')) return;
-  const filename = path.basename(url);
-  // Chống path traversal: chỉ cho phép tên file đơn giản
-  if (!/^[a-zA-Z0-9._-]+$/.test(filename)) return;
-  try {
-    await fs.unlink(path.join(getUploadDir(), filename));
-  } catch {
-    // File đã mất hoặc không xóa được — không chặn xóa DB
-  }
-}
-
 /**
  * Xóa bài tập và toàn bộ dữ liệu liên quan (cascade trong transaction),
  * đồng thời dọn file đính kèm vật lý trên disk (chống file mồ côi).
@@ -148,6 +136,10 @@ export async function deleteHomeworkCascade(id: number): Promise<void> {
   const files = (await db
     .prepare("SELECT url FROM homework_attachments WHERE homework_id = ? AND kind = 'file'")
     .all(id)) as { url: string }[];
+  // Lấy file bài nộp của học viên (tránh file mồ côi)
+  const submissionFiles = (await db
+    .prepare('SELECT file_url FROM homework_submissions WHERE homework_id = ? AND file_url IS NOT NULL')
+    .all(id)) as { file_url: string }[];
   await db.transaction(async (tx) => {
     await tx
       .prepare(
@@ -168,8 +160,8 @@ export async function deleteHomeworkCascade(id: number): Promise<void> {
     await tx.prepare('DELETE FROM homework_submissions WHERE homework_id = ?').run(id);
     await tx.prepare('DELETE FROM homework WHERE id = ?').run(id);
   });
-  // Dọn file vật lý SAU khi DB đã xóa thành công
-  for (const f of files) {
-    await deleteUploadFile(f.url);
-  }
+  // Xóa file vật lý (sau khi DB đã xóa thành công)
+  const { deleteUploadFileByUrl } = await import('../../shared/upload');
+  for (const f of files) await deleteUploadFileByUrl(f.url);
+  for (const f of submissionFiles) await deleteUploadFileByUrl(f.file_url);
 }

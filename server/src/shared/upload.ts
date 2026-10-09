@@ -55,3 +55,19 @@ export function isValidUploadFilename(filename: string): boolean {
     path.basename(filename)
   );
 }
+
+/**
+ * Xóa file vật lý theo URL lưu trong DB (vd: '/uploads/hw_xxx.pdf').
+ * Dùng khi xóa bản ghi (homework, submission, student...) để không để lại file mồ côi.
+ */
+export async function deleteUploadFileByUrl(url: string | null | undefined): Promise<void> {
+  if (!url || !url.startsWith('/uploads/')) return;
+  const filename = path.basename(url);
+  // Chống path traversal: chỉ cho phép tên file đơn giản
+  if (!/^[a-zA-Z0-9._-]+$/.test(filename)) return;
+  try {
+    await fs.promises.unlink(path.join(getUploadDir(), filename));
+  } catch {
+    // File đã mất hoặc không xóa được — không chặn xóa DB
+  }
+}
