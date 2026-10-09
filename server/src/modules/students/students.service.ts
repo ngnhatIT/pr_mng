@@ -176,7 +176,11 @@ export async function deleteStudent(centerId: number | null, id: number, actor?:
   // Guard tài chính trước khi xóa
   const debtRow = (await db
     .prepare(
-      "SELECT COALESCE(SUM(amount - paid_amount), 0) as debt FROM invoices WHERE student_id = ? AND status != 'cancelled'"
+      `SELECT COALESCE(SUM(i.amount - COALESCE((
+        SELECT SUM(p.amount) FROM payments p
+        WHERE p.invoice_id = i.id AND p.status = 'confirmed'
+      ), 0)), 0) as debt
+      FROM invoices i WHERE i.student_id = ? AND i.status != 'cancelled'`
     )
     .get(id)) as { debt: string };
   const debt = Number(debtRow?.debt) || 0;
@@ -186,7 +190,12 @@ export async function deleteStudent(centerId: number | null, id: number, actor?:
     );
   }
   const creditRow = (await db
-    .prepare('SELECT COALESCE(SUM(amount), 0) as c FROM parent_credits WHERE student_id = ?')
+    .prepare(
+      `SELECT COALESCE(SUM(c.amount - c.used_amount), 0) as c
+       FROM credits c JOIN parents p ON p.id = c.parent_id
+       JOIN parent_students ps ON ps.parent_id = p.id
+       WHERE ps.student_id = ?`
+    )
     .get(id)) as { c: string };
   if ((Number(creditRow?.c) || 0) > 0) {
     throw AppError.badRequest('Không thể xóa: học viên còn credits. Xử lý credits trước.');
@@ -200,6 +209,10 @@ export async function deleteStudent(centerId: number | null, id: number, actor?:
   if ((Number(paidRow?.c) || 0) > 0) {
     throw AppError.badRequest('Không thể xóa: học viên đã có thanh toán được xác nhận. Giữ lại để đối soát.');
   }
+  // Lấy file bài nộp trước khi xóa (tránh file mồ côi)
+  const submissionFiles = (await db
+    .prepare('SELECT file_url FROM homework_submissions WHERE student_id = ? AND file_url IS NOT NULL')
+    .all(id)) as { file_url: string }[];
   await db.transaction(async (tx) => {
     await tx.prepare('DELETE FROM attendance WHERE student_id = ?').run(id);
     await tx.prepare('DELETE FROM enrollments WHERE student_id = ?').run(id);
@@ -213,6 +226,9 @@ export async function deleteStudent(centerId: number | null, id: number, actor?:
     await tx.prepare('DELETE FROM grades WHERE student_id = ?').run(id);
     await tx.prepare('DELETE FROM students WHERE id = ?').run(id);
   });
+  // Xóa file vật lý sau khi DB đã xóa thành công
+  const { deleteUploadFileByUrl } = await import('../../shared/upload');
+  for (const f of submissionFiles) await deleteUploadFileByUrl(f.file_url);
   void audit({
     centerId,
     actor,
