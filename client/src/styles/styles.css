@@ -3482,7 +3482,8 @@ a:focus-visible,
   .topbar,
   .mobile-drawer,
   .bottom-nav,
-  .modal-overlay,
+  .modal-backdrop,
+  .modal-head,
   .toast-container,
   .network-banner,
   .offline-banner,
@@ -3503,9 +3504,16 @@ a:focus-visible,
   :root {
     --bg: #fff;
     --surface: #fff;
+    --bg-soft: #fff;
     --text: #000;
     --text-strong: #000;
     --border: #ccc;
+  }
+  @page {
+    margin: 15mm;
+  }
+  .receipt-footer {
+    break-inside: avoid;
   }
 }
 
