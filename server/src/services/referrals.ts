@@ -51,10 +51,20 @@ export async function afterInvoicePaid(invoiceId: number): Promise<void> {
     if (!inv || inv.status !== 'paid') return;
 
     // Advisory lock theo student: 2 hóa đơn cùng học viên paid đồng thời
-    // không thưởng 2 lần (mỗi luồng có thể claim 1 referral row khác nhau)
-    await withAdvisoryLock(`referral-reward:${inv.student_id}`, async () => {
+    // không thưởng 2 lần (mỗi luồng có thể claim 1 referral row khác nhau).
+    // Nếu locked → retry 1 lần sau 2s (tránh mất reward khi lock holder xử lý HD khác trước).
+    let outcome = await withAdvisoryLock(`referral-reward:${inv.student_id}`, async () => {
       await doAfterInvoicePaid(inv);
     });
+    if (outcome.status === 'locked') {
+      await new Promise((r) => setTimeout(r, 2000));
+      outcome = await withAdvisoryLock(`referral-reward:${inv.student_id}`, async () => {
+        await doAfterInvoicePaid(inv);
+      });
+    }
+    if (outcome.status !== 'done') {
+      logger.warn('afterInvoicePaid không hoàn tất', { invoiceId, status: outcome.status });
+    }
   } catch (err) {
     logger.error('afterInvoicePaid thất bại', { invoiceId, error: String(err) });
   }
