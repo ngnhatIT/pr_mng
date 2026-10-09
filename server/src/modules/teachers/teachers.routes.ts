@@ -151,6 +151,15 @@ router.post(
         'INSERT INTO users (username, password_hash, role, name, center_id, teacher_id) VALUES (?, ?, ?, ?, ?, ?)'
       )
       .run(username.trim(), hash, 'teacher', teacher.name, teacher.center_id, id);
+    await audit({
+      centerId: teacher.center_id,
+      actor: actorFromReq(req),
+      action: 'create',
+      entity: 'users',
+      entityId: Number(r.lastInsertRowid),
+      summary: `Cấp tài khoản đăng nhập cho giáo viên ${teacher.name}`,
+      meta: { username: username.trim(), teacher_id: id },
+    });
     res.status(201).json({ ok: true, username: username.trim(), user_id: Number(r.lastInsertRowid) });
   })
 );
