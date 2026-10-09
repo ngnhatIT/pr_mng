@@ -53,6 +53,12 @@ export async function afterInvoicePaid(invoiceId: number): Promise<void> {
     ).c;
     if (otherPaid > 0) return;
 
+    // Chống thưởng trùng: học viên chỉ được thưởng 1 lần duy nhất (dù có nhiều referral pending)
+    const alreadyRewarded = (await db
+      .prepare("SELECT 1 FROM referrals WHERE referred_student_id = ? AND status = 'rewarded' LIMIT 1")
+      .get(inv.student_id)) as { '1'?: number } | undefined;
+    if (alreadyRewarded) return;
+
     const student = (await db
       .prepare('SELECT id, center_id, phone FROM students WHERE id = ?')
       .get(inv.student_id)) as { id: number; center_id: number | null; phone: string | null } | undefined;
