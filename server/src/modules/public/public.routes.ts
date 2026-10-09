@@ -204,7 +204,12 @@ router.post(
     }
     const desiredDateRaw = body?.desired_date ? String(body.desired_date).trim() : null;
     // Validate ngày thật (tránh "2026-13-99" lọt vào DB)
-    const desiredDate = desiredDateRaw ? v.date({ label: 'Ngày mong muốn' }).parse(desiredDateRaw) : null;
+    let desiredDate: string | null = null;
+    if (desiredDateRaw) {
+      const { validate } = await import('../../shared/validate');
+      const parsed = validate({ d: desiredDateRaw }, { d: v.date({ label: 'Ngày mong muốn' }) });
+      desiredDate = parsed.d;
+    }
     const note = body?.note ? String(body.note).trim() : null;
     await db
       .prepare(
