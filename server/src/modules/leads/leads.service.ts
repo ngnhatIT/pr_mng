@@ -1,5 +1,6 @@
 import { db } from '../../db';
 import { parsePagination, paginate, type PageOptions, type Paginated } from '../../shared/pagination';
+import { escapeLike } from '../../shared/like';
 import { AppError } from '../../shared/errors';
 import type { Db } from '../../db/pg-compat';
 
@@ -42,8 +43,8 @@ export async function listLeads(
     params.push(status);
   }
   if (search) {
-    conds.push('(name LIKE ? OR phone LIKE ?)');
-    const kw = `%${search}%`;
+    conds.push('(name LIKE ? ESCAPE "\\" OR phone LIKE ? ESCAPE "\\")');
+    const kw = `%${escapeLike(search)}%`;
     params.push(kw, kw);
   }
   const where = conds.length ? `WHERE ${conds.join(' AND ')}` : '';

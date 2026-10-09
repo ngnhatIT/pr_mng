@@ -1,5 +1,6 @@
 import { db } from '../../db';
 import { parsePagination, paginate, type PageOptions, type Paginated } from '../../shared/pagination';
+import { escapeLike } from '../../shared/like';
 import { DAY_MS } from '../../shared/time';
 import { AppError } from '../../shared/errors';
 import { todayVN, nowVNMinute, assignedCountExpr, assertValidDates } from './homework.helpers';
@@ -126,7 +127,7 @@ export async function listHomework(
     params.push(Number(class_id));
   }
   if (search.trim()) {
-    conds.push('(h.title LIKE ? OR h.content LIKE ?)');
+    conds.push("(h.title LIKE ? ESCAPE '\\' OR h.content LIKE ? ESCAPE '\\')");
     params.push(`%${search.trim()}%`, `%${search.trim()}%`);
   }
   if (due) dueCond(due, conds, params);

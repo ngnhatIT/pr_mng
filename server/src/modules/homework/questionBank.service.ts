@@ -1,5 +1,6 @@
 import { db } from '../../db';
 import { AppError } from '../../shared/errors';
+import { escapeLike } from '../../shared/like';
 import { countQuizAttempts } from './quiz.service';
 
 /* ---------------------------------- Types ---------------------------------- */
@@ -38,7 +39,7 @@ export async function listBankQuestions(
     params.push(centerId);
   }
   if (search.trim()) {
-    conds.push('question LIKE ?');
+    conds.push('question LIKE ? ESCAPE "\\"');
     params.push(`%${search.trim()}%`);
   }
   if (tag) {

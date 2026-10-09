@@ -1,6 +1,7 @@
 import { db, recalcInvoiceStatus } from '../../db';
 import { afterInvoicePaid, applyCreditToInvoice } from '../../services/referrals';
 import { AppError } from '../../shared/errors';
+import { escapeLike } from '../../shared/like';
 import { parsePagination, paginate, type PageOptions, type Paginated } from '../../shared/pagination';
 import { audit, formatVND, type AuditActor } from '../../shared/audit';
 
@@ -81,8 +82,8 @@ export async function listInvoices(
     params.push(status);
   }
   if (search) {
-    conds.push('(s.name LIKE ? OR s.code LIKE ?)');
-    const kw = `%${search}%`;
+    conds.push('(s.name LIKE ? ESCAPE "\\" OR s.code LIKE ? ESCAPE "\\")');
+    const kw = `%${escapeLike(search)}%`;
     params.push(kw, kw);
   }
   const where = conds.length ? `WHERE ${conds.join(' AND ')}` : '';
