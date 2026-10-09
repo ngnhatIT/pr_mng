@@ -143,6 +143,10 @@ export function createApp(): Express {
   app.get('/api/live', (_req: express.Request, res: express.Response) => {
     res.json({ ok: true });
   });
+  // Version endpoint: client/integrator phát hiện version API đang phục vụ
+  app.get('/api/version', (_req: express.Request, res: express.Response) => {
+    res.json({ version: 'v1', api: '1.0.0' });
+  });
   app.get(
     '/api/health',
     asyncHandler(async (_req: express.Request, res: express.Response) => {
