@@ -1053,6 +1053,14 @@ textarea.text-input {
   gap: 8px;
   z-index: 200;
 }
+/* Mobile: toast hiện trên bottom nav (cao ~60px) để không che tab */
+@media (max-width: 768px) {
+  .toast-wrap {
+    bottom: 76px;
+    right: 16px;
+    left: 16px;
+  }
+}
 .toast {
   background: #1e293b;
   color: #fff;
