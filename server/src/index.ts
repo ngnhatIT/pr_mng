@@ -151,6 +151,7 @@ async function main(): Promise<void> {
   const app = createApp();
   const server = app.listen(env.PORT, () => {
     logger.info(`EduCenter Pro API đang chạy tại http://localhost:${env.PORT} (${env.NODE_ENV})`);
+    logger.info(`CORS origins: ${env.CORS_ORIGIN}`);
     startReminderScheduler();
     startBackupScheduler();
     startConsistencyScheduler();
