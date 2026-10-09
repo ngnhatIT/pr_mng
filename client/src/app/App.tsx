@@ -23,6 +23,7 @@ import { ReferralsAdmin } from '../features/growth/ReferralsAdmin';
 import { PaymentConfig } from '../features/tuition/PaymentConfig';
 import { System } from '../features/system/System';
 import { AuditLogs } from '../features/system/AuditLogs';
+import { Roles } from '../features/system/Roles';
 import { ParentLayout } from '../features/parent/ParentLayout';
 import { ParentLogin } from '../features/parent/ParentLogin';
 import { ParentRegister } from '../features/parent/ParentRegister';
@@ -133,6 +134,7 @@ export default function App() {
         <Route path="cau-hinh-thanh-toan" element={<PaymentConfig />} />
         <Route path="system" element={<System />} />
         <Route path="nhat-ky" element={<AuditLogs />} />
+        <Route path="phan-quyen" element={<Roles />} />
       </Route>
 
       {/* Redirect đường dẫn cũ sang mới */}

@@ -1,0 +1,447 @@
+/* ================= Trang Phân quyền =================
+ * Design: 2 cột (danh sách vai trò | ma trận quyền).
+ * Calm, mật độ trung bình-cao, micro-interaction nhẹ.
+ */
+
+.roles-layout {
+  display: grid;
+  grid-template-columns: 300px 1fr;
+  gap: var(--sp-4);
+  align-items: start;
+}
+
+/* ---------- Cột trái: danh sách vai trò ---------- */
+.roles-list-col {
+  position: sticky;
+  top: var(--sp-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+  max-height: calc(100vh - 140px);
+}
+
+.roles-search {
+  position: relative;
+}
+
+.roles-search-icon {
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-muted);
+  pointer-events: none;
+}
+
+.roles-search-input {
+  padding-left: 34px !important;
+  width: 100%;
+}
+
+.roles-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  overflow-y: auto;
+  padding-bottom: var(--sp-2);
+}
+
+.role-card {
+  text-align: left;
+  background: var(--bg-soft);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: var(--sp-3) var(--sp-4);
+  cursor: pointer;
+  transition: border-color 150ms ease-out, box-shadow 150ms ease-out, transform 150ms ease-out;
+  width: 100%;
+  font: inherit;
+  color: inherit;
+}
+
+.role-card:hover {
+  border-color: var(--primary);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-sm);
+}
+
+.role-card.active {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 1px var(--primary);
+  background: var(--primary-soft);
+}
+
+.role-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-2);
+  margin-bottom: var(--sp-1);
+}
+
+.role-card-name {
+  font-weight: 600;
+  font-size: var(--font-size-md);
+}
+
+.role-card-meta {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  color: var(--text-muted);
+  font-size: var(--font-size-xs);
+}
+
+.role-card-meta svg {
+  vertical-align: -2px;
+  margin-right: 2px;
+}
+
+.badge-system {
+  background: var(--bg-muted);
+  color: var(--text-muted);
+}
+
+.badge-custom {
+  background: var(--primary-soft);
+  color: var(--primary-dark);
+}
+
+/* ---------- Cột phải: chi tiết ---------- */
+.roles-detail-col {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+}
+
+.role-head {
+  display: flex;
+  gap: var(--sp-4);
+  align-items: flex-start;
+  background: var(--bg-soft);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: var(--sp-5);
+}
+
+.role-head-icon {
+  flex: none;
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius-md);
+  background: var(--primary-soft);
+  color: var(--primary-dark);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.role-head-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.role-head-info h2 {
+  margin: 0 0 var(--sp-1);
+  font-size: var(--font-size-xl);
+  letter-spacing: -0.01em;
+}
+
+.role-head-info p {
+  margin: 0 0 var(--sp-2);
+  color: var(--text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.role-head-tags {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  flex-wrap: wrap;
+}
+
+.role-head-actions {
+  display: flex;
+  gap: var(--sp-2);
+  flex: none;
+}
+
+.btn-danger-ghost {
+  color: var(--danger);
+}
+
+.btn-danger-ghost:hover {
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+
+/* ---------- Nhóm quyền theo module ---------- */
+.perm-groups {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+}
+
+.perm-group {
+  background: var(--bg-soft);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
+.perm-group-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--sp-3) var(--sp-4);
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-muted);
+}
+
+.perm-group-name {
+  font-weight: 700;
+  font-size: var(--font-size-sm);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+}
+
+.perm-group-tools {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  font-size: var(--font-size-xs);
+}
+
+.link-btn {
+  background: none;
+  border: none;
+  color: var(--primary);
+  font: inherit;
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+}
+
+.link-btn:hover {
+  text-decoration: underline;
+}
+
+.perm-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.perm-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-4);
+  padding: var(--sp-3) var(--sp-4);
+  border-bottom: 1px solid var(--border);
+  transition: background 120ms ease-out;
+}
+
+.perm-row:last-child {
+  border-bottom: none;
+}
+
+.perm-row:hover {
+  background: var(--bg-muted);
+}
+
+.perm-row.readonly:hover {
+  background: var(--bg-soft);
+}
+
+.perm-row.on {
+  background: var(--primary-soft);
+}
+
+.perm-row.on:hover {
+  background: #e6efff;
+}
+
+.perm-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.perm-name {
+  font-weight: 600;
+  font-size: var(--font-size-md);
+}
+
+.perm-desc {
+  color: var(--text-muted);
+  font-size: var(--font-size-xs);
+  margin-top: 2px;
+}
+
+.perm-code {
+  font-size: var(--font-size-xs);
+  margin-top: 2px;
+}
+
+/* Segmented control chọn phạm vi */
+.scope-seg {
+  display: flex;
+  flex: none;
+  background: var(--bg-muted);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 2px;
+  gap: 2px;
+}
+
+.scope-seg-btn {
+  border: none;
+  background: transparent;
+  font: inherit;
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  color: var(--text-muted);
+  padding: 6px 10px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all 150ms ease-out;
+  white-space: nowrap;
+}
+
+.scope-seg-btn:hover {
+  color: var(--text);
+}
+
+.scope-seg-btn.active {
+  background: var(--bg-soft);
+  color: var(--text);
+  box-shadow: var(--shadow-sm);
+}
+
+.scope-seg-btn.active.scope-own {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.scope-seg-btn.active.scope-center {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+.scope-seg-btn.active.scope-all {
+  background: #dcfce7;
+  color: #166534;
+}
+
+/* Tag phạm vi (chế độ chỉ xem) */
+.scope-tag {
+  flex: none;
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 999px;
+}
+
+.scope-tag.scope-own {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.scope-tag.scope-center {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+.scope-tag.scope-all {
+  background: #dcfce7;
+  color: #166534;
+}
+
+/* ---------- Thanh lưu (sticky) ---------- */
+.roles-savebar {
+  position: sticky;
+  bottom: var(--sp-4);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-4);
+  background: var(--text);
+  color: #fff;
+  border-radius: var(--radius-lg);
+  padding: var(--sp-3) var(--sp-4);
+  box-shadow: var(--shadow-lg);
+  transform: translateY(16px);
+  opacity: 0;
+  pointer-events: none;
+  transition: transform 200ms ease-out, opacity 200ms ease-out;
+}
+
+.roles-savebar.show {
+  transform: translateY(0);
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.roles-savebar-text {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+}
+
+.roles-savebar-actions {
+  display: flex;
+  gap: var(--sp-2);
+}
+
+.roles-savebar .btn-ghost {
+  color: #fff;
+  border-color: rgba(255, 255, 255, 0.25);
+}
+
+.roles-savebar .btn-ghost:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+/* ---------- Responsive ---------- */
+@media (max-width: 900px) {
+  .roles-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .roles-list-col {
+    position: static;
+    max-height: none;
+  }
+
+  .roles-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  }
+
+  .perm-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--sp-2);
+  }
+
+  .scope-seg {
+    align-self: flex-start;
+  }
+
+  .role-head {
+    flex-direction: column;
+  }
+
+  .role-head-actions {
+    width: 100%;
+  }
+
+  .role-head-actions .btn {
+    flex: 1;
+  }
+}

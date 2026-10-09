@@ -161,7 +161,7 @@ router.delete(
   '/assign',
   requirePermission('roles.manage'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
-    const { user_id, role_id } = validate(req.body, {
+    const { user_id, role_id } = validate({ ...req.query, ...req.body }, {
       user_id: v.number({ required: true, label: 'User' }),
       role_id: v.number({ required: true, label: 'Role' }),
     });
