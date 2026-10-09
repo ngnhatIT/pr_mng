@@ -1004,6 +1004,7 @@ textarea.text-input {
   font-size: 13px;
   cursor: pointer;
   color: var(--text-muted);
+  min-height: 40px; /* touch target chuẩn nội bộ */
 }
 .seg-btn + .seg-btn {
   border-left: 1px solid var(--border);
