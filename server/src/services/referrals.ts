@@ -177,6 +177,15 @@ export async function applyCreditToInvoice(
         "INSERT INTO payments (invoice_id, amount, method, note, status) VALUES (?, ?, 'credit', ?, 'confirmed')"
       )
       .run(invoiceId, applied, `Áp dụng credits #${creditId}`);
+    // Re-check chống race: nếu payment khác chen vào giữa lúc tính remaining → rollback
+    const finalPaid = (await tx
+      .prepare(
+        "SELECT COALESCE(SUM(amount),0) as paid FROM payments WHERE invoice_id = ? AND status = 'confirmed'"
+      )
+      .get(invoiceId)) as { paid: number };
+    if (Number(finalPaid.paid) > lockedInv.amount + 0.01) {
+      throw AppError.conflict('Hóa đơn vừa được thanh toán bởi giao dịch khác, vui lòng thử lại');
+    }
     await tx.prepare('UPDATE credits SET used_amount = used_amount + ? WHERE id = ?').run(applied, creditId);
     const newStatus = Number(paidRow.paid) + applied >= lockedInv.amount - 0.01 ? 'paid' : 'partial';
     await tx.prepare('UPDATE invoices SET status = ? WHERE id = ?').run(newStatus, invoiceId);
