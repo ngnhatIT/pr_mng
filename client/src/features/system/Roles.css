@@ -453,3 +453,9 @@
     flex: 1;
   }
 }
+
+@media (max-width: 768px) {
+  .scope-seg-btn {
+    padding: 10px 12px;
+  }
+}

@@ -1965,6 +1965,12 @@ textarea.text-input {
 .stat-grid-3 {
   grid-template-columns: repeat(3, 1fr);
 }
+
+@media (max-width: 640px) {
+  .stat-grid-3 {
+    grid-template-columns: 1fr;
+  }
+}
 @media (max-width: 600px) {
   .stat-grid-3 {
     grid-template-columns: repeat(2, 1fr);
