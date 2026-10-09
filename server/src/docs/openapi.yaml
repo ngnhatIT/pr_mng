@@ -3498,6 +3498,39 @@ paths:
           description: Token pair mới
         '401':
           description: Refresh token không hợp lệ
+  /api/v1/parent/change-password:
+    post:
+      tags:
+        - Parent
+      summary: Đổi mật khẩu phụ huynh (giữ session hiện tại)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - old_password
+                - new_password
+              properties:
+                old_password:
+                  type: string
+                new_password:
+                  type: string
+                  minLength: 8
+      responses:
+        '200':
+          description: Đổi mật khẩu thành công
+        '400':
+          description: Mật khẩu cũ sai hoặc mật khẩu mới không hợp lệ
+  /api/v1/parent/logout-all:
+    post:
+      tags:
+        - Parent
+      summary: Đăng xuất mọi thiết bị của phụ huynh
+      responses:
+        '200':
+          description: Đã thu hồi mọi session
   /api/v1/parent/logout:
     post:
       tags:
