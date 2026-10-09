@@ -75,30 +75,6 @@ export const homeworkRepo = {
     return Number(r.lastInsertRowid);
   },
 
-  /** Cập nhật các field cho phép sửa. */
-  async update(
-    id: number,
-    patch: Partial<
-      Pick<
-        HomeworkRow,
-        | 'title'
-        | 'content'
-        | 'due_date'
-        | 'max_score'
-        | 'close_date'
-        | 'status'
-        | 'publish_at'
-        | 'kind'
-        | 'rubric_id'
-      >
-    >
-  ): Promise<void> {
-    const keys = Object.keys(patch) as (keyof typeof patch)[];
-    if (!keys.length) return;
-    const set = keys.map((k) => `${k} = ?`).join(', ');
-    await db.prepare(`UPDATE homework SET ${set} WHERE id = ?`).run(...keys.map((k) => patch[k]), id);
-  },
-
   /** Đặt trạng thái đăng/gỡ đăng. */
   async setStatus(id: number, status: 'published' | 'draft'): Promise<void> {
     await db.prepare('UPDATE homework SET status = ?, publish_at = NULL WHERE id = ?').run(status, id);
