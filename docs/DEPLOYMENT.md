@@ -41,7 +41,7 @@ npm start
 Lần chạy đầu tiên tự tạo schema PostgreSQL + chạy migrations theo version.
 Seed demo **mặc định TẮT** (`SEED_DEMO=false`) — chỉ bật cho môi trường dev/test.
 
-Tài khoản superadmin khởi tạo: xem log server lúc boot hoặc tạo qua seed.
+Tài khoản superadmin khởi tạo: chạy `npx tsx scripts/create-superadmin.ts <username> <password>` (mật khẩu 8+ ký tự). Không dùng SEED_DEMO=true trên production.
 
 ### 4. Reverse proxy (Nginx mẫu)
 

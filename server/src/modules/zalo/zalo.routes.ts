@@ -209,6 +209,21 @@ router.post(
       }
     }
     const kind = req.body?.kind === 'upcoming' ? 'upcoming' : 'overdue';
+    // Anti-spam: không gửi lại cùng loại trong 1 giờ (endpoint thủ công bypass dedupe 3 ngày của scheduler)
+    const recent = (await db
+      .prepare(
+        `SELECT 1 FROM reminders
+         WHERE invoice_id = ? AND kind = ? AND created_at >= datetime('now', '-1 hour')
+         LIMIT 1`
+      )
+      .get(id, kind)) as { '1'?: number } | undefined;
+    if (recent) {
+      res.status(429).json({
+        error: 'Hóa đơn này vừa được nhắc trong 1 giờ qua. Vui lòng thử lại sau.',
+        code: 'REMINDER_COOLDOWN',
+      });
+      return;
+    }
     const r = await sendTuitionReminder(id, kind, cid ?? undefined);
     res.json(r);
   })
