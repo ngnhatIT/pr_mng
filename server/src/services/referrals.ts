@@ -3,6 +3,7 @@ import { db, getCenterSetting, recalcInvoiceStatus } from '../db';
 import { AppError } from '../shared/errors';
 import { logger } from '../shared/logger';
 import { audit } from '../shared/audit';
+import { withAdvisoryLock } from '../shared/advisoryLock';
 
 const log = logger.scope('referrals');
 
@@ -49,11 +50,23 @@ export async function afterInvoicePaid(invoiceId: number): Promise<void> {
       .get(invoiceId)) as { id: number; student_id: number; status: string } | undefined;
     if (!inv || inv.status !== 'paid') return;
 
+    // Advisory lock theo student: 2 hóa đơn cùng học viên paid đồng thời
+    // không thưởng 2 lần (mỗi luồng có thể claim 1 referral row khác nhau)
+    await withAdvisoryLock(`referral-reward:${inv.student_id}`, async () => {
+      await doAfterInvoicePaid(inv);
+    });
+  } catch (err) {
+    logger.error('afterInvoicePaid thất bại', { invoiceId, error: String(err) });
+  }
+}
+
+async function doAfterInvoicePaid(inv: { id: number; student_id: number; status: string }): Promise<void> {
+
     // Chỉ thưởng cho hóa đơn đầu tiên thanh toán đủ của học viên
     const otherPaid = (
       (await db
         .prepare("SELECT COUNT(*) as c FROM invoices WHERE student_id = ? AND status = 'paid' AND id != ?")
-        .get(inv.student_id, invoiceId)) as { c: number }
+        .get(inv.student_id, inv.id)) as { c: number }
     ).c;
     if (otherPaid > 0) return;
 
@@ -119,7 +132,7 @@ export async function afterInvoicePaid(invoiceId: number): Promise<void> {
         await addCredit.run(
           referrerParentId,
           Math.round(amtReferrer),
-          `Thưởng giới thiệu học viên mới (HD${invoiceId})`,
+          `Thưởng giới thiệu học viên mới (HD${inv.id})`,
           centerId
         );
       }
@@ -127,16 +140,13 @@ export async function afterInvoicePaid(invoiceId: number): Promise<void> {
         await addCredit.run(
           childParent.parent_id,
           Math.round(amtReferred),
-          `Ưu đãi học viên được giới thiệu (HD${invoiceId})`,
+          `Ưu đãi học viên được giới thiệu (HD${inv.id})`,
           centerId
         );
       }
       return true;
     });
-    if (rewarded) log.info(`Đã thưởng credits cho referral #${ref.id} (hóa đơn HD${invoiceId})`);
-  } catch (err) {
-    log.error('Lỗi afterInvoicePaid', { error: String(err) });
-  }
+    if (rewarded) log.info(`Đã thưởng credits cho referral #${ref.id} (hóa đơn HD${inv.id})`);
 }
 
 /**
@@ -224,7 +234,7 @@ export async function applyCreditToInvoice(
     action: 'apply_credit',
     entity: 'credits',
     entityId: creditId,
-    summary: `Áp ${applied.toLocaleString('vi-VN')}đ credits vào HD${invoiceId}`,
+    summary: `Áp ${applied.toLocaleString('vi-VN')}đ credits vào HD${inv.id}`,
     meta: { invoiceId, creditId, applied },
   });
   return { applied, status };
