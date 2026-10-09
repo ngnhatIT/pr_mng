@@ -165,6 +165,7 @@ async function doAfterInvoicePaid(inv: { id: number; student_id: number; status:
         entity: 'referral',
         entityId: ref.id,
         centerId,
+        summary: `Thưởng giới thiệu cho HD${inv.id}`,
         meta: { invoiceId: inv.id, referrerAmount: Math.round(amtReferrer), referredAmount: Math.round(amtReferred) },
       });
     }
