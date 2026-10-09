@@ -24,7 +24,7 @@ router.post(
   asyncHandler(async (req: Request, res: Response) => {
     const { username, password } = req.body as { username?: string; password?: string };
     if (!username || !password) {
-      res.status(400).json({ error: 'Vui lòng nhập tên đăng nhập và mật khẩu' });
+      res.status(400).json({ error: 'Vui lòng nhập tên đăng nhập và mật khẩu', code: 'BAD_REQUEST' });
       return;
     }
     const user = (await db.prepare('SELECT * FROM users WHERE username = ?').get(username)) as
@@ -44,7 +44,7 @@ router.post(
     if (!user || !passwordOk) {
       // Log failed login để phát hiện brute-force (không log password)
       log.warn('Đăng nhập thất bại', { username, ip: reqMeta(req).ip });
-      res.status(401).json({ error: 'Tên đăng nhập hoặc mật khẩu không đúng' });
+      res.status(401).json({ error: 'Tên đăng nhập hoặc mật khẩu không đúng', code: 'BAD_REQUEST' });
       return;
     }
     const payload: AuthUser = {

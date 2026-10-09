@@ -180,7 +180,7 @@ router.post(
       .prepare('SELECT id, is_system, center_id FROM roles WHERE id = ?')
       .get(role_id)) as { id: number; is_system: boolean; center_id: number | null } | undefined;
     if (!role) {
-      res.status(404).json({ error: 'Không tìm thấy role' });
+      res.status(404).json({ error: 'Không tìm thấy role', code: 'NOT_FOUND' });
       return;
     }
     if (role.is_system && req.user?.role !== 'superadmin') {
@@ -189,7 +189,7 @@ router.post(
     }
     // Admin chỉ gán role của trung tâm mình
     if (cid !== null && role.center_id !== cid) {
-      res.status(404).json({ error: 'Không tìm thấy role' });
+      res.status(404).json({ error: 'Không tìm thấy role', code: 'NOT_FOUND' });
       return;
     }
     // User được gán phải thuộc trung tâm mình
@@ -197,7 +197,7 @@ router.post(
       .prepare('SELECT id, center_id FROM users WHERE id = ?')
       .get(user_id)) as { id: number; center_id: number | null } | undefined;
     if (!targetUser || (cid !== null && targetUser.center_id !== cid)) {
-      res.status(404).json({ error: 'Không tìm thấy người dùng' });
+      res.status(404).json({ error: 'Không tìm thấy người dùng', code: 'NOT_FOUND' });
       return;
     }
     await db

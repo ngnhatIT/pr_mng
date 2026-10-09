@@ -60,7 +60,7 @@ router.post(
     const id = Number(req.params.id);
     const leave = await getLeave(id);
     if (!leave || (cid !== null && leave.center_id !== cid)) {
-      res.status(404).json({ error: 'Không tìm thấy đơn xin nghỉ' });
+      res.status(404).json({ error: 'Không tìm thấy đơn xin nghỉ', code: 'NOT_FOUND' });
       return;
     }
     const now = nowVNSql();
@@ -71,7 +71,7 @@ router.post(
       )
       .run(req.user!.id, now, id);
     if ((upd.changes ?? 0) !== 1) {
-      res.status(409).json({ error: 'Đơn xin nghỉ đã được xử lý trước đó' });
+      res.status(409).json({ error: 'Đơn xin nghỉ đã được xử lý trước đó', code: 'BAD_REQUEST' });
       return;
     }
     // Gợi ý học bù: các buổi BỊ MISS trong khoảng nghỉ [from_date, to_date]
@@ -107,7 +107,7 @@ router.post(
     const id = Number(req.params.id);
     const leave = await getLeave(id);
     if (!leave || (cid !== null && leave.center_id !== cid)) {
-      res.status(404).json({ error: 'Không tìm thấy đơn xin nghỉ' });
+      res.status(404).json({ error: 'Không tìm thấy đơn xin nghỉ', code: 'NOT_FOUND' });
       return;
     }
     const now = nowVNSql();
@@ -117,7 +117,7 @@ router.post(
       )
       .run(req.user!.id, now, id);
     if ((upd.changes ?? 0) !== 1) {
-      res.status(409).json({ error: 'Đơn xin nghỉ đã được xử lý trước đó' });
+      res.status(409).json({ error: 'Đơn xin nghỉ đã được xử lý trước đó', code: 'BAD_REQUEST' });
       return;
     }
     await notifyParents(

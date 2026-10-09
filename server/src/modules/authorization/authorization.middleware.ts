@@ -20,7 +20,7 @@ import { hasPermission, Scope, invalidateUserPermissions } from './authorization
 export function requirePermission(permissionCode: string, minScope: Scope = 'own') {
   return async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
     if (!req.user) {
-      res.status(401).json({ error: 'Thiếu token đăng nhập' });
+      res.status(401).json({ error: 'Thiếu token đăng nhập', code: 'BAD_REQUEST' });
       return;
     }
     try {
@@ -35,7 +35,7 @@ export function requirePermission(permissionCode: string, minScope: Scope = 'own
       }
       next();
     } catch {
-      res.status(500).json({ error: 'Lỗi kiểm tra quyền hạn' });
+      res.status(500).json({ error: 'Lỗi kiểm tra quyền hạn', code: 'BAD_REQUEST' });
     }
   };
 }

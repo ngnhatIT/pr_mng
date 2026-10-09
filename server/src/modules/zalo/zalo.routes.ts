@@ -42,7 +42,7 @@ router.put(
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const cid = await cidOf(req);
     if (cid === undefined) {
-      res.status(400).json({ error: 'Chưa có trung tâm nào để lưu cấu hình' });
+      res.status(400).json({ error: 'Chưa có trung tâm nào để lưu cấu hình', code: 'BAD_REQUEST' });
       return;
     }
     const body = req.body as Record<string, unknown>;
@@ -50,13 +50,13 @@ router.put(
       if (body[k] === undefined) continue;
       let v = String(body[k] ?? '');
       if (k === 'reminder_hour' && v && !/^\d{2}:\d{2}$/.test(v)) {
-        res.status(400).json({ error: 'Giờ nhắc phải có dạng HH:MM' });
+        res.status(400).json({ error: 'Giờ nhắc phải có dạng HH:MM', code: 'BAD_REQUEST' });
         return;
       }
       if ((k === 'reminder_overdue_days' || k === 'reminder_upcoming_days') && v) {
         const n = Number(v);
         if (Number.isNaN(n) || n < 0 || n > 60) {
-          res.status(400).json({ error: 'Số ngày nhắc phải từ 0 đến 60' });
+          res.status(400).json({ error: 'Số ngày nhắc phải từ 0 đến 60', code: 'BAD_REQUEST' });
           return;
         }
         v = String(Math.floor(n));
@@ -82,7 +82,7 @@ router.post(
     const cfg = await getZaloConfig(cid);
     const phone = normalizePhone(req.body?.phone as string | undefined);
     if (!phone) {
-      res.status(400).json({ error: 'Số điện thoại không hợp lệ (cần 10 số, bắt đầu bằng 0)' });
+      res.status(400).json({ error: 'Số điện thoại không hợp lệ (cần 10 số, bắt đầu bằng 0)', code: 'VALIDATION_INVALID' });
       return;
     }
     const templateData = {
@@ -113,7 +113,7 @@ router.post(
       return;
     }
     if (!cfg.zalo_template_upcoming) {
-      res.status(400).json({ error: 'Chưa cấu hình Template ID cho tin nhắn sắp đến hạn' });
+      res.status(400).json({ error: 'Chưa cấu hình Template ID cho tin nhắn sắp đến hạn', code: 'BAD_REQUEST' });
       return;
     }
     const r = await sendZNS({
@@ -205,7 +205,7 @@ router.post(
         )
         .get(id, cid);
       if (!inv) {
-        res.status(404).json({ error: 'Không tìm thấy hóa đơn' });
+        res.status(404).json({ error: 'Không tìm thấy hóa đơn', code: 'NOT_FOUND' });
         return;
       }
     }

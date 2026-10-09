@@ -11,7 +11,7 @@ const router = Router();
 async function landingCenter(req: Request, res: Response): Promise<Center | undefined> {
   const center = await resolvePublicCenter(req);
   if (!center || !hasFeature(center, 'landing')) {
-    res.status(403).json({ error: 'Trung tâm chưa kích hoạt trang công khai' });
+    res.status(403).json({ error: 'Trung tâm chưa kích hoạt trang công khai', code: 'BAD_REQUEST' });
     return undefined;
   }
   return center;
@@ -124,22 +124,22 @@ router.post(
   asyncHandler(async (req: Request, res: Response) => {
     const center = await resolvePublicCenter(req);
     if (!center) {
-      res.status(404).json({ error: 'Không xác định được trung tâm' });
+      res.status(404).json({ error: 'Không xác định được trung tâm', code: 'BAD_REQUEST' });
       return;
     }
     const body = req.body as Record<string, unknown> | undefined;
     const name = String(body?.name ?? '').trim();
     const phone = normalizePhone(body?.phone as string | undefined);
     if (!name) {
-      res.status(400).json({ error: 'Vui lòng nhập họ tên' });
+      res.status(400).json({ error: 'Vui lòng nhập họ tên', code: 'BAD_REQUEST' });
       return;
     }
     if (name.length > 100) {
-      res.status(400).json({ error: 'Họ tên tối đa 100 ký tự' });
+      res.status(400).json({ error: 'Họ tên tối đa 100 ký tự', code: 'BAD_REQUEST' });
       return;
     }
     if (!phone) {
-      res.status(400).json({ error: 'Số điện thoại không hợp lệ (cần 10 số, bắt đầu bằng 0)' });
+      res.status(400).json({ error: 'Số điện thoại không hợp lệ (cần 10 số, bắt đầu bằng 0)', code: 'VALIDATION_INVALID' });
       return;
     }
     const source = body?.source ? String(body.source).trim().slice(0, 50) : null;
@@ -160,32 +160,32 @@ router.post(
   asyncHandler(async (req: Request, res: Response) => {
     const center = await resolvePublicCenter(req);
     if (!center) {
-      res.status(404).json({ error: 'Không xác định được trung tâm' });
+      res.status(404).json({ error: 'Không xác định được trung tâm', code: 'BAD_REQUEST' });
       return;
     }
     const body = req.body as Record<string, unknown> | undefined;
     const name = String(body?.name ?? '').trim();
     const phone = normalizePhone(body?.phone as string | undefined);
     if (!name) {
-      res.status(400).json({ error: 'Vui lòng nhập họ tên' });
+      res.status(400).json({ error: 'Vui lòng nhập họ tên', code: 'BAD_REQUEST' });
       return;
     }
     if (!phone) {
-      res.status(400).json({ error: 'Số điện thoại không hợp lệ (cần 10 số, bắt đầu bằng 0)' });
+      res.status(400).json({ error: 'Số điện thoại không hợp lệ (cần 10 số, bắt đầu bằng 0)', code: 'VALIDATION_INVALID' });
       return;
     }
     let classId: number | null = null;
     if (body?.class_id !== undefined && body?.class_id !== null && String(body.class_id).trim() !== '') {
       classId = Number(body.class_id);
       if (!Number.isInteger(classId)) {
-        res.status(400).json({ error: 'Lớp học không hợp lệ' });
+        res.status(400).json({ error: 'Lớp học không hợp lệ', code: 'VALIDATION_INVALID' });
         return;
       }
       const cls = await db
         .prepare('SELECT id FROM classes WHERE id = ? AND center_id = ?')
         .get(classId, center.id);
       if (!cls) {
-        res.status(400).json({ error: 'Lớp học không tồn tại' });
+        res.status(400).json({ error: 'Lớp học không tồn tại', code: 'BAD_REQUEST' });
         return;
       }
     }
@@ -197,7 +197,7 @@ router.post(
         .get(referralCode, center.id)) as { id: number; phone: string | null } | undefined;
       // Chặn tự giới thiệu chính mình: SĐT đăng ký trùng SĐT của referrer
       if (referrer && normalizePhone(referrer.phone) === phone) {
-        res.status(400).json({ error: 'Không thể dùng mã giới thiệu của chính mình' });
+        res.status(400).json({ error: 'Không thể dùng mã giới thiệu của chính mình', code: 'BAD_REQUEST' });
         return;
       }
     }

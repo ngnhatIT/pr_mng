@@ -40,19 +40,19 @@ router.put(
       per_session_amount?: number;
     };
     if (!teacher_id) {
-      res.status(400).json({ error: 'Thiếu teacher_id' });
+      res.status(400).json({ error: 'Thiếu teacher_id', code: 'BAD_REQUEST' });
       return;
     }
     const teacher = (await db
       .prepare('SELECT id, center_id FROM teachers WHERE id = ?')
       .get(Number(teacher_id))) as { id: number; center_id: number | null } | undefined;
     if (!teacher || (cid !== null && teacher.center_id !== cid)) {
-      res.status(404).json({ error: 'Không tìm thấy giáo viên' });
+      res.status(404).json({ error: 'Không tìm thấy giáo viên', code: 'NOT_FOUND' });
       return;
     }
     const amount = Number(per_session_amount);
     if (!Number.isInteger(amount) || amount < 0 || amount > 100000000) {
-      res.status(400).json({ error: 'Số tiền mỗi buổi phải là số nguyên từ 0 đến 100,000,000' });
+      res.status(400).json({ error: 'Số tiền mỗi buổi phải là số nguyên từ 0 đến 100,000,000', code: 'BAD_REQUEST' });
       return;
     }
     const old = (await db

@@ -51,7 +51,7 @@ router.post(
     const id = Number(req.params.id);
     const review = await getReview(id, cid);
     if (!review) {
-      res.status(404).json({ error: 'Không tìm thấy đánh giá' });
+      res.status(404).json({ error: 'Không tìm thấy đánh giá', code: 'NOT_FOUND' });
       return;
     }
     await db.prepare("UPDATE reviews SET status = 'approved' WHERE id = ?").run(id);
@@ -69,7 +69,7 @@ router.post(
     const id = Number(req.params.id);
     const review = await getReview(id, cid);
     if (!review) {
-      res.status(404).json({ error: 'Không tìm thấy đánh giá' });
+      res.status(404).json({ error: 'Không tìm thấy đánh giá', code: 'NOT_FOUND' });
       return;
     }
     await db.prepare("UPDATE reviews SET status = 'rejected' WHERE id = ?").run(id);
@@ -89,7 +89,7 @@ router.delete(
     const id = Number(req.params.id);
     const review = await getReview(id, cid);
     if (!review) {
-      res.status(404).json({ error: 'Không tìm thấy đánh giá' });
+      res.status(404).json({ error: 'Không tìm thấy đánh giá', code: 'NOT_FOUND' });
       return;
     }
     await db.prepare('DELETE FROM reviews WHERE id = ?').run(id);

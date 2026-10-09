@@ -56,18 +56,18 @@ router.post(
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const cid = reqCenterId(req);
     if (cid === null) {
-      res.status(400).json({ error: 'Thiếu thông tin trung tâm' });
+      res.status(400).json({ error: 'Thiếu thông tin trung tâm', code: 'BAD_REQUEST' });
       return;
     }
     const body = req.body as Record<string, unknown> | undefined;
     const name = String(body?.name ?? '').trim();
     const phone = String(body?.phone ?? '').trim();
     if (!name) {
-      res.status(400).json({ error: 'Tên khách hàng là bắt buộc' });
+      res.status(400).json({ error: 'Tên khách hàng là bắt buộc', code: 'VALIDATION_REQUIRED' });
       return;
     }
     if (!phone) {
-      res.status(400).json({ error: 'Số điện thoại là bắt buộc' });
+      res.status(400).json({ error: 'Số điện thoại là bắt buộc', code: 'VALIDATION_REQUIRED' });
       return;
     }
     const status =
@@ -95,7 +95,7 @@ router.put(
     const id = Number(req.params.id);
     const lead = await getLead(id, cid);
     if (!lead) {
-      res.status(404).json({ error: 'Không tìm thấy lead' });
+      res.status(404).json({ error: 'Không tìm thấy lead', code: 'NOT_FOUND' });
       return;
     }
     const body = req.body as Record<string, unknown> | undefined;
@@ -104,7 +104,7 @@ router.put(
     if (body?.name !== undefined) {
       const name = String(body.name).trim();
       if (!name) {
-        res.status(400).json({ error: 'Tên khách hàng không được để trống' });
+        res.status(400).json({ error: 'Tên khách hàng không được để trống', code: 'BAD_REQUEST' });
         return;
       }
       sets.push('name = ?');
@@ -113,7 +113,7 @@ router.put(
     if (body?.phone !== undefined) {
       const phone = String(body.phone).trim();
       if (!phone) {
-        res.status(400).json({ error: 'Số điện thoại không được để trống' });
+        res.status(400).json({ error: 'Số điện thoại không được để trống', code: 'BAD_REQUEST' });
         return;
       }
       sets.push('phone = ?');
@@ -126,7 +126,7 @@ router.put(
     if (body?.status !== undefined) {
       const status = String(body.status);
       if (!(LEAD_STATUS as readonly string[]).includes(status)) {
-        res.status(400).json({ error: 'Trạng thái không hợp lệ' });
+        res.status(400).json({ error: 'Trạng thái không hợp lệ', code: 'VALIDATION_INVALID' });
         return;
       }
       sets.push('status = ?');
@@ -155,7 +155,7 @@ router.delete(
     const id = Number(req.params.id);
     const lead = await getLead(id, cid);
     if (!lead) {
-      res.status(404).json({ error: 'Không tìm thấy lead' });
+      res.status(404).json({ error: 'Không tìm thấy lead', code: 'NOT_FOUND' });
       return;
     }
     await db.prepare('DELETE FROM leads WHERE id = ?').run(id);

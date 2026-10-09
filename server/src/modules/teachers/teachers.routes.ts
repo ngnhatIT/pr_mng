@@ -49,7 +49,7 @@ router.put(
     const cur = (await db.prepare('SELECT center_id, name FROM teachers WHERE id = ?').get(id)) as
       { center_id: number | null; name: string } | undefined;
     if (!cur || (cid !== null && cur.center_id !== cid)) {
-      res.status(404).json({ error: 'Không tìm thấy giáo viên' });
+      res.status(404).json({ error: 'Không tìm thấy giáo viên', code: 'NOT_FOUND' });
       return;
     }
     const { name, phone, email, subject } = validate(req.body, {
@@ -62,7 +62,7 @@ router.put(
       .prepare('UPDATE teachers SET name=?, phone=?, email=?, subject=? WHERE id=?')
       .run(name.trim(), phone || null, email || null, subject || null, id);
     if (r.changes === 0) {
-      res.status(404).json({ error: 'Không tìm thấy giáo viên' });
+      res.status(404).json({ error: 'Không tìm thấy giáo viên', code: 'NOT_FOUND' });
       return;
     }
     res.json(await db.prepare('SELECT * FROM teachers WHERE id = ?').get(id));
@@ -78,7 +78,7 @@ router.delete(
     const cur = (await db.prepare('SELECT center_id, name FROM teachers WHERE id = ?').get(id)) as
       { center_id: number | null; name: string } | undefined;
     if (!cur || (cid !== null && cur.center_id !== cid)) {
-      res.status(404).json({ error: 'Không tìm thấy giáo viên' });
+      res.status(404).json({ error: 'Không tìm thấy giáo viên', code: 'NOT_FOUND' });
       return;
     }
     // Chặn xóa giáo viên đã có lịch sử lương (mất cấu hình tính lương, không đối chiếu được)
@@ -120,7 +120,7 @@ router.post(
     const teacher = (await db.prepare('SELECT * FROM teachers WHERE id = ?').get(id)) as
       { id: number; name: string; center_id: number | null } | undefined;
     if (!teacher || (cid !== null && teacher.center_id !== cid)) {
-      res.status(404).json({ error: 'Không tìm thấy giáo viên' });
+      res.status(404).json({ error: 'Không tìm thấy giáo viên', code: 'NOT_FOUND' });
       return;
     }
     const { username, password } = req.body as { username?: string; password?: string };
@@ -137,12 +137,12 @@ router.post(
     }
     const exists = await db.prepare('SELECT 1 FROM users WHERE username = ?').get(username.trim());
     if (exists) {
-      res.status(400).json({ error: 'Tên đăng nhập đã tồn tại' });
+      res.status(400).json({ error: 'Tên đăng nhập đã tồn tại', code: 'ALREADY_EXISTS' });
       return;
     }
     const linked = await db.prepare('SELECT 1 FROM users WHERE teacher_id = ?').get(id);
     if (linked) {
-      res.status(400).json({ error: 'Giáo viên này đã có tài khoản đăng nhập' });
+      res.status(400).json({ error: 'Giáo viên này đã có tài khoản đăng nhập', code: 'BAD_REQUEST' });
       return;
     }
     const hash = bcrypt.hashSync(password, 10);

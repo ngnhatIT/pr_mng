@@ -40,11 +40,11 @@ router.post(
     const cid = reqCenterId(req);
     const { student_id, class_id, title, score, max_score, comment } = req.body as Record<string, unknown>;
     if (!student_id) {
-      res.status(400).json({ error: 'Vui lòng chọn học viên' });
+      res.status(400).json({ error: 'Vui lòng chọn học viên', code: 'BAD_REQUEST' });
       return;
     }
     if (!title || !String(title).trim()) {
-      res.status(400).json({ error: 'Vui lòng nhập tiêu đề bài kiểm tra' });
+      res.status(400).json({ error: 'Vui lòng nhập tiêu đề bài kiểm tra', code: 'BAD_REQUEST' });
       return;
     }
     const row = await createGrade({

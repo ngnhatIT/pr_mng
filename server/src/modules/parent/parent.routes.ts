@@ -281,7 +281,7 @@ router.post(
       answers: v.any({ label: 'Bài làm' }),
     });
     if (!Array.isArray(answers)) {
-      res.status(400).json({ error: 'Bài làm không hợp lệ' });
+      res.status(400).json({ error: 'Bài làm không hợp lệ', code: 'VALIDATION_INVALID' });
       return;
     }
     res

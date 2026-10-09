@@ -82,12 +82,12 @@ router.put(
     const id = Number(req.params.id);
     const room = await getScopedRoom(req, id);
     if (!room) {
-      res.status(404).json({ error: 'Không tìm thấy phòng học' });
+      res.status(404).json({ error: 'Không tìm thấy phòng học', code: 'NOT_FOUND' });
       return;
     }
     const { name, capacity } = req.body as { name?: string; capacity?: number };
     if (!name || !String(name).trim()) {
-      res.status(400).json({ error: 'Tên phòng là bắt buộc' });
+      res.status(400).json({ error: 'Tên phòng là bắt buộc', code: 'VALIDATION_REQUIRED' });
       return;
     }
     const cap = Number(capacity);
@@ -106,7 +106,7 @@ router.delete(
     const id = Number(req.params.id);
     const room = await getScopedRoom(req, id);
     if (!room) {
-      res.status(404).json({ error: 'Không tìm thấy phòng học' });
+      res.status(404).json({ error: 'Không tìm thấy phòng học', code: 'NOT_FOUND' });
       return;
     }
     await db.transaction(async (tx) => {

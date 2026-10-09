@@ -34,13 +34,13 @@ router.put(
     const id = Number(req.params.id);
     const { status } = req.body as { status?: string };
     if (!status || !(TRIAL_STATUS as readonly string[]).includes(status)) {
-      res.status(400).json({ error: 'Trạng thái không hợp lệ' });
+      res.status(400).json({ error: 'Trạng thái không hợp lệ', code: 'VALIDATION_INVALID' });
       return;
     }
     const trial = (await db.prepare('SELECT id, center_id FROM trial_registrations WHERE id = ?').get(id)) as
       { id: number; center_id: number | null } | undefined;
     if (!trial || (cid !== null && trial.center_id !== cid)) {
-      res.status(404).json({ error: 'Không tìm thấy đăng ký học thử' });
+      res.status(404).json({ error: 'Không tìm thấy đăng ký học thử', code: 'NOT_FOUND' });
       return;
     }
     await db.prepare('UPDATE trial_registrations SET status = ? WHERE id = ?').run(status, id);

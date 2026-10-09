@@ -18,7 +18,7 @@ router.use(requirePermission('system.manage'));
  */
 function superadminOnly(req: AuthRequest, res: Response, next: NextFunction): void {
   if (req.user?.role !== 'superadmin') {
-    res.status(403).json({ error: 'Chỉ quản trị hệ thống mới có quyền này' });
+    res.status(403).json({ error: 'Chỉ quản trị hệ thống mới có quyền này', code: 'BAD_REQUEST' });
     return;
   }
   next();
@@ -79,7 +79,7 @@ router.put(
     const id = Number(req.params.id);
     const center = await getCenter(id);
     if (!center) {
-      res.status(404).json({ error: 'Không tìm thấy trung tâm' });
+      res.status(404).json({ error: 'Không tìm thấy trung tâm', code: 'NOT_FOUND' });
       return;
     }
     const body = req.body as Record<string, unknown> | undefined;
@@ -88,7 +88,7 @@ router.put(
     if (body?.name !== undefined) {
       const name = String(body.name).trim();
       if (!name) {
-        res.status(400).json({ error: 'Tên trung tâm không được để trống' });
+        res.status(400).json({ error: 'Tên trung tâm không được để trống', code: 'BAD_REQUEST' });
         return;
       }
       sets.push('name = ?');
