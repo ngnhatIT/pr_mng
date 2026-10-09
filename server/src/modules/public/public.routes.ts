@@ -12,7 +12,7 @@ const router = Router();
 async function landingCenter(req: Request, res: Response): Promise<Center | undefined> {
   const center = await resolvePublicCenter(req);
   if (!center || !hasFeature(center, 'landing')) {
-    res.status(403).json({ error: 'Trung tâm chưa kích hoạt trang công khai', code: 'BAD_REQUEST' });
+    res.status(403).json({ error: 'Trung tâm chưa kích hoạt trang công khai', code: 'FORBIDDEN' });
     return undefined;
   }
   return center;
