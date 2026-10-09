@@ -134,7 +134,7 @@ export async function registerParent(input: {
     .get(center.id, normalized);
   if (exists) throw AppError.conflict('Số điện thoại này đã được đăng ký');
 
-  const hash = bcrypt.hashSync(input.password as string, 10);
+  const hash = bcrypt.hashSync(input.password as string, BCRYPT_ROUNDS);
   const r = await db
     .prepare('INSERT INTO parents (center_id, phone, password_hash, name) VALUES (?, ?, ?, ?)')
     .run(center.id, normalized, hash, name);

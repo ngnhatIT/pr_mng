@@ -32,6 +32,9 @@ const MIN_PASSWORD_LENGTH = 8;
 /** bcrypt truncate lặng lẽ ở 72 bytes — giới hạn để user không tưởng password dài hơn an toàn hơn */
 const MAX_PASSWORD_LENGTH = 72;
 
+/** Số vòng salt bcrypt (đồng nhất mọi luồng). */
+export const BCRYPT_ROUNDS = 10;
+
 /**
  * Validate mật khẩu mới: 8-72 ký tự, không nằm trong danh sách phổ biến.
  * Ném AppError 400 nếu không đạt.

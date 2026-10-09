@@ -136,7 +136,7 @@ router.post(
       return;
     }
     assertStrongPassword(new_password, 'Mật khẩu mới');
-    const hash = bcrypt.hashSync(new_password, 10);
+    const hash = bcrypt.hashSync(new_password, BCRYPT_ROUNDS);
     await db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(hash, u.id);
     // Đổi mật khẩu = thu hồi mọi session khác (giữ session hiện tại, kẻ trộm bị đá ra)
     const { refresh_token } = (req.body ?? {}) as { refresh_token?: string };

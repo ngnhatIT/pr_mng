@@ -76,7 +76,7 @@ export async function createCenterWithAdmin(
         input.plan_expires_at?.trim() || null
       );
     const centerId = Number(r.lastInsertRowid);
-    const hash = bcrypt.hashSync(adminPassword, 10);
+    const hash = bcrypt.hashSync(adminPassword, BCRYPT_ROUNDS);
     await tx
       .prepare(
         "INSERT INTO users (username, password_hash, role, name, center_id) VALUES (?, ?, 'admin', ?, ?)"

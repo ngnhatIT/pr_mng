@@ -145,7 +145,7 @@ router.post(
       res.status(400).json({ error: 'Giáo viên này đã có tài khoản đăng nhập', code: 'BAD_REQUEST' });
       return;
     }
-    const hash = bcrypt.hashSync(password, 10);
+    const hash = bcrypt.hashSync(password, BCRYPT_ROUNDS);
     const r = await db
       .prepare(
         'INSERT INTO users (username, password_hash, role, name, center_id, teacher_id) VALUES (?, ?, ?, ?, ?, ?)'
