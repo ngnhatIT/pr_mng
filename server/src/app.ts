@@ -4,6 +4,7 @@ import helmet from 'helmet';
 import path from 'path';
 import fs from 'fs';
 import { requireAuth, denyParents, reqCenterId, AuthRequest } from './middleware/auth';
+import { requirePermission } from './modules/authorization/authorization.middleware';
 import { requestId } from './middleware/requestId';
 import { requestLogger } from './middleware/requestLogger';
 import { errorHandler, notFoundHandler, asyncHandler } from './shared/http';
