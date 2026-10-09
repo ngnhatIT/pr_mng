@@ -28,6 +28,11 @@
     flex-direction: column;
     align-items: stretch;
   }
+  .pagination-buttons .btn {
+    min-width: 44px;
+    min-height: 44px;
+    padding: 8px 12px;
+  }
   .pagination-buttons {
     justify-content: center;
   }

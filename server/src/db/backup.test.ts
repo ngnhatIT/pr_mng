@@ -52,4 +52,37 @@ describe('backupDatabase (PostgreSQL pg_dump)', () => {
 
     fs.rmSync(dir, { recursive: true, force: true });
   });
+
+  it('restore từ backup khôi phục được dữ liệu', async () => {
+    const { execFileSync } = await import('child_process');
+    // Tạo dữ liệu mẫu
+    await db.prepare("INSERT INTO centers (name) VALUES ('TT Restore Test')").run();
+    const before = (await db.prepare('SELECT COUNT(*) as c FROM centers').get()) as { c: string };
+
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'ecp-restore-'));
+    const { path: dumpPath } = await backupDatabase(dir, 7);
+
+    // Giả lập thảm họa: xóa toàn bộ bảng
+    await db.query(`
+      DO $$ DECLARE r RECORD;
+      BEGIN
+        FOR r IN (SELECT tablename FROM pg_tables WHERE schemaname = 'public') LOOP
+          EXECUTE 'DROP TABLE IF EXISTS "' || r.tablename || '" CASCADE';
+        END LOOP;
+      END $$;
+    `);
+
+    // Restore từ backup
+    const dbUrl = process.env.DATABASE_URL || '';
+    execFileSync('pg_restore', ['--clean', '--if-exists', '-d', dbUrl, dumpPath], {
+      stdio: 'pipe',
+      env: { ...process.env, PGCONNECT_TIMEOUT: '10' },
+    });
+
+    // Verify dữ liệu quay lại
+    const after = (await db.prepare('SELECT COUNT(*) as c FROM centers').get()) as { c: string };
+    assert.equal(Number(after.c), Number(before.c), 'restore phải khôi phục đúng số centers');
+
+    fs.rmSync(dir, { recursive: true, force: true });
+  });
 });
