@@ -6,6 +6,7 @@ import { loginRateLimit } from '../../middleware/rateLimit';
 import { asyncHandler } from '../../shared/http';
 import { validate, v } from '../../shared/validate';
 import { issueTokenPair, rotateRefreshToken, revokeRefreshToken, revokeAllForOwner } from './refresh.service';
+import { audit } from '../../shared/audit';
 
 const router = Router();
 
@@ -50,6 +51,15 @@ router.post(
       teacher_id: user.teacher_id ?? null,
     };
     const pair = await issueTokenPair(payload, reqMeta(req));
+    // Audit login thành công (forensics: ai đăng nhập lúc nào, từ IP nào)
+    void audit({
+      centerId: user.center_id ?? null,
+      actor: { id: user.id, name: user.name, role: user.role, ip: reqMeta(req).ip },
+      action: 'login',
+      entity: 'users',
+      entityId: user.id,
+      summary: `${user.name} đăng nhập`,
+    });
     res.json({ ...pair, user: payload });
   })
 );

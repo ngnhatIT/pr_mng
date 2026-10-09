@@ -8,6 +8,8 @@ import { asyncHandler } from '../../shared/http';
 import { validate, v } from '../../shared/validate';
 import { AppError } from '../../shared/errors';
 import { db } from '../../db/pg-compat';
+import { audit } from '../../shared/audit';
+import { actorFromReq } from '../../shared/audit';
 import { requirePermission } from './authorization.middleware';
 import {
   invalidateUserPermissions,
@@ -135,6 +137,15 @@ router.delete(
     if (role.is_system) throw AppError.badRequest('Không được xóa vai trò hệ thống');
     await db.prepare('DELETE FROM roles WHERE id = ?').run(id);
     invalidateAllPermissions();
+    // Audit xóa role (thao tác phân quyền nhạy cảm)
+    void audit({
+      centerId: null,
+      actor: actorFromReq(req),
+      action: 'delete',
+      entity: 'roles',
+      entityId: id,
+      summary: `Xóa vai trò #${id}`,
+    });
     res.json({ ok: true });
   })
 );
