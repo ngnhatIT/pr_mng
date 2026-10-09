@@ -50,11 +50,21 @@ export async function backupDatabase(backupDir: string, keep = 7): Promise<Backu
     PGUSER: decodeURIComponent(dbUrl.username),
     PGPASSWORD: decodeURIComponent(dbUrl.password),
   };
-  await execFileAsync('pg_dump', ['-Fc', '-f', filePath], {
-    timeout: 10 * 60 * 1000,
-    maxBuffer: 256 * 1024 * 1024,
-    env: pgEnv,
-  });
+  try {
+    await execFileAsync('pg_dump', ['-Fc', '-f', filePath], {
+      timeout: 10 * 60 * 1000,
+      maxBuffer: 256 * 1024 * 1024,
+      env: pgEnv,
+    });
+  } catch (err) {
+    // pg_dump fail → xóa file dở dang (tránh file partial bị tính là backup hợp lệ)
+    try {
+      fs.unlinkSync(filePath);
+    } catch {
+      /* bỏ qua */
+    }
+    throw err;
+  }
 
   const sizeBytes = fs.statSync(filePath).size;
   if (sizeBytes === 0) {
