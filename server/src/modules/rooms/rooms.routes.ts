@@ -91,6 +91,10 @@ router.put(
       return;
     }
     const trimmed = String(name).trim();
+    if (trimmed.length > 100) {
+      res.status(400).json({ error: 'Tên phòng tối đa 100 ký tự', code: 'VALIDATION_INVALID' });
+      return;
+    }
     // Chống trùng tên khi đổi tên (loại trừ chính phòng đang sửa)
     const dup = (await db
       .prepare('SELECT id FROM rooms WHERE center_id = ? AND LOWER(name) = LOWER(?) AND id != ?')
