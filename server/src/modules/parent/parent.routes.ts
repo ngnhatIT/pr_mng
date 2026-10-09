@@ -6,6 +6,7 @@ import { AppError } from '../../shared/errors';
 import { uploadSingle, cleanupUploadedFile } from '../../shared/upload';
 import { validate, v, paramId } from '../../shared/validate';
 import { env } from '../../config/env';
+import { audit } from '../../shared/audit';
 import * as parentService from './parent.service';
 import { assertStrongPassword } from '../../shared/password';
 import { rotateRefreshToken, revokeRefreshToken, revokeAllForOwner, revokeAllForOwnerExcept } from '../auth/refresh.service';
@@ -92,11 +93,22 @@ router.post(
       old_password: v.string({ required: true, label: 'Mật khẩu cũ' }),
       new_password: v.string({ required: true, min: 8, max: 72, label: 'Mật khẩu mới' }),
     });
+    if (old_password === new_password) {
+      res.status(400).json({ error: 'Mật khẩu mới phải khác mật khẩu cũ', code: 'SAME_PASSWORD' });
+      return;
+    }
     assertStrongPassword(new_password);
     await parentService.changePassword(parentId, old_password, new_password);
     // Thu hồi mọi session khác (giữ session hiện tại)
     const { refresh_token } = (req.body ?? {}) as { refresh_token?: string };
     await revokeAllForOwnerExcept('parent', parentId, refresh_token);
+    void audit({
+      centerId: null,
+      action: 'change_password',
+      entity: 'parents',
+      entityId: parentId,
+      summary: `Phụ huynh #${parentId} đổi mật khẩu`,
+    });
     res.json({ ok: true });
   })
 );

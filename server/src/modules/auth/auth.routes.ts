@@ -5,7 +5,7 @@ import { AuthUser, DUMMY_PASSWORD_HASH, requireAuth, type AuthRequest } from '..
 import { loginRateLimit } from '../../middleware/rateLimit';
 import { asyncHandler } from '../../shared/http';
 import { validate, v } from '../../shared/validate';
-import { issueTokenPair, rotateRefreshToken, revokeRefreshToken, revokeAllForOwner } from './refresh.service';
+import { issueTokenPair, rotateRefreshToken, revokeRefreshToken, revokeAllForOwnerExcept } from './refresh.service';
 import { audit } from '../../shared/audit';
 import { assertStrongPassword } from '../../shared/password';
 import { logger } from '../../shared/logger';
@@ -138,8 +138,9 @@ router.post(
     assertStrongPassword(new_password, 'Mật khẩu mới');
     const hash = bcrypt.hashSync(new_password, 10);
     await db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(hash, u.id);
-    // Đổi mật khẩu = thu hồi mọi session khác (kẻ trộm bị đá ra)
-    await revokeAllForOwner('staff', u.id);
+    // Đổi mật khẩu = thu hồi mọi session khác (giữ session hiện tại, kẻ trộm bị đá ra)
+    const { refresh_token } = (req.body ?? {}) as { refresh_token?: string };
+    await revokeAllForOwnerExcept('staff', u.id, refresh_token);
     void audit({
       centerId: u.center_id ?? null,
       actor: { id: u.id, name: u.name, role: u.role },
