@@ -171,6 +171,10 @@ async function main(): Promise<void> {
     }, 10000);
     forceTimer.unref();
 
+    // Drain keep-alive idle connections (tránh server.close() treo)
+    if (typeof server.closeIdleConnections === 'function') {
+      server.closeIdleConnections();
+    }
     server.close(() => {
       closePool()
         .then(() => logger.info('Đã đóng PG pool, tắt sạch'))
