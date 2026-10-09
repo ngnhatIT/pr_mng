@@ -868,7 +868,9 @@ CREATE TABLE IF NOT EXISTS sessions (
   checkin_code TEXT,
   checkin_date TEXT,
   updated_at TEXT NOT NULL DEFAULT (to_char(NOW(), 'YYYY-MM-DD HH24:MI:SS')),
-  UNIQUE(class_id, date)
+  UNIQUE(class_id, date),
+  -- Chống race trùng mã điểm danh (2 request đồng thời sinh cùng mã)
+  UNIQUE(checkin_date, checkin_code)
 );
 
 CREATE TABLE IF NOT EXISTS attendance (
