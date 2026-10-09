@@ -209,6 +209,18 @@ const MIGRATIONS: Migration[] = [
       for (const sql of idx) await tx.exec(sql);
     },
   },
+  {
+    version: 10,
+    name: 'teacher_checkin_salary_indexes',
+    up: async (tx) => {
+      // Index cho teacher schedule EXISTS + payroll salary_rules lookup (audit API perf 2)
+      const idx = [
+        'CREATE INDEX IF NOT EXISTS idx_teacher_checkins_lookup ON teacher_checkins(teacher_id, session_id)',
+        'CREATE INDEX IF NOT EXISTS idx_salary_rules_teacher ON salary_rules(teacher_id)',
+      ];
+      for (const sql of idx) await tx.exec(sql);
+    },
+  },
 ];
 
 /** Version migration cao nhất mà code hiện tại biết (để test đối chiếu). */
