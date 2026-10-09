@@ -138,14 +138,20 @@ export function createApp(): Express {
 
   // Health check CÔNG KHAI — M11: chỉ trả {ok, time}, KHÔNG lộ version PG/heap.
   // PHẢI đứng trước mọi mount có requireAuth.
+  // Liveness probe: chỉ check process sống (K8s restart khi fail)
+  app.get('/api/live', (_req: express.Request, res: express.Response) => {
+    res.json({ ok: true });
+  });
   app.get(
     '/api/health',
-    apiRateLimit,
     asyncHandler(async (_req: express.Request, res: express.Response) => {
-      // Public nhưng có ping DB để LB dùng làm readiness probe (không lộ chi tiết)
+      // Readiness probe: ping DB với timeout (LB ngừng route khi DB chết, không kill process)
       let dbOk = true;
       try {
-        await db.prepare('SELECT 1').get();
+        await Promise.race([
+          db.prepare('SELECT 1').get(),
+          new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 3000)),
+        ]);
       } catch {
         dbOk = false;
       }
