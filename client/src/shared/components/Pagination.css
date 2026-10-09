@@ -9,7 +9,7 @@
 
 .pagination-info {
   font-size: 13px;
-  color: var(--muted, #6b7280);
+  color: var(--text-muted);
 }
 
 .pagination-buttons {
