@@ -244,6 +244,11 @@ export function createApp(): Express {
   v1.use('/metrics', requireAuth, denyParents, metricsRoutes); // adminOnly: Prometheus metrics
   v1.use('/roles', requireAuth, denyParents, rolesRoutes); // quản trị phân quyền
 
+  // 404 cuối v1 (tránh fallthrough sang mount /api gây double-processing)
+  v1.use((_req, res) => {
+    res.status(404).json({ error: 'Không tìm thấy', code: 'NOT_FOUND' });
+  });
+
   // Mount versioned API + legacy alias (backward compat với client cũ)
   const LEGACY_SUNSET = 'Sat, 01 Jan 2028 00:00:00 GMT';
   app.use('/api/v1', v1);
