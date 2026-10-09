@@ -141,7 +141,7 @@ export async function deleteSession(ctx: ScopeCtx, id: number, actor?: AuditActo
     await tx.prepare('DELETE FROM attendance WHERE session_id = ?').run(id);
     await tx.prepare('DELETE FROM sessions WHERE id = ?').run(id);
   });
-  void audit({
+  await audit({
     centerId: sc.center_id,
     actor,
     action: 'delete',
