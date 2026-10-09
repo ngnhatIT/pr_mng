@@ -53,6 +53,7 @@ jobs:
       - run: npm ci
       - run: npm test -w server
       - run: npm test -w client
+      - run: python3 -c "import yaml; yaml.safe_load(open('server/src/docs/openapi.yaml')); print('openapi.yaml valid')"
 
   build:
     name: Build (server + client)
