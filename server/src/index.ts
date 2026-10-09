@@ -113,6 +113,20 @@ function startConsistencyScheduler(): void {
   consistencyTask = cron.schedule(
     '0 * * * *',
     async () => {
+      // Advisory lock: chỉ 1 instance chạy (chống 2 instance cùng DELETE/consistency)
+      let locked = false;
+      try {
+        const r = (await db.query('SELECT pg_try_advisory_lock(hashtext($1)) AS locked', [
+          'educenter-consistency',
+        ])) as { rows: { locked: boolean }[] };
+        locked = r.rows[0]?.locked ?? false;
+      } catch {
+        locked = true; // fail-open
+      }
+      if (!locked) {
+        logger.info('Bỏ qua consistency: instance khác đang chạy');
+        return;
+      }
       try {
         const { checkFinancialConsistency } = await import('./db/consistency.js');
         const issues = await checkFinancialConsistency(db);
@@ -126,6 +140,22 @@ function startConsistencyScheduler(): void {
         if ((r.changes ?? 0) > 0) logger.info('Đã dọn refresh token hết hạn', { count: r.changes });
       } catch (err: unknown) {
         logger.error('Kiểm tra nhất quán tài chính thất bại', { error: String(err) });
+      } finally {
+        try {
+          await db.query('SELECT pg_advisory_unlock(hashtext($1))', ['educenter-consistency']);
+        } catch {
+          /* bỏ qua */
+        }
+      }
+      // Dọn idempotency keys hết hạn (TTL 24h) — cron độc lập, không phụ thuộc traffic
+      try {
+        await db
+          .prepare(
+            "DELETE FROM idempotency_keys WHERE created_at < to_char(NOW() - INTERVAL '24 hours', 'YYYY-MM-DD HH24:MI:SS')"
+          )
+          .run();
+      } catch {
+        /* bỏ qua */
       }
     },
     { timezone: 'Asia/Ho_Chi_Minh' }

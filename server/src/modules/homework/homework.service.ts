@@ -421,13 +421,11 @@ export async function reuseHomework(
  * So sánh theo giờ Việt Nam vì publish_at lưu từ input datetime-local (giờ local). */
 export async function publishScheduled(): Promise<number> {
   const now = nowVNMinute();
-  // Lấy danh sách trước để gửi thông báo
-  const due = await homeworkRepo.findDueScheduled(now);
-  if (due.length === 0) return 0;
-  const count = await homeworkRepo.publishDue(now);
-  // Phát event — Zalo listener tự gửi thông báo
-  for (const hw of due) eventBus.emitSync(new HomeworkPublishedEvent(hw.id, hw.center_id));
-  return count;
+  // UPDATE ... RETURNING: atomic — chỉ instance nào update thành công mới emit event
+  // (chống 2 instance cùng publish → gửi Zalo trùng)
+  const published = await homeworkRepo.publishDue(now);
+  for (const hw of published) eventBus.emitSync(new HomeworkPublishedEvent(hw.id, hw.center_id));
+  return published.length;
 }
 
 export async function updateHomework(

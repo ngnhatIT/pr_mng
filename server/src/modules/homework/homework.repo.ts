@@ -115,11 +115,14 @@ export const homeworkRepo = {
   },
 
   /** Publish tất cả bài hẹn giờ đến hạn, trả về số bài. */
-  async publishDue(now: string): Promise<number> {
-    const r = await db
-      .prepare("UPDATE homework SET status = 'published' WHERE status = 'scheduled' AND publish_at <= ?")
-      .run(now);
-    return Number(r.changes);
+  async publishDue(now: string): Promise<{ id: number; center_id: number }[]> {
+    // RETURNING: chỉ instance nào UPDATE thành công mới nhận được row → chống duplicate event
+    const r = (await db
+      .prepare(
+        "UPDATE homework SET status = 'published' WHERE status = 'scheduled' AND publish_at <= ? RETURNING id, center_id"
+      )
+      .all(now)) as { id: number; center_id: number }[];
+    return r;
   },
 };
 

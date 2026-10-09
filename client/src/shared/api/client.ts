@@ -129,7 +129,13 @@ export async function api<T>(path: string, options: RequestInit = {}): Promise<T
         },
       });
     } catch (err) {
+      // Timeout (AbortError) với GET: retry 1 lần (mạng VN chập chờn)
       if (err instanceof DOMException && err.name === 'AbortError') {
+        if (isIdempotent && attempt < 1) {
+          attempt++;
+          await new Promise((r) => setTimeout(r, 500));
+          continue;
+        }
         throw new Error(tApi('api.timeout'), { cause: err });
       }
       throw new Error(tApi('api.network'), { cause: err });
