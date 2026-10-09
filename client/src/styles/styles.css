@@ -3396,3 +3396,48 @@ a:focus-visible,
     grid-template-columns: 1fr;
   }
 }
+
+/* ---------- Network banner ---------- */
+.network-banner {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 9999;
+  padding: 10px 16px;
+  text-align: center;
+  font-size: 14px;
+  font-weight: 500;
+}
+.network-banner.offline {
+  background: #dc2626;
+  color: #fff;
+}
+.network-banner.online {
+  background: #16a34a;
+  color: #fff;
+}
+
+/* ---------- Error pages ---------- */
+.empty-page {
+  min-height: 60vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 32px 16px;
+  text-align: center;
+}
+.empty-page-icon {
+  color: var(--text-faint);
+}
+.empty-page h1 {
+  font-size: 22px;
+  margin: 0;
+}
+.empty-page-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 8px;
+}

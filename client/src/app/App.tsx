@@ -2,6 +2,8 @@ import { lazy, Suspense, useEffect, type ComponentType, type JSX, type LazyExoti
 import { Routes, Route, Navigate, useParams, useLocation } from 'react-router-dom';
 import { getToken, getUser } from '../shared/api/client';
 import { ErrorBoundary } from '../shared/components/ErrorBoundary';
+import { NotFound, Forbidden } from './ErrorPages';
+import { NetworkBanner } from '../shared/components/NetworkBanner';
 
 /** Lazy-load 1 named export từ module page. */
 function lazyPage<T extends object>(
@@ -88,7 +90,7 @@ function RoleGuard({
   }, [authed, location.pathname, location.search]);
   if (!authed) return <Navigate to={loginPath} replace />;
   const user = getUser();
-  if (!user || !roles.includes(user.role)) return <Navigate to="/" replace />;
+  if (!user || !roles.includes(user.role)) return <Forbidden />;
   return children;
 }
 
@@ -105,6 +107,7 @@ function OldRedirect({ to }: { to: string }) {
 export default function App() {
   return (
     <ErrorBoundary name="root">
+      <NetworkBanner />
       <Suspense fallback={<RouteFallback />}>
         <Routes>
           <Route path="/" element={<Landing />} />
@@ -193,7 +196,7 @@ export default function App() {
           <Route path="/teachers" element={<OldRedirect to="/app/teachers" />} />
           <Route path="/zalo-reminders" element={<OldRedirect to="/app/zalo-reminders" />} />
 
-          <Route path="*" element={<Navigate to="/" replace />} />
+          <Route path="*" element={<NotFound />} />
         </Routes>
       </Suspense>
     </ErrorBoundary>

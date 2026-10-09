@@ -4,7 +4,7 @@ import { useTranslation, Trans } from 'react-i18next';
 import { invoicesApi, paymentsApi, InvoiceItem, PendingPayment, DebtRow } from './tuition.api';
 import { studentsApi, Student } from '../students/students.api';
 import { classesApi, ClassItem } from '../classes/classes.api';
-import { useToast } from '../../shared/ui/toast';
+import { useToast, toastApiError } from '../../shared/ui/toast';
 import { Modal } from '../../shared/components/Modal';
 import { Field } from '../../shared/components/Form';
 import { PageHeader } from '../../shared/components/PageHeader';
@@ -66,7 +66,7 @@ function PendingPayments() {
       setItems(res.data);
       setPagination(res.pagination);
     } catch (err) {
-      toast(err instanceof Error ? err.message : t('pending.loadError'), 'error');
+      toastApiError(toast, err, t('pending.loadError'));
     } finally {
       setLoading(false);
     }
@@ -84,7 +84,7 @@ function PendingPayments() {
       toast(action === 'approve' ? t('pending.approved') : t('pending.rejected'), 'success');
       void load();
     } catch (err) {
-      toast(err instanceof Error ? err.message : t('pending.fail'), 'error');
+      toastApiError(toast, err, t('pending.fail'));
     } finally {
       setBusyId(null);
     }
@@ -176,7 +176,7 @@ function InvoiceList() {
         r.status === 'failed' ? 'error' : 'success'
       );
     } catch (err) {
-      toast(err instanceof Error ? err.message : t('invoice.remindError'), 'error');
+      toastApiError(toast, err, t('invoice.remindError'));
     } finally {
       setRemindingId(null);
     }
@@ -189,7 +189,7 @@ function InvoiceList() {
       setInvoices(res.data);
       setPagination(res.pagination);
     } catch (err) {
-      toast(err instanceof Error ? err.message : t('invoices.loadError'), 'error');
+      toastApiError(toast, err, t('invoices.loadError'));
     } finally {
       setLoading(false);
     }
@@ -405,7 +405,7 @@ function ApplyCreditModal({
       toast(t('credit.applied', { amount: formatVND(r.applied) }), 'success');
       onDone();
     } catch (err) {
-      toast(err instanceof Error ? err.message : t('credit.applyError'), 'error');
+      toastApiError(toast, err, t('credit.applyError'));
     } finally {
       setBusy(false);
     }
@@ -502,7 +502,7 @@ function InvoiceFormModal({ onClose, onDone }: { onClose: () => void; onDone: ()
       toast(t('invoiceForm.created'), 'success');
       onDone();
     } catch (err) {
-      toast(err instanceof Error ? err.message : t('invoiceForm.createError'), 'error');
+      toastApiError(toast, err, t('invoiceForm.createError'));
     } finally {
       setBusy(false);
     }
@@ -602,7 +602,7 @@ function PayModal({
       toast(t('pay.recorded'), 'success');
       onDone();
     } catch (err) {
-      toast(err instanceof Error ? err.message : t('pay.payError'), 'error');
+      toastApiError(toast, err, t('pay.payError'));
     } finally {
       setBusy(false);
     }
@@ -683,7 +683,7 @@ function RefundModal({
       toast(t('refund.done'), 'success');
       onDone();
     } catch (err) {
-      toast(err instanceof Error ? err.message : t('refund.error'), 'error');
+      toastApiError(toast, err, t('refund.error'));
     } finally {
       setBusy(false);
     }
@@ -750,7 +750,7 @@ function DebtList() {
       setDebts(r.data);
       setPagination(r.pagination);
     } catch (err) {
-      toast(err instanceof Error ? err.message : t('debt.loadError'), 'error');
+      toastApiError(toast, err, t('debt.loadError'));
     } finally {
       setLoading(false);
     }

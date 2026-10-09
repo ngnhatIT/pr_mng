@@ -110,5 +110,19 @@
     "message": "Sorry, this page failed to load. You can try again or go back home.",
     "retry": "Try again",
     "home": "Go home"
+  },
+  "notFound": {
+    "title": "Page not found",
+    "desc": "The page you are looking for does not exist or has been moved.",
+    "back": "Go back",
+    "home": "Home"
+  },
+  "forbidden": {
+    "title": "Access denied",
+    "desc": "Your account does not have permission to view this page. Contact your administrator if you need access."
+  },
+  "network": {
+    "offline": "No internet connection. Check your Wi-Fi/4G.",
+    "backOnline": "Back online."
   }
 }

@@ -60,7 +60,7 @@ export function Landing() {
   const scrollToForm = () => formRef.current?.scrollIntoView({ behavior: 'smooth' });
 
   return (
-    <div className="landing">
+    <main className="landing">
       <header className="landing-nav">
         <div className="landing-brand">
           <div className="brand-logo">E</div>
@@ -102,7 +102,14 @@ export function Landing() {
             </div>
           </div>
           <div className="landing-hero-media">
-            <img src="/landing-hero.jpg" alt={t('hero.imgAlt')} loading="eager" />
+            <img
+              src="/landing-hero.jpg"
+              alt={t('hero.imgAlt')}
+              loading="eager"
+              width="1920"
+              height="1280"
+              fetchPriority="high"
+            />
           </div>
         </div>
       </section>
@@ -230,7 +237,7 @@ export function Landing() {
           </div>
         </div>
       </footer>
-    </div>
+    </main>
   );
 }
 

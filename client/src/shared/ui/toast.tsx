@@ -15,6 +15,21 @@ export function useToast(): (message: string, type?: ToastType) => void {
   return useContext(ToastContext);
 }
 
+/**
+ * Toast lỗi từ Error API: tự gắn mã lỗi (request_id) để user báo support.
+ * Dùng thay cho toast(err.message, 'error') ở các catch.
+ */
+export function toastApiError(
+  toast: (message: string, type?: ToastType) => void,
+  err: unknown,
+  fallback: string
+): void {
+  const e = err as Error & { requestId?: string };
+  const msg = e instanceof Error ? e.message : fallback;
+  const suffix = e?.requestId ? ` (Mã lỗi: ${e.requestId})` : '';
+  toast(`${msg}${suffix}`, 'error');
+}
+
 let nextId = 1;
 
 const TOAST_ICON = {

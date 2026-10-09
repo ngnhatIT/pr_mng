@@ -114,25 +114,36 @@ export async function api<T>(path: string, options: RequestInit = {}): Promise<T
   const timer = setTimeout(() => controller.abort(), isForm ? UPLOAD_TIMEOUT_MS : TIMEOUT_MS);
 
   let res: Response;
-  try {
-    res = await fetch(API_BASE + path, {
-      ...options,
-      // Ưu tiên signal của caller (nếu có), mặc định dùng signal timeout nội bộ.
-      signal: options.signal ?? controller.signal,
-      headers: {
-        ...(isForm ? {} : { 'Content-Type': 'application/json' }),
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        ...options.headers,
-      },
-    });
-  } catch (err) {
-    if (err instanceof DOMException && err.name === 'AbortError') {
-      throw new Error(tApi('api.timeout'), { cause: err });
+  // Retry 1 lần cho lỗi transient (502/503/504 hoặc timeout) với GET — mạng VN chập chờn
+  const isIdempotent = !options.method || options.method.toUpperCase() === 'GET';
+  let attempt = 0;
+  for (;;) {
+    try {
+      res = await fetch(API_BASE + path, {
+        ...options,
+        signal: options.signal ?? controller.signal,
+        headers: {
+          ...(isForm ? {} : { 'Content-Type': 'application/json' }),
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          ...options.headers,
+        },
+      });
+    } catch (err) {
+      if (err instanceof DOMException && err.name === 'AbortError') {
+        throw new Error(tApi('api.timeout'), { cause: err });
+      }
+      throw new Error(tApi('api.network'), { cause: err });
     }
-    throw new Error(tApi('api.network'), { cause: err });
-  } finally {
-    clearTimeout(timer);
+    attempt++;
+    const transient = res.status === 502 || res.status === 503 || res.status === 504;
+    if (isIdempotent && transient && attempt < 2) {
+      // Chờ 500ms rồi thử lại 1 lần
+      await new Promise((r) => setTimeout(r, 500));
+      continue;
+    }
+    break;
   }
+  clearTimeout(timer);
 
   if (res.status === 401) {
     // Thử refresh token 1 lần trước khi đá về login (access token chỉ sống 1 giờ).
@@ -162,7 +173,11 @@ export async function api<T>(path: string, options: RequestInit = {}): Promise<T
     data = {};
   }
   if (!res.ok) {
-    throw new Error((data as { error?: string }).error || tApi('api.error'));
+    const body = data as { error?: string; request_id?: string };
+    // Gắn request_id vào error để UI hiển thị mã lỗi cho user báo support
+    const err = new Error(body.error || tApi('api.error')) as Error & { requestId?: string };
+    if (body.request_id) err.requestId = body.request_id;
+    throw err;
   }
   return data as T;
 }

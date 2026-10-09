@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction, RequestHandler } from 'express';
 import { AppError } from './errors';
 import { logger } from './logger';
+import { getRequestId } from '../middleware/requestId';
 
 /**
  * Bọc async route handler để mọi exception (kể cả promise rejection)
@@ -22,9 +23,10 @@ export function asyncHandler(
  * - AppError  -> trả đúng statusCode + message thân thiện
  * - Lỗi lạ    -> 500 "Lỗi máy chủ", log chi tiết ra console (không lộ cho client)
  */
-export function errorHandler(err: unknown, _req: Request, res: Response, _next: NextFunction): void {
+export function errorHandler(err: unknown, req: Request, res: Response, _next: NextFunction): void {
+  const requestId = getRequestId(req);
   if (err instanceof AppError) {
-    res.status(err.statusCode).json({ error: err.message, code: err.code });
+    res.status(err.statusCode).json({ error: err.message, code: err.code, request_id: requestId });
     return;
   }
   // Lỗi upload từ multer: file quá lớn → 413 với message rõ ràng
@@ -37,9 +39,12 @@ export function errorHandler(err: unknown, _req: Request, res: Response, _next: 
     res.status(400).json({ error: 'File không hợp lệ', code: 'INVALID_FILE' });
     return;
   }
-  // Lỗi không lường trước: log để debug, client chỉ thấy message chung
-  logger.error('Unhandled error', { error: err instanceof Error ? err.stack || err.message : String(err) });
-  res.status(500).json({ error: 'Lỗi máy chủ', code: 'INTERNAL_ERROR' });
+  // Lỗi không lường trước: log để debug (kèm requestId để trace), client chỉ thấy message chung + mã lỗi
+  logger.error('Unhandled error', {
+    error: err instanceof Error ? err.stack || err.message : String(err),
+    requestId,
+  });
+  res.status(500).json({ error: 'Lỗi máy chủ', code: 'INTERNAL_ERROR', request_id: requestId });
 }
 
 /** 404 cho API không tồn tại — đặt sau mọi route, trước errorHandler. */

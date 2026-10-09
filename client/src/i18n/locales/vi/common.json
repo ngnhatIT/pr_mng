@@ -110,5 +110,19 @@
     "message": "Rất tiếc, có lỗi khi hiển thị trang này. Bạn có thể thử tải lại hoặc quay về trang chủ.",
     "retry": "Thử lại",
     "home": "Về trang chủ"
+  },
+  "notFound": {
+    "title": "Không tìm thấy trang",
+    "desc": "Trang bạn tìm không tồn tại hoặc đã bị di chuyển.",
+    "back": "Quay lại",
+    "home": "Về trang chủ"
+  },
+  "forbidden": {
+    "title": "Không có quyền truy cập",
+    "desc": "Tài khoản của bạn không có quyền xem trang này. Liên hệ quản trị viên nếu bạn cần quyền."
+  },
+  "network": {
+    "offline": "Mất kết nối mạng. Kiểm tra Wi-Fi/4G của bạn.",
+    "backOnline": "Đã kết nối lại."
   }
 }
