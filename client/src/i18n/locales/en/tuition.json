@@ -100,7 +100,8 @@
     "selectStudent": "- Select student -",
     "student": "Student *",
     "studentRequired": "Please select a student",
-    "title": "Create invoice"
+    "title": "Create invoice",
+    "amountInvalid": "Amount must be a positive number"
   },
   "invoiceStatus": {
     "paid": "Paid",

@@ -581,6 +581,20 @@ export const TABLE_DOCS: Record<string, TableDoc> = {
       user_agent: 'User-Agent lúc cấp token.',
     },
   },
+  idempotency_keys: {
+    description:
+      'Chống double-submit: lưu kết quả của POST theo Idempotency-Key. ' +
+      'Request trùng key trả lại kết quả cũ thay vì xử lý lại.',
+    columns: {
+      key: 'Khóa chính: Idempotency-Key do client sinh (UUID).',
+      user_id: 'User gửi request (không FK).',
+      method: 'HTTP method (vd: POST).',
+      path: 'Đường dẫn API.',
+      status_code: 'Mã trạng thái của response gốc.',
+      response_body: 'Body JSON của response gốc.',
+      created_at: 'Thời điểm tạo (dùng để xóa key quá TTL 24h).',
+    },
+  },
   audit_logs: {
     description:
       'Nhật ký kiểm toán append-only: mọi thao tác quan trọng của người dùng. ' +
@@ -1431,6 +1445,16 @@ CREATE TABLE IF NOT EXISTS invoice_history (
 );
 CREATE INDEX IF NOT EXISTS idx_payment_history_payment ON payment_history(payment_id, changed_at DESC);
 CREATE INDEX IF NOT EXISTS idx_invoice_history_invoice ON invoice_history(invoice_id, changed_at DESC);
+CREATE TABLE IF NOT EXISTS idempotency_keys (
+  key TEXT PRIMARY KEY,
+  user_id INTEGER,
+  method TEXT NOT NULL,
+  path TEXT NOT NULL,
+  status_code INTEGER NOT NULL,
+  response_body TEXT NOT NULL,
+  created_at TEXT NOT NULL DEFAULT (${TS_EXPR})
+);
+CREATE INDEX IF NOT EXISTS idx_idempotency_created ON idempotency_keys(created_at);
 
 /* Index cho các FK nóng — PostgreSQL không tự index FK, thiếu sẽ Seq Scan khi JOIN/filter.
  * Chọn lọc theo tần suất query thực tế (audit performance 2026-10-09), không index bừa. */

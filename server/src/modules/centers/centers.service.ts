@@ -1,4 +1,5 @@
 import bcrypt from 'bcryptjs';
+import { assertStrongPassword } from '../../shared/password';
 import { db } from '../../db';
 import { PLANS, listCenters, getCenter, type Center } from '../../utils/plans';
 import { AppError } from '../../shared/errors';
@@ -49,7 +50,7 @@ export async function createCenterWithAdmin(
   const plan = input.plan || 'standard';
   if (!name) throw AppError.badRequest('Tên trung tâm là bắt buộc');
   if (adminUsername.length < 4) throw AppError.badRequest('Tên đăng nhập admin phải từ 4 ký tự trở lên');
-  if (adminPassword.length < 4) throw AppError.badRequest('Mật khẩu admin phải từ 4 ký tự trở lên');
+  assertStrongPassword(adminPassword, 'Mật khẩu admin');
   if (!PLANS[plan]) {
     throw AppError.badRequest(`Gói cước không hợp lệ. Chọn một trong: ${Object.keys(PLANS).join(', ')}`);
   }

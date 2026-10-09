@@ -6,6 +6,7 @@ import { AppError } from '../../shared/errors';
 import { uploadSingle, cleanupUploadedFile } from '../../shared/upload';
 import { validate, v, paramId } from '../../shared/validate';
 import * as parentService from './parent.service';
+import { assertStrongPassword } from '../../shared/password';
 import { rotateRefreshToken, revokeRefreshToken } from '../auth/refresh.service';
 
 const router = Router();
@@ -30,10 +31,12 @@ router.post(
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const input = validate(req.body, {
       phone: v.string({ required: true, label: 'Số điện thoại' }),
-      password: v.string({ required: true, min: 4, label: 'Mật khẩu' }),
+      password: v.string({ required: true, min: 8, label: 'Mật khẩu' }),
       name: v.string({ required: true, max: 100, label: 'Họ tên' }),
       center_id: v.number({ required: true, label: 'Trung tâm' }),
     });
+    // Chặn mật khẩu phổ biến (validate() chỉ check độ dài)
+    assertStrongPassword(input.password);
     const result = await parentService.registerParent(input);
     res.status(201).json(result);
   })

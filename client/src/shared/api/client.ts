@@ -186,7 +186,12 @@ export async function api<T>(path: string, options: RequestInit = {}): Promise<T
 export const http = {
   get: <T>(path: string) => api<T>(path),
   post: <T>(path: string, body?: unknown) =>
-    api<T>(path, { method: 'POST', body: body !== undefined ? JSON.stringify(body) : undefined }),
+    api<T>(path, {
+      method: 'POST',
+      body: body !== undefined ? JSON.stringify(body) : undefined,
+      // Idempotency-Key: chống double-submit tạo 2 bản ghi (server dedupe theo key)
+      headers: { 'Idempotency-Key': crypto.randomUUID() },
+    }),
   put: <T>(path: string, body?: unknown) => api<T>(path, { method: 'PUT', body: JSON.stringify(body) }),
   del: <T>(path: string) => api<T>(path, { method: 'DELETE' }),
   postForm: <T>(path: string, form: FormData) => api<T>(path, { method: 'POST', body: form }),

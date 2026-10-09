@@ -1,4 +1,5 @@
 import bcrypt from 'bcryptjs';
+import { assertStrongPassword } from '../../shared/password';
 import { db, toISODate, confirmedPaid, getCenterSettings, formatSchedule } from '../../db';
 import { AuthUser, DUMMY_PASSWORD_HASH } from '../../middleware/auth';
 import { issueTokenPair, TokenPair } from '../auth/refresh.service';

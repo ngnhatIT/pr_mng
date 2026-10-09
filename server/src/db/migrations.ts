@@ -153,6 +153,19 @@ const MIGRATIONS: Migration[] = [
         'CREATE INDEX IF NOT EXISTS idx_submissions_homework_student ON homework_submissions(homework_id, student_id)',
         'CREATE INDEX IF NOT EXISTS idx_leave_requests_student ON leave_requests(student_id)',
         'CREATE INDEX IF NOT EXISTS idx_sessions_date ON sessions(date)',
+        'CREATE INDEX IF NOT EXISTS idx_payments_invoice ON payments(invoice_id)',
+        'CREATE INDEX IF NOT EXISTS idx_invoices_student ON invoices(student_id)',
+        'CREATE INDEX IF NOT EXISTS idx_invoices_center ON invoices(center_id)',
+        'CREATE INDEX IF NOT EXISTS idx_students_center ON students(center_id)',
+        'CREATE INDEX IF NOT EXISTS idx_classes_center ON classes(center_id)',
+        'CREATE INDEX IF NOT EXISTS idx_teachers_center ON teachers(center_id)',
+        'CREATE INDEX IF NOT EXISTS idx_homework_center ON homework(center_id)',
+        'CREATE INDEX IF NOT EXISTS idx_homework_class ON homework(class_id)',
+        'CREATE INDEX IF NOT EXISTS idx_grades_student ON grades(student_id)',
+        'CREATE INDEX IF NOT EXISTS idx_quiz_attempts_homework ON quiz_attempts(homework_id)',
+        'CREATE INDEX IF NOT EXISTS idx_submissions_homework_student ON homework_submissions(homework_id, student_id)',
+        'CREATE INDEX IF NOT EXISTS idx_leave_requests_student ON leave_requests(student_id)',
+        'CREATE INDEX IF NOT EXISTS idx_sessions_date ON sessions(date)',
         'CREATE INDEX IF NOT EXISTS idx_enrollments_class ON enrollments(class_id)',
         'CREATE INDEX IF NOT EXISTS idx_parent_students_parent ON parent_students(parent_id)',
         'CREATE INDEX IF NOT EXISTS idx_parent_students_student ON parent_students(student_id)',
@@ -160,6 +173,26 @@ const MIGRATIONS: Migration[] = [
         'CREATE INDEX IF NOT EXISTS idx_checkins_teacher ON teacher_checkins(teacher_id)',
       ];
       for (const sql of idx) await tx.exec(sql);
+    },
+  },
+  {
+    version: 8,
+    name: 'idempotency_keys',
+    up: async (tx) => {
+      // Bảng idempotency key: chống double-submit tạo dữ liệu trùng.
+      // Client gửi header Idempotency-Key (UUID); server trả lại kết quả cũ nếu key đã dùng.
+      await tx.exec(`
+        CREATE TABLE IF NOT EXISTS idempotency_keys (
+          key TEXT PRIMARY KEY,
+          user_id INTEGER,
+          method TEXT NOT NULL,
+          path TEXT NOT NULL,
+          status_code INTEGER NOT NULL,
+          response_body TEXT NOT NULL,
+          created_at TEXT NOT NULL DEFAULT (to_char(NOW(), 'YYYY-MM-DD HH24:MI:SS'))
+        )
+      `);
+      await tx.exec('CREATE INDEX IF NOT EXISTS idx_idempotency_created ON idempotency_keys(created_at)');
     },
   },
 ];

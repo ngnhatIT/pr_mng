@@ -7,6 +7,7 @@ import { asyncHandler } from '../../shared/http';
 import { validate, v } from '../../shared/validate';
 import { issueTokenPair, rotateRefreshToken, revokeRefreshToken, revokeAllForOwner } from './refresh.service';
 import { audit } from '../../shared/audit';
+import { assertStrongPassword } from '../../shared/password';
 
 const router = Router();
 
@@ -95,6 +96,53 @@ router.post(
     const u = req.user!;
     const isParent = u.kind === 'parent' || u.role === 'parent';
     await revokeAllForOwner(isParent ? 'parent' : 'staff', isParent ? (u.parent_id ?? u.id) : u.id);
+    res.json({ ok: true });
+  })
+);
+
+/** Đổi mật khẩu: yêu cầu mật khẩu cũ đúng + mật khẩu mới đủ mạnh. */
+router.post(
+  '/change-password',
+  requireAuth,
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const u = req.user!;
+    if (u.kind === 'parent' || u.role === 'parent') {
+      res.status(403).json({ error: 'Tài khoản phụ huynh dùng luồng riêng', code: 'NOT_STAFF' });
+      return;
+    }
+    const { old_password, new_password } = (req.body ?? {}) as {
+      old_password?: string;
+      new_password?: string;
+    };
+    if (!old_password || !new_password) {
+      res
+        .status(400)
+        .json({ error: 'Vui lòng nhập mật khẩu cũ và mật khẩu mới', code: 'VALIDATION_REQUIRED' });
+      return;
+    }
+    const row = (await db.prepare('SELECT password_hash FROM users WHERE id = ?').get(u.id)) as
+      { password_hash: string } | undefined;
+    if (!row || !bcrypt.compareSync(old_password, row.password_hash)) {
+      res.status(400).json({ error: 'Mật khẩu cũ không đúng', code: 'WRONG_PASSWORD' });
+      return;
+    }
+    if (old_password === new_password) {
+      res.status(400).json({ error: 'Mật khẩu mới phải khác mật khẩu cũ', code: 'SAME_PASSWORD' });
+      return;
+    }
+    assertStrongPassword(new_password, 'Mật khẩu mới');
+    const hash = bcrypt.hashSync(new_password, 10);
+    await db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(hash, u.id);
+    // Đổi mật khẩu = thu hồi mọi session khác (kẻ trộm bị đá ra)
+    await revokeAllForOwner('staff', u.id);
+    void audit({
+      centerId: u.center_id ?? null,
+      actor: { id: u.id, name: u.name, role: u.role },
+      action: 'update',
+      entity: 'users',
+      entityId: u.id,
+      summary: `${u.name} đổi mật khẩu`,
+    });
     res.json({ ok: true });
   })
 );

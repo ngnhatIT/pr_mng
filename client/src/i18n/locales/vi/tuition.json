@@ -100,7 +100,8 @@
     "selectStudent": "- Chọn học viên -",
     "student": "Học viên *",
     "studentRequired": "Vui lòng chọn học viên",
-    "title": "Tạo phiếu thu"
+    "title": "Tạo phiếu thu",
+    "amountInvalid": "Số tiền phải là số dương"
   },
   "invoiceStatus": {
     "paid": "Đã thanh toán",

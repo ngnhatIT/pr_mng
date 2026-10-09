@@ -463,6 +463,7 @@ function InvoiceFormModal({ onClose, onDone }: { onClose: () => void; onDone: ()
   const [dueDate, setDueDate] = useState('');
   const [note, setNote] = useState('');
   const [busy, setBusy] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const toast = useToast();
 
   useEffect(() => {
@@ -486,10 +487,14 @@ function InvoiceFormModal({ onClose, onDone }: { onClose: () => void; onDone: ()
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!studentId) {
-      toast(t('invoiceForm.studentRequired'), 'error');
-      return;
+    const errs: Record<string, string> = {};
+    if (!studentId) errs.studentId = t('invoiceForm.studentRequired');
+    const amt = Number(amount);
+    if (!amount || !Number.isFinite(amt) || amt <= 0) {
+      errs.amount = t('invoiceForm.amountInvalid');
     }
+    setFieldErrors(errs);
+    if (Object.keys(errs).length > 0) return;
     setBusy(true);
     try {
       await invoicesApi.create({
@@ -512,7 +517,7 @@ function InvoiceFormModal({ onClose, onDone }: { onClose: () => void; onDone: ()
     <Modal title={t('invoiceForm.title')} onClose={onClose}>
       <form onSubmit={submit}>
         <div className="form-grid">
-          <Field label={t('invoiceForm.student')} span>
+          <Field label={t('invoiceForm.student')} span error={fieldErrors.studentId} required>
             <select
               className="text-input"
               value={studentId}
@@ -537,7 +542,7 @@ function InvoiceFormModal({ onClose, onDone }: { onClose: () => void; onDone: ()
               ))}
             </select>
           </Field>
-          <Field label={t('invoiceForm.amount')}>
+          <Field label={t('invoiceForm.amount')} error={fieldErrors.amount} required>
             <input
               className="text-input"
               type="number"

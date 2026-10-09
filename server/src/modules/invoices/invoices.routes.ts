@@ -6,6 +6,7 @@ import { validate, v, paramId } from '../../shared/validate';
 import * as invoiceService from './invoices.service';
 import * as paymentService from '../payments/payments.service';
 import { actorFromReq } from '../../shared/audit';
+import { idempotency } from '../../middleware/idempotency';
 
 const router = Router();
 
@@ -53,6 +54,7 @@ router.get(
 router.post(
   '/',
   requirePermission('invoices.create'),
+  idempotency,
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const input = validate(req.body, {
       student_id: v.number({ required: true, integer: true, label: 'Học viên' }),

@@ -7,6 +7,7 @@ import { asyncHandler } from '../../shared/http';
 import { validate, v } from '../../shared/validate';
 import { listTeachers } from './teachers.service';
 import { audit, actorFromReq } from '../../shared/audit';
+import { assertStrongPassword } from '../../shared/password';
 
 const router = Router();
 
@@ -121,8 +122,15 @@ router.post(
       return;
     }
     const { username, password } = req.body as { username?: string; password?: string };
-    if (!username || !username.trim() || !password || password.length < 4) {
-      res.status(400).json({ error: 'Tên đăng nhập và mật khẩu (tối thiểu 4 ký tự) là bắt buộc' });
+    if (!username || !username.trim() || !password) {
+      res.status(400).json({ error: 'Tên đăng nhập và mật khẩu là bắt buộc', code: 'VALIDATION_REQUIRED' });
+      return;
+    }
+    try {
+      assertStrongPassword(password);
+    } catch (err) {
+      const e = err as { message?: string };
+      res.status(400).json({ error: e.message || 'Mật khẩu quá yếu', code: 'WEAK_PASSWORD' });
       return;
     }
     const exists = await db.prepare('SELECT 1 FROM users WHERE username = ?').get(username.trim());
