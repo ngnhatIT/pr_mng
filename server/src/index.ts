@@ -50,8 +50,8 @@ let backupTask: ReturnType<typeof cron.schedule> | null = null;
 let consistencyTask: ReturnType<typeof cron.schedule> | null = null;
 
 export function stopSchedulers(): void {
-  backupTask?.stop();
-  consistencyTask?.stop();
+  void backupTask?.stop();
+  void consistencyTask?.stop();
   backupTask = consistencyTask = null;
 }
 

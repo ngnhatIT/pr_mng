@@ -187,7 +187,7 @@ export async function runReminderOnce(centerId?: number): Promise<RunOnceResult>
 let reminderTask: ReturnType<typeof cron.schedule> | null = null;
 
 export function stopReminderScheduler(): void {
-  reminderTask?.stop();
+  void reminderTask?.stop();
   reminderTask = null;
 }
 

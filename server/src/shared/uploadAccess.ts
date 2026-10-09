@@ -60,8 +60,6 @@ export async function checkUploadAccess(
       .prepare('SELECT 1 FROM parent_students WHERE parent_id = ? AND student_id = ?')
       .get(pid, sub.student_id);
     allowed = !!link;
-  } else if (role === 'teacher') {
-    allowed = userCenterId === null || userCenterId === sub.center_id;
   }
   if (!allowed) throw AppError.forbidden('Không có quyền xem file này');
   return sub;
