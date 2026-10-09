@@ -163,6 +163,61 @@ async function assertNoRoomConflict(
   }
 }
 
+/** Kiểm tra trùng lịch giáo viên: cùng teacher, cùng day, khung giờ giao nhau. */
+async function findTeacherConflict(
+  teacherId: number,
+  schedule: ScheduleEntry[],
+  excludeId: number | null,
+  centerId: number | null
+): Promise<{ className: string; day: number; start: string; end: string; teacherName: string } | null> {
+  if (!teacherId || schedule.length === 0) return null;
+  const teacher = (await db.prepare('SELECT name FROM teachers WHERE id = ?').get(teacherId)) as
+    { name: string } | undefined;
+  const teacherName = teacher?.name || '';
+  let sql = 'SELECT id, name, schedule FROM classes WHERE teacher_id = ? AND status = ?';
+  const params: unknown[] = [teacherId, 'active'];
+  if (centerId !== null) {
+    sql += ' AND center_id = ?';
+    params.push(centerId);
+  }
+  if (excludeId) {
+    sql += ' AND id != ?';
+    params.push(excludeId);
+  }
+  const rows = (await db.prepare(sql).all(...params)) as { id: number; name: string; schedule: string }[];
+  for (const row of rows) {
+    let other: ScheduleEntry[];
+    try {
+      other = JSON.parse(row.schedule || '[]');
+    } catch {
+      other = [];
+    }
+    for (const a of schedule) {
+      for (const b of other) {
+        if (a.day === b.day && a.start < b.end && b.start < a.end) {
+          return { className: row.name, day: a.day, start: a.start, end: a.end, teacherName };
+        }
+      }
+    }
+  }
+  return null;
+}
+
+async function assertNoTeacherConflict(
+  teacherId: number | null,
+  schedule: ScheduleEntry[],
+  excludeId: number | null,
+  centerId: number | null
+): Promise<void> {
+  if (!teacherId) return;
+  const conflict = await findTeacherConflict(teacherId, schedule, excludeId, centerId);
+  if (conflict) {
+    throw AppError.badRequest(
+      `Giáo viên "${conflict.teacherName}" bị trùng lịch với lớp "${conflict.className}" (${DAY_NAMES[conflict.day]} ${conflict.start}-${conflict.end})`
+    );
+  }
+}
+
 /** Kiểm tra giáo viên tồn tại và thuộc trung tâm (chống gán giáo viên center khác). */
 async function resolveTeacherId(teacherId: number | null, centerId: number | null): Promise<number | null> {
   if (!teacherId) return null;
@@ -200,12 +255,17 @@ function normalizeInput(input: ClassInput): {
   if (!name) throw AppError.badRequest('Tên lớp học là bắt buộc');
   const fee = Number(input.tuition_fee);
   if (!Number.isFinite(fee) || fee < 0) throw AppError.badRequest('Học phí không hợp lệ');
+  const startDate = input.start_date || null;
+  const endDate = input.end_date || null;
+  if (startDate && endDate && endDate < startDate) {
+    throw AppError.badRequest('Ngày kết thúc phải sau ngày bắt đầu');
+  }
   return {
     name,
     teacherId: input.teacher_id ? Number(input.teacher_id) : null,
     schedule: parseSchedule(input.schedule ?? []),
-    startDate: input.start_date || null,
-    endDate: input.end_date || null,
+    startDate,
+    endDate,
     fee,
     maxStudents: Number(input.max_students) > 0 ? Number(input.max_students) : 30,
     status: input.status === 'inactive' ? 'inactive' : 'active',
@@ -267,6 +327,7 @@ export async function createClass(ctx: ScopeCtx, input: ClassInput): Promise<unk
   const roomId = await resolveRoomId(ctx, input.room_id, centerId);
   await assertNoRoomConflict(roomId, n.schedule, null, centerId);
   const teacherId = await resolveTeacherId(n.teacherId, centerId);
+  await assertNoTeacherConflict(teacherId, n.schedule, null, centerId);
   const r = await db
     .prepare(
       'INSERT INTO classes (name, teacher_id, schedule, start_date, end_date, tuition_fee, max_students, status, center_id, room_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
@@ -293,6 +354,7 @@ export async function updateClass(ctx: ScopeCtx, id: number, input: ClassInput):
   const roomId = await resolveRoomId(ctx, input.room_id, centerId);
   await assertNoRoomConflict(roomId, n.schedule, id, centerId);
   const teacherId = await resolveTeacherId(n.teacherId, centerId);
+  await assertNoTeacherConflict(teacherId, n.schedule, id, centerId);
   // Chặn giảm sĩ số tối đa dưới số học viên đang học
   const activeCount = (
     (await db
