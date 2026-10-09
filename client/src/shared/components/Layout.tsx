@@ -171,7 +171,8 @@ export function Layout() {
         className={`sidebar${drawerOpen ? ' open' : ''}`}
         aria-label={t('nav.main')}
         aria-hidden={!drawerOpen || undefined}
-        inert={!drawerOpen || undefined}
+        // inert: drawer đóng không focusable được (WCAG 2.4.3)
+        {...(!drawerOpen ? { inert: '' } : {})}
       >
         <div className="brand">
           <div className="brand-logo">E</div>
