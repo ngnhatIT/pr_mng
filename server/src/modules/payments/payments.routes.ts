@@ -12,26 +12,34 @@ const router = Router();
  * VNPay return URL — PUBLIC (VNPay gọi về, không có token).
  * Định nghĩa TRƯỚC router.use(requireAuth).
  */
-router.get('/vnpay-return', async (req: AuthRequest, res: Response) => {
-  const redirectUrl = await paymentService.handleVnpayReturn(
-    req.query as Record<string, string | string[] | undefined>
-  );
-  res.redirect(redirectUrl);
-});
+router.get(
+  '/vnpay-return',
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const redirectUrl = await paymentService.handleVnpayReturn(
+      req.query as Record<string, string | string[] | undefined>
+    );
+    res.redirect(redirectUrl);
+  })
+);
 
 /**
  * VNPay IPN — PUBLIC server-to-server (VNPay gọi trực tiếp).
  * Xử lý khi phụ huynh đóng tab trước khi redirect về.
  * Trả về RspCode chuẩn VNPay (JSON), luôn HTTP 200.
  */
-router.post('/vnpay-ipn', async (req: AuthRequest, res: Response) => {
-  const query = {
-    ...(req.query as Record<string, string | undefined>),
-    ...(req.body as Record<string, string | undefined>),
-  };
-  const result = await paymentService.handleVnpayIpn(query as Record<string, string | string[] | undefined>);
-  res.json(result);
-});
+router.post(
+  '/vnpay-ipn',
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const query = {
+      ...(req.query as Record<string, string | undefined>),
+      ...(req.body as Record<string, string | undefined>),
+    };
+    const result = await paymentService.handleVnpayIpn(
+      query as Record<string, string | string[] | undefined>
+    );
+    res.json(result);
+  })
+);
 
 /* --------------------- Từ đây yêu cầu đăng nhập --------------------- */
 router.use(requireAuth);

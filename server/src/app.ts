@@ -127,66 +127,76 @@ export function createApp(): Express {
   v1.use('/payments', paymentRoutes);
 
   // Client error reporting (public, rate-limited): nhận lỗi crash từ ErrorBoundary
-  v1.post('/client-errors', async (req: express.Request, res: express.Response) => {
-    const { scope, message, stack, url } = (req.body ?? {}) as Record<string, string>;
-    logger.warn('Client error', {
-      scope: String(scope || 'unknown').slice(0, 50),
-      message: String(message || '').slice(0, 500),
-      stack: String(stack || '').slice(0, 2000),
-      url: String(url || '').slice(0, 500),
-      ip: req.ip,
-    });
-    // Trả request_id để UI hiển thị cho user báo support
-    const requestId = (req as { requestId?: string }).requestId;
-    res.json({ ok: true, request_id: requestId });
-  });
+  v1.post(
+    '/client-errors',
+    asyncHandler(async (req: express.Request, res: express.Response) => {
+      const { scope, message, stack, url } = (req.body ?? {}) as Record<string, string>;
+      logger.warn('Client error', {
+        scope: String(scope || 'unknown').slice(0, 50),
+        message: String(message || '').slice(0, 500),
+        stack: String(stack || '').slice(0, 2000),
+        url: String(url || '').slice(0, 500),
+        ip: req.ip,
+      });
+      // Trả request_id để UI hiển thị cho user báo support
+      const requestId = (req as { requestId?: string }).requestId;
+      res.json({ ok: true, request_id: requestId });
+    })
+  );
 
   // Health check CÔNG KHAI — M11: chỉ trả {ok, time}, KHÔNG lộ version PG/heap.
   // PHẢI đứng trước mọi mount có requireAuth.
-  app.get('/api/health', async (_req: express.Request, res: express.Response) => {
-    // Public nhưng có ping DB để LB dùng làm readiness probe (không lộ chi tiết)
-    let dbOk = true;
-    try {
-      await db.prepare('SELECT 1').get();
-    } catch {
-      dbOk = false;
-    }
-    res.status(dbOk ? 200 : 503).json({ ok: dbOk, time: new Date().toISOString() });
-  });
+  app.get(
+    '/api/health',
+    asyncHandler(async (_req: express.Request, res: express.Response) => {
+      // Public nhưng có ping DB để LB dùng làm readiness probe (không lộ chi tiết)
+      let dbOk = true;
+      try {
+        await db.prepare('SELECT 1').get();
+      } catch {
+        dbOk = false;
+      }
+      res.status(dbOk ? 200 : 503).json({ ok: dbOk, time: new Date().toISOString() });
+    })
+  );
 
   // Health check CHI TIẾT (DB, disk, memory) — yêu cầu đăng nhập.
   // Mount trên v1 router → /api/v1/health (legacy /api/health vẫn trúng route public ở trên nhờ thứ tự đăng ký).
-  v1.get('/health', requireAuth, async (_req: express.Request, res: express.Response) => {
-    const checks: Record<string, { ok: boolean; detail?: string }> = {};
-    // DB: query đơn giản + version PostgreSQL
-    try {
-      await db.prepare('SELECT 1').get();
-      const v = (await db.query('SHOW server_version')) as { rows: { server_version: string }[] };
-      checks.database = { ok: true, detail: `postgresql ${v.rows[0].server_version}` };
-    } catch (err) {
-      checks.database = { ok: false, detail: String(err) };
-    }
-    // Disk: dung lượng trống thư mục uploads
-    try {
-      fs.accessSync(getUploadDir(), fs.constants.W_OK);
-      checks.disk = { ok: true, detail: 'uploads writable' };
-    } catch {
-      checks.disk = { ok: false, detail: 'uploads not writable' };
-    }
-    // Memory
-    const mem = process.memoryUsage();
-    checks.memory = {
-      ok: mem.heapUsed < 512 * 1024 * 1024,
-      detail: `${Math.round(mem.heapUsed / 1024 / 1024)}MB heap`,
-    };
-    const allOk = Object.values(checks).every((c) => c.ok);
-    res.status(allOk ? 200 : 503).json({
-      ok: allOk,
-      time: new Date().toISOString(),
-      uptime: Math.round(process.uptime()),
-      checks,
-    });
-  });
+  v1.get(
+    '/health',
+    requireAuth,
+    asyncHandler(async (_req: express.Request, res: express.Response) => {
+      const checks: Record<string, { ok: boolean; detail?: string }> = {};
+      // DB: query đơn giản + version PostgreSQL
+      try {
+        await db.prepare('SELECT 1').get();
+        const v = (await db.query('SHOW server_version')) as { rows: { server_version: string }[] };
+        checks.database = { ok: true, detail: `postgresql ${v.rows[0].server_version}` };
+      } catch (err) {
+        checks.database = { ok: false, detail: String(err) };
+      }
+      // Disk: dung lượng trống thư mục uploads
+      try {
+        fs.accessSync(getUploadDir(), fs.constants.W_OK);
+        checks.disk = { ok: true, detail: 'uploads writable' };
+      } catch {
+        checks.disk = { ok: false, detail: 'uploads not writable' };
+      }
+      // Memory
+      const mem = process.memoryUsage();
+      checks.memory = {
+        ok: mem.heapUsed < 512 * 1024 * 1024,
+        detail: `${Math.round(mem.heapUsed / 1024 / 1024)}MB heap`,
+      };
+      const allOk = Object.values(checks).every((c) => c.ok);
+      res.status(allOk ? 200 : 503).json({
+        ok: allOk,
+        time: new Date().toISOString(),
+        uptime: Math.round(process.uptime()),
+        checks,
+      });
+    })
+  );
 
   /* ------------------------- Quản trị trung tâm ------------------------- */
   // denyParents: phụ huynh chỉ được dùng /api/parent, không chạm API nhân sự
