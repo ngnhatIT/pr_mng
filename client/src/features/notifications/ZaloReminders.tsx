@@ -64,7 +64,7 @@ export function ZaloReminders() {
   const checkPermission = useCallback(async () => {
     try {
       const res = await rolesApi.mine();
-      const codes = new Set(res.data.map((p) => p.code));
+      const codes = new Set(res.map((p) => p.code));
       setCanManage(codes.has('notifications.manage'));
     } catch {
       // fail-closed: không kiểm tra được permission thì không hiện form cấu hình

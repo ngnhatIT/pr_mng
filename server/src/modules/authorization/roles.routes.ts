@@ -28,7 +28,7 @@ router.get(
     const rows = (await db
       .prepare('SELECT id, code, name, description, module FROM permissions ORDER BY module, code')
       .all()) as unknown[];
-    res.json({ data: rows, catalog: PERMISSIONS.length });
+    res.json({ catalog: PERMISSIONS.length, rows });
   })
 );
 
@@ -48,7 +48,7 @@ router.get(
        ORDER BY r.is_system DESC, r.name`
       )
       .all(cid)) as unknown[];
-    res.json({ data: rows });
+    res.json(rows);
   })
 );
 
@@ -190,7 +190,7 @@ router.get(
   '/me/permissions',
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const perms = await getUserPermissions(req.user!.id);
-    res.json({ data: [...perms.entries()].map(([code, scope]) => ({ code, scope })) });
+    res.json([...perms.entries()].map(([code, scope]) => ({ code, scope })));
   })
 );
 

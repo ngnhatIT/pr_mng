@@ -51,8 +51,8 @@ export function moduleLabelKey(module: string): string {
 }
 
 export const rolesApi = {
-  permissions: () => http.get<{ data: Permission[] }>('/roles/permissions'),
-  list: () => http.get<{ data: Role[] }>('/roles'),
+  permissions: () => http.get<{ catalog: number; rows: Permission[] }>('/roles/permissions'),
+  list: () => http.get<Role[]>('/roles'),
   detail: (id: number) => http.get<RoleDetail>(`/roles/${id}`),
   create: (input: { code: string; name: string; description?: string }) =>
     http.post<{ id: number; code: string }>('/roles', input),
@@ -65,5 +65,5 @@ export const rolesApi = {
     http.post<{ ok: boolean }>('/roles/assign', { user_id, role_id }),
   unassign: (user_id: number, role_id: number) =>
     http.del<{ ok: boolean }>(`/roles/assign?user_id=${user_id}&role_id=${role_id}`),
-  mine: () => http.get<{ data: MyPermission[] }>('/roles/me/permissions'),
+  mine: () => http.get<MyPermission[]>('/roles/me/permissions'),
 };

@@ -155,11 +155,11 @@ export function Roles() {
   const loadRoles = useCallback(async () => {
     try {
       const [r, c] = await Promise.all([rolesApi.list(), rolesApi.permissions()]);
-      setRoles(r.data);
-      setCatalog(c.data);
+      setRoles(r);
+      setCatalog(c.rows);
       setSelectedId((prev) => {
-        if (prev && r.data.some((x) => x.id === prev)) return prev;
-        return r.data[0]?.id ?? null;
+        if (prev && r.some((x) => x.id === prev)) return prev;
+        return r[0]?.id ?? null;
       });
     } catch (err) {
       const msg = err instanceof Error ? err.message : '';

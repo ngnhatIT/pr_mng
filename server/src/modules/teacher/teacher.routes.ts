@@ -88,7 +88,9 @@ router.post(
     await db
       .prepare('INSERT OR IGNORE INTO teacher_checkins (session_id, teacher_id) VALUES (?, ?)')
       .run(sess.session_id, tid);
-    res.json({ ok: true, session_id: sess.session_id, class_name: sess.class_name, date: sess.date });
+    res
+      .status(201)
+      .json({ ok: true, session_id: sess.session_id, class_name: sess.class_name, date: sess.date });
   })
 );
 

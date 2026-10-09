@@ -90,7 +90,7 @@ export function Layout() {
     rolesApi
       .mine()
       .then((r) => {
-        if (!cancelled) setMyPerms(new Set(r.data.map((p) => p.code)));
+        if (!cancelled) setMyPerms(new Set(r.map((p) => p.code)));
       })
       .catch(() => {
         if (!cancelled) setMyPerms(null);

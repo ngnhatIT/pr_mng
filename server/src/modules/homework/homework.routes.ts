@@ -364,7 +364,7 @@ router.post(
       throw AppError.badRequest('Chưa chọn câu hỏi');
     }
     const count = await importFromBank(id, bank_ids.map(Number), reqCenterId(req));
-    res.json({ ok: true, count });
+    res.status(201).json({ ok: true, count });
   })
 );
 

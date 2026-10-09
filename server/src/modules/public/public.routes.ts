@@ -145,7 +145,7 @@ router.post(
         "INSERT INTO leads (center_id, name, phone, source, status, note) VALUES (?, ?, ?, ?, 'new', ?)"
       )
       .run(center.id, name, phone, source, note);
-    res.json({ ok: true });
+    res.status(201).json({ ok: true });
   })
 );
 
@@ -219,7 +219,7 @@ router.post(
           .run(referrer.id, phone);
       }
     }
-    res.json({ ok: true });
+    res.status(201).json({ ok: true });
   })
 );
 

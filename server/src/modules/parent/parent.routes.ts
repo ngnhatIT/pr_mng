@@ -88,7 +88,7 @@ router.post(
       dob: v.string({ required: true, label: 'Ngày sinh' }),
     });
     const student = await parentService.linkStudent(parentId, centerId, student_code, dob);
-    res.json({ ok: true, student });
+    res.status(201).json({ ok: true, student });
   })
 );
 
@@ -133,7 +133,9 @@ router.post(
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const { parentId } = ctx(req);
     const baseUrl = `${req.protocol}://${req.get('host')}`;
-    res.json(await parentService.createVnpayPayment(parentId, paramId(req.params), baseUrl, req.ip || ''));
+    res
+      .status(201)
+      .json(await parentService.createVnpayPayment(parentId, paramId(req.params), baseUrl, req.ip || ''));
   })
 );
 
@@ -197,7 +199,7 @@ router.post(
       student_id: v.number({ integer: true, min: 1, label: 'Học viên' }),
     });
     await parentService.markHomeworkComplete(parentId, student_id as number, homeworkId);
-    res.json({ ok: true });
+    res.status(201).json({ ok: true });
   })
 );
 
@@ -238,9 +240,11 @@ router.post(
       res.status(400).json({ error: 'Bài làm không hợp lệ' });
       return;
     }
-    res.json(
-      await parentService.submitChildQuiz(parentId, student_id as number, homeworkId, answers as never)
-    );
+    res
+      .status(201)
+      .json(
+        await parentService.submitChildQuiz(parentId, student_id as number, homeworkId, answers as never)
+      );
   })
 );
 
@@ -291,7 +295,7 @@ router.post(
       cleanupUploadedFile(req.file);
       throw err;
     }
-    res.json({ ok: true });
+    res.status(201).json({ ok: true });
   })
 );
 

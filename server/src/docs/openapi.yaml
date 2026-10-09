@@ -463,7 +463,7 @@ components:
               type: integer
               nullable: true
 paths:
-  /api/homework:
+  /api/v1/homework:
     get:
       tags:
         - Homework
@@ -556,7 +556,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-  /api/homework/stats:
+  /api/v1/homework/stats:
     get:
       tags:
         - Homework
@@ -581,7 +581,7 @@ paths:
                   drafts:
                     type: integer
                     example: 2
-  /api/homework/analytics:
+  /api/v1/homework/analytics:
     get:
       tags:
         - Homework
@@ -626,7 +626,7 @@ paths:
                         completion_rate:
                           type: number
                           example: 80
-  /api/homework/{id}:
+  /api/v1/homework/{id}:
     parameters:
       - in: path
         name: id
@@ -729,7 +729,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-  /api/homework/{id}/reuse:
+  /api/v1/homework/{id}/reuse:
     post:
       tags:
         - Homework
@@ -753,7 +753,7 @@ paths:
                   count:
                     type: integer
                     example: 1
-  /api/homework/{id}/publish:
+  /api/v1/homework/{id}/publish:
     post:
       tags:
         - Homework
@@ -775,7 +775,7 @@ paths:
                   ok:
                     type: boolean
                     example: true
-  /api/homework/{id}/unpublish:
+  /api/v1/homework/{id}/unpublish:
     post:
       tags:
         - Homework
@@ -797,7 +797,7 @@ paths:
                   ok:
                     type: boolean
                     example: true
-  /api/homework/{id}/scores:
+  /api/v1/homework/{id}/scores:
     parameters:
       - in: path
         name: id
@@ -858,7 +858,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-  /api/homework/{id}/quiz/edit:
+  /api/v1/homework/{id}/quiz/edit:
     get:
       tags:
         - Quiz
@@ -878,7 +878,7 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/QuizQuestionStaff'
-  /api/homework/{id}/quiz:
+  /api/v1/homework/{id}/quiz:
     parameters:
       - in: path
         name: id
@@ -920,7 +920,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-  /api/homework/{id}/quiz/attempts:
+  /api/v1/homework/{id}/quiz/attempts:
     get:
       tags:
         - Quiz
@@ -940,7 +940,7 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/QuizAttemptRow'
-  /api/homework/{id}/quiz/import:
+  /api/v1/homework/{id}/quiz/import:
     post:
       tags:
         - Quiz
@@ -982,7 +982,7 @@ paths:
                   count:
                     type: integer
                     example: 3
-  /api/homework/{id}/submissions:
+  /api/v1/homework/{id}/submissions:
     get:
       tags:
         - Submissions
@@ -1002,7 +1002,7 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Submission'
-  /api/homework/bank/questions:
+  /api/v1/homework/bank/questions:
     get:
       tags:
         - Bank
@@ -1081,7 +1081,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-  /api/homework/bank/questions/{bid}:
+  /api/v1/homework/bank/questions/{bid}:
     delete:
       tags:
         - Bank
@@ -1103,7 +1103,7 @@ paths:
                   ok:
                     type: boolean
                     example: true
-  /api/homework/rubrics/list:
+  /api/v1/homework/rubrics/list:
     get:
       tags:
         - Rubrics
@@ -1166,7 +1166,7 @@ paths:
       responses:
         '201':
           description: Đã tạo
-  /api/homework/rubrics/{rid}:
+  /api/v1/homework/rubrics/{rid}:
     delete:
       tags:
         - Rubrics
@@ -1686,7 +1686,7 @@ paths:
       responses:
         '200':
           description: OK
-  /api/v1/enrollments/{enrollmentId}:
+  /api/v1/classes/enrollments/{enrollmentId}:
     delete:
       tags:
         - Classes
@@ -3200,3 +3200,199 @@ paths:
       responses:
         '201':
           description: Đã nhận
+
+  # ------------------------- Phân quyền (roles) -------------------------
+  /api/v1/roles:
+    get:
+      tags:
+        - Roles
+      summary: Danh sách vai trò
+      responses:
+        '200':
+          description: OK
+    post:
+      tags:
+        - Roles
+      summary: Tạo vai trò tùy chỉnh
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                code:
+                  type: string
+                name:
+                  type: string
+                description:
+                  type: string
+      responses:
+        '201':
+          description: Đã tạo
+  /api/v1/roles/permissions:
+    get:
+      tags:
+        - Roles
+      summary: Catalog 61 permissions
+      responses:
+        '200':
+          description: OK
+  /api/v1/roles/me/permissions:
+    get:
+      tags:
+        - Roles
+      summary: Permissions của user hiện tại (menu gating)
+      responses:
+        '200':
+          description: OK
+  /api/v1/roles/{id}:
+    get:
+      tags:
+        - Roles
+      summary: Chi tiết vai trò
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: OK
+        '404':
+          description: Không tìm thấy
+    put:
+      tags:
+        - Roles
+      summary: Cập nhật vai trò tùy chỉnh
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: OK
+    delete:
+      tags:
+        - Roles
+      summary: Xóa vai trò tùy chỉnh
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: OK
+  /api/v1/roles/{id}/permissions:
+    put:
+      tags:
+        - Roles
+      summary: Gán permissions cho role (thay thế toàn bộ)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                permissions:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                      scope:
+                        type: string
+                        enum: [own, center, all]
+      responses:
+        '200':
+          description: OK
+  /api/v1/roles/assign:
+    post:
+      tags:
+        - Roles
+      summary: Gán role cho user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                user_id:
+                  type: integer
+                role_id:
+                  type: integer
+      responses:
+        '200':
+          description: OK
+    delete:
+      tags:
+        - Roles
+      summary: Gỡ role khỏi user
+      responses:
+        '200':
+          description: OK
+
+  # ------------------------- Parent auth bổ sung -------------------------
+  /api/v1/parent/refresh:
+    post:
+      tags:
+        - Parent
+      summary: Đổi parent refresh token (rotation)
+      security: []
+      responses:
+        '200':
+          description: Token pair mới
+        '401':
+          description: Refresh token không hợp lệ
+  /api/v1/parent/logout:
+    post:
+      tags:
+        - Parent
+      summary: Thu hồi parent refresh token
+      responses:
+        '200':
+          description: OK
+
+  # ------------------------- VNPay callback -------------------------
+  /api/v1/parent/vnpay-return:
+    get:
+      tags:
+        - Parent
+      summary: VNPay return URL (idempotent)
+      security: []
+      responses:
+        '302':
+          description: Redirect về portal phụ huynh
+  /api/v1/parent/vnpay-ipn:
+    get:
+      tags:
+        - Parent
+      summary: VNPay IPN (idempotent, verify checksum)
+      security: []
+      responses:
+        '200':
+          description: OK
+
+  # ------------------------- Metrics -------------------------
+  /api/v1/metrics:
+    get:
+      tags:
+        - System
+      summary: Prometheus metrics
+      responses:
+        '200':
+          description: text/plain; version=0.0.4
