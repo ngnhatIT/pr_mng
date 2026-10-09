@@ -100,8 +100,14 @@ function resetDb(): void {
     'quiz_options', 'quiz_questions', 'homework_scores', 'homework_completions',
     'homework_submissions', 'reminders', 'homework',
     'parent_students', 'parents', 'enrollments', 'students', 'classes',
+    'users',
   ];
   for (const t of tables) testDb.prepare(`DELETE FROM ${t}`).run();
+
+  // User cố định id=1 cho các fixture created_by/graded_by (FK bắt buộc user có thật)
+  testDb.prepare(
+    "INSERT INTO users (id, username, password_hash, role, name) VALUES (1, 'tester', 'x', 'staff', 'Tester')"
+  ).run();
 
   classId = Number(testDb.prepare("INSERT INTO classes (name) VALUES ('Lớp Test')").run().lastInsertRowid);
   student1Id = Number(

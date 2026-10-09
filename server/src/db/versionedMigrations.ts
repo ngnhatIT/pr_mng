@@ -55,6 +55,32 @@ const MIGRATIONS: Migration[] = [
       if (!names.has('kind')) db.exec("ALTER TABLE reminders ADD COLUMN kind TEXT NOT NULL DEFAULT 'overdue'");
     },
   },
+  {
+    version: 5,
+    name: 'schema_hardening_updated_at',
+    up: (db) => {
+      // Bản schema enterprise (schema.ts viết lại 2026-10-09) thêm cột updated_at
+      // cho các bảng nghiệp vụ chính. DB cũ backfill cột tại đây; trigger +
+      // view được tạo bởi createTriggers()/createViews() trong db/index.ts.
+      // LƯU Ý: SQLite không ALTER để thêm FK/CHECK vào bảng đã tồn tại —
+      // DB cũ giữ nguyên định nghĩa bảng cũ, chỉ DB cài mới nhận đủ ràng buộc.
+      const tables = [
+        'users', 'centers', 'teachers', 'students', 'classes', 'invoices',
+        'parents', 'leave_requests', 'grades', 'homework',
+        'trial_registrations', 'leads',
+      ];
+      for (const t of tables) {
+        const cols = db.prepare(`PRAGMA table_info(${t})`).all() as { name: string }[];
+        if (!cols.some((c) => c.name === 'updated_at')) {
+          db.exec(`ALTER TABLE ${t} ADD COLUMN updated_at TEXT NOT NULL DEFAULT (datetime('now'))`);
+        }
+      }
+      const scols = db.prepare('PRAGMA table_info(salary_rules)').all() as { name: string }[];
+      if (!scols.some((c) => c.name === 'updated_at')) {
+        db.exec("ALTER TABLE salary_rules ADD COLUMN updated_at TEXT NOT NULL DEFAULT (datetime('now'))");
+      }
+    },
+  },
 ];
 
 export function runVersionedMigrations(db: Db): void {

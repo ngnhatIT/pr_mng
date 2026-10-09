@@ -14,3 +14,8 @@ db.pragma('busy_timeout = 5000');
 db.pragma('synchronous = NORMAL');
 
 export type Db = typeof db;
+
+// BẮT BUỘC bật FK enforcement trên mọi connection — nếu không các CONSTRAINT
+// FOREIGN KEY trong schema.ts chỉ là tài liệu trang trí. Lưu ý: pragma này
+// có phạm vi từng connection, nên mọi Database mới đều phải bật lại.
+db.pragma('foreign_keys = ON');

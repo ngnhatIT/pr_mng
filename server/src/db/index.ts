@@ -1,16 +1,19 @@
 import { db } from './connection';
-import { createSchema } from './schema';
+import { createSchema, createTriggers, createViews } from './schema';
 import { createIndexes } from './indexes';
 import { runMigrations } from './migrations';
 import { runVersionedMigrations } from './versionedMigrations';
 import { seedDatabase } from './seed';
 import { backfillCenters } from './helpers';
 
-/* Khởi tạo DB: schema -> migration (cũ) -> migration (versioned) -> indexes -> backfill -> seed */
+/* Khởi tạo DB: schema -> migration (cũ) -> migration (versioned) -> indexes
+ * -> triggers -> views -> backfill -> seed */
 createSchema(db);
 runMigrations(db);
 runVersionedMigrations(db);
 createIndexes(db);
+createTriggers(db);
+createViews(db);
 backfillCenters();
 seedDatabase();
 
