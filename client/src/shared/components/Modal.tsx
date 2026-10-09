@@ -2,6 +2,9 @@ import { ReactNode, useEffect, useId, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Icon } from './icons';
 
+// Stack modal đang mở (để modal lồng nhau: chỉ modal trên cùng xử lý Escape)
+const modalStack: HTMLDivElement[] = [];
+
 export function Modal({
   title,
   onClose,
@@ -23,13 +26,21 @@ export function Modal({
     previouslyFocused.current = document.activeElement as HTMLElement | null;
     // Chuyển focus vào modal khi mở.
     dialogRef.current?.focus();
+    // Đăng ký vào stack (modal mở sau = trên cùng)
+    const root = dialogRef.current;
+    if (root) modalStack.push(root);
     // Khóa scroll nền khi modal mở (đặc biệt quan trọng trên mobile).
     const prevOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
 
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
-        onClose();
+        // Chỉ modal trên cùng (topmost) được đóng bằng Escape
+        // (tránh modal lồng nhau bị đóng cả 2, mất dữ liệu form)
+        const root = dialogRef.current;
+        if (root && modalStack[modalStack.length - 1] === root) {
+          onClose();
+        }
         return;
       }
       if (e.key !== 'Tab') return;
@@ -58,6 +69,9 @@ export function Modal({
     window.addEventListener('keydown', onKey);
     return () => {
       window.removeEventListener('keydown', onKey);
+      // Gỡ khỏi stack khi unmount
+      const idx = modalStack.indexOf(root as HTMLDivElement);
+      if (idx >= 0) modalStack.splice(idx, 1);
       document.body.style.overflow = prevOverflow;
       // Trả focus về nút đã mở modal.
       try {
