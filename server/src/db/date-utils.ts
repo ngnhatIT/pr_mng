@@ -50,8 +50,10 @@ export function addDays(d: Date, n: number): Date {
 
 /** Chuyển JS getDay() (0=CN..6=T7) sang quy ước của app (2=T2..8=CN) */
 export function ourDayOfWeek(d: Date): number {
-  const js = d.getDay();
-  return js === 0 ? 8 : js + 1;
+  // Dùng giờ VN (không phải TZ server) để tránh lệch ngày trong khung 00:00-06:59 giờ VN
+  // khi server chạy UTC
+  const vnDay = new Date(d.toLocaleString('en-US', { timeZone: 'Asia/Ho_Chi_Minh' })).getDay();
+  return vnDay === 0 ? 8 : vnDay + 1;
 }
 
 export const DAY_NAMES: Record<number, string> = {
