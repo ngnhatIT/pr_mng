@@ -232,8 +232,14 @@ export async function generateCheckinCode(ctx: ScopeCtx, id: number): Promise<{ 
       )
       .get(today, code, id)) as { '1'?: number } | undefined;
     if (!clash) {
-      await db.prepare('UPDATE sessions SET checkin_code = ?, checkin_date = ? WHERE id = ?').run(code, today, id);
-      return { code };
+      try {
+        await db.prepare('UPDATE sessions SET checkin_code = ?, checkin_date = ? WHERE id = ?').run(code, today, id);
+        return { code };
+      } catch (err) {
+        // Race: 2 request cùng sinh mã giống nhau, UNIQUE constraint chặn → thử mã khác
+        if ((err as { code?: string }).code === '23505') continue;
+        throw err;
+      }
     }
   }
   throw AppError.conflict('Không sinh được mã điểm danh duy nhất, vui lòng thử lại');
