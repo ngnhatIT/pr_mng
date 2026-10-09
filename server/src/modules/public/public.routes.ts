@@ -23,6 +23,7 @@ async function landingCenter(req: Request, res: Response): Promise<Center | unde
 // GET /api/public/center
 router.get(
   '/center',
+  publicRateLimit(20),
   asyncHandler(async (req: Request, res: Response) => {
     const center = await landingCenter(req, res);
     if (!center) return;
@@ -39,6 +40,7 @@ router.get(
 // GET /api/public/classes
 router.get(
   '/classes',
+  publicRateLimit(20),
   asyncHandler(async (req: Request, res: Response) => {
     const center = await landingCenter(req, res);
     if (!center) return;
@@ -78,6 +80,7 @@ router.get(
 // GET /api/public/teachers
 router.get(
   '/teachers',
+  publicRateLimit(20),
   asyncHandler(async (req: Request, res: Response) => {
     const center = await landingCenter(req, res);
     if (!center) return;
