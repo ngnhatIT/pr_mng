@@ -57,9 +57,15 @@ export function Dashboard() {
   useEffect(() => {
     void (async () => {
       try {
-        const [d, debt] = await Promise.all([dashboardApi.summary(), dashboardApi.topDebts({ limit: 5 })]);
+        const d = await dashboardApi.summary();
         setData(d);
-        setDebts(debt.data);
+        try {
+          // Teacher không có quyền invoices.view → 403, bỏ qua (không vỡ dashboard)
+          const debt = await dashboardApi.topDebts({ limit: 5 });
+          setDebts(debt.data);
+        } catch {
+          setDebts([]);
+        }
       } catch (err) {
         toast(err instanceof Error ? err.message : t('loadError'), 'error');
       } finally {
