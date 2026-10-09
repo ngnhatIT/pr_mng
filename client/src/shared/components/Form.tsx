@@ -8,11 +8,3 @@ export function Field({ label, children, span }: { label: string; children: Reac
     </label>
   );
 }
-
-export function inputProps(value: string, onChange: (v: string) => void) {
-  return {
-    className: 'text-input',
-    value,
-    onChange: (e: React.ChangeEvent<HTMLInputElement>) => onChange(e.target.value),
-  };
-}

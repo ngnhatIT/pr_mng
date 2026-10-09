@@ -84,15 +84,6 @@ export interface InvoiceItem {
   paid?: number;
 }
 
-export interface PaymentItem {
-  id: number;
-  invoice_id: number;
-  amount: number;
-  paid_at: string;
-  method: string | null;
-  note: string | null;
-}
-
 export interface DebtRow {
   id: number;
   code: string;
@@ -518,7 +509,3 @@ export const ROLE_LABEL: Record<string, string> = {
   teacher: 'Giáo viên',
   parent: 'Phụ huynh',
 };
-
-export function labelOf(map: Record<string, string>, key: string): string {
-  return map[key] ?? key;
-}

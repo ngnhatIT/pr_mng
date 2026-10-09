@@ -105,9 +105,6 @@ export function denyParents(req: AuthRequest, res: Response, next: NextFunction)
 
 /** Vai trò nhân sự (được dùng chung app quản trị /app) */
 export const STAFF_ROLES = ['superadmin', 'admin', 'staff'];
-export const staffOnly = requireRole(...STAFF_ROLES);
-/** Giáo viên: bản thân giáo viên + admin/superadmin được xem */
-export const teacherOnly = requireRole('teacher', 'admin', 'superadmin');
 export const adminOnly = requireRole('admin', 'superadmin');
 export const superadminOnly = requireRole('superadmin');
 

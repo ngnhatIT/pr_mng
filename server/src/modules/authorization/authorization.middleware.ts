@@ -41,9 +41,5 @@ export function requirePermission(permissionCode: string, minScope: Scope = 'own
 }
 
 /** Lấy scope của user cho permission — dùng trong handler cần logic theo scope. */
-export async function permissionScope(req: AuthRequest, permissionCode: string): Promise<Scope | null> {
-  if (!req.user) return null;
-  return getPermissionScope(req.user.id, permissionCode);
-}
 
 export { invalidateUserPermissions };

@@ -76,14 +76,6 @@ export async function getSetting(key: string, fallback = ''): Promise<string> {
   return row.value;
 }
 
-export async function setSetting(key: string, value: string): Promise<void> {
-  await db
-    .prepare(
-      'INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value'
-    )
-    .run(key, value);
-}
-
 /* --------------------- Cấu hình theo trung tâm --------------------- */
 
 export async function getCenterSetting(centerId: number, key: string, fallback = ''): Promise<string> {

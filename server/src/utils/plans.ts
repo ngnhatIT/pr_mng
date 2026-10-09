@@ -19,8 +19,6 @@ export const PLANS: Record<string, PlanDef> = {
   premium: { name: 'Cao cấp', price: 799000, features: ['zalo_auto', 'landing'] },
 };
 
-export const ALL_FEATURES = ['zalo_auto', 'landing'];
-
 export interface Center {
   id: number;
   name: string;

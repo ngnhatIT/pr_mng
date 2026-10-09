@@ -25,25 +25,6 @@ export interface AuditFilter {
   to?: string;
 }
 
-export const ACTION_LABEL: Record<string, string> = {
-  create: 'Tạo mới',
-  update: 'Cập nhật',
-  delete: 'Xóa',
-  approve: 'Duyệt',
-  reject: 'Từ chối',
-  payment: 'Thu tiền',
-  apply_credit: 'Trừ credit',
-  login: 'Đăng nhập',
-};
-
-export const ENTITY_LABEL: Record<string, string> = {
-  invoices: 'Phiếu thu',
-  payments: 'Thanh toán',
-  students: 'Học viên',
-  teachers: 'Giáo viên',
-  classes: 'Lớp học',
-};
-
 export const auditApi = {
   list: (filter: AuditFilter = {}, page?: PageParams) => {
     const q = new URLSearchParams();
