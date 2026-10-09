@@ -5,7 +5,7 @@ import { AuthUser, DUMMY_PASSWORD_HASH, requireAuth, type AuthRequest } from '..
 import { loginRateLimit } from '../../middleware/rateLimit';
 import { asyncHandler } from '../../shared/http';
 import { validate, v } from '../../shared/validate';
-import { issueTokenPair, rotateRefreshToken, revokeRefreshToken, revokeAllForOwnerExcept } from './refresh.service';
+import { issueTokenPair, rotateRefreshToken, revokeRefreshToken, revokeAllForOwner, revokeAllForOwnerExcept } from './refresh.service';
 import { audit } from '../../shared/audit';
 import { assertStrongPassword } from '../../shared/password';
 import { logger } from '../../shared/logger';
