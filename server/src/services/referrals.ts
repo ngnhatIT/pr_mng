@@ -112,7 +112,7 @@ async function doAfterInvoicePaid(inv: { id: number; student_id: number; status:
     }
     if (!ref) return;
 
-    const centerId = student.center_id || 0;
+    const centerId = student.center_id ?? null;
     const amtReferrer = Math.max(
       0,
       Number(await getCenterSetting(centerId, 'referral_reward_referrer', '200000')) || 0

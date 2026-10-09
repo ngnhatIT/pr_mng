@@ -23,7 +23,7 @@ router.get(
       page?: string;
       limit?: string;
     };
-    res.json(listReferrals(reqCenterId(req), { status }, { page, limit }));
+    res.json(await listReferrals(reqCenterId(req), { status }, { page, limit }));
   })
 );
 
