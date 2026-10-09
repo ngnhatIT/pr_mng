@@ -60,9 +60,10 @@ export interface RateLimitOptions {
  * env TRUST_PROXY=true (chạy sau reverse proxy đáng tin) — chống bypass H6.
  */
 function trustedClientIp(req: Request): string {
+  // Dùng req.ip (Express trust proxy đã parse XFF đúng: lấy IP phải nhất của proxy đáng tin)
+  // Không lấy XFF trái nhất vì client tự gửi được (spoof).
   if (env.TRUST_PROXY) {
-    const xff = (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim();
-    if (xff) return xff;
+    if (req.ip) return req.ip;
   }
   return req.socket.remoteAddress || req.ip || 'unknown';
 }
