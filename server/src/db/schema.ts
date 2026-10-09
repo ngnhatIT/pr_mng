@@ -241,7 +241,7 @@ export const TABLE_DOCS: Record<string, TableDoc> = {
     columns: {
       id: 'Khóa chính.',
       invoice_id: 'Hóa đơn. CASCADE khi xóa hóa đơn.',
-      amount: 'Số tiền thu (VND, > 0).',
+      amount: "Số tiền thu (VND). Dương = thu, âm = hoàn tiền (chỉ khi method='refund').",
       paid_at: 'Thời điểm thu (UTC).',
       method: 'Hình thức thu (tự do: Tiền mặt, bank_transfer, vnpay...).',
       note: 'Ghi chú.',
@@ -913,7 +913,7 @@ CREATE TABLE IF NOT EXISTS payments (
   invoice_id INTEGER NOT NULL
     CONSTRAINT fk_payments_invoice REFERENCES invoices(id) ON DELETE CASCADE,
   amount DOUBLE PRECISION NOT NULL
-    CONSTRAINT chk_payments_amount CHECK (amount > 0),
+    CONSTRAINT chk_payments_amount CHECK (amount > 0 OR (amount < 0 AND method = 'refund')),
   paid_at TEXT NOT NULL DEFAULT (to_char(NOW(), 'YYYY-MM-DD HH24:MI:SS')),
   method TEXT,
   note TEXT,

@@ -418,6 +418,15 @@ export async function createLeave(
   if (from_date > to_date) throw AppError.badRequest('Ngày bắt đầu phải trước hoặc bằng ngày kết thúc');
   // Không cho xin nghỉ cho ngày đã qua
   if (to_date < toISODate(new Date())) throw AppError.badRequest('Không thể xin nghỉ cho ngày đã qua');
+  // Chặn đơn trùng: học viên đã có đơn pending/approved giao nhau với khoảng ngày này
+  const overlap = (await db
+    .prepare(
+      `SELECT id FROM leave_requests
+       WHERE student_id = ? AND status IN ('pending', 'approved')
+         AND NOT (to_date < ? OR from_date > ?)`
+    )
+    .get(student.id, from_date, to_date)) as { id: number } | undefined;
+  if (overlap) throw AppError.conflict('Học viên đã có đơn xin nghỉ trong khoảng thời gian này');
   // class_id (nếu có) phải thuộc đúng center của học viên và học viên đang học lớp đó
   let classId: number | null = null;
   if (input.class_id) {

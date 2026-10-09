@@ -4,6 +4,7 @@ import { requirePermission } from '../authorization/authorization.middleware';
 import { asyncHandler } from '../../shared/http';
 import { validate, v, paramId } from '../../shared/validate';
 import * as invoiceService from './invoices.service';
+import * as paymentService from '../payments/payments.service';
 import { actorFromReq } from '../../shared/audit';
 
 const router = Router();
@@ -105,6 +106,25 @@ router.delete(
   asyncHandler(async (req: AuthRequest, res: Response) => {
     await invoiceService.deleteInvoice(reqCenterId(req), paramId(req.params), actorFromReq(req));
     res.json({ ok: true });
+  })
+);
+
+// Hoàn tiền cho phiếu thu (quyền payments.refund — permission đã có từ trước nhưng chưa có implementation)
+router.post(
+  '/:id/refund',
+  requirePermission('payments.refund'),
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const input = validate(req.body, {
+      amount: v.number({ required: true, min: 1, label: 'Số tiền hoàn' }),
+      reason: v.string({ max: 500, label: 'Lý do hoàn tiền' }),
+    });
+    const result = await paymentService.refundInvoice(
+      reqCenterId(req),
+      paramId(req.params),
+      { amount: input.amount, reason: input.reason ?? undefined },
+      actorFromReq(req)
+    );
+    res.json({ ok: true, ...result });
   })
 );
 

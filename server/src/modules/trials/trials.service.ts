@@ -116,7 +116,13 @@ export async function convertTrial(
         .prepare('INSERT OR IGNORE INTO enrollments (student_id, class_id) VALUES (?, ?)')
         .run(studentId, enrollClassId);
     }
-    await tx.prepare("UPDATE trial_registrations SET status = 'converted' WHERE id = ?").run(id);
+    // Atomic: chỉ 1 luồng giành được chuyển trạng thái (chống convert đồng thời tạo trùng học viên)
+    const upd = await tx
+      .prepare("UPDATE trial_registrations SET status = 'converted' WHERE id = ? AND status != 'converted'")
+      .run(id);
+    if ((upd.changes ?? 0) !== 1) {
+      throw AppError.conflict('Đăng ký học thử này đã được chuyển đổi thành học viên');
+    }
     // Gắn referral đang chờ theo SĐT (nếu trial đăng ký bằng mã giới thiệu)
     if (trial.referral_code && trial.phone) {
       await tx

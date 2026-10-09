@@ -2001,6 +2001,57 @@ paths:
       responses:
         '201':
           description: Đã ghi nhận
+  /api/v1/invoices/{id}/refund:
+    post:
+      tags:
+      - Invoices
+      summary: Hoàn tiền cho hóa đơn (quyền payments.refund)
+      parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: integer
+      - in: header
+        name: Authorization
+        required: true
+        schema:
+          type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - amount
+              properties:
+                amount:
+                  type: integer
+                  description: Số tiền hoàn (không vượt số đã thu thực)
+                reason:
+                  type: string
+                  description: Lý do hoàn tiền
+      responses:
+        '200':
+          description: OK — ghi nhận payment âm method='refund', tính lại trạng thái hóa đơn
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                  refunded:
+                    type: integer
+                  status:
+                    type: string
+        '400':
+          description: Số tiền không hợp lệ / vượt số đã thu
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
   /api/v1/invoices/{id}/apply-credit:
     post:
       tags:

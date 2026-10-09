@@ -64,6 +64,20 @@ describe('trials.convert - idempotency', () => {
     assert.equal(await studentCount(centerA), 1);
   });
 
+  it('convert 2 lần đồng thời -> chỉ 1 thành công, không trùng học viên', async () => {
+    const results = await Promise.allSettled([
+      trialsService.convertTrial(centerA, trialId, null),
+      trialsService.convertTrial(centerA, trialId, null),
+    ]);
+    const ok = results.filter((r) => r.status === 'fulfilled').length;
+    const fail409 = results.filter(
+      (r) => r.status === 'rejected' && r.reason instanceof AppError && r.reason.statusCode === 409
+    ).length;
+    assert.equal(ok, 1, 'chỉ 1 lượt convert thành công');
+    assert.equal(fail409, 1, 'lượt còn lại phải 409');
+    assert.equal(await studentCount(centerA), 1, 'không tạo trùng học viên');
+  });
+
   it('convert lần 2 -> throw 409 và không tạo thêm học viên', async () => {
     await trialsService.convertTrial(centerA, trialId, null);
     await assert.rejects(

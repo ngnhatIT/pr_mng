@@ -149,5 +149,17 @@
     }
   },
   "searchAllStatuses": "Tất cả trạng thái",
-  "title": "Học phí"
+  "title": "Học phí",
+  "refund": {
+    "title": "Hoàn tiền",
+    "action": "Hoàn tiền",
+    "amount": "Số tiền hoàn",
+    "reason": "Lý do hoàn tiền",
+    "reasonPlaceholder": "VD: Học viên nghỉ giữa chừng",
+    "confirm": "Xác nhận hoàn tiền",
+    "processing": "Đang hoàn tiền...",
+    "done": "Đã ghi nhận hoàn tiền",
+    "error": "Hoàn tiền thất bại",
+    "confirmText": "Hoàn tiền cho học viên <strong>{{name}}</strong> (đã thu <strong>{{paid}}</strong>). Số tiền hoàn sẽ trừ vào công nợ."
+  }
 }

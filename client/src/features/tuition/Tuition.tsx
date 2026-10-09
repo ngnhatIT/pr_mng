@@ -161,6 +161,7 @@ function InvoiceList() {
   const [showCreate, setShowCreate] = useState(false);
   const [paying, setPaying] = useState<InvoiceItem | null>(null);
   const [crediting, setCrediting] = useState<InvoiceItem | null>(null);
+  const [refunding, setRefunding] = useState<InvoiceItem | null>(null);
   const [remindingId, setRemindingId] = useState<number | null>(null);
   const [page, setPage] = useState(1);
   const [pagination, setPagination] = useState<PaginationMeta | null>(null);
@@ -289,28 +290,39 @@ function InvoiceList() {
                       <span className={`badge badge-${inv.status}`}>{t(`invoiceStatus.${inv.status}`)}</span>
                     </td>
                     <td className="td-right nowrap">
-                      {inv.status !== 'paid' && (
-                        <span className="tuition-actions">
+                      <span className="tuition-actions">
+                        {inv.status !== 'paid' && (
+                          <>
+                            <button
+                              className="btn btn-sm"
+                              onClick={() => void remindInvoice(inv)}
+                              disabled={remindingId === inv.id}
+                              title={t('invoice.remindTitle')}
+                            >
+                              {remindingId === inv.id ? t('invoice.sending') : t('invoice.remindZalo')}
+                            </button>
+                            <button
+                              className="btn btn-sm"
+                              onClick={() => setCrediting(inv)}
+                              title={t('credit.applyTitle')}
+                            >
+                              {t('credit.apply')}
+                            </button>
+                            <button className="btn btn-sm btn-primary" onClick={() => setPaying(inv)}>
+                              {t('pay.collect')}
+                            </button>
+                          </>
+                        )}
+                        {paid > 0 && (
                           <button
-                            className="btn btn-sm"
-                            onClick={() => void remindInvoice(inv)}
-                            disabled={remindingId === inv.id}
-                            title={t('invoice.remindTitle')}
+                            className="btn btn-sm btn-ghost-dark"
+                            onClick={() => setRefunding(inv)}
+                            title={t('refund.title')}
                           >
-                            {remindingId === inv.id ? t('invoice.sending') : t('invoice.remindZalo')}
+                            {t('refund.action')}
                           </button>
-                          <button
-                            className="btn btn-sm"
-                            onClick={() => setCrediting(inv)}
-                            title={t('credit.applyTitle')}
-                          >
-                            {t('credit.apply')}
-                          </button>
-                          <button className="btn btn-sm btn-primary" onClick={() => setPaying(inv)}>
-                            {t('pay.collect')}
-                          </button>
-                        </span>
-                      )}
+                        )}
+                      </span>
                     </td>
                   </tr>
                 );
@@ -337,6 +349,16 @@ function InvoiceList() {
           onClose={() => setPaying(null)}
           onDone={() => {
             setPaying(null);
+            void load();
+          }}
+        />
+      )}
+      {refunding && (
+        <RefundModal
+          invoice={refunding}
+          onClose={() => setRefunding(null)}
+          onDone={() => {
+            setRefunding(null);
             void load();
           }}
         />
@@ -626,6 +648,84 @@ function PayModal({
           </button>
           <button type="submit" className="btn btn-primary" disabled={busy}>
             {busy ? t('pay.collecting') : t('pay.confirm')}
+          </button>
+        </div>
+      </form>
+    </Modal>
+  );
+}
+
+function RefundModal({
+  invoice,
+  onClose,
+  onDone,
+}: {
+  invoice: InvoiceItem;
+  onClose: () => void;
+  onDone: () => void;
+}) {
+  const { t } = useTranslation(['tuition', 'common']);
+  const paid = invoice.paid || 0;
+  const [amount, setAmount] = useState(String(paid));
+  const [reason, setReason] = useState('');
+  const [busy, setBusy] = useState(false);
+  const toast = useToast();
+
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setBusy(true);
+    try {
+      await invoicesApi.refund(invoice.id, {
+        amount: Number(amount),
+        reason: reason || undefined,
+      });
+      toast(t('refund.done'), 'success');
+      onDone();
+    } catch (err) {
+      toast(err instanceof Error ? err.message : t('refund.error'), 'error');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <Modal title={t('refund.title')} onClose={onClose}>
+      <form onSubmit={submit}>
+        <p className="confirm-text">
+          <Trans
+            i18nKey="refund.confirmText"
+            ns="tuition"
+            values={{ name: invoice.student_name, paid: formatVND(paid) }}
+            components={{ strong: <strong className="debt-amount" /> }}
+          />
+        </p>
+        <div className="form-grid">
+          <Field label={t('refund.amount')}>
+            <input
+              className="text-input"
+              type="number"
+              min={1}
+              max={paid}
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+              required
+            />
+          </Field>
+          <Field label={t('refund.reason')} span>
+            <input
+              className="text-input"
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              placeholder={t('refund.reasonPlaceholder')}
+            />
+          </Field>
+        </div>
+        <div className="modal-actions">
+          <button type="button" className="btn" onClick={onClose}>
+            {t('actions.cancel', { ns: 'common' })}
+          </button>
+          <button type="submit" className="btn btn-danger" disabled={busy}>
+            {busy ? t('refund.processing') : t('refund.confirm')}
           </button>
         </div>
       </form>

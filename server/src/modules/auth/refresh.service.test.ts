@@ -8,7 +8,7 @@
  */
 import { describe, it, before, beforeEach, after } from 'node:test';
 import assert from 'node:assert/strict';
-import bcrypt from 'bcryptjs';
+import { createHash } from 'crypto';
 import { db } from '../../db/pg-compat';
 import { setupTestDb, resetTestDb, teardownTestDb } from '../../db/test-utils';
 import { issueTokenPair, rotateRefreshToken, revokeRefreshToken, revokeAllForOwner } from './refresh.service';
@@ -61,7 +61,7 @@ describe('refresh token rotation (PostgreSQL)', () => {
     assert.notEqual(p2.token, p1.token);
     const old = (await db
       .prepare('SELECT revoked_at, replaced_by FROM refresh_tokens WHERE token_hash = ?')
-      .get(require('crypto').createHash('sha256').update(p1.refresh_token).digest('hex'))) as {
+      .get(createHash('sha256').update(p1.refresh_token).digest('hex'))) as {
       revoked_at: string | null;
       replaced_by: string | null;
     };

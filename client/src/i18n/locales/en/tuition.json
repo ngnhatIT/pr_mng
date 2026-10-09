@@ -149,5 +149,17 @@
     }
   },
   "searchAllStatuses": "All statuses",
-  "title": "Tuition"
+  "title": "Tuition",
+  "refund": {
+    "title": "Refund",
+    "action": "Refund",
+    "amount": "Refund amount",
+    "reason": "Refund reason",
+    "reasonPlaceholder": "E.g.: Student withdrew mid-course",
+    "confirm": "Confirm refund",
+    "processing": "Processing refund...",
+    "done": "Refund recorded",
+    "error": "Refund failed",
+    "confirmText": "Refund for student <strong>{{name}}</strong> (collected <strong>{{paid}}</strong>). The refund will reduce the outstanding balance."
+  }
 }

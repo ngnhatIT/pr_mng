@@ -352,6 +352,64 @@ export async function rejectPendingPayment(
   eventBus.emitSync(new PaymentRejectedEvent(id, payment.invoice_id));
 }
 
+/**
+ * Hoàn tiền cho hóa đơn (staff, quyền payments.refund).
+ * Ghi nhận dưới dạng payment âm với method='refund' — tự động trừ vào công nợ
+ * ở mọi nơi tính SUM(payments confirmed), không cần sửa logic nào khác.
+ * - Chỉ hoàn được số đã thu thực (net paid > 0), không hoàn vượt.
+ * - Transaction + FOR UPDATE chống 2 lượt hoàn đồng thời vượt số đã thu.
+ */
+export async function refundInvoice(
+  centerId: number | null,
+  invoiceId: number,
+  input: { amount: number; reason?: string | null },
+  actor?: AuditActor
+): Promise<{ refunded: number; status: string }> {
+  const amt = Math.round(Number(input.amount));
+  if (!Number.isFinite(amt) || amt <= 0) throw AppError.badRequest('Số tiền hoàn phải lớn hơn 0');
+  // Scope: hóa đơn phải thuộc center (qua học viên)
+  const scope = (await db
+    .prepare('SELECT s.center_id FROM invoices i JOIN students s ON s.id = i.student_id WHERE i.id = ?')
+    .get(invoiceId)) as { center_id: number | null } | undefined;
+  if (!scope || (centerId !== null && scope.center_id !== centerId)) {
+    throw AppError.notFound('Không tìm thấy phiếu thu');
+  }
+  const status = await db.transaction(async (tx) => {
+    const inv = (await tx
+      .prepare('SELECT id, amount FROM invoices WHERE id = ? FOR UPDATE')
+      .get(invoiceId)) as { id: number; amount: number } | undefined;
+    if (!inv) throw AppError.notFound('Không tìm thấy phiếu thu');
+    const paidRow = (await tx
+      .prepare(
+        "SELECT COALESCE(SUM(amount),0) as paid FROM payments WHERE invoice_id = ? AND status = 'confirmed'"
+      )
+      .get(invoiceId)) as { paid: number };
+    const netPaid = Number(paidRow.paid);
+    if (netPaid <= 0) throw AppError.badRequest('Hóa đơn chưa có khoản thu nào để hoàn');
+    if (amt > netPaid + 0.01) {
+      throw AppError.badRequest(`Chỉ hoàn được tối đa ${netPaid.toLocaleString('vi-VN')}đ (số đã thu thực)`);
+    }
+    await tx
+      .prepare(
+        "INSERT INTO payments (invoice_id, amount, method, note, status) VALUES (?, ?, 'refund', ?, 'confirmed')"
+      )
+      .run(invoiceId, -amt, input.reason?.trim() || 'Hoàn tiền');
+    const newStatus = netPaid - amt >= inv.amount - 0.01 ? 'paid' : netPaid - amt > 0 ? 'partial' : 'unpaid';
+    await tx.prepare('UPDATE invoices SET status = ? WHERE id = ?').run(newStatus, invoiceId);
+    return newStatus;
+  });
+  void audit({
+    centerId,
+    actor,
+    action: 'refund',
+    entity: 'invoices',
+    entityId: invoiceId,
+    summary: `Hoàn ${formatVND(amt)} cho HD${invoiceId}${input.reason ? `: ${input.reason}` : ''}`,
+    meta: { amount: amt, reason: input.reason ?? null },
+  });
+  return { refunded: amt, status };
+}
+
 /* ---------------------------- Cấu hình thanh toán ---------------------------- */
 
 async function resolveConfigCenterId(centerId: number | null): Promise<number> {

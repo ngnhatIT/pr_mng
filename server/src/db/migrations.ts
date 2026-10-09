@@ -114,6 +114,25 @@ const MIGRATIONS: Migration[] = [
       );
     },
   },
+  {
+    version: 6,
+    name: 'payments_refund_negative',
+    up: async (tx) => {
+      // Cho phép hoàn tiền: amount âm khi method='refund' (bản ghi hoàn tiền trừ vào công nợ).
+      // DB mới đã có constraint mới từ schema.ts -> DROP/CREATE an toàn cả 2 đường.
+      await tx.exec('ALTER TABLE payments DROP CONSTRAINT IF EXISTS chk_payments_amount');
+      await tx.exec(`DO $$
+        BEGIN
+          IF NOT EXISTS (
+            SELECT 1 FROM pg_constraint
+            WHERE conname = 'chk_payments_amount' AND conrelid = 'payments'::regclass
+          ) THEN
+            ALTER TABLE payments ADD CONSTRAINT chk_payments_amount
+              CHECK (amount > 0 OR (amount < 0 AND method = 'refund'));
+          END IF;
+        END $$;`);
+    },
+  },
 ];
 
 /** Version migration cao nhất mà code hiện tại biết (để test đối chiếu). */
