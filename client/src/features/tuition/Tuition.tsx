@@ -98,11 +98,7 @@ function PendingPayments() {
       {loading ? (
         <TableSkeleton cols={6} />
       ) : items.length === 0 ? (
-        <EmptyState
-          icon="check-circle"
-          title={t('pending.emptyTitle')}
-          desc={t('pending.emptyDesc')}
-        />
+        <EmptyState icon="check-circle" title={t('pending.emptyTitle')} desc={t('pending.emptyDesc')} />
       ) : (
         <div className="table-wrap sticky">
           <table className="table">
@@ -308,7 +304,7 @@ function InvoiceList() {
                             onClick={() => setCrediting(inv)}
                             title={t('credit.applyTitle')}
                           >
-                            Credits
+                            {t('credit.apply')}
                           </button>
                           <button className="btn btn-sm btn-primary" onClick={() => setPaying(inv)}>
                             {t('pay.collect')}
@@ -694,10 +690,7 @@ function DebtList() {
           failed++;
         }
       }
-      toast(
-        t('debt.remindResult', { name: d.name, sent, demo, failed }),
-        failed > 0 ? 'error' : 'success'
-      );
+      toast(t('debt.remindResult', { name: d.name, sent, demo, failed }), failed > 0 ? 'error' : 'success');
     } finally {
       setRemindingId(null);
     }
@@ -718,11 +711,7 @@ function DebtList() {
       {loading ? (
         <TableSkeleton cols={6} />
       ) : debts.length === 0 ? (
-        <EmptyState
-          icon="check-circle"
-          title={t('debt.emptyTitle')}
-          desc={t('debt.emptyDesc')}
-        />
+        <EmptyState icon="check-circle" title={t('debt.emptyTitle')} desc={t('debt.emptyDesc')} />
       ) : (
         <div className="table-wrap sticky">
           <table className="table">

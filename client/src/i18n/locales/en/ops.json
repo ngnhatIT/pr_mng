@@ -135,7 +135,8 @@
       "createdAt": "Created at",
       "referred": "Referred person",
       "reward": "Reward",
-      "status": "Status"
+      "status": "Status",
+      "referrer": "Referrer"
     },
     "desc": "Track referrals and credit rewards",
     "empty": {
@@ -271,7 +272,8 @@
       "enrolled": "Enrolled",
       "lost": "Lost",
       "new": "New",
-      "trialed": "Tried"
+      "trialed": "Tried",
+      "converted": "Converted"
     },
     "title": "Trial lessons",
     "toast": {
@@ -326,7 +328,7 @@
       "test": "Test message",
       "upcoming": "Upcoming"
     },
-    "notAdmin": "Configuration is for administrators only. You can still view the reminder history below.",
+    "notAdmin": "Configuration requires the notification management permission (notifications.manage). You can still view the reminder history below.",
     "ph": {
       "centerName": "ABC English Center",
       "oaId": "E.g. 1234567890",

@@ -31,7 +31,9 @@ export function QuizAttemptsModal({ homework, onClose }: { homework: HomeworkIte
     <Modal title={t('attempts.title', { title: homework.title })} onClose={onClose} wide>
       <div className="muted hw-action-icon attempts-summary">
         <Icon name="users" size={14} />
-        <span><strong className="num">{rows.length}</strong> {t('attempts.attempts', { count: rows.length })}</span>
+        <span>
+          <strong className="num">{rows.length}</strong> {t('attempts.attempts', { count: rows.length })}
+        </span>
         <span aria-hidden="true">·</span>
         <Icon name="star" size={14} />
         <span>{t('attempts.avgScore', { avg: avg.toFixed(1) })}</span>
@@ -58,10 +60,14 @@ export function QuizAttemptsModal({ homework, onClose }: { homework: HomeworkIte
                   <tr key={r.id}>
                     <td className="attempts-student">{r.student_name}</td>
                     <td className="td-right">
-                      <span className="num attempts-score">{r.score}/{r.max_score}</span>
+                      <span className="num attempts-score">
+                        {r.score}/{r.max_score}
+                      </span>
                     </td>
                     <td className="td-right">
-                      <span className={`badge ${pct >= 80 ? 'badge-paid' : pct >= 50 ? 'badge-late' : 'badge-overdue'}`}>
+                      <span
+                        className={`badge ${pct >= 80 ? 'badge-paid' : pct >= 50 ? 'badge-late' : 'badge-overdue'}`}
+                      >
                         {pct.toFixed(0)}%
                       </span>
                     </td>

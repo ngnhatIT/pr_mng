@@ -1,1 +1,153 @@
-{"config":{"bank":{"accountName":"Account holder name","accountNo":"Account number","bank":"Bank","selectBank":"- Select bank -","title":"Receiving bank account"},"desc":"Used to generate VietQR codes for parents to scan and pay.","pageDesc":"Set up the receiving account, VNPay, and referral rewards","loadError":"Could not load settings","loadFailDesc":"Please try reloading the page.","loadFailTitle":"Could not load settings","referral":{"desc":"Credits awarded for successful referrals.","forReferred":"Reward for the referred person","forReferrer":"Reward for the referrer","title":"Referral rewards"},"saveConfig":"Save settings","saved":"Payment settings saved","title":"Payment settings","vnpay":{"desc":"Online payment gateway for parents.","disabled":"Off","enabled":"On","hashSecret":"Hash Secret","savedPlaceholder":"Saved (leave blank to keep)","status":"Status","title":"VNPay","tmnCode":"Website code (TMN Code)"}},"credit":{"applied":"Applied {{amount}} credits to the invoice","apply":"Apply","applyError":"Could not apply","applying":"Applying...","applyTitle":"Apply parent credits to the invoice","confirmText":"{{name}} ({{code}}) - owes <strong>{{amount}}</strong>","help":"Enter the parent's <strong>credit ID</strong> (see the parent Referrals page or credit management). The system will deduct available credits from the invoice balance.","idLabel":"Credit ID *","idPlaceholder":"E.g. 12","idRequired":"Please enter the credit ID","title":"Apply credits to invoice"},"debt":{"emptyDesc":"All students have paid in full. Great!","emptyTitle":"No outstanding debts","loadError":"Could not load debts","noInvoices":"No invoices found to remind","remindResult":"Zalo reminders for {{name}}: {{sent}} sent, {{demo}} demo, {{failed}} failed","remindTitle":"Send Zalo tuition reminders for unpaid invoices","remindZalo":"Remind via Zalo","sending":"Sending...","summary":"{{count}} students with outstanding debt. Total: <strong>{{total}}</strong>","tab":"Debts","table":{"actions":"Actions","debt":"Owes","paid":"Paid","phone":"Phone","student":"Student","total":"Total due"}},"desc":"Receipts, debts and online payment approval","invoice":{"create":"Create invoice","creating":"Creating...","remindDemo":"Demo log recorded: {{message}}","remindError":"Could not send reminder","remindTitle":"Send tuition reminder via Zalo","remindZalo":"Zalo reminder","sending":"Sending...","table":{"actions":"Actions","amount":"Amount","class":"Class","debt":"Owes","dueDate":"Due date","paid":"Paid","status":"Status","student":"Student"}},"invoiceForm":{"amount":"Amount (VND) *","class":"Class","classOption":"{{name}} - {{fee}}","create":"Create invoice","createError":"Creation failed","created":"Invoice created","creating":"Creating...","dueDate":"Due date","noClass":"- No class -","note":"Note","selectStudent":"- Select student -","student":"Student *","studentRequired":"Please select a student","title":"Create invoice"},"invoiceStatus":{"paid":"Paid","partial":"Partially paid","unpaid":"Unpaid"},"invoices":{"emptyDesc":"Create tuition invoices for students to start collecting.","emptyTitle":"No invoices yet","loadError":"Could not load invoices","searchPlaceholder":"Search by student name/code...","tab":"Invoices","totalDebt":"Owes:"},"pay":{"amount":"Amount collected (VND) *","collect":"Collect","collecting":"Saving...","confirm":"Confirm collection","confirmText":"{{name}} - owes <strong>{{debt}}</strong>","method":"Method","note":"Note","payError":"Collection failed","recorded":"Payment recorded","title":"Collect tuition"},"pending":{"approve":"Approve","approved":"Payment approved","defaultMethod":"Bank transfer","emptyDesc":"Payments parents reported as \"transferred\" will appear here.","emptyTitle":"Nothing pending approval","fail":"Failed","loadError":"Could not load the pending list","note":"Payments parents reported as \"transferred\", awaiting confirmation.","reject":"Reject","rejected":"Payment rejected","tab":"Pending approval","table":{"actions":"Actions","amount":"Amount","method":"Method","note":"Note","reportedAt":"Reported at","student":"Student"}},"searchAllStatuses":"All statuses","title":"Tuition"}
+{
+  "config": {
+    "bank": {
+      "accountName": "Account holder name",
+      "accountNo": "Account number",
+      "bank": "Bank",
+      "selectBank": "- Select bank -",
+      "title": "Receiving bank account"
+    },
+    "desc": "Used to generate VietQR codes for parents to scan and pay.",
+    "pageDesc": "Set up the receiving account, VNPay, and referral rewards",
+    "loadError": "Could not load settings",
+    "loadFailDesc": "Please try reloading the page.",
+    "loadFailTitle": "Could not load settings",
+    "referral": {
+      "desc": "Credits awarded for successful referrals.",
+      "forReferred": "Reward for the referred person",
+      "forReferrer": "Reward for the referrer",
+      "title": "Referral rewards"
+    },
+    "saveConfig": "Save settings",
+    "saved": "Payment settings saved",
+    "title": "Payment settings",
+    "vnpay": {
+      "desc": "Online payment gateway for parents.",
+      "disabled": "Off",
+      "enabled": "On",
+      "hashSecret": "Hash Secret",
+      "savedPlaceholder": "Saved (leave blank to keep)",
+      "status": "Status",
+      "title": "VNPay",
+      "tmnCode": "Website code (TMN Code)",
+      "newSecretPlaceholder": "Enter new secret (leave blank to keep current)"
+    }
+  },
+  "credit": {
+    "applied": "Applied {{amount}} credits to the invoice",
+    "apply": "Apply",
+    "applyError": "Could not apply",
+    "applying": "Applying...",
+    "applyTitle": "Apply parent credits to the invoice",
+    "confirmText": "{{name}} ({{code}}) - owes <strong>{{amount}}</strong>",
+    "help": "Enter the parent's <strong>credit ID</strong> (see the parent Referrals page or credit management). The system will deduct available credits from the invoice balance.",
+    "idLabel": "Credit ID *",
+    "idPlaceholder": "E.g. 12",
+    "idRequired": "Please enter the credit ID",
+    "title": "Apply credits to invoice"
+  },
+  "debt": {
+    "emptyDesc": "All students have paid in full. Great!",
+    "emptyTitle": "No outstanding debts",
+    "loadError": "Could not load debts",
+    "noInvoices": "No invoices found to remind",
+    "remindResult": "Zalo reminders for {{name}}: {{sent}} sent, {{demo}} demo, {{failed}} failed",
+    "remindTitle": "Send Zalo tuition reminders for unpaid invoices",
+    "remindZalo": "Remind via Zalo",
+    "sending": "Sending...",
+    "summary": "{{count}} students with outstanding debt. Total: <strong>{{total}}</strong>",
+    "tab": "Debts",
+    "table": {
+      "actions": "Actions",
+      "debt": "Owes",
+      "paid": "Paid",
+      "phone": "Phone",
+      "student": "Student",
+      "total": "Total due"
+    }
+  },
+  "desc": "Receipts, debts and online payment approval",
+  "invoice": {
+    "create": "Create invoice",
+    "creating": "Creating...",
+    "remindDemo": "Demo log recorded: {{message}}",
+    "remindError": "Could not send reminder",
+    "remindTitle": "Send tuition reminder via Zalo",
+    "remindZalo": "Zalo reminder",
+    "sending": "Sending...",
+    "table": {
+      "actions": "Actions",
+      "amount": "Amount",
+      "class": "Class",
+      "debt": "Owes",
+      "dueDate": "Due date",
+      "paid": "Paid",
+      "status": "Status",
+      "student": "Student"
+    }
+  },
+  "invoiceForm": {
+    "amount": "Amount (VND) *",
+    "class": "Class",
+    "classOption": "{{name}} - {{fee}}",
+    "create": "Create invoice",
+    "createError": "Creation failed",
+    "created": "Invoice created",
+    "creating": "Creating...",
+    "dueDate": "Due date",
+    "noClass": "- No class -",
+    "note": "Note",
+    "selectStudent": "- Select student -",
+    "student": "Student *",
+    "studentRequired": "Please select a student",
+    "title": "Create invoice"
+  },
+  "invoiceStatus": {
+    "paid": "Paid",
+    "partial": "Partially paid",
+    "unpaid": "Unpaid"
+  },
+  "invoices": {
+    "emptyDesc": "Create tuition invoices for students to start collecting.",
+    "emptyTitle": "No invoices yet",
+    "loadError": "Could not load invoices",
+    "searchPlaceholder": "Search by student name/code...",
+    "tab": "Invoices",
+    "totalDebt": "Owes:"
+  },
+  "pay": {
+    "amount": "Amount collected (VND) *",
+    "collect": "Collect",
+    "collecting": "Saving...",
+    "confirm": "Confirm collection",
+    "confirmText": "{{name}} - owes <strong>{{debt}}</strong>",
+    "method": "Method",
+    "note": "Note",
+    "payError": "Collection failed",
+    "recorded": "Payment recorded",
+    "title": "Collect tuition"
+  },
+  "pending": {
+    "approve": "Approve",
+    "approved": "Payment approved",
+    "defaultMethod": "Bank transfer",
+    "emptyDesc": "Payments parents reported as \"transferred\" will appear here.",
+    "emptyTitle": "Nothing pending approval",
+    "fail": "Failed",
+    "loadError": "Could not load the pending list",
+    "note": "Payments parents reported as \"transferred\", awaiting confirmation.",
+    "reject": "Reject",
+    "rejected": "Payment rejected",
+    "tab": "Pending approval",
+    "table": {
+      "actions": "Actions",
+      "amount": "Amount",
+      "method": "Method",
+      "note": "Note",
+      "reportedAt": "Reported at",
+      "student": "Student"
+    }
+  },
+  "searchAllStatuses": "All statuses",
+  "title": "Tuition"
+}

@@ -83,7 +83,7 @@ router.delete(
   '/:id',
   requirePermission('students.delete'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
-    studentService.deleteStudent(reqCenterId(req), paramId(req.params), actorFromReq(req));
+    await studentService.deleteStudent(reqCenterId(req), paramId(req.params), actorFromReq(req));
     res.json({ ok: true });
   })
 );

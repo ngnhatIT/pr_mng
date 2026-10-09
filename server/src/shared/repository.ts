@@ -48,7 +48,7 @@ export async function findByIdOr404<T extends ScopedRow = ScopedRow>(
   if (!(SCOPED_TABLES as readonly string[]).includes(table)) {
     throw AppError.badRequest('Bảng dữ liệu không hợp lệ');
   }
-  const row = await db.prepare(`SELECT * FROM ${table} WHERE id = ?`).get(id) as T | undefined;
+  const row = (await db.prepare(`SELECT * FROM ${table} WHERE id = ?`).get(id)) as T | undefined;
   if (!row || (centerId !== null && row.center_id !== centerId)) {
     throw AppError.notFound(notFoundMessage);
   }
@@ -68,8 +68,8 @@ export function belongsToCenter(
   return row.center_id === centerId;
 }
 
-/** Xóa mềm/mạnh 1 dòng sau khi đã kiểm tra scope. Trả về true nếu đã xóa. */
-export async function deleteById(table: ScopedTable, id: number): Promise<boolean> {
-  const r = await db.prepare(`DELETE FROM ${table} WHERE id = ?`).run(id);
-  return r.changes > 0;
-}
+/**
+ * GHI CHÚ: hàm deleteById cũ đã bị xóa (không có caller nào, và thiếu kiểm
+ * tra center_id -> nguy cơ bypass multi-tenant). Cần xóa theo scope thì dùng
+ * findByIdOr404 để kiểm tra trước rồi DELETE trực tiếp.
+ */

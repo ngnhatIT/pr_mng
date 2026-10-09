@@ -12,7 +12,7 @@ export interface ZaloTestResult {
 
 export const zaloApi = {
   getConfig: () => http.get<ZaloConfig>('/zalo/config'),
-  saveConfig: (config: ZaloConfig) => http.put<ZaloConfig>('/zalo/config', config),
+  saveConfig: (config: Partial<ZaloConfig>) => http.put<ZaloConfig>('/zalo/config', config),
   test: (phone: string) => http.post<ZaloTestResult>('/zalo/test', { phone }),
   runOnce: () => http.post<{ message: string }>('/zalo/run-once'),
   history: (limit = 100) => http.get<ReminderItem[]>(`/reminders?limit=${limit}`),

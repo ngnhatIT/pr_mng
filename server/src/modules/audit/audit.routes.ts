@@ -24,7 +24,7 @@ router.get(
       limit: v.string({ label: 'Số dòng' }),
     });
     res.json(
-      auditService.listAuditLogs(
+      await auditService.listAuditLogs(
         reqCenterId(req),
         { action: q.action, entity: q.entity, from: q.from, to: q.to },
         { page: q.page, limit: q.limit }

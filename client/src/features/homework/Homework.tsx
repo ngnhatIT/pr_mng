@@ -1,11 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
-import {
-  homeworkApi,
-  type HomeworkStats,
-  type HomeworkFilters,
-} from './homework.api';
+import { homeworkApi, type HomeworkStats, type HomeworkFilters } from './homework.api';
 import { ClassItem } from '../classes/classes.api';
 import { useToast } from '../../shared/ui/toast';
 import { ConfirmDialog } from '../../shared/components/Modal';
@@ -66,7 +62,10 @@ export function Homework() {
       .listClasses()
       .then((c) => setClasses(c.filter((x) => x.status === 'active')))
       .catch((err: Error) => toast(err.message, 'error'));
-    homeworkApi.stats().then(setStats).catch(() => {});
+    homeworkApi
+      .stats()
+      .then(setStats)
+      .catch(() => {});
   }, [toast]);
 
   const load = useCallback(async () => {
@@ -90,10 +89,15 @@ export function Homework() {
     return () => clearTimeout(tm);
   }, [search]);
 
-  useEffect(() => { void load(); }, [load]);
+  useEffect(() => {
+    void load();
+  }, [load]);
 
   const refreshStats = useCallback(() => {
-    homeworkApi.stats().then(setStats).catch(() => {});
+    homeworkApi
+      .stats()
+      .then(setStats)
+      .catch(() => {});
   }, []);
 
   const onSaved = () => {
@@ -185,28 +189,36 @@ export function Homework() {
         <div className="stat-grid hw-stat-grid">
           <div className="stat-card tone-blue">
             <div className="stat-top">
-              <div className="stat-icon"><Icon name="clipboard" size={20} /></div>
+              <div className="stat-icon">
+                <Icon name="clipboard" size={20} />
+              </div>
             </div>
             <div className="stat-value">{stats.total}</div>
             <div className="stat-label">{t('stats.published')}</div>
           </div>
           <div className="stat-card tone-amber">
             <div className="stat-top">
-              <div className="stat-icon"><Icon name="clock" size={20} /></div>
+              <div className="stat-icon">
+                <Icon name="clock" size={20} />
+              </div>
             </div>
             <div className="stat-value">{stats.dueSoon}</div>
             <div className="stat-label">{t('stats.dueSoon')}</div>
           </div>
           <div className="stat-card tone-red">
             <div className="stat-top">
-              <div className="stat-icon"><Icon name="calendar-x" size={20} /></div>
+              <div className="stat-icon">
+                <Icon name="calendar-x" size={20} />
+              </div>
             </div>
             <div className="stat-value">{stats.overdue}</div>
             <div className="stat-label">{t('stats.overdue')}</div>
           </div>
           <div className="stat-card tone-violet">
             <div className="stat-top">
-              <div className="stat-icon"><Icon name="file" size={20} /></div>
+              <div className="stat-icon">
+                <Icon name="file" size={20} />
+              </div>
             </div>
             <div className="stat-value">{stats.drafts}</div>
             <div className="stat-label">{t('stats.drafts')}</div>
@@ -219,7 +231,10 @@ export function Homework() {
           <button
             key={tab.id}
             className={`tab ${statusTab === tab.id ? 'active' : ''}`}
-            onClick={() => { setStatusTab(tab.id); setPage(1); }}
+            onClick={() => {
+              setStatusTab(tab.id);
+              setPage(1);
+            }}
           >
             {tab.label}
           </button>
@@ -240,7 +255,9 @@ export function Homework() {
         >
           <option value="">{t('filters.allClasses')}</option>
           {classes.map((c) => (
-            <option key={c.id} value={c.id}>{c.name}</option>
+            <option key={c.id} value={c.id}>
+              {c.name}
+            </option>
           ))}
         </select>
         <select
@@ -302,48 +319,88 @@ export function Homework() {
                     <tr key={h.id}>
                       <td>
                         <div className="hw-item-title">
-                          {h.kind === 'quiz' && <span className="badge badge-plan-premium hw-quiz-badge">Quiz</span>}
+                          {h.kind === 'quiz' && (
+                            <span className="badge badge-plan-premium hw-quiz-badge">Quiz</span>
+                          )}
                           {h.title}
                         </div>
                         {h.max_score != null && (
                           <div className="muted hw-sub">{t('table.maxScore', { max: h.max_score })}</div>
                         )}
                       </td>
-                      <td><span className="badge badge-general">{h.class_name}</span></td>
+                      <td>
+                        <span className="badge badge-general">{h.class_name}</span>
+                      </td>
                       <td>
                         <span className={`badge ${st.cls}`}>{st.label}</span>
                         {h.status === 'scheduled' && h.publish_at && (
                           <div className="muted hw-sub-sm">{formatDate(h.publish_at)}</div>
                         )}
                       </td>
-                      <td>{due ? <span className={`badge ${due.badge}`}>{due.label}</span> : <span className="muted">-</span>}</td>
+                      <td>
+                        {due ? (
+                          <span className={`badge ${due.badge}`}>{due.label}</span>
+                        ) : (
+                          <span className="muted">-</span>
+                        )}
+                      </td>
                       <td className="td-right">
                         <div className="hw-progress">
                           <div className="hw-progress-track" aria-hidden="true">
                             <div className="hw-progress-fill" style={{ width: `${pct}%` }} />
                           </div>
-                          <span className="num">{done}/{totalStudents}</span>
+                          <span className="num">
+                            {done}/{totalStudents}
+                          </span>
                         </div>
                       </td>
                       <td className="td-right nowrap">
                         {h.status !== 'published' ? (
-                          <button className="btn btn-sm btn-primary" onClick={() => doPublish(h)} title={t('actions.publishNow')}>{t('actions.publish')}</button>
+                          <button
+                            className="btn btn-sm btn-primary"
+                            onClick={() => doPublish(h)}
+                            title={t('actions.publishNow')}
+                          >
+                            {t('actions.publish')}
+                          </button>
                         ) : (
-                          <button className="btn btn-sm" onClick={() => doUnpublish(h)} title={t('actions.unpublishTitle')}>{t('actions.unpublish')}</button>
+                          <button
+                            className="btn btn-sm"
+                            onClick={() => doUnpublish(h)}
+                            title={t('actions.unpublishTitle')}
+                          >
+                            {t('actions.unpublish')}
+                          </button>
                         )}{' '}
-                        <button className="btn btn-sm" onClick={() => doReuse(h)} title={t('actions.reuseTitle')}>{t('actions.reuse')}</button>{' '}
+                        <button
+                          className="btn btn-sm"
+                          onClick={() => doReuse(h)}
+                          title={t('actions.reuseTitle')}
+                        >
+                          {t('actions.reuse')}
+                        </button>{' '}
                         {h.kind === 'quiz' ? (
-                          <button className="btn btn-sm" onClick={() => setAttempts(h)}>{t('actions.viewResults')}</button>
+                          <button className="btn btn-sm" onClick={() => setAttempts(h)}>
+                            {t('actions.viewResults')}
+                          </button>
                         ) : (
-                          <button className="btn btn-sm" onClick={() => setGrading(h)}>{t('actions.grade')}</button>
+                          <button className="btn btn-sm" onClick={() => setGrading(h)}>
+                            {t('actions.grade')}
+                          </button>
                         )}{' '}
-                        <button className="btn btn-sm" onClick={() => setEditing(h)}>{t('actions.edit', { ns: 'common' })}</button>{' '}
+                        <button className="btn btn-sm" onClick={() => setEditing(h)}>
+                          {t('actions.edit', { ns: 'common' })}
+                        </button>{' '}
                         {h.kind === 'homework' && (
                           <>
-                            <button className="btn btn-sm" onClick={() => setViewSubs(h)}>{t('actions.viewSubmissions')}</button>{' '}
+                            <button className="btn btn-sm" onClick={() => setViewSubs(h)}>
+                              {t('actions.viewSubmissions')}
+                            </button>{' '}
                           </>
                         )}
-                        <button className="btn btn-sm btn-danger-ghost" onClick={() => setDeleting(h)}>{t('actions.delete', { ns: 'common' })}</button>
+                        <button className="btn btn-sm btn-danger-ghost" onClick={() => setDeleting(h)}>
+                          {t('actions.delete', { ns: 'common' })}
+                        </button>
                       </td>
                     </tr>
                   );
@@ -365,11 +422,15 @@ export function Homework() {
         />
       )}
       {grading && (
-        <GradeModal homework={grading} onClose={() => { setGrading(null); void load(); }} />
+        <GradeModal
+          homework={grading}
+          onClose={() => {
+            setGrading(null);
+            void load();
+          }}
+        />
       )}
-      {attempts && (
-        <QuizAttemptsModal homework={attempts} onClose={() => setAttempts(null)} />
-      )}
+      {attempts && <QuizAttemptsModal homework={attempts} onClose={() => setAttempts(null)} />}
       {showBank && <QuestionBank onClose={() => setShowBank(false)} />}
       {showAnalytics && <AnalyticsModal onClose={() => setShowAnalytics(false)} />}
       {viewSubs && (

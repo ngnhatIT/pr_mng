@@ -1,5 +1,5 @@
-/* Homework feature - styles rieng theo taste-ui. */
-   Design read: cụm bài tập cho giáo viên/admin, calm, chấm bài và xem bài nộp phải nhanh. */
+/* Homework feature - styles rieng theo taste-ui.
+   Design read: cum bai tap cho giao vien/admin, calm, cham bai va xem bai nop phai nhanh. */
 
 /* ---------- Stat cards: tone đỏ cho quá hạn ---------- */
 .tone-red .stat-icon { background: var(--danger-soft); color: var(--danger); }

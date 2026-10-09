@@ -1,4 +1,10 @@
 {
+  "api": {
+    "timeout": "Request timed out, please try again",
+    "network": "Cannot reach the server, please check your connection and try again",
+    "sessionExpired": "Your session has expired, please sign in again",
+    "error": "Something went wrong"
+  },
   "actions": {
     "add": "Add",
     "apply": "Apply",
@@ -97,5 +103,11 @@
     "prev": "Previous page",
     "next": "Next page",
     "last": "Last page"
+  },
+  "error": {
+    "title": "Something went wrong",
+    "message": "Sorry, this page failed to load. You can try again or go back home.",
+    "retry": "Try again",
+    "home": "Go home"
   }
 }

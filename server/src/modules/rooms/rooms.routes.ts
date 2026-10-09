@@ -39,7 +39,8 @@ router.post(
       return;
     }
     const cap = Number(capacity);
-    const r = await db.prepare('INSERT INTO rooms (center_id, name, capacity) VALUES (?, ?, ?)')
+    const r = await db
+      .prepare('INSERT INTO rooms (center_id, name, capacity) VALUES (?, ?, ?)')
       .run(cid, String(name).trim(), Number.isFinite(cap) && cap > 0 ? Math.floor(cap) : 30);
     res.status(201).json(await db.prepare('SELECT * FROM rooms WHERE id = ?').get(Number(r.lastInsertRowid)));
   })
@@ -47,7 +48,7 @@ router.post(
 
 async function getScopedRoom(req: AuthRequest, id: number) {
   const cid = await effCid(req);
-  const row = await db.prepare('SELECT * FROM rooms WHERE id = ?').get(id) as
+  const row = (await db.prepare('SELECT * FROM rooms WHERE id = ?').get(id)) as
     { id: number; center_id: number | null } | undefined;
   if (!row) return null;
   // superadmin (effCid = default center) vẫn được sửa phòng của mọi trung tâm? Không — chỉ phòng thuộc center hiệu lực
@@ -61,7 +62,7 @@ router.put(
   requirePermission('rooms.manage'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const id = Number(req.params.id);
-    const room = getScopedRoom(req, id);
+    const room = await getScopedRoom(req, id);
     if (!room) {
       res.status(404).json({ error: 'Không tìm thấy phòng học' });
       return;
@@ -72,11 +73,9 @@ router.put(
       return;
     }
     const cap = Number(capacity);
-    await db.prepare('UPDATE rooms SET name = ?, capacity = ? WHERE id = ?').run(
-      String(name).trim(),
-      Number.isFinite(cap) && cap > 0 ? Math.floor(cap) : 30,
-      id
-    );
+    await db
+      .prepare('UPDATE rooms SET name = ?, capacity = ? WHERE id = ?')
+      .run(String(name).trim(), Number.isFinite(cap) && cap > 0 ? Math.floor(cap) : 30, id);
     res.json(await db.prepare('SELECT * FROM rooms WHERE id = ?').get(id));
   })
 );
@@ -87,7 +86,7 @@ router.delete(
   requirePermission('rooms.manage'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const id = Number(req.params.id);
-    const room = getScopedRoom(req, id);
+    const room = await getScopedRoom(req, id);
     if (!room) {
       res.status(404).json({ error: 'Không tìm thấy phòng học' });
       return;

@@ -39,13 +39,23 @@ export function Dashboard() {
 
   const quickActions: { to: string; label: string; desc: string; icon: IconName }[] = [
     { to: '/app/students', label: t('quick.addStudent'), desc: t('quick.addStudentDesc'), icon: 'plus' },
-    { to: '/app/tuition', label: t('quick.createInvoice'), desc: t('quick.createInvoiceDesc'), icon: 'banknote' },
-    { to: '/app/attendance', label: t('quick.attendance'), desc: t('quick.attendanceDesc'), icon: 'clipboard' },
+    {
+      to: '/app/tuition',
+      label: t('quick.createInvoice'),
+      desc: t('quick.createInvoiceDesc'),
+      icon: 'banknote',
+    },
+    {
+      to: '/app/attendance',
+      label: t('quick.attendance'),
+      desc: t('quick.attendanceDesc'),
+      icon: 'clipboard',
+    },
     { to: '/app/zalo-reminders', label: t('quick.zalo'), desc: t('quick.zaloDesc'), icon: 'bell' },
   ];
 
   useEffect(() => {
-    (async () => {
+    void (async () => {
       try {
         const [d, debt] = await Promise.all([dashboardApi.summary(), dashboardApi.topDebts({ limit: 5 })]);
         setData(d);
@@ -114,7 +124,8 @@ export function Dashboard() {
             {greeting(t)}, {user?.name || t('fallbackName')}
           </h1>
           <p className="dash-greet-sub">
-            {todayLine(i18n.language)} · {data.todaySessions.length > 0
+            {todayLine(i18n.language)} ·{' '}
+            {data.todaySessions.length > 0
               ? t('today.count', { count: data.todaySessions.length })
               : t('today.none')}
           </p>

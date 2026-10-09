@@ -1,14 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import {
-  homeworkApi,
-  type QuizQuestionForm,
-  type Rubric,
-} from './homework.api';
-import { ClassItem } from '../classes/classes.api';
-import { studentsApi } from '../students/students.api';
+import { homeworkApi, type QuizQuestionForm, type Rubric } from './homework.api';
+import { ClassItem, classesApi } from '../classes/classes.api';
 import { HomeworkItem, formatDate } from '../../shared/types';
-import type { Student } from '../students/students.api';
 import { useToast } from '../../shared/ui/toast';
 import { Modal } from '../../shared/components/Modal';
 import { Field } from '../../shared/components/Form';
@@ -54,7 +48,7 @@ export function HomeworkFormModal({
   const [classSearch, setClassSearch] = useState('');
   // Đối tượng: cả lớp hoặc chọn riêng từng em
   const [targetMode, setTargetMode] = useState<'all' | 'selected'>('all');
-  const [students, setStudents] = useState<Student[]>([]);
+  const [students, setStudents] = useState<{ id: number; name: string }[]>([]);
   const [selectedStudents, setSelectedStudents] = useState<number[]>([]);
   const [studentSearch, setStudentSearch] = useState('');
   // Đính kèm
@@ -66,14 +60,25 @@ export function HomeworkFormModal({
   const [rubricId, setRubricId] = useState<string>(initial?.rubric_id?.toString() || '');
   const [showRubricForm, setShowRubricForm] = useState(false);
   const [newRubricName, setNewRubricName] = useState('');
-  const templates = t('form.templates', { returnObjects: true }) as { name: string; title: string; content: string }[];
+  const templates = t('form.templates', { returnObjects: true }) as {
+    name: string;
+    title: string;
+    content: string;
+  }[];
   const defaultCriteria = t('form.defaultCriteria', { returnObjects: true }) as string[];
   const [newCriteria, setNewCriteria] = useState<{ name: string; max_score: string }[]>(() =>
     defaultCriteria.map((name) => ({ name, max_score: '10' }))
   );
   // Quiz builder
   const [questions, setQuestions] = useState<QuizQuestionForm[]>([
-    { question: '', points: 1, options: [{ text: '', is_correct: true }, { text: '', is_correct: false }] },
+    {
+      question: '',
+      points: 1,
+      options: [
+        { text: '', is_correct: true },
+        { text: '', is_correct: false },
+      ],
+    },
   ]);
   const [quizLocked, setQuizLocked] = useState(false); // đã có người làm → không sửa đề
 
@@ -122,16 +127,40 @@ export function HomeworkFormModal({
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    homeworkApi.listRubrics().then(setRubrics).catch(() => {});
+    homeworkApi
+      .listRubrics()
+      .then(setRubrics)
+      .catch(() => {});
   }, []);
 
-  // Load học viên của các lớp đã chọn (cho giao riêng)
+  // Load học viên thuộc các lớp đã chọn (cho giao riêng từng em).
+  // Dùng chi tiết từng lớp để chỉ hiện học viên đang học ở các lớp đó.
   useEffect(() => {
-    if (targetMode !== 'selected' || !selectedClasses.length) return;
-    studentsApi
-      .list('', '', { page: 1, limit: 200 })
-      .then((r) => setStudents(r.data))
+    if (targetMode !== 'selected' || !selectedClasses.length) {
+      setStudents([]);
+      return;
+    }
+    let cancelled = false;
+    Promise.all(selectedClasses.map((id) => classesApi.get(id).catch(() => null)))
+      .then((details) => {
+        if (cancelled) return;
+        const seen = new Set<number>();
+        const merged: { id: number; name: string }[] = [];
+        for (const d of details) {
+          for (const s of d?.students ?? []) {
+            if (!seen.has(s.id)) {
+              seen.add(s.id);
+              merged.push({ id: s.id, name: s.name });
+            }
+          }
+        }
+        merged.sort((a, b) => a.name.localeCompare(b.name, 'vi'));
+        setStudents(merged);
+      })
       .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
   }, [targetMode, selectedClasses]);
 
   const filteredClasses = useMemo(
@@ -160,10 +189,13 @@ export function HomeworkFormModal({
 
   const createRubricNow = async () => {
     try {
-      const r = await homeworkApi.createRubric(newRubricName.trim(), newCriteria.map((c) => ({
-        name: c.name.trim(),
-        max_score: Number(c.max_score) || 0,
-      })));
+      const r = await homeworkApi.createRubric(
+        newRubricName.trim(),
+        newCriteria.map((c) => ({
+          name: c.name.trim(),
+          max_score: Number(c.max_score) || 0,
+        }))
+      );
       setRubrics((rs) => [r, ...rs]);
       setRubricId(String(r.id));
       setShowRubricForm(false);
@@ -176,11 +208,23 @@ export function HomeworkFormModal({
 
   // Quiz builder helpers
   const addQuestion = () =>
-    setQuestions((q) => [...q, { question: '', points: 1, options: [{ text: '', is_correct: true }, { text: '', is_correct: false }] }]);
+    setQuestions((q) => [
+      ...q,
+      {
+        question: '',
+        points: 1,
+        options: [
+          { text: '', is_correct: true },
+          { text: '', is_correct: false },
+        ],
+      },
+    ]);
   const updateQuestion = (i: number, patch: Partial<QuizQuestionForm>) =>
     setQuestions((qs) => qs.map((q, j) => (j === i ? { ...q, ...patch } : q)));
   const addOption = (qi: number) =>
-    setQuestions((qs) => qs.map((q, j) => (j === qi ? { ...q, options: [...q.options, { text: '', is_correct: false }] } : q)));
+    setQuestions((qs) =>
+      qs.map((q, j) => (j === qi ? { ...q, options: [...q.options, { text: '', is_correct: false }] } : q))
+    );
   const updateOption = (qi: number, oi: number, patch: Partial<{ text: string; is_correct: boolean }>) =>
     setQuestions((qs) =>
       qs.map((q, j) =>
@@ -195,7 +239,9 @@ export function HomeworkFormModal({
       )
     );
   const removeOption = (qi: number, oi: number) =>
-    setQuestions((qs) => qs.map((q, j) => (j === qi ? { ...q, options: q.options.filter((_, k) => k !== oi) } : q)));
+    setQuestions((qs) =>
+      qs.map((q, j) => (j === qi ? { ...q, options: q.options.filter((_, k) => k !== oi) } : q))
+    );
 
   const selectedRubric = rubrics.find((r) => String(r.id) === rubricId);
   const quizTotal = questions.reduce((s, q) => s + (Number(q.points) || 0), 0);
@@ -205,7 +251,11 @@ export function HomeworkFormModal({
     (initial ? true : selectedClasses.length > 0) &&
     (publishMode !== 'schedule' || publishAt) &&
     (targetMode !== 'selected' || selectedStudents.length > 0) &&
-    (kind !== 'quiz' || questions.every((q) => q.question.trim() && q.options.length >= 2 && q.options.some((o) => o.is_correct && o.text.trim())));
+    (kind !== 'quiz' ||
+      questions.every(
+        (q) =>
+          q.question.trim() && q.options.length >= 2 && q.options.some((o) => o.is_correct && o.text.trim())
+      ));
 
   const submit = async (publishOverride?: 'now' | 'draft' | 'schedule') => {
     const mode = publishOverride || publishMode;
@@ -286,26 +336,48 @@ export function HomeworkFormModal({
         </div>
       )}
 
-      <form onSubmit={(e) => { e.preventDefault(); void submit(); }}>
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          void submit();
+        }}
+      >
         {/* Chọn lớp */}
         {!initial && (
           <Field label={t('form.selectClass', { count: selectedClasses.length })}>
-            <input className="text-input hw-mb-8" placeholder={t('form.searchClass')} value={classSearch}
-              onChange={(e) => setClassSearch(e.target.value)} />
+            <input
+              className="text-input hw-mb-8"
+              placeholder={t('form.searchClass')}
+              value={classSearch}
+              onChange={(e) => setClassSearch(e.target.value)}
+            />
             <div className="chip-grid">
               {filteredClasses.map((c) => {
                 const active = selectedClasses.includes(c.id);
                 return (
-                  <button key={c.id} type="button" className={`chip ${active ? 'chip-active' : ''}`}
-                    onClick={() => toggleClass(c.id)}>
-                    {active && <Icon name="check" size={12} />}{c.name}
+                  <button
+                    key={c.id}
+                    type="button"
+                    className={`chip ${active ? 'chip-active' : ''}`}
+                    onClick={() => toggleClass(c.id)}
+                  >
+                    {active && <Icon name="check" size={12} />}
+                    {c.name}
                   </button>
                 );
               })}
             </div>
             <div className="hw-flex hw-mt-8">
-              <button type="button" className="btn btn-sm" onClick={() => setSelectedClasses(classes.map((c) => c.id))}>{t('form.selectAll')}</button>
-              <button type="button" className="btn btn-sm" onClick={() => setSelectedClasses([])}>{t('form.deselectAll')}</button>
+              <button
+                type="button"
+                className="btn btn-sm"
+                onClick={() => setSelectedClasses(classes.map((c) => c.id))}
+              >
+                {t('form.selectAll')}
+              </button>
+              <button type="button" className="btn btn-sm" onClick={() => setSelectedClasses([])}>
+                {t('form.deselectAll')}
+              </button>
             </div>
           </Field>
         )}
@@ -314,28 +386,49 @@ export function HomeworkFormModal({
         {!initial && (
           <Field label={t('form.assignTo')}>
             <div className="hw-flex hw-mb-8">
-              <button type="button" className={`btn btn-sm ${targetMode === 'all' ? 'btn-primary' : ''}`}
-                onClick={() => setTargetMode('all')}>{t('form.wholeClass')}</button>
-              <button type="button" className={`btn btn-sm ${targetMode === 'selected' ? 'btn-primary' : ''}`}
-                onClick={() => setTargetMode('selected')}>{t('form.pickStudents')}</button>
+              <button
+                type="button"
+                className={`btn btn-sm ${targetMode === 'all' ? 'btn-primary' : ''}`}
+                onClick={() => setTargetMode('all')}
+              >
+                {t('form.wholeClass')}
+              </button>
+              <button
+                type="button"
+                className={`btn btn-sm ${targetMode === 'selected' ? 'btn-primary' : ''}`}
+                onClick={() => setTargetMode('selected')}
+              >
+                {t('form.pickStudents')}
+              </button>
             </div>
             {targetMode === 'selected' && (
               <>
-                <input className="text-input hw-mb-8" placeholder={t('form.searchStudent')} value={studentSearch}
-                  onChange={(e) => setStudentSearch(e.target.value)} />
+                <input
+                  className="text-input hw-mb-8"
+                  placeholder={t('form.searchStudent')}
+                  value={studentSearch}
+                  onChange={(e) => setStudentSearch(e.target.value)}
+                />
                 <div className="chip-grid">
                   {filteredStudents.map((s) => {
                     const active = selectedStudents.includes(s.id);
                     return (
-                      <button key={s.id} type="button" className={`chip ${active ? 'chip-active' : ''}`}
-                        onClick={() => toggleStudent(s.id)}>
-                        {active && <Icon name="check" size={12} />}{s.name}
+                      <button
+                        key={s.id}
+                        type="button"
+                        className={`chip ${active ? 'chip-active' : ''}`}
+                        onClick={() => toggleStudent(s.id)}
+                      >
+                        {active && <Icon name="check" size={12} />}
+                        {s.name}
                       </button>
                     );
                   })}
                   {filteredStudents.length === 0 && <span className="muted">{t('form.noResults')}</span>}
                 </div>
-                <div className="muted hw-text-13 hw-mt-4">{t('form.selectedCount', { count: selectedStudents.length })}</div>
+                <div className="muted hw-text-13 hw-mt-4">
+                  {t('form.selectedCount', { count: selectedStudents.length })}
+                </div>
               </>
             )}
           </Field>
@@ -346,52 +439,95 @@ export function HomeworkFormModal({
           <Field label={t('form.quickTemplates')}>
             <div className="hw-flex-wrap">
               {templates.map((tpl) => (
-                <button key={tpl.name} type="button" className="btn btn-sm"
-                  onClick={() => { setTitle(tpl.title); setContent(tpl.content); }}>{tpl.name}</button>
+                <button
+                  key={tpl.name}
+                  type="button"
+                  className="btn btn-sm"
+                  onClick={() => {
+                    setTitle(tpl.title);
+                    setContent(tpl.content);
+                  }}
+                >
+                  {tpl.name}
+                </button>
               ))}
             </div>
           </Field>
         )}
 
         <Field label={t('form.title')}>
-          <input className="text-input" value={title} onChange={(e) => setTitle(e.target.value)}
+          <input
+            className="text-input"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
             placeholder={kind === 'quiz' ? t('form.titlePhQuiz') : t('form.titlePhHw')}
-            maxLength={200} required />
+            maxLength={200}
+            required
+          />
         </Field>
 
         {kind === 'homework' && (
           <Field label={t('form.content', { count: content.length })}>
-            <RichTextarea value={content} rows={5}
+            <RichTextarea
+              value={content}
+              rows={5}
               onChange={(v) => setContent(v.slice(0, 5000))}
-              placeholder={t('form.contentPh')} />
+              placeholder={t('form.contentPh')}
+            />
           </Field>
         )}
 
         {/* Điểm + Hạn */}
         <div className="form-grid">
           <Field label={t('form.maxScore')}>
-            <input className="text-input" type="number" min="0" step="0.5" value={maxScore}
-              onChange={(e) => setMaxScore(e.target.value)} placeholder={t('form.maxScorePh')} />
+            <input
+              className="text-input"
+              type="number"
+              min="0"
+              step="0.5"
+              value={maxScore}
+              onChange={(e) => setMaxScore(e.target.value)}
+              placeholder={t('form.maxScorePh')}
+            />
           </Field>
           <Field label={t('form.dueDate')}>
-            <input className="text-input" type="date" value={dueDate}
-              min={new Date().toISOString().slice(0, 10)} onChange={(e) => setDueDate(e.target.value)} />
+            <input
+              className="text-input"
+              type="date"
+              value={dueDate}
+              min={new Date().toISOString().slice(0, 10)}
+              onChange={(e) => setDueDate(e.target.value)}
+            />
           </Field>
         </div>
         <div className="form-grid">
           <Field label={t('form.quickDue')}>
             <div className="hw-flex-6-wrap">
               {quickDueOptions.map(({ k, label }) => (
-                <button key={k} type="button" className={`btn btn-sm ${dueDate === quickDate(k) ? 'btn-primary' : ''}`}
-                  onClick={() => setDueDate(quickDate(k))}>{label}</button>
+                <button
+                  key={k}
+                  type="button"
+                  className={`btn btn-sm ${dueDate === quickDate(k) ? 'btn-primary' : ''}`}
+                  onClick={() => setDueDate(quickDate(k))}
+                >
+                  {label}
+                </button>
               ))}
-              {dueDate && <button type="button" className="btn btn-sm" onClick={() => setDueDate('')}>{t('actions.delete', { ns: 'common' })}</button>}
+              {dueDate && (
+                <button type="button" className="btn btn-sm" onClick={() => setDueDate('')}>
+                  {t('actions.delete', { ns: 'common' })}
+                </button>
+              )}
             </div>
           </Field>
           <Field label={t('form.hardDeadline')}>
-            <input className="text-input" type="date" value={closeDate}
+            <input
+              className="text-input"
+              type="date"
+              value={closeDate}
               min={dueDate || new Date().toISOString().slice(0, 10)}
-              onChange={(e) => setCloseDate(e.target.value)} />
+              onChange={(e) => setCloseDate(e.target.value)}
+            />
             <div className="muted hw-text-12">{t('form.hardDeadlineHint')}</div>
           </Field>
         </div>
@@ -404,16 +540,31 @@ export function HomeworkFormModal({
                 <Icon name="paperclip" size={14} />
                 <span>{a.name}</span>
                 <span className="muted hw-text-12">{a.url.slice(0, 40)}...</span>
-                <button type="button" className="btn btn-sm btn-danger-ghost"
-                  onClick={() => setAttachments((x) => x.filter((_, j) => j !== i))}>{t('actions.delete', { ns: 'common' })}</button>
+                <button
+                  type="button"
+                  className="btn btn-sm btn-danger-ghost"
+                  onClick={() => setAttachments((x) => x.filter((_, j) => j !== i))}
+                >
+                  {t('actions.delete', { ns: 'common' })}
+                </button>
               </div>
             ))}
             <div className="hw-flex">
-              <input className="text-input" placeholder={t('form.attNamePh')} value={attName}
-                onChange={(e) => setAttName(e.target.value)} />
-              <input className="text-input" placeholder={t('form.attUrlPh')} value={attUrl}
-                onChange={(e) => setAttUrl(e.target.value)} />
-              <button type="button" className="btn" onClick={addAttachment}>{t('form.addAttachment')}</button>
+              <input
+                className="text-input"
+                placeholder={t('form.attNamePh')}
+                value={attName}
+                onChange={(e) => setAttName(e.target.value)}
+              />
+              <input
+                className="text-input"
+                placeholder={t('form.attUrlPh')}
+                value={attUrl}
+                onChange={(e) => setAttUrl(e.target.value)}
+              />
+              <button type="button" className="btn" onClick={addAttachment}>
+                {t('form.addAttachment')}
+              </button>
             </div>
           </Field>
         )}
@@ -422,39 +573,82 @@ export function HomeworkFormModal({
         {kind === 'homework' && (
           <Field label={t('form.rubric')}>
             <div className="hw-flex hw-mb-8">
-              <select className="text-input hw-flex-1" value={rubricId} onChange={(e) => setRubricId(e.target.value)}>
+              <select
+                className="text-input hw-flex-1"
+                value={rubricId}
+                onChange={(e) => setRubricId(e.target.value)}
+              >
                 <option value="">{t('form.noRubric')}</option>
                 {rubrics.map((r) => (
-                  <option key={r.id} value={r.id}>{t('form.rubricOption', { name: r.name, score: r.total_score })}</option>
+                  <option key={r.id} value={r.id}>
+                    {t('form.rubricOption', { name: r.name, score: r.total_score })}
+                  </option>
                 ))}
               </select>
-              <button type="button" className="btn" onClick={() => setShowRubricForm((s) => !s)}>{t('form.newRubric')}</button>
+              <button type="button" className="btn" onClick={() => setShowRubricForm((s) => !s)}>
+                {t('form.newRubric')}
+              </button>
             </div>
             {selectedRubric && (
               <div className="rubric-preview">
                 {selectedRubric.criteria.map((c) => (
-                  <div key={c.id} className="rubric-row"><span>{c.name}</span><span className="num">{t('form.criterionScore', { score: c.max_score })}</span></div>
+                  <div key={c.id} className="rubric-row">
+                    <span>{c.name}</span>
+                    <span className="num">{t('form.criterionScore', { score: c.max_score })}</span>
+                  </div>
                 ))}
               </div>
             )}
             {showRubricForm && (
               <div className="rubric-form">
-                <input className="text-input hw-mb-8" placeholder={t('form.rubricNamePh')} value={newRubricName}
-                  onChange={(e) => setNewRubricName(e.target.value)} />
+                <input
+                  className="text-input hw-mb-8"
+                  placeholder={t('form.rubricNamePh')}
+                  value={newRubricName}
+                  onChange={(e) => setNewRubricName(e.target.value)}
+                />
                 {newCriteria.map((c, i) => (
                   <div key={i} className="hw-flex hw-mb-8">
-                    <input className="text-input" placeholder={t('form.criterion')} value={c.name}
-                      onChange={(e) => setNewCriteria((x) => x.map((y, j) => (j === i ? { ...y, name: e.target.value } : y)))} />
-                    <input className="text-input hw-w-100" type="number" min="0" placeholder={t('form.points')} value={c.max_score}
-                      onChange={(e) => setNewCriteria((x) => x.map((y, j) => (j === i ? { ...y, max_score: e.target.value } : y)))} />
-                    <button type="button" className="btn btn-sm btn-danger-ghost"
-                      onClick={() => setNewCriteria((x) => x.filter((_, j) => j !== i))}>×</button>
+                    <input
+                      className="text-input"
+                      placeholder={t('form.criterion')}
+                      value={c.name}
+                      onChange={(e) =>
+                        setNewCriteria((x) => x.map((y, j) => (j === i ? { ...y, name: e.target.value } : y)))
+                      }
+                    />
+                    <input
+                      className="text-input hw-w-100"
+                      type="number"
+                      min="0"
+                      placeholder={t('form.points')}
+                      value={c.max_score}
+                      onChange={(e) =>
+                        setNewCriteria((x) =>
+                          x.map((y, j) => (j === i ? { ...y, max_score: e.target.value } : y))
+                        )
+                      }
+                    />
+                    <button
+                      type="button"
+                      className="btn btn-sm btn-danger-ghost"
+                      onClick={() => setNewCriteria((x) => x.filter((_, j) => j !== i))}
+                    >
+                      ×
+                    </button>
                   </div>
                 ))}
                 <div className="hw-flex">
-                  <button type="button" className="btn btn-sm"
-                    onClick={() => setNewCriteria((x) => [...x, { name: '', max_score: '10' }])}>{t('form.addCriterion')}</button>
-                  <button type="button" className="btn btn-sm btn-primary" onClick={createRubricNow}>{t('form.saveRubric')}</button>
+                  <button
+                    type="button"
+                    className="btn btn-sm"
+                    onClick={() => setNewCriteria((x) => [...x, { name: '', max_score: '10' }])}
+                  >
+                    {t('form.addCriterion')}
+                  </button>
+                  <button type="button" className="btn btn-sm btn-primary" onClick={createRubricNow}>
+                    {t('form.saveRubric')}
+                  </button>
                 </div>
               </div>
             )}
@@ -474,13 +668,29 @@ export function HomeworkFormModal({
               <div key={qi} className="quiz-q">
                 <div className="hw-flex hw-mb-8">
                   <span className="quiz-num">{qi + 1}</span>
-                  <input className="text-input hw-flex-1" placeholder={t('form.questionPh', { n: qi + 1 })} value={q.question}
-                    onChange={(e) => updateQuestion(qi, { question: e.target.value })} />
-                  <input className="text-input hw-w-80" type="number" min="0.5" step="0.5" value={q.points}
-                    onChange={(e) => updateQuestion(qi, { points: Number(e.target.value) || 1 })} title={t('form.points')} />
+                  <input
+                    className="text-input hw-flex-1"
+                    placeholder={t('form.questionPh', { n: qi + 1 })}
+                    value={q.question}
+                    onChange={(e) => updateQuestion(qi, { question: e.target.value })}
+                  />
+                  <input
+                    className="text-input hw-w-80"
+                    type="number"
+                    min="0.5"
+                    step="0.5"
+                    value={q.points}
+                    onChange={(e) => updateQuestion(qi, { points: Number(e.target.value) || 1 })}
+                    title={t('form.points')}
+                  />
                   {questions.length > 1 && (
-                    <button type="button" className="btn btn-sm btn-danger-ghost"
-                      onClick={() => setQuestions((x) => x.filter((_, j) => j !== qi))}>×</button>
+                    <button
+                      type="button"
+                      className="btn btn-sm btn-danger-ghost"
+                      onClick={() => setQuestions((x) => x.filter((_, j) => j !== qi))}
+                    >
+                      ×
+                    </button>
                   )}
                 </div>
                 {q.options.map((o, oi) => (
@@ -490,12 +700,23 @@ export function HomeworkFormModal({
                       className={`quiz-correct ${o.is_correct ? 'active' : ''}`}
                       onClick={() => updateOption(qi, oi, { is_correct: true })}
                       title={t('form.correctAnswer')}
-                    >{o.is_correct ? '●' : '○'}</button>
-                    <input className="text-input input-sm hw-flex-1" placeholder={t('form.optionPh', { letter: String.fromCharCode(65 + oi) })}
-                      value={o.text} onChange={(e) => updateOption(qi, oi, { text: e.target.value })} />
+                    >
+                      {o.is_correct ? '●' : '○'}
+                    </button>
+                    <input
+                      className="text-input input-sm hw-flex-1"
+                      placeholder={t('form.optionPh', { letter: String.fromCharCode(65 + oi) })}
+                      value={o.text}
+                      onChange={(e) => updateOption(qi, oi, { text: e.target.value })}
+                    />
                     {q.options.length > 2 && (
-                      <button type="button" className="btn btn-sm btn-danger-ghost"
-                        onClick={() => removeOption(qi, oi)}>×</button>
+                      <button
+                        type="button"
+                        className="btn btn-sm btn-danger-ghost"
+                        onClick={() => removeOption(qi, oi)}
+                      >
+                        ×
+                      </button>
                     )}
                   </div>
                 ))}
@@ -505,7 +726,9 @@ export function HomeworkFormModal({
               </div>
             ))}
             <div className="hw-flex">
-              <button type="button" className="btn" onClick={addQuestion}>{t('form.addQuestion')}</button>
+              <button type="button" className="btn" onClick={addQuestion}>
+                {t('form.addQuestion')}
+              </button>
               <button type="button" className="btn hw-action-icon" onClick={() => setShowBankPicker(true)}>
                 <Icon name="book" size={15} /> {t('form.fromBank')}
               </button>
@@ -517,20 +740,31 @@ export function HomeworkFormModal({
         {!initial && (
           <Field label={t('form.publishSection')}>
             <div className="publish-options">
-              {([
-                ['now', t('form.publishNowOpt')],
-                ['schedule', t('form.publishScheduleOpt')],
-                ['draft', t('form.publishDraftOpt')],
-              ] as const).map(([m, label]) => (
-                <button key={m} type="button"
+              {(
+                [
+                  ['now', t('form.publishNowOpt')],
+                  ['schedule', t('form.publishScheduleOpt')],
+                  ['draft', t('form.publishDraftOpt')],
+                ] as const
+              ).map(([m, label]) => (
+                <button
+                  key={m}
+                  type="button"
                   className={`publish-btn ${publishMode === m ? 'active' : ''}`}
-                  onClick={() => setPublishMode(m)}>{label}</button>
+                  onClick={() => setPublishMode(m)}
+                >
+                  {label}
+                </button>
               ))}
             </div>
             {publishMode === 'schedule' && (
-              <input className="text-input hw-mt-8" type="datetime-local" value={publishAt}
+              <input
+                className="text-input hw-mt-8"
+                type="datetime-local"
+                value={publishAt}
                 min={new Date().toISOString().slice(0, 16)}
-                onChange={(e) => setPublishAt(e.target.value)} />
+                onChange={(e) => setPublishAt(e.target.value)}
+              />
             )}
           </Field>
         )}
@@ -542,7 +776,11 @@ export function HomeworkFormModal({
             <div className="card hw-flat-card">
               <div className="card-head">
                 <h2>{title || t('form.noTitle')}</h2>
-                {dueDate && <span className="badge badge-upcoming">{t('form.dueWithDate', { date: formatDate(dueDate) })}</span>}
+                {dueDate && (
+                  <span className="badge badge-upcoming">
+                    {t('form.dueWithDate', { date: formatDate(dueDate) })}
+                  </span>
+                )}
               </div>
               {content && <p className="homework-content">{content}</p>}
               {maxScore && <p className="muted">{t('table.maxScore', { max: maxScore })}</p>}
@@ -555,28 +793,36 @@ export function HomeworkFormModal({
             {showPreview ? t('form.hidePreview') : t('form.preview')}
           </button>
           <span className="spacer" />
-          <button type="button" className="btn" onClick={onClose}>{t('actions.cancel', { ns: 'common' })}</button>
+          <button type="button" className="btn" onClick={onClose}>
+            {t('actions.cancel', { ns: 'common' })}
+          </button>
           {initial ? (
             <button type="submit" className="btn btn-primary" disabled={!canSubmit || busy}>
               {busy ? t('actions.saving', { ns: 'common' }) : t('form.saveChanges')}
             </button>
           ) : (
             <>
-              <button type="button" className="btn" disabled={!canSubmit || busy}
-                onClick={() => void submit('draft')}>{t('form.saveDraft')}</button>
+              <button
+                type="button"
+                className="btn"
+                disabled={!canSubmit || busy}
+                onClick={() => void submit('draft')}
+              >
+                {t('form.saveDraft')}
+              </button>
               <button type="submit" className="btn btn-primary" disabled={!canSubmit || busy}>
-                {busy ? t('form.submitting') : publishMode === 'schedule' ? t('form.scheduleFor', { count: selectedClasses.length }) : t('form.publishFor', { count: selectedClasses.length })}
+                {busy
+                  ? t('form.submitting')
+                  : publishMode === 'schedule'
+                    ? t('form.scheduleFor', { count: selectedClasses.length })
+                    : t('form.publishFor', { count: selectedClasses.length })}
               </button>
             </>
           )}
         </div>
       </form>
       {showBankPicker && (
-        <QuestionBank
-          onClose={() => setShowBankPicker(false)}
-          selectMode
-          onImport={importBankQuestions}
-        />
+        <QuestionBank onClose={() => setShowBankPicker(false)} selectMode onImport={importBankQuestions} />
       )}
     </Modal>
   );

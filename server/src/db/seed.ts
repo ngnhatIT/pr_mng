@@ -1,22 +1,29 @@
 /* eslint-disable no-console -- seed script: output trực tiếp cho người chạy */
 import bcrypt from 'bcryptjs';
 import { db } from './connection';
+import { env } from '../config/env';
 import { ensureDemoCenter, generateSessionsForClass, recalcInvoiceStatus } from './helpers';
 import { toISODate, addDays, ourDayOfWeek, parseISODate } from './date-utils';
 
 /** Dữ liệu demo cho lần chạy đầu tiên. */
-/** Seed dữ liệu demo — chỉ chạy khi DB trống. */
+/**
+ * Seed dữ liệu demo — CHỈ chạy khi SEED_DEMO=true (mặc định TẮT).
+ *
+ * Lý do: seedExtraAccounts() trước đây tự tạo lại root/123456 (superadmin)
+ * mỗi lần boot — production sẽ tự mở tài khoản đặc quyền mật khẩu yếu, và
+ * admin xóa đi thì reboot lại mọc lại. Từ nay production phải tạo tài khoản
+ * qua quy trình riêng, không qua seed demo.
+ */
 export async function seedDatabase(): Promise<void> {
+  if (!env.SEED_DEMO) return;
   const demoId = await ensureDemoCenter();
-  const count = (await db.prepare('SELECT COUNT(*) as c FROM users').get() as { c: number }).c;
+  const count = ((await db.prepare('SELECT COUNT(*) as c FROM users').get()) as { c: number }).c;
   if (count === 0) {
     console.log('Đang tạo dữ liệu demo...');
 
     const adminHash = bcrypt.hashSync('123456', 10);
     await db
-      .prepare(
-        'INSERT INTO users (username, password_hash, role, name, center_id) VALUES (?, ?, ?, ?, ?)'
-      )
+      .prepare('INSERT INTO users (username, password_hash, role, name, center_id) VALUES (?, ?, ?, ?, ?)')
       .run('admin', adminHash, 'admin', 'Quản trị viên', demoId);
 
     const addTeacher = db.prepare(
@@ -238,10 +245,12 @@ async function seedExtraAccounts(): Promise<void> {
       .run(demoId, '0900000001', hash, 'Phụ huynh Demo', 'GTDEMO01');
     const pid = Number(r.lastInsertRowid);
     const link = db.prepare('INSERT OR IGNORE INTO parent_students (parent_id, student_id) VALUES (?, ?)');
-    const s1 = (await db.prepare('SELECT id FROM students WHERE code = ? AND center_id = ?').get('HV001', demoId)) as
-      { id: number } | undefined;
-    const s2 = (await db.prepare('SELECT id FROM students WHERE code = ? AND center_id = ?').get('HV002', demoId)) as
-      { id: number } | undefined;
+    const s1 = (await db
+      .prepare('SELECT id FROM students WHERE code = ? AND center_id = ?')
+      .get('HV001', demoId)) as { id: number } | undefined;
+    const s2 = (await db
+      .prepare('SELECT id FROM students WHERE code = ? AND center_id = ?')
+      .get('HV002', demoId)) as { id: number } | undefined;
     if (s1) await link.run(pid, s1.id);
     if (s2) await link.run(pid, s2.id);
     console.log('Đã tạo tài khoản phụ huynh demo: 0900000001 / 123456 (liên kết HV001, HV002)');

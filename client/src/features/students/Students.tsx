@@ -167,10 +167,7 @@ export function Students() {
                       <Icon name="pencil" size={13} />
                       {t('actions.edit', { ns: 'common' })}
                     </button>{' '}
-                    <button
-                      className="btn btn-sm btn-inline btn-danger-ghost"
-                      onClick={() => setDeleting(s)}
-                    >
+                    <button className="btn btn-sm btn-inline btn-danger-ghost" onClick={() => setDeleting(s)}>
                       <Icon name="trash" size={13} />
                       {t('actions.delete', { ns: 'common' })}
                     </button>

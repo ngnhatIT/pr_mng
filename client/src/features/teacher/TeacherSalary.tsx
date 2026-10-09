@@ -54,7 +54,9 @@ export function TeacherSalary() {
       ) : salary ? (
         <>
           <div className="salary-hero">
-            <div className="salary-month">{t('salary.totalOfMonth', { month: `${month.slice(5, 7)}/${month.slice(0, 4)}` })}</div>
+            <div className="salary-month">
+              {t('salary.totalOfMonth', { month: `${month.slice(5, 7)}/${month.slice(0, 4)}` })}
+            </div>
             <div className="salary-total">{formatVND(salary.total)}</div>
             <div className="salary-sub">{t('salary.sessionsDone', { count: salary.sessions })}</div>
           </div>
@@ -70,11 +72,7 @@ export function TeacherSalary() {
           </div>
         </>
       ) : (
-        <EmptyState
-          icon="wallet"
-          title={t('salary.emptyTitle')}
-          desc={t('salary.emptyDesc')}
-        />
+        <EmptyState icon="wallet" title={t('salary.emptyTitle')} desc={t('salary.emptyDesc')} />
       )}
     </div>
   );

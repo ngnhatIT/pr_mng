@@ -130,11 +130,7 @@ export function TeacherGrades() {
       ) : !studentId ? (
         <EmptyState icon="cap" title={t('grades.noStudentTitle')} desc={t('grades.noStudentDesc')} />
       ) : grades.length === 0 ? (
-        <EmptyState
-          icon="file"
-          title={t('grades.noGradesTitle')}
-          desc={t('grades.noGradesDesc')}
-        />
+        <EmptyState icon="file" title={t('grades.noGradesTitle')} desc={t('grades.noGradesDesc')} />
       ) : (
         <div className="table-wrap">
           <table className="table">
@@ -190,7 +186,11 @@ export function TeacherGrades() {
       {deleting && (
         <ConfirmDialog
           title={t('grades.deleteTitle')}
-          message={t('grades.deleteMessage', { title: deleting.title, score: deleting.score, max: deleting.max_score })}
+          message={t('grades.deleteMessage', {
+            title: deleting.title,
+            score: deleting.score,
+            max: deleting.max_score,
+          })}
           onClose={() => setDeleting(null)}
           onConfirm={remove}
           danger

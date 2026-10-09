@@ -1,9 +1,9 @@
 import { Router, Response } from 'express';
-import { db } from '../../db';
 import { AuthRequest, reqCenterId } from '../../middleware/auth';
 import { requirePermission } from '../authorization/authorization.middleware';
 import { asyncHandler } from '../../shared/http';
-import { listGrades, type ScopeCtx } from './grades.service';
+import { actorFromReq } from '../../shared/audit';
+import { listGrades, createGrade, deleteGrade, type ScopeCtx } from './grades.service';
 
 const router = Router();
 
@@ -28,7 +28,7 @@ router.get(
       role: req.user?.role || '',
       teacherId: req.user?.teacher_id ?? null,
     };
-    res.json(listGrades(ctx, { student_id, class_id }, { page, limit }));
+    res.json(await listGrades(ctx, { student_id, class_id }, { page, limit }));
   })
 );
 
@@ -47,51 +47,19 @@ router.post(
       res.status(400).json({ error: 'Vui lòng nhập tiêu đề bài kiểm tra' });
       return;
     }
-    const sc = Number(score);
-    if (Number.isNaN(sc)) {
-      res.status(400).json({ error: 'Điểm số không hợp lệ' });
-      return;
-    }
-    const student = await db.prepare('SELECT id, center_id FROM students WHERE id = ?').get(Number(student_id)) as
-      { id: number; center_id: number | null } | undefined;
-    if (!student || (cid !== null && student.center_id !== cid)) {
-      res.status(404).json({ error: 'Không tìm thấy học viên' });
-      return;
-    }
-    let classId: number | null = null;
-    if (class_id) {
-      const cls = await db.prepare('SELECT id, center_id, teacher_id FROM classes WHERE id = ?')
-        .get(Number(class_id)) as
-        { id: number; center_id: number | null; teacher_id: number | null } | undefined;
-      if (!cls || (cid !== null && cls.center_id !== cid)) {
-        res.status(404).json({ error: 'Không tìm thấy lớp học' });
-        return;
-      }
-      if (req.user?.role === 'teacher') {
-        if (!req.user.teacher_id || cls.teacher_id !== req.user.teacher_id) {
-          res.status(403).json({ error: 'Bạn chỉ được nhập điểm cho lớp của mình' });
-          return;
-        }
-      }
-      classId = cls.id;
-    } else if (req.user?.role === 'teacher') {
-      res.status(400).json({ error: 'Vui lòng chọn lớp học' });
-      return;
-    }
-    const r = await db.prepare(
-        'INSERT INTO grades (center_id, student_id, class_id, title, score, max_score, comment, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
-      )
-      .run(
-        cid,
-        student.id,
-        classId,
-        String(title).trim(),
-        sc,
-        max_score !== undefined && max_score !== null && max_score !== '' ? Number(max_score) : 10,
-        (comment as string) || null,
-        req.user!.id
-      );
-    res.status(201).json(await db.prepare('SELECT * FROM grades WHERE id = ?').get(Number(r.lastInsertRowid)));
+    const row = await createGrade({
+      centerId: cid,
+      student_id: Number(student_id),
+      class_id: class_id ? Number(class_id) : null,
+      title: String(title),
+      score: Number(score),
+      max_score: max_score !== undefined && max_score !== null && max_score !== '' ? Number(max_score) : 10,
+      comment: (comment as string) || null,
+      created_by: req.user!.id,
+      role: req.user?.role || '',
+      teacher_id: req.user?.teacher_id ?? null,
+    });
+    res.status(201).json(row);
   })
 );
 
@@ -102,23 +70,7 @@ router.delete(
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const cid = reqCenterId(req);
     const id = Number(req.params.id);
-    const grade = await db.prepare(
-        `SELECT g.id, s.center_id, c.teacher_id
-       FROM grades g
-       JOIN students s ON s.id = g.student_id
-       LEFT JOIN classes c ON c.id = g.class_id
-       WHERE g.id = ?`
-      )
-      .get(id) as { id: number; center_id: number | null; teacher_id: number | null } | undefined;
-    if (!grade || (cid !== null && grade.center_id !== cid)) {
-      res.status(404).json({ error: 'Không tìm thấy điểm' });
-      return;
-    }
-    if (req.user?.role === 'teacher' && (!req.user.teacher_id || grade.teacher_id !== req.user.teacher_id)) {
-      res.status(403).json({ error: 'Bạn chỉ được xóa điểm của lớp mình' });
-      return;
-    }
-    await db.prepare('DELETE FROM grades WHERE id = ?').run(id);
+    await deleteGrade(cid, id, req.user?.role || '', req.user?.teacher_id ?? null, actorFromReq(req));
     res.json({ ok: true });
   })
 );

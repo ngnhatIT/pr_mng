@@ -34,38 +34,20 @@ export interface MyPermission {
   scope: Scope;
 }
 
-export const SCOPE_LABEL: Record<Scope, string> = {
-  own: 'Của mình',
-  center: 'Trung tâm',
-  all: 'Tất cả',
-};
+/**
+ * Key i18n cho nhãn phạm vi, dùng với t(scopeLabelKey(scope), { ns: 'roles' }).
+ * Thay thế SCOPE_LABEL cứng tiếng Việt trước đây.
+ */
+export function scopeLabelKey(scope: Scope): string {
+  return `scope.${scope}`;
+}
 
-export const MODULE_LABEL: Record<string, string> = {
-  students: 'Học viên',
-  classes: 'Lớp học',
-  attendance: 'Điểm danh',
-  sessions: 'Buổi học',
-  invoices: 'Học phí',
-  teachers: 'Giáo viên',
-  payroll: 'Lương',
-  homework: 'Bài tập',
-  grades: 'Điểm số',
-  reports: 'Báo cáo',
-  leaves: 'Nghỉ phép',
-  rooms: 'Phòng học',
-  trials: 'Học thử',
-  leads: 'Leads',
-  referrals: 'Giới thiệu',
-  reviews: 'Đánh giá',
-  notifications: 'Thông báo',
-  settings: 'Cấu hình',
-  users: 'Tài khoản',
-  roles: 'Phân quyền',
-  system: 'Hệ thống',
-};
-
-export function moduleLabel(module: string): string {
-  return MODULE_LABEL[module] || module;
+/**
+ * Key i18n cho tên module, dùng với t(moduleLabelKey(module), { ns: 'roles', defaultValue: module }).
+ * Thay thế MODULE_LABEL cứng tiếng Việt trước đây.
+ */
+export function moduleLabelKey(module: string): string {
+  return `module.${module}`;
 }
 
 export const rolesApi = {
@@ -79,7 +61,8 @@ export const rolesApi = {
   remove: (id: number) => http.del<{ ok: boolean }>(`/roles/${id}`),
   setPermissions: (id: number, permissions: { code: string; scope: Scope }[]) =>
     http.put<{ ok: boolean; count: number }>(`/roles/${id}/permissions`, { permissions }),
-  assign: (user_id: number, role_id: number) => http.post<{ ok: boolean }>('/roles/assign', { user_id, role_id }),
+  assign: (user_id: number, role_id: number) =>
+    http.post<{ ok: boolean }>('/roles/assign', { user_id, role_id }),
   unassign: (user_id: number, role_id: number) =>
     http.del<{ ok: boolean }>(`/roles/assign?user_id=${user_id}&role_id=${role_id}`),
   mine: () => http.get<{ data: MyPermission[] }>('/roles/me/permissions'),

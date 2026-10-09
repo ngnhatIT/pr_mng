@@ -3,12 +3,18 @@ import swaggerUi from 'swagger-ui-express';
 import YAML from 'yamljs';
 import path from 'path';
 import { logger } from '../shared/logger';
+import { env } from '../config/env';
 
 /**
  * Mount Swagger UI tại /api/docs.
  * Đọc spec từ src/docs/openapi.yaml (dev) hoặc dist/docs/openapi.yaml (production).
+ * M10: production KHÔNG mount Swagger UI (tránh lộ bề mặt API).
  */
 export function setupSwagger(app: Express): void {
+  if (env.IS_PROD) {
+    logger.warn('[swagger] Production: bỏ qua Swagger UI');
+    return;
+  }
   const candidates = [
     path.resolve(__dirname, 'openapi.yaml'), // dist/docs/openapi.yaml (production)
     path.resolve(__dirname, '..', 'src', 'docs', 'openapi.yaml'), // src (tsx dev)

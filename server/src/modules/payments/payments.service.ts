@@ -1,4 +1,4 @@
-import { db, recalcInvoiceStatus, getCenterSetting, setCenterSetting } from '../../db';
+import { db, getCenterSetting, setCenterSetting } from '../../db';
 import { notifyParents } from '../../services/notify';
 import { afterInvoicePaid } from '../../services/referrals';
 import { verifyVnpayReturn } from '../../services/vnpay';
@@ -8,7 +8,10 @@ import { AppError } from '../../shared/errors';
 import { audit, formatVND, type AuditActor } from '../../shared/audit';
 import { parsePagination, paginate, type PageOptions, type Paginated } from '../../shared/pagination';
 import { eventBus } from '../../shared/events/eventBus';
+import { logger } from '../../shared/logger';
 import { PaymentApprovedEvent, PaymentRejectedEvent } from '../../shared/events/finance.events';
+
+const log = logger.scope('payments');
 
 /* ---------------------------------- Types ---------------------------------- */
 
@@ -27,6 +30,109 @@ const CONFIG_KEYS = [
 
 /* ------------------------------ VNPay callback ------------------------------ */
 
+interface VnpayTxnRow {
+  ref: string;
+  invoice_id: number;
+  amount: number;
+  status: string;
+}
+
+type VnpayConfirmResult =
+  | { kind: 'confirmed'; txnRef: string; already: boolean }
+  | {
+      kind: 'failed';
+      reason: 'notfound' | 'invalid_signature' | 'payment_failed' | 'invalid_status' | 'error';
+    };
+
+/**
+ * Logic xác nhận VNPay dùng chung cho return URL và IPN.
+ * - Idempotent: txn đã 'confirmed' → trả thành công ngay, không ghi thêm payment.
+ * - Chỉ xử lý txn 'pending'; các trạng thái khác → fail.
+ * - Secret trống → từ chối (chống giả mạo callback khi chưa cấu hình).
+ * - Check + confirm bọc trong transaction với SELECT ... FOR UPDATE (chống replay đồng thời).
+ */
+async function confirmVnpayTxn(
+  query: Record<string, string | string[] | undefined>
+): Promise<VnpayConfirmResult> {
+  const txnRef = String(query.vnp_TxnRef || '');
+
+  // Tra cứu nhanh (không lock) để phân loại sớm
+  const txn = (await db.prepare('SELECT * FROM payment_txns WHERE ref = ?').get(txnRef)) as
+    VnpayTxnRow | undefined;
+  if (!txn) return { kind: 'failed', reason: 'notfound' };
+  if (txn.status === 'confirmed') return { kind: 'confirmed', txnRef, already: true };
+  if (txn.status !== 'pending') return { kind: 'failed', reason: 'invalid_status' };
+
+  const inv = (await db
+    .prepare('SELECT id, student_id, amount FROM invoices WHERE id = ?')
+    .get(txn.invoice_id)) as { id: number; student_id: number; amount: number } | undefined;
+  if (!inv) return { kind: 'failed', reason: 'notfound' };
+
+  const student = (await db
+    .prepare('SELECT id, center_id FROM students WHERE id = ?')
+    .get(inv.student_id)) as { id: number; center_id: number | null } | undefined;
+  const centerId = student?.center_id ?? 0;
+  const secret = await getCenterSetting(centerId, 'pay_vnp_hashsecret');
+  // Secret trống → không thể verify chữ ký thật → từ chối ngay (chống giả mạo)
+  if (!secret) return { kind: 'failed', reason: 'invalid_signature' };
+
+  const result = verifyVnpayReturn(query, secret);
+  if (!result.ok) return { kind: 'failed', reason: 'invalid_signature' };
+  if (!result.success) {
+    await db
+      .prepare("UPDATE payment_txns SET status = 'failed' WHERE ref = ? AND status = 'pending'")
+      .run(txnRef);
+    return { kind: 'failed', reason: 'payment_failed' };
+  }
+  // Kiểm tra số tiền khớp (dung sai ±1đ)
+  if (Math.abs(result.amountVnd - txn.amount) > 1) {
+    await db
+      .prepare("UPDATE payment_txns SET status = 'failed' WHERE ref = ? AND status = 'pending'")
+      .run(txnRef);
+    return { kind: 'failed', reason: 'payment_failed' };
+  }
+
+  const amount = Math.round(txn.amount);
+  const confirmed = await db.transaction(async (tx) => {
+    // Lock row txn: request replay đồng thời sẽ chờ và thấy status != 'pending'
+    const locked = (await tx
+      .prepare('SELECT status FROM payment_txns WHERE ref = ? FOR UPDATE')
+      .get(txnRef)) as { status: string } | undefined;
+    if (!locked) return { kind: 'failed', reason: 'notfound' } as VnpayConfirmResult;
+    if (locked.status === 'confirmed')
+      return { kind: 'confirmed', txnRef, already: true } as VnpayConfirmResult;
+    if (locked.status !== 'pending')
+      return { kind: 'failed', reason: 'invalid_status' } as VnpayConfirmResult;
+
+    await tx
+      .prepare("UPDATE payment_txns SET status = 'confirmed' WHERE ref = ? AND status = 'pending'")
+      .run(txnRef);
+    await tx
+      .prepare(
+        "INSERT INTO payments (invoice_id, amount, method, note, status) VALUES (?, ?, 'vnpay', ?, 'confirmed')"
+      )
+      .run(txn.invoice_id, amount, 'VNPay ' + String(query.vnp_TransactionNo || ''));
+    // Recalc trạng thái hóa đơn NGAY trong transaction (tx-scoped, thấy INSERT vừa rồi)
+    const paidRow = (await tx
+      .prepare(
+        "SELECT COALESCE(SUM(amount),0) as paid FROM payments WHERE invoice_id = ? AND status = 'confirmed'"
+      )
+      .get(txn.invoice_id)) as { paid: number };
+    const newStatus = Number(paidRow.paid) >= inv.amount - 0.01 ? 'paid' : 'partial';
+    await tx.prepare('UPDATE invoices SET status = ? WHERE id = ?').run(newStatus, txn.invoice_id);
+    return { kind: 'confirmed', txnRef, already: false, status: newStatus } as VnpayConfirmResult & {
+      status: string;
+    };
+  });
+
+  if (confirmed.kind === 'confirmed' && !confirmed.already) {
+    if ((confirmed as { status?: string }).status === 'paid') {
+      await afterInvoicePaid(txn.invoice_id);
+    }
+  }
+  return confirmed;
+}
+
 /**
  * Xử lý VNPay return (public — VNPay gọi về, không có token).
  * Trả về URL để redirect (luôn thành công ở tầng HTTP, lỗi thể hiện qua query).
@@ -34,50 +140,62 @@ const CONFIG_KEYS = [
 export async function handleVnpayReturn(
   query: Record<string, string | string[] | undefined>
 ): Promise<string> {
-  const fail = (reason: string): string =>
-    `${RESULT_PAGE}?status=fail&reason=${reason}`;
+  const fail = (reason: string): string => `${RESULT_PAGE}?status=fail&reason=${reason}`;
   try {
-    const txnRef = String(query.vnp_TxnRef || '');
-    const txn = (await db.prepare('SELECT * FROM payment_txns WHERE ref = ?').get(txnRef)) as
-      { ref: string; invoice_id: number; amount: number; status: string } | undefined;
-    if (!txn) return fail('notfound');
-
-    const inv = (await db.prepare('SELECT id, student_id, amount FROM invoices WHERE id = ?').get(txn.invoice_id)) as
-      { id: number; student_id: number; amount: number } | undefined;
-    if (!inv) return fail('notfound');
-
-    const student = (await db.prepare('SELECT id, center_id FROM students WHERE id = ?').get(inv.student_id)) as
-      { id: number; center_id: number | null } | undefined;
-    const centerId = student?.center_id ?? 0;
-    const secret = await getCenterSetting(centerId, 'pay_vnp_hashsecret');
-    const result = verifyVnpayReturn(query, secret);
-    if (!result.ok) return fail('invalid_signature');
-    if (!result.success) {
-      await db.prepare("UPDATE payment_txns SET status = 'failed' WHERE ref = ?").run(txnRef);
-      return fail('payment_failed');
+    const r = await confirmVnpayTxn(query);
+    if (r.kind === 'confirmed') {
+      return `${RESULT_PAGE}?status=success&ref=${encodeURIComponent(r.txnRef)}`;
     }
-    // Kiểm tra số tiền khớp (dung sai ±1đ)
-    if (Math.abs(result.amountVnd - txn.amount) > 1) {
-      await db.prepare("UPDATE payment_txns SET status = 'failed' WHERE ref = ?").run(txnRef);
-      return fail('payment_failed');
-    }
-    await db.transaction(async (tx) => {
-      await tx.prepare("UPDATE payment_txns SET status = 'confirmed' WHERE ref = ?").run(txnRef);
-      await tx.prepare(
-        "INSERT INTO payments (invoice_id, amount, method, note, status) VALUES (?, ?, 'vnpay', ?, 'confirmed')"
-      ).run(txn.invoice_id, txn.amount, 'VNPay ' + String(query.vnp_TransactionNo || ''));
+    return fail(r.reason);
+  } catch (err) {
+    log.error('handleVnpayReturn error', {
+      ref: String(query.vnp_TxnRef || ''),
+      error: String(err),
     });
-    const status = await recalcInvoiceStatus(txn.invoice_id);
-    if (status === 'paid') await afterInvoicePaid(txn.invoice_id);
-    return `${RESULT_PAGE}?status=success&ref=${encodeURIComponent(txnRef)}`;
-  } catch {
     return fail('error');
+  }
+}
+
+/**
+ * Xử lý VNPay IPN (server-to-server, VNPay gọi trực tiếp).
+ * Trả về { RspCode, Message } theo chuẩn VNPay để VNPay biết đã nhận.
+ * Dùng khi phụ huynh đóng tab trước khi redirect về — IPN vẫn xác nhận thanh toán.
+ */
+export async function handleVnpayIpn(
+  query: Record<string, string | string[] | undefined>
+): Promise<{ RspCode: string; Message: string }> {
+  try {
+    const r = await confirmVnpayTxn(query);
+    if (r.kind === 'confirmed') {
+      return { RspCode: '00', Message: 'Confirm Success' };
+    }
+    switch (r.reason) {
+      case 'notfound':
+        return { RspCode: '01', Message: 'Order not found' };
+      case 'invalid_status':
+        return { RspCode: '02', Message: 'Order already confirmed' };
+      case 'invalid_signature':
+        return { RspCode: '97', Message: 'Invalid signature' };
+      case 'payment_failed':
+        return { RspCode: '04', Message: 'Invalid amount' };
+      default:
+        return { RspCode: '99', Message: 'Unknown error' };
+    }
+  } catch (err) {
+    log.error('handleVnpayIpn error', {
+      ref: String(query.vnp_TxnRef || ''),
+      error: String(err),
+    });
+    return { RspCode: '99', Message: 'Unknown error' };
   }
 }
 
 /* --------------------------- Duyệt thanh toán --------------------------- */
 
-export async function listPendingPayments(centerId: number | null, pageOpts: PageOptions = {}):  Promise<Paginated<unknown>> {
+export async function listPendingPayments(
+  centerId: number | null,
+  pageOpts: PageOptions = {}
+): Promise<Paginated<unknown>> {
   const conds = ["p.status = 'pending'"];
   const params: unknown[] = [];
   if (centerId !== null) {
@@ -86,28 +204,27 @@ export async function listPendingPayments(centerId: number | null, pageOpts: Pag
   }
   const { page, limit, offset } = parsePagination(pageOpts);
   const from = `FROM payments p JOIN invoices i ON i.id = p.invoice_id JOIN students s ON s.id = i.student_id WHERE ${conds.join(' AND ')}`;
-  const total = (await db.prepare(`SELECT COUNT(*) as c ${from}`).get(...params) as { c: number }).c;
-  const rows = await db.prepare(
+  const total = ((await db.prepare(`SELECT COUNT(*) as c ${from}`).get(...params)) as { c: number }).c;
+  const rows = (await db
+    .prepare(
       `SELECT p.id, p.invoice_id, p.amount, p.paid_at, p.method, p.note,
          s.name as student_name, s.code as student_code
        ${from} ORDER BY p.id DESC LIMIT ? OFFSET ?`
     )
-    .all(...params, limit, offset) as unknown[];
+    .all(...params, limit, offset)) as unknown[];
   return paginate(rows, total, page, limit);
 }
 
-async function getPendingPayment(id: number): Promise<{ id: number; invoice_id: number; amount: number; status: string; }> {
-  const payment = await db.prepare('SELECT * FROM payments WHERE id = ?').get(id) as
-    { id: number; invoice_id: number; amount: number; status: string } | undefined;
-  if (!payment || payment.status !== 'pending') {
-    throw AppError.notFound('Không tìm thấy khoản thanh toán đang chờ duyệt');
-  }
-  return payment;
-}
+/** Duyệt / từ chối khoản thanh toán chờ (staff) — có kiểm tra center. */
 
-async function notifyPaymentResult(studentId: number, amount: number, invoiceId: number, approved: boolean): Promise<void> {
+async function notifyPaymentResult(
+  studentId: number,
+  amount: number,
+  invoiceId: number,
+  approved: boolean
+): Promise<void> {
   const money = Number(amount).toLocaleString('vi-VN');
-  notifyParents(
+  await notifyParents(
     studentId,
     'payment_confirmed',
     approved
@@ -117,47 +234,114 @@ async function notifyPaymentResult(studentId: number, amount: number, invoiceId:
   );
 }
 
-export async function approvePendingPayment(id: number, actor?: AuditActor): Promise<{ status: string; }> {
-  const payment = await getPendingPayment(id);
-  await db.prepare("UPDATE payments SET status = 'confirmed' WHERE id = ?").run(id);
-  const status = await recalcInvoiceStatus(payment.invoice_id);
+/**
+ * Lấy khoản chờ duyệt kèm center_id (qua payments → invoices → students).
+ * Không tồn tại hoặc khác center → 404 (chống IDOR cross-center).
+ */
+async function getScopedPendingPayment(
+  centerId: number | null,
+  id: number
+): Promise<{
+  id: number;
+  invoice_id: number;
+  amount: number;
+  status: string;
+  student_id: number;
+  center_id: number | null;
+}> {
+  const row = (await db
+    .prepare(
+      `SELECT p.id, p.invoice_id, p.amount, p.status, s.id as student_id, s.center_id
+       FROM payments p
+       JOIN invoices i ON i.id = p.invoice_id
+       JOIN students s ON s.id = i.student_id
+       WHERE p.id = ?`
+    )
+    .get(id)) as
+    | {
+        id: number;
+        invoice_id: number;
+        amount: number;
+        status: string;
+        student_id: number;
+        center_id: number | null;
+      }
+    | undefined;
+  if (!row || row.status !== 'pending' || (centerId !== null && row.center_id !== centerId)) {
+    throw AppError.notFound('Không tìm thấy khoản thanh toán đang chờ duyệt');
+  }
+  return row;
+}
+
+export async function approvePendingPayment(
+  centerId: number | null,
+  id: number,
+  actor?: AuditActor
+): Promise<{ status: string }> {
+  const payment = await getScopedPendingPayment(centerId, id);
+  const amount = Math.round(payment.amount);
+  const status = await db.transaction(async (tx) => {
+    // Lock hóa đơn: chống 2 lượt duyệt đồng thời cùng làm overpay
+    const inv = (await tx
+      .prepare('SELECT amount FROM invoices WHERE id = ? FOR UPDATE')
+      .get(payment.invoice_id)) as { amount: number } | undefined;
+    if (!inv) throw AppError.notFound('Không tìm thấy phiếu thu');
+    const paidRow = (await tx
+      .prepare(
+        "SELECT COALESCE(SUM(amount),0) as paid FROM payments WHERE invoice_id = ? AND status = 'confirmed'"
+      )
+      .get(payment.invoice_id)) as { paid: number };
+    const paidSoFar = Number(paidRow.paid);
+    if (paidSoFar + amount > inv.amount + 0.01) {
+      throw AppError.badRequest(
+        `Duyệt khoản này sẽ làm hóa đơn bị thu vượt (còn nợ ${(inv.amount - paidSoFar).toLocaleString('vi-VN')}đ)`
+      );
+    }
+    // Chống double-approve đồng thời: chỉ update khi còn pending
+    const r = await tx
+      .prepare("UPDATE payments SET status = 'confirmed' WHERE id = ? AND status = 'pending'")
+      .run(id);
+    if ((r.changes ?? 0) !== 1) {
+      throw AppError.conflict('Khoản thanh toán đã được xử lý bởi người khác');
+    }
+    const newStatus = paidSoFar + amount >= inv.amount - 0.01 ? 'paid' : 'partial';
+    await tx.prepare('UPDATE invoices SET status = ? WHERE id = ?').run(newStatus, payment.invoice_id);
+    return newStatus;
+  });
   if (status === 'paid') await afterInvoicePaid(payment.invoice_id);
-  const inv = await db.prepare('SELECT student_id FROM invoices WHERE id = ?').get(payment.invoice_id) as
-    { student_id: number } | undefined;
-  if (inv) await notifyPaymentResult(inv.student_id, payment.amount, payment.invoice_id, true);
-  const cid = inv
-    ? ((
-        await db.prepare('SELECT center_id FROM students WHERE id = ?').get(inv.student_id) as
-          { center_id: number | null } | undefined
-      )?.center_id ?? null)
-    : null;
-  audit({
-    centerId: cid,
+  await notifyPaymentResult(payment.student_id, amount, payment.invoice_id, true).catch((err) =>
+    log.warn('notifyPaymentResult failed', { error: String(err) })
+  );
+  void audit({
+    centerId: payment.center_id,
     actor,
     action: 'approve',
     entity: 'payments',
     entityId: id,
-    summary: `Duyệt thanh toán ${formatVND(payment.amount)} cho HD${payment.invoice_id}`,
-    meta: { amount: payment.amount, invoice_id: payment.invoice_id },
+    summary: `Duyệt thanh toán ${formatVND(amount)} cho HD${payment.invoice_id}`,
+    meta: { amount, invoice_id: payment.invoice_id },
   });
-  eventBus.emitSync(new PaymentApprovedEvent(id, payment.invoice_id, payment.amount, cid));
+  eventBus.emitSync(new PaymentApprovedEvent(id, payment.invoice_id, amount, payment.center_id));
   return { status };
 }
 
-export async function rejectPendingPayment(id: number, actor?: AuditActor): Promise<void> {
-  const payment = await getPendingPayment(id);
-  await db.prepare("UPDATE payments SET status = 'rejected' WHERE id = ?").run(id);
-  const inv = await db.prepare('SELECT student_id FROM invoices WHERE id = ?').get(payment.invoice_id) as
-    { student_id: number } | undefined;
-  if (inv) await notifyPaymentResult(inv.student_id, payment.amount, payment.invoice_id, false);
-  const cid = inv
-    ? ((
-        await db.prepare('SELECT center_id FROM students WHERE id = ?').get(inv.student_id) as
-          { center_id: number | null } | undefined
-      )?.center_id ?? null)
-    : null;
-  audit({
-    centerId: cid,
+export async function rejectPendingPayment(
+  centerId: number | null,
+  id: number,
+  actor?: AuditActor
+): Promise<void> {
+  const payment = await getScopedPendingPayment(centerId, id);
+  const r = await db
+    .prepare("UPDATE payments SET status = 'rejected' WHERE id = ? AND status = 'pending'")
+    .run(id);
+  if ((r.changes ?? 0) !== 1) {
+    throw AppError.conflict('Khoản thanh toán đã được xử lý bởi người khác');
+  }
+  await notifyPaymentResult(payment.student_id, payment.amount, payment.invoice_id, false).catch((err) =>
+    log.warn('notifyPaymentResult failed', { error: String(err) })
+  );
+  void audit({
+    centerId: payment.center_id,
     actor,
     action: 'reject',
     entity: 'payments',
@@ -170,7 +354,7 @@ export async function rejectPendingPayment(id: number, actor?: AuditActor): Prom
 
 /* ---------------------------- Cấu hình thanh toán ---------------------------- */
 
-async function resolveConfigCenterId(centerId: number | null):  Promise<number> {
+async function resolveConfigCenterId(centerId: number | null): Promise<number> {
   if (centerId !== null) return centerId;
   const c = await getDefaultCenter();
   if (!c) throw AppError.badRequest('Chưa có trung tâm nào trong hệ thống');
@@ -188,11 +372,17 @@ export async function getPaymentConfig(centerId: number | null): Promise<Record<
   return out;
 }
 
-export async function savePaymentConfig(centerId: number | null, body: Record<string, unknown>): Promise<void> {
+export async function savePaymentConfig(
+  centerId: number | null,
+  body: Record<string, unknown>
+): Promise<void> {
   const cid = await resolveConfigCenterId(centerId);
   for (const k of CONFIG_KEYS) {
     if (!(k in body)) continue;
     let value = String(body[k] ?? '');
+    // Defense in depth: client không gửi secret đã che, nhưng nếu có gửi
+    // (giá trị '••••••••') thì BỎ QUA — không ghi đè secret/token thật.
+    if (value === '••••••••' || /•/.test(value)) continue;
     if (k === 'pay_vnp_enabled') value = value === '1' ? '1' : '0';
     await setCenterSetting(cid, k, value);
   }

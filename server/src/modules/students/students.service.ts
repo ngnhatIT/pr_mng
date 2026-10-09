@@ -33,7 +33,7 @@ export async function listStudents(
   centerId: number | null,
   query: { search?: string; status?: string },
   pageOpts: PageOptions = {}
-):  Promise<Paginated<unknown>> {
+): Promise<Paginated<unknown>> {
   const conds: string[] = [];
   const params: unknown[] = [];
   if (centerId !== null) {
@@ -52,21 +52,29 @@ export async function listStudents(
   }
   const where = conds.length ? `WHERE ${conds.join(' AND ')}` : '';
   const { page, limit, offset } = parsePagination(pageOpts);
-  const total = (await db.prepare(`SELECT COUNT(*) as c FROM students ${where}`).get(...params) as { c: number }).c;
-  const rows = await db.prepare(`SELECT * FROM students ${where} ORDER BY id DESC LIMIT ? OFFSET ?`)
-    .all(...params, limit, offset) as unknown[];
+  const total = (
+    (await db.prepare(`SELECT COUNT(*) as c FROM students ${where}`).get(...params)) as { c: number }
+  ).c;
+  const rows = (await db
+    .prepare(`SELECT * FROM students ${where} ORDER BY id DESC LIMIT ? OFFSET ?`)
+    .all(...params, limit, offset)) as unknown[];
   return paginate(rows, total, page, limit);
 }
 
-export async function getStudentDetail(centerId: number | null, id: number): Promise<Record<string, unknown>> {
-  const student = findByIdOr404<StudentRow>('students', id, centerId, 'Không tìm thấy học viên');
-  const classes = await db.prepare(
+export async function getStudentDetail(
+  centerId: number | null,
+  id: number
+): Promise<Record<string, unknown>> {
+  const student = await findByIdOr404<StudentRow>('students', id, centerId, 'Không tìm thấy học viên');
+  const classes = await db
+    .prepare(
       `SELECT c.id, c.name, e.status as enroll_status, e.enrolled_at
        FROM enrollments e JOIN classes c ON c.id = e.class_id
        WHERE e.student_id = ? ORDER BY e.id DESC`
     )
     .all(id);
-  const invoices = await db.prepare(
+  const invoices = await db
+    .prepare(
       `SELECT i.*, c.name as class_name,
          COALESCE((SELECT SUM(amount) FROM payments WHERE invoice_id = i.id AND status = 'confirmed'), 0) as paid
        FROM invoices i LEFT JOIN classes c ON c.id = i.class_id
@@ -76,14 +84,19 @@ export async function getStudentDetail(centerId: number | null, id: number): Pro
   return { student, classes, invoices };
 }
 
-export async function createStudent(centerId: number | null, isSuperadmin: boolean, input: StudentInput): Promise<unknown> {
+export async function createStudent(
+  centerId: number | null,
+  isSuperadmin: boolean,
+  input: StudentInput
+): Promise<unknown> {
   if (centerId === null && !isSuperadmin) throw AppError.badRequest('Thiếu thông tin trung tâm');
   const finalStatus =
     input.status && (STUDENT_STATUS as readonly string[]).includes(input.status) ? input.status : 'studying';
   const finalCode = input.code || `HV${Date.now().toString().slice(-6)}`;
   const exists = await db.prepare('SELECT 1 FROM students WHERE code = ?').get(finalCode);
   if (exists) throw AppError.conflict('Mã học viên đã tồn tại');
-  const r = await db.prepare(
+  const r = await db
+    .prepare(
       'INSERT INTO students (code, name, phone, email, dob, address, status, note, center_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
     )
     .run(
@@ -100,11 +113,22 @@ export async function createStudent(centerId: number | null, isSuperadmin: boole
   return await db.prepare('SELECT * FROM students WHERE id = ?').get(Number(r.lastInsertRowid));
 }
 
-export async function updateStudent(centerId: number | null, id: number, input: StudentInput): Promise<unknown> {
-  findByIdOr404<StudentRow>('students', id, centerId, 'Không tìm thấy học viên');
-  const finalStatus =
-    input.status && (STUDENT_STATUS as readonly string[]).includes(input.status) ? input.status : 'studying';
-  const r = await db.prepare('UPDATE students SET name=?, phone=?, email=?, dob=?, address=?, status=?, note=? WHERE id=?')
+export async function updateStudent(
+  centerId: number | null,
+  id: number,
+  input: StudentInput
+): Promise<unknown> {
+  const st = await findByIdOr404<StudentRow>('students', id, centerId, 'Không tìm thấy học viên');
+  // Chỉ đổi status khi client gửi lên — tránh "hồi sinh" học viên quit/paused về studying
+  let finalStatus = st.status;
+  if (input.status !== undefined && input.status !== null && input.status !== '') {
+    if (!(STUDENT_STATUS as readonly string[]).includes(input.status)) {
+      throw AppError.badRequest('Trạng thái học viên không hợp lệ');
+    }
+    finalStatus = input.status;
+  }
+  const r = await db
+    .prepare('UPDATE students SET name=?, phone=?, email=?, dob=?, address=?, status=?, note=? WHERE id=?')
     .run(
       input.name.trim(),
       input.phone || null,
@@ -125,7 +149,9 @@ export async function deleteStudent(centerId: number | null, id: number, actor?:
   await db.transaction(async (tx) => {
     await tx.prepare('DELETE FROM attendance WHERE student_id = ?').run(id);
     await tx.prepare('DELETE FROM enrollments WHERE student_id = ?').run(id);
-    const invs = await tx.prepare('SELECT id FROM invoices WHERE student_id = ?').all(id) as { id: number }[];
+    const invs = (await tx.prepare('SELECT id FROM invoices WHERE student_id = ?').all(id)) as {
+      id: number;
+    }[];
     for (const inv of invs) await tx.prepare('DELETE FROM payments WHERE invoice_id = ?').run(inv.id);
     await tx.prepare('DELETE FROM invoices WHERE student_id = ?').run(id);
     await tx.prepare('DELETE FROM parent_students WHERE student_id = ?').run(id);
@@ -133,7 +159,7 @@ export async function deleteStudent(centerId: number | null, id: number, actor?:
     await tx.prepare('DELETE FROM grades WHERE student_id = ?').run(id);
     await tx.prepare('DELETE FROM students WHERE id = ?').run(id);
   });
-  audit({
+  void audit({
     centerId,
     actor,
     action: 'delete',

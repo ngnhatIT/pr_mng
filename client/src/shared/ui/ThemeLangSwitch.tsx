@@ -6,23 +6,18 @@ import type { AppLang } from '../../i18n';
 
 /** Nút chuyển theme sáng/tối + chuyển ngôn ngữ VI/EN cho topbar. */
 export function ThemeLangSwitch() {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const { theme, toggle } = useTheme();
   const lang = getAppLang();
 
   const switchLang = (lng: AppLang) => {
+    // setAppLang đã gọi i18n.changeLanguage bên trong (đủ để re-render).
     setAppLang(lng);
-    // ép re-render sau khi đổi ngôn ngữ
-    void i18n.changeLanguage(lng);
   };
 
   return (
     <div className="theme-lang-switch">
-      <div
-        className="lang-seg"
-        role="group"
-        aria-label={t('lang.label')}
-      >
+      <div className="lang-seg" role="group" aria-label={t('lang.label')}>
         {(['vi', 'en'] as AppLang[]).map((l) => (
           <button
             key={l}

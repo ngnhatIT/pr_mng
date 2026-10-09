@@ -1,27 +1,131 @@
-import type { Db } from './pg-compat';
+import type { Db, Tx } from './pg-compat';
 import { SCHEMA_VERSION } from './schema';
 
 /**
- * Migration PostgreSQL — baseline mới, đánh số lại từ 1.
+ * Migration PostgreSQL — chạy tuần tự theo version, mỗi migration trong
+ * 1 transaction riêng, ghi nhận vào schema_migrations.
  *
- * Không tái sử dụng migration SQLite cũ (khác engine). DB PostgreSQL luôn
- * được tạo từ schema.ts hiện tại; bảng schema_migrations chỉ ghi nhận
- * version baseline để các migration tăng dần trong tương lai có điểm tựa.
+ * - DB mới: schema.ts đã là trạng thái đích; migration vẫn chạy (idempotent)
+ *   để mọi môi trường hội tụ cùng trạng thái.
+ * - DB cũ: chỉ chạy các migration chưa ghi nhận.
+ * - Fail-fast nếu version trong DB lớn hơn code (DB được migrate bởi bản
+ *   code mới hơn — từ chối chạy để tránh ghi đè).
  *
- * Chuyển dữ liệu từ SQLite cũ (nếu có): xem scripts/migrate-sqlite-to-pg.ts.
+ * Không tái sử dụng migration SQLite cũ (khác engine). Chuyển dữ liệu từ
+ * SQLite cũ (nếu có): xem scripts/migrate-sqlite-to-pg.ts.
  */
+
+interface Migration {
+  version: number;
+  name: string;
+  up: (tx: Tx) => Promise<void>;
+}
+
+const MIGRATIONS: Migration[] = [
+  {
+    version: 2,
+    name: 'reminder_kinds',
+    up: async (tx) => {
+      // Mở rộng danh sách kind cho reminders (scheduler/Zalo/bài tập/điểm dùng
+      // các kind mới nhưng constraint cũ chỉ cho phép 3 giá trị -> INSERT lỗi).
+      await tx.exec('ALTER TABLE reminders DROP CONSTRAINT IF EXISTS chk_reminders_kind');
+      // DO block để idempotent: DB mới tạo từ schema.ts đã có constraint mới.
+      await tx.exec(`DO $$
+        BEGIN
+          IF NOT EXISTS (
+            SELECT 1 FROM pg_constraint
+            WHERE conname = 'chk_reminders_kind' AND conrelid = 'reminders'::regclass
+          ) THEN
+            ALTER TABLE reminders ADD CONSTRAINT chk_reminders_kind CHECK (
+              kind IN ('overdue','upcoming','receipt','test','absence','leave_result',
+                       'payment_confirmed','grade','homework','general')
+            );
+          END IF;
+        END $$;`);
+      // Thêm trạng thái 'sending': log được ghi TRƯỚC khi gọi ZNS để chống gửi trùng khi crash.
+      await tx.exec('ALTER TABLE reminders DROP CONSTRAINT IF EXISTS chk_reminders_status');
+      await tx.exec(`DO $$
+        BEGIN
+          IF NOT EXISTS (
+            SELECT 1 FROM pg_constraint
+            WHERE conname = 'chk_reminders_status' AND conrelid = 'reminders'::regclass
+          ) THEN
+            ALTER TABLE reminders ADD CONSTRAINT chk_reminders_status CHECK (
+              status IN ('sending', 'sent', 'failed', 'demo')
+            );
+          END IF;
+        END $$;`);
+    },
+  },
+  {
+    version: 3,
+    name: 'reviews_parent_unique',
+    up: async (tx) => {
+      // Mỗi phụ huynh chỉ có 1 đánh giá đang hiệu lực mỗi trung tâm
+      // (parent_id NULL = đánh giá ẩn danh, không áp unique).
+      await tx.exec(
+        'CREATE UNIQUE INDEX IF NOT EXISTS parent_reviews_unique ON reviews(parent_id, center_id) WHERE parent_id IS NOT NULL'
+      );
+    },
+  },
+  {
+    version: 4,
+    name: 'history_changed_by',
+    up: async (tx) => {
+      // Lưới an toàn: cột changed_by đã có trong schema.ts hiện tại, nhưng DB
+      // tạo từ bản schema cũ hơn có thể thiếu -> thêm nếu chưa có.
+      // (runMigrations chạy TRƯỚC createHistoryTables nên bảng có thể chưa tồn
+      // tại trên DB hoàn toàn mới -> kiểm tra tồn tại trước.)
+      for (const t of ['payment_history', 'invoice_history']) {
+        const exists = await tx
+          .prepare("SELECT 1 AS ok FROM pg_tables WHERE schemaname = 'public' AND tablename = ?")
+          .get(t);
+        if (exists) {
+          await tx.exec(`ALTER TABLE ${t} ADD COLUMN IF NOT EXISTS changed_by INTEGER`);
+        }
+      }
+    },
+  },
+];
+
+/** Version migration cao nhất mà code hiện tại biết (để test đối chiếu). */
+export const LATEST_MIGRATION_VERSION: number = Math.max(...MIGRATIONS.map((m) => m.version));
+
+const CODE_VERSION = Math.max(SCHEMA_VERSION, LATEST_MIGRATION_VERSION);
+
 export async function runMigrations(db: Db): Promise<void> {
   await db.exec(`CREATE TABLE IF NOT EXISTS schema_migrations (
     version INTEGER PRIMARY KEY,
     name TEXT NOT NULL,
     applied_at TEXT NOT NULL DEFAULT (to_char(NOW(), 'YYYY-MM-DD HH24:MI:SS'))
   )`);
-  const r = await db.query('SELECT version FROM schema_migrations ORDER BY version DESC LIMIT 1');
-  const current = ((r.rows[0] as { version?: number } | undefined)?.version ?? 0) as number;
-  if (current < SCHEMA_VERSION) {
-    await db.query('INSERT INTO schema_migrations (version, name) VALUES (?, ?) ON CONFLICT (version) DO NOTHING', [
-      SCHEMA_VERSION,
-      'pg_baseline',
-    ]);
+
+  const r = await db.query('SELECT version FROM schema_migrations');
+  const applied = new Set((r.rows as { version: number }[]).map((row) => Number(row.version)));
+
+  // Fail-fast: DB đã được migrate bởi code mới hơn -> từ chối chạy.
+  const dbMax = applied.size > 0 ? Math.max(...applied) : 0;
+  if (dbMax > CODE_VERSION) {
+    throw new Error(
+      `[MIGRATION] DB schema version ${dbMax} mới hơn code (${CODE_VERSION}) — từ chối khởi động để tránh ghi đè`
+    );
+  }
+
+  // Baseline cho DB hoàn toàn mới (giữ tương thích với bản stub trước đây).
+  if (applied.size === 0) {
+    await db.query(
+      'INSERT INTO schema_migrations (version, name) VALUES (?, ?) ON CONFLICT (version) DO NOTHING',
+      [SCHEMA_VERSION, 'pg_baseline']
+    );
+    applied.add(SCHEMA_VERSION);
+  }
+
+  for (const m of [...MIGRATIONS].sort((a, b) => a.version - b.version)) {
+    if (applied.has(m.version)) continue;
+    await db.transaction(async (tx) => {
+      await m.up(tx);
+      await tx.prepare('INSERT INTO schema_migrations (version, name) VALUES (?, ?)').run(m.version, m.name);
+    });
+    applied.add(m.version);
   }
 }

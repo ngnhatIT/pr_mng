@@ -27,7 +27,9 @@
     "registerSuccess": "Đăng ký thành công!",
     "registerTitle": "Đăng ký phụ huynh",
     "registering": "Đang đăng ký...",
-    "welcome": "Xin chào, {{name}}!"
+    "welcome": "Xin chào, {{name}}!",
+    "centerRequired": "Không xác định được trung tâm. Vui lòng thử lại.",
+    "registerAtCenter": "Đăng ký tại {name}"
   },
   "child": {
     "attendance": {
@@ -133,7 +135,9 @@
     "linking": "Đang liên kết...",
     "loadError": "Không tải được danh sách con",
     "noClasses": "Chưa ghi danh lớp nào",
-    "subtitle": "Theo dõi tiến độ học tập của con bạn tại đây."
+    "subtitle": "Theo dõi tiến độ học tập của con bạn tại đây.",
+    "dobField": "Ngày sinh của học viên",
+    "dobRequired": "Vui lòng nhập ngày sinh của học viên"
   },
   "leaves": {
     "allClasses": "- Tất cả các lớp -",
@@ -200,7 +204,8 @@
     "tryHarder": "Cần ôn lại bài nhé!",
     "unanswered": "Còn {{count}} câu chưa trả lời",
     "viewAnswers": "Xem đáp án",
-    "youChose": "(bạn chọn)"
+    "youChose": "(bạn chọn)",
+    "retry": "Làm lại"
   },
   "referral": {
     "copied": "Đã sao chép",

@@ -24,17 +24,8 @@ import {
   getHomeworkSubmissions,
   type ScopeCtx,
 } from './homework.service';
-import {
-  listRubrics,
-  getRubric,
-  createRubric,
-  deleteRubric,
-} from './rubric.service';
-import {
-  saveQuizQuestions,
-  getAllAttempts,
-  getQuizForStaff,
-} from './quiz.service';
+import { listRubrics, getRubric, createRubric, deleteRubric } from './rubric.service';
+import { saveQuizQuestions, getAllAttempts, getQuizForStaff } from './quiz.service';
 import {
   listBankQuestions,
   listBankTags,
@@ -94,10 +85,18 @@ router.get(
   '/',
   requirePermission('homework.view'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
-    const { class_id = '', search = '', due = '', status = '', kind = '', page, limit } = req.query as Record<string, string>;
+    const {
+      class_id = '',
+      search = '',
+      due = '',
+      status = '',
+      kind = '',
+      page,
+      limit,
+    } = req.query as Record<string, string>;
     // Mặc định ẩn nháp? Không — staff thấy tất cả, phân biệt bằng status badge
     res.json(
-      listHomework(
+      await listHomework(
         ctxFrom(req),
         {
           class_id,
@@ -117,7 +116,7 @@ router.get(
   '/stats',
   requirePermission('homework.view'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
-    res.json(getHomeworkStats(ctxFrom(req)));
+    res.json(await getHomeworkStats(ctxFrom(req)));
   })
 );
 
@@ -126,7 +125,7 @@ router.get(
   '/analytics',
   requirePermission('homework.view'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
-    res.json(getHomeworkAnalytics(ctxFrom(req)));
+    res.json(await getHomeworkAnalytics(ctxFrom(req)));
   })
 );
 
@@ -159,11 +158,12 @@ router.post(
     // Lưu câu hỏi quiz
     if (input.kind === 'quiz' && input.questions.length) {
       for (const hw of created) {
-        saveQuizQuestions(hw.id, input.questions as never);
+        await saveQuizQuestions(hw.id, input.questions as never);
       }
     }
-    const statusLabel = input.status === 'draft' ? 'nháp' : input.status === 'scheduled' ? 'hẹn giờ đăng' : 'đăng';
-    audit({
+    const statusLabel =
+      input.status === 'draft' ? 'nháp' : input.status === 'scheduled' ? 'hẹn giờ đăng' : 'đăng';
+    void audit({
       centerId: reqCenterId(req),
       actor: actorFromReq(req),
       action: 'create',
@@ -184,7 +184,7 @@ router.get(
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const id = Number(req.params.id);
     await requireHomework(req, id);
-    res.json(getHomeworkDetail(id));
+    res.json(await getHomeworkDetail(id));
   })
 );
 
@@ -220,7 +220,7 @@ router.post(
     const id = Number(req.params.id);
     const hw = await requireHomework(req, id);
     await setHomeworkStatus(id, 'draft', reqCenterId(req));
-    audit({
+    void audit({
       centerId: reqCenterId(req),
       actor: actorFromReq(req),
       action: 'update',
@@ -240,7 +240,7 @@ router.get(
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const id = Number(req.params.id);
     await requireHomework(req, id);
-    res.json(getHomeworkScores(id));
+    res.json(await getHomeworkScores(id));
   })
 );
 
@@ -256,11 +256,18 @@ router.post(
       score: v.any({ label: 'Điểm' }),
       feedback: v.string({ max: 2000, label: 'Nhận xét' }),
     });
-    const score = body.score === null || body.score === undefined || body.score === '' ? null : Number(body.score);
+    const score =
+      body.score === null || body.score === undefined || body.score === '' ? null : Number(body.score);
     if (score !== null && (!Number.isFinite(score) || score < 0)) {
       throw AppError.badRequest('Điểm không hợp lệ');
     }
-    gradeHomework(id, body.student_id as number, score, (body.feedback as string) || null, req.user!.id);
+    await gradeHomework(
+      id,
+      body.student_id as number,
+      score,
+      (body.feedback as string) || null,
+      req.user!.id
+    );
     res.json({ ok: true });
   })
 );
@@ -272,7 +279,7 @@ router.get(
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const id = Number(req.params.id);
     await requireHomework(req, id);
-    res.json(getAllAttempts(id));
+    res.json(await getAllAttempts(id));
   })
 );
 
@@ -283,7 +290,7 @@ router.get(
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const id = Number(req.params.id);
     await requireHomework(req, id);
-    res.json(getQuizForStaff(id));
+    res.json(await getQuizForStaff(id));
   })
 );
 
@@ -298,7 +305,7 @@ router.put(
     if (!Array.isArray(questions)) {
       throw AppError.badRequest('Thiếu danh sách câu hỏi');
     }
-    saveQuizQuestions(id, questions as never);
+    await saveQuizQuestions(id, questions as never);
     res.json({ ok: true, count: questions.length });
   })
 );
@@ -311,8 +318,8 @@ router.get(
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const { search = '', tag = '' } = req.query as Record<string, string>;
     res.json({
-      questions: listBankQuestions(reqCenterId(req), search, tag),
-      tags: listBankTags(reqCenterId(req)),
+      questions: await listBankQuestions(reqCenterId(req), search, tag),
+      tags: await listBankTags(reqCenterId(req)),
     });
   })
 );
@@ -322,12 +329,17 @@ router.post(
   requirePermission('homework.create'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const { tag, question, points, options } = req.body as {
-      tag: string; question: string; points: number; options: { text: string; is_correct: boolean }[];
+      tag: string;
+      question: string;
+      points: number;
+      options: { text: string; is_correct: boolean }[];
     };
     if (!Array.isArray(options)) {
       throw AppError.badRequest('Thiếu đáp án');
     }
-    res.status(201).json(addBankQuestion(reqCenterId(req), req.user!.id, { tag, question, points, options }));
+    res
+      .status(201)
+      .json(await addBankQuestion(reqCenterId(req), req.user!.id, { tag, question, points, options }));
   })
 );
 
@@ -335,7 +347,7 @@ router.delete(
   '/bank/questions/:bid',
   requirePermission('homework.delete'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
-    deleteBankQuestion(Number(req.params.bid), reqCenterId(req));
+    await deleteBankQuestion(Number(req.params.bid), reqCenterId(req));
     res.json({ ok: true });
   })
 );
@@ -351,7 +363,7 @@ router.post(
     if (!Array.isArray(bank_ids) || !bank_ids.length) {
       throw AppError.badRequest('Chưa chọn câu hỏi');
     }
-    const count = importFromBank(id, bank_ids.map(Number), reqCenterId(req));
+    const count = await importFromBank(id, bank_ids.map(Number), reqCenterId(req));
     res.json({ ok: true, count });
   })
 );
@@ -365,7 +377,7 @@ router.get(
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const id = Number(req.params.id);
     await requireHomework(req, id);
-    const rows = getHomeworkSubmissions(id);
+    const rows = await getHomeworkSubmissions(id);
     res.json(rows);
   })
 );
@@ -376,7 +388,7 @@ router.get(
   '/rubrics/list',
   requirePermission('homework.view'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
-    res.json(listRubrics(reqCenterId(req)));
+    res.json(await listRubrics(reqCenterId(req)));
   })
 );
 
@@ -388,7 +400,7 @@ router.post(
     if (!Array.isArray(criteria)) {
       throw AppError.badRequest('Thiếu danh sách tiêu chí');
     }
-    res.status(201).json(createRubric(reqCenterId(req), req.user!.id, { name, criteria }));
+    res.status(201).json(await createRubric(reqCenterId(req), req.user!.id, { name, criteria }));
   })
 );
 
@@ -426,7 +438,7 @@ router.put(
       throw AppError.badRequest('Hạn nộp không hợp lệ (YYYY-MM-DD)');
     }
     res.json(
-      updateHomework(id, {
+      await updateHomework(id, {
         title: body.title as string,
         content: body.content,
         due_date: body.due_date || null,
@@ -448,7 +460,7 @@ router.delete(
     const id = Number(req.params.id);
     const hw = await requireHomework(req, id);
     await deleteHomework(id, reqCenterId(req));
-    audit({
+    void audit({
       centerId: reqCenterId(req),
       actor: actorFromReq(req),
       action: 'delete',

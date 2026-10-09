@@ -26,22 +26,23 @@ export async function listRubrics(centerId: number | null): Promise<Rubric[]> {
     conds.push('(center_id = ? OR center_id IS NULL)');
     params.push(centerId);
   }
-  const rows = await db.prepare(`SELECT * FROM rubrics WHERE ${conds.join(' AND ')} ORDER BY id DESC`)
-    .all(...params) as { id: number; name: string }[];
+  const rows = (await db
+    .prepare(`SELECT * FROM rubrics WHERE ${conds.join(' AND ')} ORDER BY id DESC`)
+    .all(...params)) as { id: number; name: string }[];
   return (await Promise.all(rows.map((r) => getRubric(r.id)))).filter((r): r is Rubric => r !== null);
 }
 
 /** Chi tiết rubric kèm tiêu chí (scope center để chống cross-tenant). */
 export async function getRubric(id: number, centerId?: number | null): Promise<Rubric | null> {
-  const r = await db.prepare('SELECT * FROM rubrics WHERE id = ?').get(id) as
-    | { id: number; name: string; center_id: number | null }
-    | undefined;
+  const r = (await db.prepare('SELECT * FROM rubrics WHERE id = ?').get(id)) as
+    { id: number; name: string; center_id: number | null } | undefined;
   if (!r) return null;
   if (centerId !== undefined && centerId !== null && r.center_id !== null && r.center_id !== centerId) {
     return null;
   }
-  const criteria = await db.prepare('SELECT id, name, max_score FROM rubric_criteria WHERE rubric_id = ? ORDER BY position, id')
-    .all(id) as RubricCriterion[];
+  const criteria = (await db
+    .prepare('SELECT id, name, max_score FROM rubric_criteria WHERE rubric_id = ? ORDER BY position, id')
+    .all(id)) as RubricCriterion[];
   return {
     id: r.id,
     name: r.name,
@@ -63,7 +64,8 @@ export async function createRubric(
     if (!c.name.trim()) throw AppError.badRequest(`Tiêu chí ${i + 1} chưa có tên`);
   });
   const rid = await db.transaction(async (tx) => {
-    const ins = await tx.prepare('INSERT INTO rubrics (center_id, name, created_by) VALUES (?, ?, ?)')
+    const ins = await tx
+      .prepare('INSERT INTO rubrics (center_id, name, created_by) VALUES (?, ?, ?)')
       .run(centerId, data.name.trim(), createdBy);
     const rid = Number(ins.lastInsertRowid);
     const stmt = await tx.prepare(
@@ -79,9 +81,8 @@ export async function createRubric(
 
 /** Xóa rubric (chỉ khi chưa gắn vào bài tập nào, và thuộc center). */
 export async function deleteRubric(id: number, centerId: number | null): Promise<void> {
-  const r = await db.prepare('SELECT center_id FROM rubrics WHERE id = ?').get(id) as
-    | { center_id: number | null }
-    | undefined;
+  const r = (await db.prepare('SELECT center_id FROM rubrics WHERE id = ?').get(id)) as
+    { center_id: number | null } | undefined;
   if (!r) return;
   if (centerId !== null && r.center_id !== null && r.center_id !== centerId) {
     throw AppError.notFound('Không tìm thấy rubric');

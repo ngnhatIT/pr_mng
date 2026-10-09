@@ -132,7 +132,8 @@
       "createdAt": "Ngày tạo",
       "referred": "Người được giới thiệu",
       "reward": "Thưởng",
-      "status": "Trạng thái"
+      "status": "Trạng thái",
+      "referrer": "Người giới thiệu"
     },
     "desc": "Theo dõi lượt giới thiệu và thưởng credits",
     "empty": {
@@ -268,7 +269,8 @@
       "enrolled": "Đã đăng ký",
       "lost": "Mất",
       "new": "Mới",
-      "trialed": "Đã học thử"
+      "trialed": "Đã học thử",
+      "converted": "Đã chuyển đổi"
     },
     "title": "Học thử",
     "toast": {
@@ -323,7 +325,7 @@
       "test": "Tin nhắn thử",
       "upcoming": "Sắp đến hạn"
     },
-    "notAdmin": "Mục cấu hình chỉ dành cho Quản trị viên. Bạn vẫn có thể xem lịch sử nhắc bên dưới.",
+    "notAdmin": "Mục cấu hình cần quyền quản lý thông báo (notifications.manage). Bạn vẫn có thể xem lịch sử nhắc bên dưới.",
     "ph": {
       "centerName": "Trung tâm Anh ngữ ABC",
       "oaId": "VD: 1234567890",

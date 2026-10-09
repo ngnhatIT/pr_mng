@@ -16,6 +16,7 @@ export function ParentHome() {
   const [children, setChildren] = useState<ParentChild[]>([]);
   const [loading, setLoading] = useState(true);
   const [code, setCode] = useState('');
+  const [dob, setDob] = useState('');
   const [linking, setLinking] = useState(false);
   const toast = useToast();
   const user = getUser();
@@ -42,11 +43,16 @@ export function ParentHome() {
       toast(t('home.codeRequired'), 'error');
       return;
     }
+    if (!dob) {
+      toast(t('home.dobRequired'), 'error');
+      return;
+    }
     setLinking(true);
     try {
-      const r = await parentApi.linkChild(code.trim());
+      const r = await parentApi.linkChild(code.trim(), dob);
       toast(t('home.linkedSuccess', { name: r.student.name }), 'success');
       setCode('');
+      setDob('');
       void load();
     } catch (err) {
       toast(err instanceof Error ? err.message : t('home.linkError'), 'error');
@@ -114,6 +120,9 @@ export function ParentHome() {
               onChange={(e) => setCode(e.target.value)}
               placeholder={t('home.codePlaceholder')}
             />
+          </Field>
+          <Field label={t('home.dobField')}>
+            <input className="text-input" type="date" value={dob} onChange={(e) => setDob(e.target.value)} />
           </Field>
           <button className="btn btn-primary btn-block" type="submit" disabled={linking}>
             {linking ? t('home.linking') : t('home.linkAction')}

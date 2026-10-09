@@ -27,7 +27,9 @@
     "registerSuccess": "Signed up successfully!",
     "registerTitle": "Parent sign up",
     "registering": "Signing up...",
-    "welcome": "Hello, {{name}}!"
+    "welcome": "Hello, {{name}}!",
+    "centerRequired": "Could not determine the center. Please try again.",
+    "registerAtCenter": "Registering at {name}"
   },
   "child": {
     "attendance": {
@@ -133,7 +135,9 @@
     "linking": "Linking...",
     "loadError": "Couldn't load your children",
     "noClasses": "Not enrolled in any class",
-    "subtitle": "Follow your child's learning progress here."
+    "subtitle": "Follow your child's learning progress here.",
+    "dobField": "Student's date of birth",
+    "dobRequired": "Please enter the student's date of birth"
   },
   "leaves": {
     "allClasses": "- All classes -",
@@ -200,7 +204,8 @@
     "tryHarder": "Time to review the lesson!",
     "unanswered": "{{count}} questions unanswered",
     "viewAnswers": "View answers",
-    "youChose": "(your choice)"
+    "youChose": "(your choice)",
+    "retry": "Retry"
   },
   "referral": {
     "copied": "Copied",

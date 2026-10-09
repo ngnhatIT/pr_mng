@@ -28,7 +28,7 @@ export async function listAuditLogs(
   centerId: number | null,
   filter: AuditFilter,
   pageOpts: PageOptions = {}
-):  Promise<Paginated<AuditLogRow>> {
+): Promise<Paginated<AuditLogRow>> {
   const conds: string[] = [];
   const params: unknown[] = [];
   if (centerId !== null) {
@@ -53,9 +53,11 @@ export async function listAuditLogs(
   }
   const where = conds.length ? `WHERE ${conds.join(' AND ')}` : '';
   const { page, limit, offset } = parsePagination(pageOpts);
-  const total = (await db.prepare(`SELECT COUNT(*) as c FROM audit_logs ${where}`).get(...params) as { c: number })
-    .c;
-  const rows = await db.prepare(`SELECT * FROM audit_logs ${where} ORDER BY id DESC LIMIT ? OFFSET ?`)
-    .all(...params, limit, offset) as AuditLogRow[];
+  const total = (
+    (await db.prepare(`SELECT COUNT(*) as c FROM audit_logs ${where}`).get(...params)) as { c: number }
+  ).c;
+  const rows = (await db
+    .prepare(`SELECT * FROM audit_logs ${where} ORDER BY id DESC LIMIT ? OFFSET ?`)
+    .all(...params, limit, offset)) as AuditLogRow[];
   return paginate(rows, total, page, limit);
 }

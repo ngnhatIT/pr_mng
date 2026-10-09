@@ -6,6 +6,7 @@
  * module, mỗi quyền chọn phạm vi qua segmented control. System role chỉ xem.
  */
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useToast } from '../../shared/ui/toast';
 import { PageHeader } from '../../shared/components/PageHeader';
 import { EmptyState } from '../../shared/components/EmptyState';
@@ -14,8 +15,8 @@ import { Modal, ConfirmDialog } from '../../shared/components/Modal';
 import { Icon } from '../../shared/components/icons';
 import {
   rolesApi,
-  moduleLabel,
-  SCOPE_LABEL,
+  moduleLabelKey,
+  scopeLabelKey,
   type Role,
   type RoleDetail,
   type Permission,
@@ -24,12 +25,6 @@ import {
 import './Roles.css';
 
 const SCOPES: (Scope | null)[] = [null, 'own', 'center', 'all'];
-const SCOPE_SHORT: Record<string, string> = {
-  '': 'Tắt',
-  own: 'Của mình',
-  center: 'Trung tâm',
-  all: 'Tất cả',
-};
 
 type Draft = Record<string, Scope | null>;
 
@@ -49,6 +44,7 @@ function RoleForm({
   onClose: () => void;
   onSubmit: (input: { code?: string; name: string; description?: string }) => Promise<void>;
 }) {
+  const { t } = useTranslation(['roles', 'common']);
   const toast = useToast();
   const [name, setName] = useState(initial?.name ?? '');
   const [code, setCode] = useState('');
@@ -57,16 +53,22 @@ function RoleForm({
 
   const save = async () => {
     if (!name.trim()) {
-      toast('Vui lòng nhập tên vai trò', 'error');
+      toast(t('form.needName'), 'error');
       return;
     }
     let clean: string | undefined;
     if (!initial) {
       clean =
-        code.trim().toLowerCase().replace(/[^a-z0-9_]/g, '_') ||
-        name.trim().toLowerCase().replace(/[^a-z0-9_]/g, '_');
+        code
+          .trim()
+          .toLowerCase()
+          .replace(/[^a-z0-9_]/g, '_') ||
+        name
+          .trim()
+          .toLowerCase()
+          .replace(/[^a-z0-9_]/g, '_');
       if (!clean) {
-        toast('Vui lòng nhập mã vai trò', 'error');
+        toast(t('form.needCode'), 'error');
         return;
       }
     }
@@ -75,7 +77,7 @@ function RoleForm({
       await onSubmit({ code: clean, name: name.trim(), description: description.trim() || undefined });
       onClose();
     } catch (err) {
-      toast(err instanceof Error ? err.message : 'Không lưu được', 'error');
+      toast(err instanceof Error ? err.message : t('form.saveFail'), 'error');
     } finally {
       setSaving(false);
     }
@@ -85,41 +87,41 @@ function RoleForm({
     <div className="form-grid">
       {!initial && (
         <label className="form-field">
-          <span>Mã vai trò</span>
+          <span>{t('form.code')}</span>
           <input
             className="text-input"
             value={code}
             onChange={(e) => setCode(e.target.value)}
-            placeholder="vd: le_tan (tự sinh từ tên nếu bỏ trống)"
+            placeholder={t('form.codePh')}
           />
         </label>
       )}
       <label className="form-field">
-        <span>Tên vai trò</span>
+        <span>{t('form.name')}</span>
         <input
           className="text-input"
           value={name}
           onChange={(e) => setName(e.target.value)}
-          placeholder="vd: Lễ tân"
+          placeholder={t('form.namePh')}
           autoFocus
         />
       </label>
       <label className="form-field">
-        <span>Mô tả</span>
+        <span>{t('form.desc')}</span>
         <textarea
           className="text-input"
           value={description}
           onChange={(e) => setDescription(e.target.value)}
-          placeholder="Vai trò này làm gì trong trung tâm?"
+          placeholder={t('form.descPh')}
           rows={3}
         />
       </label>
       <div className="form-actions">
         <button className="btn btn-ghost" onClick={onClose} disabled={saving}>
-          Hủy
+          {t('actions.cancel', { ns: 'common' })}
         </button>
         <button className="btn btn-primary" onClick={save} disabled={saving}>
-          {saving ? 'Đang lưu...' : initial ? 'Lưu thay đổi' : 'Tạo vai trò'}
+          {saving ? t('saving') : initial ? t('form.save') : t('form.create')}
         </button>
       </div>
     </div>
@@ -127,6 +129,7 @@ function RoleForm({
 }
 
 export function Roles() {
+  const { t } = useTranslation(['roles', 'common']);
   const toast = useToast();
   const [roles, setRoles] = useState<Role[]>([]);
   const [catalog, setCatalog] = useState<Permission[]>([]);
@@ -142,6 +145,13 @@ export function Roles() {
   const [showEdit, setShowEdit] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
 
+  const SCOPE_SHORT: Record<string, string> = {
+    '': t('scopeShort.off'),
+    own: t('scopeShort.own'),
+    center: t('scopeShort.center'),
+    all: t('scopeShort.all'),
+  };
+
   const loadRoles = useCallback(async () => {
     try {
       const [r, c] = await Promise.all([rolesApi.list(), rolesApi.permissions()]);
@@ -154,28 +164,31 @@ export function Roles() {
     } catch (err) {
       const msg = err instanceof Error ? err.message : '';
       if (msg.includes('quyền')) setForbidden(true);
-      else toast(msg || 'Không tải được danh sách vai trò', 'error');
+      else toast(msg || t('toast.loadRolesFail'), 'error');
     } finally {
       setLoading(false);
     }
-  }, [toast]);
+  }, [toast, t]);
 
   useEffect(() => {
     void loadRoles();
   }, [loadRoles]);
 
-  const loadDetail = useCallback(async (id: number) => {
-    setDetailLoading(true);
-    try {
-      const d = await rolesApi.detail(id);
-      setDetail(d);
-    } catch (err) {
-      toast(err instanceof Error ? err.message : 'Không tải được chi tiết vai trò', 'error');
-      setDetail(null);
-    } finally {
-      setDetailLoading(false);
-    }
-  }, [toast]);
+  const loadDetail = useCallback(
+    async (id: number) => {
+      setDetailLoading(true);
+      try {
+        const d = await rolesApi.detail(id);
+        setDetail(d);
+      } catch (err) {
+        toast(err instanceof Error ? err.message : t('toast.loadDetailFail'), 'error');
+        setDetail(null);
+      } finally {
+        setDetailLoading(false);
+      }
+    },
+    [toast, t]
+  );
 
   useEffect(() => {
     if (selectedId !== null) {
@@ -218,9 +231,7 @@ export function Roles() {
   const filteredRoles = useMemo(() => {
     const q = search.trim().toLowerCase();
     if (!q) return roles;
-    return roles.filter(
-      (r) => r.name.toLowerCase().includes(q) || r.code.toLowerCase().includes(q)
-    );
+    return roles.filter((r) => r.name.toLowerCase().includes(q) || r.code.toLowerCase().includes(q));
   }, [roles, search]);
 
   const setScope = (code: string, scope: Scope | null) => {
@@ -245,11 +256,11 @@ export function Roles() {
         .filter(([, s]) => s !== null)
         .map(([code, scope]) => ({ code, scope: scope as Scope }));
       await rolesApi.setPermissions(detail.id, permissions);
-      toast(`Đã lưu ${permissions.length} quyền cho vai trò`, 'success');
+      toast(t('toast.savedPerms', { count: permissions.length }), 'success');
       await loadDetail(detail.id);
       await loadRoles();
     } catch (err) {
-      toast(err instanceof Error ? err.message : 'Không lưu được quyền', 'error');
+      toast(err instanceof Error ? err.message : t('toast.savePermsFail'), 'error');
     } finally {
       setSaving(false);
     }
@@ -263,20 +274,20 @@ export function Roles() {
     if (!detail) return;
     try {
       await rolesApi.remove(detail.id);
-      toast('Đã xóa vai trò', 'success');
+      toast(t('toast.deleted'), 'success');
       setConfirmDelete(false);
       setSelectedId(null);
       setDetail(null);
       await loadRoles();
     } catch (err) {
-      toast(err instanceof Error ? err.message : 'Không xóa được vai trò', 'error');
+      toast(err instanceof Error ? err.message : t('toast.deleteFail'), 'error');
     }
   };
 
   const doUpdateRole = async (input: { name: string; description: string }) => {
     if (!detail) return;
     await rolesApi.update(detail.id, input);
-    toast('Đã cập nhật vai trò', 'success');
+    toast(t('toast.updated'), 'success');
     await loadRoles();
     await loadDetail(detail.id);
   };
@@ -284,7 +295,7 @@ export function Roles() {
   if (loading) {
     return (
       <div className="page">
-        <PageHeader title="Phân quyền" desc="Ai được làm gì, trên dữ liệu nào, trong phạm vi nào" />
+        <PageHeader title={t('title')} desc={t('desc')} />
         <Skeleton height={420} />
       </div>
     );
@@ -293,12 +304,8 @@ export function Roles() {
   if (forbidden) {
     return (
       <div className="page">
-        <PageHeader title="Phân quyền" desc="Ai được làm gì, trên dữ liệu nào, trong phạm vi nào" />
-        <EmptyState
-          icon="lock"
-          title="Không có quyền truy cập"
-          desc="Tài khoản của bạn không được xem trang phân quyền. Liên hệ quản trị viên nếu cần."
-        />
+        <PageHeader title={t('title')} desc={t('desc')} />
+        <EmptyState icon="lock" title={t('forbidden.title')} desc={t('forbidden.desc')} />
       </div>
     );
   }
@@ -306,12 +313,12 @@ export function Roles() {
   return (
     <div className="page roles-page">
       <PageHeader
-        title="Phân quyền"
-        desc="Ai được làm gì, trên dữ liệu nào, trong phạm vi nào"
+        title={t('title')}
+        desc={t('desc')}
         actions={
           <button className="btn btn-primary" onClick={() => setShowCreate(true)}>
             <Icon name="plus" size={16} />
-            Tạo vai trò
+            {t('create')}
           </button>
         }
       />
@@ -323,14 +330,14 @@ export function Roles() {
             <Icon name="search" size={16} className="roles-search-icon" />
             <input
               className="text-input roles-search-input"
-              placeholder="Tìm vai trò..."
+              placeholder={t('searchPh')}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
           </div>
           <div className="roles-list">
             {filteredRoles.length === 0 ? (
-              <EmptyState icon="users" title="Không tìm thấy" desc="Thử từ khóa khác." />
+              <EmptyState icon="users" title={t('emptySearch.title')} desc={t('emptySearch.desc')} />
             ) : (
               filteredRoles.map((r) => (
                 <button
@@ -341,17 +348,17 @@ export function Roles() {
                   <div className="role-card-top">
                     <span className="role-card-name">{r.name}</span>
                     {r.is_system ? (
-                      <span className="badge badge-system">Hệ thống</span>
+                      <span className="badge badge-system">{t('badge.system')}</span>
                     ) : (
-                      <span className="badge badge-custom">Tùy chỉnh</span>
+                      <span className="badge badge-custom">{t('badge.custom')}</span>
                     )}
                   </div>
                   <div className="role-card-meta">
                     <span className="mono">@{r.code}</span>
-                    <span aria-label={`${r.perm_count} quyền`}>
+                    <span aria-label={t('card.permCount', { count: r.perm_count })}>
                       <Icon name="key" size={13} /> {r.perm_count}
                     </span>
-                    <span aria-label={`${r.user_count} người dùng`}>
+                    <span aria-label={t('card.userCount', { count: r.user_count })}>
                       <Icon name="users" size={13} /> {r.user_count}
                     </span>
                   </div>
@@ -366,11 +373,7 @@ export function Roles() {
           {detailLoading ? (
             <Skeleton height={420} />
           ) : !detail ? (
-            <EmptyState
-              icon="key"
-              title="Chọn một vai trò"
-              desc="Chọn vai trò ở danh sách bên trái để xem và chỉnh sửa quyền."
-            />
+            <EmptyState icon="key" title={t('selectRole.title')} desc={t('selectRole.desc')} />
           ) : (
             <>
               <div className="role-head">
@@ -379,19 +382,19 @@ export function Roles() {
                 </div>
                 <div className="role-head-info">
                   <h2>{detail.name}</h2>
-                  <p>{detail.description || 'Chưa có mô tả.'}</p>
+                  <p>{detail.description || t('noDesc')}</p>
                   <div className="role-head-tags">
                     <span className="mono muted">@{detail.code}</span>
-                    {detail.is_system && <span className="badge badge-system">Vai trò hệ thống: không sửa, không xóa</span>}
+                    {detail.is_system && <span className="badge badge-system">{t('systemNote')}</span>}
                   </div>
                 </div>
                 {!detail.is_system && (
                   <div className="role-head-actions">
                     <button className="btn btn-ghost" onClick={() => setShowEdit(true)}>
-                      <Icon name="pencil" size={15} /> Sửa
+                      <Icon name="pencil" size={15} /> {t('edit')}
                     </button>
                     <button className="btn btn-ghost btn-danger-ghost" onClick={() => setConfirmDelete(true)}>
-                      <Icon name="trash" size={15} /> Xóa
+                      <Icon name="trash" size={15} /> {t('delete')}
                     </button>
                   </div>
                 )}
@@ -405,8 +408,10 @@ export function Roles() {
                     return (
                       <div key={module} className="perm-group">
                         <div className="perm-group-head">
-                          <span className="perm-group-name">{moduleLabel(module)}</span>
-                          <span className="muted">{assigned.length} quyền</span>
+                          <span className="perm-group-name">
+                            {t(moduleLabelKey(module), { defaultValue: module })}
+                          </span>
+                          <span className="muted">{t('modulePermCount', { count: assigned.length })}</span>
                         </div>
                         <ul className="perm-list">
                           {assigned.map((p) => (
@@ -415,7 +420,9 @@ export function Roles() {
                                 <div className="perm-name">{p.name}</div>
                                 <div className="perm-code mono muted">{p.code}</div>
                               </div>
-                              <span className={`scope-tag scope-${p.scope}`}>{SCOPE_LABEL[p.scope]}</span>
+                              <span className={`scope-tag scope-${p.scope}`}>
+                                {t(scopeLabelKey(p.scope))}
+                              </span>
                             </li>
                           ))}
                         </ul>
@@ -432,16 +439,15 @@ export function Roles() {
                       return (
                         <div key={module} className="perm-group">
                           <div className="perm-group-head">
-                            <span className="perm-group-name">{moduleLabel(module)}</span>
+                            <span className="perm-group-name">
+                              {t(moduleLabelKey(module), { defaultValue: module })}
+                            </span>
                             <span className="perm-group-tools">
                               <span className="muted">
-                                {onCount}/{perms.length} đang bật
+                                {t('onCount', { on: onCount, total: perms.length })}
                               </span>
-                              <button
-                                className="link-btn"
-                                onClick={() => toggleModule(module, !allOn)}
-                              >
-                                {allOn ? 'Tắt hết' : 'Bật hết'}
+                              <button className="link-btn" onClick={() => toggleModule(module, !allOn)}>
+                                {allOn ? t('turnOffAll') : t('turnOnAll')}
                               </button>
                             </span>
                           </div>
@@ -455,7 +461,7 @@ export function Roles() {
                                 <div
                                   className="scope-seg"
                                   role="radiogroup"
-                                  aria-label={`Phạm vi quyền ${p.name}`}
+                                  aria-label={t('scopeAria', { name: p.name })}
                                 >
                                   {SCOPES.map((s) => (
                                     <button
@@ -464,7 +470,7 @@ export function Roles() {
                                       aria-checked={draft[p.code] === s}
                                       className={`scope-seg-btn${draft[p.code] === s ? ' active' : ''} ${s ? `scope-${s}` : 'scope-off'}`}
                                       onClick={() => setScope(p.code, s)}
-                                      title={s ? SCOPE_LABEL[s] : 'Tắt quyền này'}
+                                      title={s ? t(scopeLabelKey(s)) : t('disableScope')}
                                     >
                                       {SCOPE_SHORT[s ?? '']}
                                     </button>
@@ -481,14 +487,14 @@ export function Roles() {
                   <div className={`roles-savebar${dirty ? ' show' : ''}`}>
                     <span className="roles-savebar-text">
                       <Icon name="info" size={15} />
-                      {changedCount} thay đổi chưa lưu
+                      {t('savebar', { count: changedCount })}
                     </span>
                     <div className="roles-savebar-actions">
                       <button className="btn btn-ghost btn-ghost-dark" onClick={cancelEdit} disabled={saving}>
-                        Hủy
+                        {t('actions.cancel', { ns: 'common' })}
                       </button>
                       <button className="btn btn-primary" onClick={savePermissions} disabled={saving}>
-                        {saving ? 'Đang lưu...' : 'Lưu quyền'}
+                        {saving ? t('saving') : t('savePerms')}
                       </button>
                     </div>
                   </div>
@@ -500,12 +506,12 @@ export function Roles() {
       </div>
 
       {showCreate && (
-        <Modal title="Tạo vai trò mới" onClose={() => setShowCreate(false)}>
+        <Modal title={t('modal.createTitle')} onClose={() => setShowCreate(false)}>
           <RoleForm
             onClose={() => setShowCreate(false)}
             onSubmit={async (input) => {
               await rolesApi.create({ code: input.code!, name: input.name, description: input.description });
-              toast('Đã tạo vai trò mới', 'success');
+              toast(t('toast.created'), 'success');
               await loadRoles();
             }}
           />
@@ -513,7 +519,7 @@ export function Roles() {
       )}
 
       {showEdit && detail && (
-        <Modal title="Sửa vai trò" onClose={() => setShowEdit(false)}>
+        <Modal title={t('modal.editTitle')} onClose={() => setShowEdit(false)}>
           <RoleForm
             initial={{ name: detail.name, description: detail.description || '' }}
             onClose={() => setShowEdit(false)}
@@ -526,8 +532,8 @@ export function Roles() {
 
       {confirmDelete && detail && (
         <ConfirmDialog
-          title="Xóa vai trò?"
-          message={`Vai trò "${detail.name}" sẽ bị xóa. Người dùng đang mang vai trò này sẽ mất các quyền đi kèm. Hành động này không thể hoàn tác.`}
+          title={t('confirmDelete.title')}
+          message={t('confirmDelete.message', { name: detail.name })}
           danger
           onClose={() => setConfirmDelete(false)}
           onConfirm={doDelete}

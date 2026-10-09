@@ -78,7 +78,7 @@ router.delete(
   '/:id',
   requirePermission('classes.delete'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
-    classService.deleteClass(scopeOf(req), paramId(req.params), actorFromReq(req));
+    await classService.deleteClass(scopeOf(req), paramId(req.params), actorFromReq(req));
     res.json({ ok: true });
   })
 );
@@ -90,7 +90,7 @@ router.post(
     const { student_id } = validate(req.body, {
       student_id: v.number({ required: true, integer: true, label: 'Học viên' }),
     });
-    classService.enrollStudent(scopeOf(req), paramId(req.params), student_id as number);
+    await classService.enrollStudent(scopeOf(req), paramId(req.params), student_id as number);
     res.status(201).json({ ok: true });
   })
 );
@@ -99,7 +99,7 @@ router.delete(
   '/enrollments/:enrollmentId',
   requirePermission('classes.enroll'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
-    classService.unenroll(scopeOf(req), paramId(req.params, 'enrollmentId'));
+    await classService.unenroll(scopeOf(req), paramId(req.params, 'enrollmentId'));
     res.json({ ok: true });
   })
 );

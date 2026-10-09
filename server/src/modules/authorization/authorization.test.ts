@@ -40,7 +40,7 @@ async function ensureCenter(): Promise<number> {
 }
 
 async function createUser(username: string, role: string, centerId: number | null = null): Promise<number> {
-  const cid = role === 'superadmin' ? null : centerId ?? (await ensureCenter());
+  const cid = role === 'superadmin' ? null : (centerId ?? (await ensureCenter()));
   const r = await db
     .prepare('INSERT INTO users (username, password_hash, role, name, center_id) VALUES (?, ?, ?, ?, ?)')
     .run(username, 'hash', role, username, cid);
@@ -66,7 +66,9 @@ describe('authorization (RBAC)', () => {
   it('seed đủ permission catalog và system roles (idempotent)', async () => {
     const pc = (await db.prepare('SELECT COUNT(*) as c FROM permissions').get()) as { c: number };
     assert.equal(Number(pc.c), PERMISSIONS.length);
-    const rc = (await db.prepare("SELECT COUNT(*) as c FROM roles WHERE is_system = TRUE").get()) as { c: number };
+    const rc = (await db.prepare('SELECT COUNT(*) as c FROM roles WHERE is_system = TRUE').get()) as {
+      c: number;
+    };
     assert.equal(Number(rc.c), SYSTEM_ROLES.length);
     // Chạy lại vẫn idempotent
     await seedAuthorization();
@@ -115,8 +117,12 @@ describe('authorization (RBAC)', () => {
     // Tạo custom role có students.view scope center, gán cho user
     const rr = await db.prepare("INSERT INTO roles (code, name) VALUES ('troly', 'Trợ lý')").run();
     const roleId = Number(rr.lastInsertRowid);
-    const perm = (await db.prepare("SELECT id FROM permissions WHERE code = 'students.view'").get()) as { id: number };
-    await db.prepare('INSERT INTO role_permissions (role_id, permission_id, scope) VALUES (?, ?, ?)').run(roleId, perm.id, 'center');
+    const perm = (await db.prepare("SELECT id FROM permissions WHERE code = 'students.view'").get()) as {
+      id: number;
+    };
+    await db
+      .prepare('INSERT INTO role_permissions (role_id, permission_id, scope) VALUES (?, ?, ?)')
+      .run(roleId, perm.id, 'center');
     await db.prepare('INSERT INTO user_roles (user_id, role_id) VALUES (?, ?)').run(id, roleId);
     invalidateAllPermissions();
     // teacher cho students.view scope own, custom role cho scope center -> center thắng
@@ -127,8 +133,12 @@ describe('authorization (RBAC)', () => {
     const id = await createUser('multi2', 'teacher');
     const rr = await db.prepare("INSERT INTO roles (code, name) VALUES ('troly2', 'Trợ lý 2')").run();
     const roleId = Number(rr.lastInsertRowid);
-    const perm = (await db.prepare("SELECT id FROM permissions WHERE code = 'invoices.view'").get()) as { id: number };
-    await db.prepare('INSERT INTO role_permissions (role_id, permission_id, scope) VALUES (?, ?, ?)').run(roleId, perm.id, 'center');
+    const perm = (await db.prepare("SELECT id FROM permissions WHERE code = 'invoices.view'").get()) as {
+      id: number;
+    };
+    await db
+      .prepare('INSERT INTO role_permissions (role_id, permission_id, scope) VALUES (?, ?, ?)')
+      .run(roleId, perm.id, 'center');
     await db.prepare('INSERT INTO user_roles (user_id, role_id) VALUES (?, ?)').run(id, roleId);
     invalidateAllPermissions();
     assert.equal(await hasPermission(id, 'invoices.view'), true);
@@ -157,13 +167,22 @@ describe('authorization (RBAC)', () => {
 
     const mw = requirePermission('students.delete');
     const state = { status: 0, nextCalled: false };
-    const res = { status: (c: number) => { state.status = c; return res; }, json: () => res } as never;
-    const next = () => { state.nextCalled = true; };
+    const res = {
+      status: (c: number) => {
+        state.status = c;
+        return res;
+      },
+      json: () => res,
+    } as never;
+    const next = () => {
+      state.nextCalled = true;
+    };
 
     await mw({ user: { id: adminId } } as never, res, next);
     assert.equal(state.nextCalled, true);
 
-    state.nextCalled = false; state.status = 0;
+    state.nextCalled = false;
+    state.status = 0;
     await mw({ user: { id: staffId } } as never, res, next);
     assert.equal(state.nextCalled, false);
     assert.equal(state.status, 403);
@@ -172,7 +191,13 @@ describe('authorization (RBAC)', () => {
   it('middleware requirePermission: 401 khi thiếu user', async () => {
     const mw = requirePermission('students.view');
     let status = 0;
-    const res = { status: (c: number) => { status = c; return res; }, json: () => res } as never;
+    const res = {
+      status: (c: number) => {
+        status = c;
+        return res;
+      },
+      json: () => res,
+    } as never;
     await mw({} as never, res, () => {});
     assert.equal(status, 401);
   });

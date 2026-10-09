@@ -85,7 +85,7 @@ router.put(
       note: v.string({ max: 500, label: 'Ghi chú' }),
     });
     res.json(
-      invoiceService.updateInvoice(
+      await invoiceService.updateInvoice(
         reqCenterId(req),
         paramId(req.params),
         {
@@ -103,7 +103,7 @@ router.delete(
   '/:id',
   requirePermission('invoices.delete'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
-    invoiceService.deleteInvoice(reqCenterId(req), paramId(req.params), actorFromReq(req));
+    await invoiceService.deleteInvoice(reqCenterId(req), paramId(req.params), actorFromReq(req));
     res.json({ ok: true });
   })
 );

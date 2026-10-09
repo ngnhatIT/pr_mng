@@ -19,6 +19,20 @@ router.get('/vnpay-return', async (req: AuthRequest, res: Response) => {
   res.redirect(redirectUrl);
 });
 
+/**
+ * VNPay IPN — PUBLIC server-to-server (VNPay gọi trực tiếp).
+ * Xử lý khi phụ huynh đóng tab trước khi redirect về.
+ * Trả về RspCode chuẩn VNPay (JSON), luôn HTTP 200.
+ */
+router.post('/vnpay-ipn', async (req: AuthRequest, res: Response) => {
+  const query = {
+    ...(req.query as Record<string, string | undefined>),
+    ...(req.body as Record<string, string | undefined>),
+  };
+  const result = await paymentService.handleVnpayIpn(query as Record<string, string | string[] | undefined>);
+  res.json(result);
+});
+
 /* --------------------- Từ đây yêu cầu đăng nhập --------------------- */
 router.use(requireAuth);
 
@@ -37,7 +51,11 @@ router.post(
   '/pending/:id/approve',
   requirePermission('payments.approve'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
-    const { status } = await paymentService.approvePendingPayment(paramId(req.params), actorFromReq(req));
+    const { status } = await paymentService.approvePendingPayment(
+      reqCenterId(req),
+      paramId(req.params),
+      actorFromReq(req)
+    );
     res.json({ ok: true, status });
   })
 );
@@ -47,7 +65,7 @@ router.post(
   '/pending/:id/reject',
   requirePermission('payments.approve'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
-    paymentService.rejectPendingPayment(paramId(req.params), actorFromReq(req));
+    await paymentService.rejectPendingPayment(reqCenterId(req), paramId(req.params), actorFromReq(req));
     res.json({ ok: true });
   })
 );
@@ -76,7 +94,7 @@ router.put(
       referral_reward_referrer: v.number({ min: 0, label: 'Thưởng người giới thiệu' }),
       referral_reward_referred: v.number({ min: 0, label: 'Thưởng người được giới thiệu' }),
     });
-    paymentService.savePaymentConfig(reqCenterId(req), body as Record<string, unknown>);
+    await paymentService.savePaymentConfig(reqCenterId(req), body as Record<string, unknown>);
     res.json({ ok: true });
   })
 );

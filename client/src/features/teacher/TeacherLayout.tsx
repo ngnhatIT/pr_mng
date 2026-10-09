@@ -1,4 +1,5 @@
-import { NavLink, Outlet, useNavigate } from 'react-router-dom';
+import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { getUser, clearAuth } from '../../shared/api/client';
 import { Icon, IconName } from '../../shared/components/icons';
@@ -16,7 +17,15 @@ const TABS: { to: string; labelKey: string; end?: boolean; icon: IconName }[] = 
 export function TeacherLayout() {
   const { t } = useTranslation(['teacher', 'common']);
   const navigate = useNavigate();
+  const location = useLocation();
   const user = getUser();
+
+  useEffect(() => {
+    const active = [...TABS]
+      .sort((a, b) => b.to.length - a.to.length)
+      .find((tab) => (tab.end ? location.pathname === tab.to : location.pathname.startsWith(tab.to)));
+    document.title = active ? `${t(active.labelKey)} - EduCenter Pro` : 'EduCenter Pro';
+  }, [location.pathname, t]);
 
   const logout = () => {
     clearAuth();
@@ -35,7 +44,11 @@ export function TeacherLayout() {
         </div>
         <div className="parent-topbar-actions">
           <ThemeLangSwitch />
-          <button className="btn btn-ghost btn-sm" onClick={logout} aria-label={t('nav.logout', { ns: 'common' })}>
+          <button
+            className="btn btn-ghost btn-sm"
+            onClick={logout}
+            aria-label={t('nav.logout', { ns: 'common' })}
+          >
             <Icon name="logout" size={18} />
           </button>
         </div>

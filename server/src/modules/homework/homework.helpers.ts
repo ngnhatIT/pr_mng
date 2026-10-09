@@ -43,7 +43,10 @@ export function assignedCountExpr(homeworkAlias = 'h', classAlias = 'h'): string
 }
 
 /** Validate cặp hạn nộp / hạn chót cứng. */
-export function assertValidDates(dueDate: string | null | undefined, closeDate: string | null | undefined): void {
+export function assertValidDates(
+  dueDate: string | null | undefined,
+  closeDate: string | null | undefined
+): void {
   if (dueDate && !/^\d{4}-\d{2}-\d{2}$/.test(dueDate)) {
     throw AppError.badRequest('Hạn nộp không hợp lệ (YYYY-MM-DD)');
   }

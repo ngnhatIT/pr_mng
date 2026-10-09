@@ -282,9 +282,7 @@ const PATHS: Record<string, ReactNode> = {
       <path d="m19.07 4.93-1.41 1.41" />
     </>
   ),
-  moon: (
-    <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z" />
-  ),
+  moon: <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z" />,
   globe: (
     <>
       <circle cx="12" cy="12" r="10" />

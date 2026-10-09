@@ -111,9 +111,7 @@ export function ClassDetail() {
         <div className="profile-meta">
           <h1 className="page-title">{cls.name}</h1>
           <div className="profile-badges">
-            <span className={`badge badge-${cls.status}`}>
-              {t('classStatus.' + cls.status)}
-            </span>
+            <span className={`badge badge-${cls.status}`}>{t('classStatus.' + cls.status)}</span>
             <span className="badge badge-general">
               {t('detail.sizeBadge', { count: data.students.length, max: cls.max_students })}
             </span>

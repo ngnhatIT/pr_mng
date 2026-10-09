@@ -25,7 +25,7 @@ export async function listReviews(
   centerId: number | null,
   query: ReviewQuery,
   pageOpts: PageOptions = {}
-):  Promise<Paginated<ReviewRow>> {
+): Promise<Paginated<ReviewRow>> {
   const { status = '' } = query;
   const conds: string[] = [];
   const params: unknown[] = [];
@@ -40,13 +40,15 @@ export async function listReviews(
   const from = `FROM reviews r LEFT JOIN parents p ON p.id = r.parent_id`;
   const where = conds.length ? `WHERE ${conds.join(' AND ')}` : '';
   const { page, limit, offset } = parsePagination(pageOpts);
-  const total = (await db.prepare(`SELECT COUNT(*) as c ${from} ${where}`).get(...params) as { c: number }).c;
-  const rows = await db.prepare(
+  const total = ((await db.prepare(`SELECT COUNT(*) as c ${from} ${where}`).get(...params)) as { c: number })
+    .c;
+  const rows = (await db
+    .prepare(
       `SELECT r.id, r.rating, r.comment, r.status, r.created_at,
          p.name as parent_name, p.phone as parent_phone
        ${from} ${where}
        ORDER BY r.id DESC LIMIT ? OFFSET ?`
     )
-    .all(...params, limit, offset) as ReviewRow[];
+    .all(...params, limit, offset)) as ReviewRow[];
   return paginate(rows, total, page, limit);
 }

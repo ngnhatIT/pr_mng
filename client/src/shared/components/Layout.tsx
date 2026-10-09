@@ -49,7 +49,12 @@ const SECTIONS: { labelKey: string; items: NavItem[] }[] = [
   {
     labelKey: 'nav.sections.system',
     items: [
-      { to: '/app/cau-hinh-thanh-toan', labelKey: 'nav.paymentConfig', icon: 'settings', perm: 'payment_config.manage' },
+      {
+        to: '/app/cau-hinh-thanh-toan',
+        labelKey: 'nav.paymentConfig',
+        icon: 'settings',
+        perm: 'payment_config.manage',
+      },
       { to: '/app/nhat-ky', labelKey: 'nav.audit', icon: 'shield', perm: 'audit.view' },
       { to: '/app/phan-quyen', labelKey: 'nav.roles', icon: 'key', perm: 'roles.view' },
     ],
@@ -119,6 +124,10 @@ export function Layout() {
   }, [drawerOpen]);
 
   const title = pageTitleFor(t, location.pathname, isSuperadmin);
+
+  useEffect(() => {
+    document.title = `${title} - EduCenter Pro`;
+  }, [title]);
 
   return (
     <div className="app-shell">

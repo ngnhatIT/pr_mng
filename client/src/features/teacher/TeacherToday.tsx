@@ -73,11 +73,7 @@ export function TeacherToday() {
           ))}
         </div>
       ) : sessions.length === 0 ? (
-        <EmptyState
-          icon="calendar"
-          title={t('today.emptyTitle')}
-          desc={t('today.emptyDesc')}
-        />
+        <EmptyState icon="calendar" title={t('today.emptyTitle')} desc={t('today.emptyDesc')} />
       ) : (
         <div className="timeline">
           {sessions.map((s) => (
@@ -132,11 +128,7 @@ export function TeacherToday() {
               maxLength={6}
             />
           </Field>
-          <button
-            className="btn btn-block btn-lg checkin-submit"
-            type="submit"
-            disabled={checkingIn}
-          >
+          <button className="btn btn-block btn-lg checkin-submit" type="submit" disabled={checkingIn}>
             {checkingIn ? t('checkin.submitting') : t('checkin.submit')}
           </button>
         </form>

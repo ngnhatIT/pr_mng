@@ -103,7 +103,11 @@ export function ChildDetail() {
 
       <div className="tabs parent-tabs pill-tabs">
         {TABS.map((tb) => (
-          <button key={tb.id} className={`tab${tab === tb.id ? ' active' : ''}`} onClick={() => setTab(tb.id)}>
+          <button
+            key={tb.id}
+            className={`tab${tab === tb.id ? ' active' : ''}`}
+            onClick={() => setTab(tb.id)}
+          >
             <Icon name={tb.icon} size={15} />
             {tb.label}
           </button>
@@ -417,7 +421,12 @@ function ProgressChart({ grades }: { grades: Grade[] }) {
   const points = xs.map((x, i) => `${x.toFixed(1)},${ys[i].toFixed(1)}`).join(' ');
   const area = `${PAD},${(H - PAD).toFixed(1)} ${points} ${(W - PAD).toFixed(1)},${(H - PAD).toFixed(1)}`;
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} className="progress-svg" role="img" aria-label={t('child.grades.chartLabel')}>
+    <svg
+      viewBox={`0 0 ${W} ${H}`}
+      className="progress-svg"
+      role="img"
+      aria-label={t('child.grades.chartLabel')}
+    >
       <line x1={PAD} y1={H - PAD} x2={W - PAD} y2={H - PAD} className="chart-axis" />
       <polygon points={area} className="chart-area" />
       <polyline points={points} fill="none" className="chart-line" strokeWidth="2.5" strokeLinejoin="round" />
@@ -495,14 +504,23 @@ function HomeworkTab({ data, onChanged }: { data: ChildOverview; onChanged: () =
         )}
         <div className="hw-body">
           <div className="hw-title">
-            {isQuiz && <span className="badge badge-quiz" style={{ marginRight: 6 }}>Quiz</span>}
+            {isQuiz && (
+              <span className="badge badge-quiz" style={{ marginRight: 6 }}>
+                Quiz
+              </span>
+            )}
             {h.title}
             {renderScore(h)}
           </div>
-          <div className="muted" style={{ fontSize: 13 }}>{h.class_name || ''}</div>
+          <div className="muted" style={{ fontSize: 13 }}>
+            {h.class_name || ''}
+          </div>
           {h.content && (
-            <div className="homework-content" style={{ fontSize: 13 }}
-              dangerouslySetInnerHTML={{ __html: renderMarkdown(h.content) }} />
+            <div
+              className="homework-content"
+              style={{ fontSize: 13 }}
+              dangerouslySetInnerHTML={{ __html: renderMarkdown(h.content) }}
+            />
           )}
           {h.feedback && (
             <div className="hw-feedback">
@@ -533,9 +551,13 @@ function HomeworkTab({ data, onChanged }: { data: ChildOverview; onChanged: () =
         <div>
           {h.due_date &&
             (isOverdue ? (
-              <span className="badge badge-overdue">{t('child.homework.overdueLabel', { date: formatDate(h.due_date) })}</span>
+              <span className="badge badge-overdue">
+                {t('child.homework.overdueLabel', { date: formatDate(h.due_date) })}
+              </span>
             ) : (
-              <span className="badge badge-upcoming">{t('child.homework.dueLabel', { date: formatDate(h.due_date) })}</span>
+              <span className="badge badge-upcoming">
+                {t('child.homework.dueLabel', { date: formatDate(h.due_date) })}
+              </span>
             ))}
         </div>
       </div>
@@ -558,7 +580,9 @@ function HomeworkTab({ data, onChanged }: { data: ChildOverview; onChanged: () =
           )}
           {overdue.length > 0 && (
             <>
-              <div className="hw-group-title" style={{ color: 'var(--danger)' }}>{t('child.homework.overdue', { count: overdue.length })}</div>
+              <div className="hw-group-title" style={{ color: 'var(--danger)' }}>
+                {t('child.homework.overdue', { count: overdue.length })}
+              </div>
               {overdue.map(renderItem)}
             </>
           )}
@@ -575,7 +599,10 @@ function HomeworkTab({ data, onChanged }: { data: ChildOverview; onChanged: () =
           homework={takingQuiz}
           studentId={studentId}
           onClose={() => setTakingQuiz(null)}
-          onDone={() => { setTakingQuiz(null); onChanged(); }}
+          onDone={() => {
+            setTakingQuiz(null);
+            onChanged();
+          }}
         />
       )}
       {submitting && (
@@ -583,7 +610,10 @@ function HomeworkTab({ data, onChanged }: { data: ChildOverview; onChanged: () =
           homework={submitting}
           studentId={studentId}
           onClose={() => setSubmitting(null)}
-          onDone={() => { setSubmitting(null); onChanged(); }}
+          onDone={() => {
+            setSubmitting(null);
+            onChanged();
+          }}
         />
       )}
       {viewingSubs && (

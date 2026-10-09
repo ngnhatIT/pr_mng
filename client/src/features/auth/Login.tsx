@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { api, setAuth } from '../../shared/api/client';
+import { api, setAuth, takePostLoginRedirect } from '../../shared/api/client';
 import { useToast } from '../../shared/ui/toast';
 import { Icon } from '../../shared/components/icons';
 import { ThemeLangSwitch } from '../../shared/ui/ThemeLangSwitch';
@@ -10,8 +10,8 @@ import './Login.css';
 
 export function Login() {
   const { t } = useTranslation(['auth', 'common']);
-  const [username, setUsername] = useState('admin');
-  const [password, setPassword] = useState('123456');
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const navigate = useNavigate();
@@ -29,6 +29,12 @@ export function Login() {
       });
       setAuth(data.token, data.user);
       toast(t('welcome', { name: data.user.name }), 'success');
+      // Quay lại deep-link đã lưu (khi bị 401 hoặc vào trang cần login), nếu không thì về home theo role.
+      const next = takePostLoginRedirect();
+      if (next) {
+        navigate(next, { replace: true });
+        return;
+      }
       const role = data.user.role;
       if (role === 'teacher') navigate('/teacher');
       else if (role === 'parent') navigate('/parent');

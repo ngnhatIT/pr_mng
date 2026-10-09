@@ -1,7 +1,7 @@
 import { Router, Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import { db } from '../../db';
-import { signToken, AuthUser } from '../../middleware/auth';
+import { signToken, AuthUser, DUMMY_PASSWORD_HASH } from '../../middleware/auth';
 import { loginRateLimit } from '../../middleware/rateLimit';
 import { asyncHandler } from '../../shared/http';
 
@@ -16,7 +16,7 @@ router.post(
       res.status(400).json({ error: 'Vui lòng nhập tên đăng nhập và mật khẩu' });
       return;
     }
-    const user = await db.prepare('SELECT * FROM users WHERE username = ?').get(username) as
+    const user = (await db.prepare('SELECT * FROM users WHERE username = ?').get(username)) as
       | {
           id: number;
           username: string;
@@ -27,7 +27,10 @@ router.post(
           teacher_id: number | null;
         }
       | undefined;
-    if (!user || !bcrypt.compareSync(password, user.password_hash)) {
+    const passwordOk = user
+      ? bcrypt.compareSync(password, user.password_hash)
+      : bcrypt.compareSync(password, DUMMY_PASSWORD_HASH);
+    if (!user || !passwordOk) {
       res.status(401).json({ error: 'Tên đăng nhập hoặc mật khẩu không đúng' });
       return;
     }
@@ -36,6 +39,7 @@ router.post(
       username: user.username,
       role: user.role,
       name: user.name,
+      kind: 'staff',
       center_id: user.center_id ?? null,
       teacher_id: user.teacher_id ?? null,
     };

@@ -84,7 +84,10 @@ export function verifyVnpayReturn(
   const signData = buildSignData(flat);
   const signed = crypto.createHmac('sha512', hashSecret).update(Buffer.from(signData, 'utf-8')).digest('hex');
   const received = String(query.vnp_SecureHash || '');
-  const ok = signed === received;
+  // M7: so sánh constant-time để chống timing attack
+  const a = Buffer.from(signed, 'utf-8');
+  const b = Buffer.from(received, 'utf-8');
+  const ok = a.length === b.length && crypto.timingSafeEqual(a, b);
   const amountVnd = Math.round(Number(flat.vnp_Amount || 0) / 100);
   return {
     ok,

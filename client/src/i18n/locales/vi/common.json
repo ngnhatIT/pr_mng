@@ -1,4 +1,10 @@
 {
+  "api": {
+    "timeout": "Yêu cầu quá thời gian, vui lòng thử lại",
+    "network": "Không thể kết nối máy chủ, vui lòng kiểm tra mạng và thử lại",
+    "sessionExpired": "Phiên đăng nhập đã hết hạn, vui lòng đăng nhập lại",
+    "error": "Đã xảy ra lỗi"
+  },
   "actions": {
     "add": "Thêm",
     "apply": "Áp dụng",
@@ -97,5 +103,11 @@
     "prev": "Trang trước",
     "next": "Trang sau",
     "last": "Trang cuối"
+  },
+  "error": {
+    "title": "Đã xảy ra lỗi",
+    "message": "Rất tiếc, có lỗi khi hiển thị trang này. Bạn có thể thử tải lại hoặc quay về trang chủ.",
+    "retry": "Thử lại",
+    "home": "Về trang chủ"
   }
 }

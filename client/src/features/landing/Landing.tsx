@@ -39,7 +39,7 @@ export function Landing() {
   const formRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    (async () => {
+    void (async () => {
       try {
         const [c, cls, te, r] = await Promise.all([
           getJSON<PublicCenter>('/public/center'),

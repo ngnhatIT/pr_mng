@@ -26,18 +26,30 @@ async function resetDb(): Promise<void> {
 
   const cr = await db.prepare("INSERT INTO centers (name) VALUES ('Trung tâm Test')").run();
   centerId = Number(cr.lastInsertRowid);
-  const clr = await db.prepare('INSERT INTO classes (name, center_id) VALUES (?, ?)').run('Lớp Test', centerId);
+  const clr = await db
+    .prepare('INSERT INTO classes (name, center_id) VALUES (?, ?)')
+    .run('Lớp Test', centerId);
   const classId = Number(clr.lastInsertRowid);
-  const sr = await db.prepare('INSERT INTO students (code, name, center_id) VALUES (?, ?, ?)').run('ST001', 'Học viên 1', centerId);
+  const sr = await db
+    .prepare('INSERT INTO students (code, name, center_id) VALUES (?, ?, ?)')
+    .run('ST001', 'Học viên 1', centerId);
   studentId = Number(sr.lastInsertRowid);
   await db.prepare('INSERT INTO enrollments (student_id, class_id) VALUES (?, ?)').run(studentId, classId);
-  const pr = await db.prepare("INSERT INTO parents (phone, password_hash, name, center_id) VALUES ('0900000001', 'x', 'PH 1', ?)").run(centerId);
+  const pr = await db
+    .prepare(
+      "INSERT INTO parents (phone, password_hash, name, center_id) VALUES ('0900000001', 'x', 'PH 1', ?)"
+    )
+    .run(centerId);
   parentId = Number(pr.lastInsertRowid);
-  await db.prepare('INSERT INTO parent_students (parent_id, student_id) VALUES (?, ?)').run(parentId, studentId);
+  await db
+    .prepare('INSERT INTO parent_students (parent_id, student_id) VALUES (?, ?)')
+    .run(parentId, studentId);
 }
 
 async function createInvoice(amount = 1000000): Promise<number> {
-  const inv = (await invoicesService.createInvoice(centerId, { student_id: studentId, amount })) as { id: number };
+  const inv = (await invoicesService.createInvoice(centerId, { student_id: studentId, amount })) as {
+    id: number;
+  };
   return inv.id;
 }
 
@@ -52,9 +64,11 @@ async function invoiceStatus(id: number): Promise<string> {
 }
 
 async function confirmedPaid(invoiceId: number): Promise<number> {
-  const row = (await db.prepare(
-    "SELECT COALESCE(SUM(amount),0) as paid FROM payments WHERE invoice_id = ? AND status = 'confirmed'"
-  ).get(invoiceId)) as { paid: number };
+  const row = (await db
+    .prepare(
+      "SELECT COALESCE(SUM(amount),0) as paid FROM payments WHERE invoice_id = ? AND status = 'confirmed'"
+    )
+    .get(invoiceId)) as { paid: number };
   return Number(row.paid);
 }
 
@@ -63,11 +77,17 @@ async function confirmedPaid(invoiceId: number): Promise<number> {
 // ---------------------------------------------------------------------------
 
 // Setup/teardown chung cho cả file (1 lần)
-before(async () => { await setupTestDb(); });
-after(async () => { await teardownTestDb(); });
+before(async () => {
+  await setupTestDb();
+});
+after(async () => {
+  await teardownTestDb();
+});
 
 describe('invoices.service - createInvoice', () => {
-  beforeEach(async () => { await resetDb(); });
+  beforeEach(async () => {
+    await resetDb();
+  });
 
   it('tạo hóa đơn hợp lệ', async () => {
     const inv = (await invoicesService.createInvoice(centerId, {
@@ -82,8 +102,14 @@ describe('invoices.service - createInvoice', () => {
   });
 
   it('số tiền <= 0 → throw', async () => {
-    await assert.rejects(invoicesService.createInvoice(centerId, { student_id: studentId, amount: 0 }), /lớn hơn 0/);
-    await assert.rejects(invoicesService.createInvoice(centerId, { student_id: studentId, amount: -500 }), /lớn hơn 0/);
+    await assert.rejects(
+      invoicesService.createInvoice(centerId, { student_id: studentId, amount: 0 }),
+      /lớn hơn 0/
+    );
+    await assert.rejects(
+      invoicesService.createInvoice(centerId, { student_id: studentId, amount: -500 }),
+      /lớn hơn 0/
+    );
     assert.equal(await count('invoices'), 0);
   });
 
@@ -105,7 +131,9 @@ describe('invoices.service - createInvoice', () => {
 });
 
 describe('invoices.service - recordPayment (thu tiền)', () => {
-  beforeEach(async () => { await resetDb(); });
+  beforeEach(async () => {
+    await resetDb();
+  });
 
   it('thu đủ → status paid', async () => {
     const id = await createInvoice(1000000);
@@ -152,12 +180,14 @@ describe('invoices.service - recordPayment (thu tiền)', () => {
 });
 
 describe('payments.service - duyệt/từ chối', () => {
-  beforeEach(async () => { await resetDb(); });
+  beforeEach(async () => {
+    await resetDb();
+  });
 
   it('duyệt payment pending → confirmed, recalc status', async () => {
     const id = await createInvoice(1000000);
     const { payment_id } = await parentService.claimPaid(parentId, id);
-    const r = await paymentsService.approvePendingPayment(payment_id);
+    const r = await paymentsService.approvePendingPayment(centerId, payment_id);
     assert.equal(r.status, 'paid');
     assert.equal(await confirmedPaid(id), 1000000);
     assert.equal(await invoiceStatus(id), 'paid');
@@ -166,22 +196,24 @@ describe('payments.service - duyệt/từ chối', () => {
   it('duyệt payment đã duyệt rồi → throw 404', async () => {
     const id = await createInvoice(1000000);
     const { payment_id } = await parentService.claimPaid(parentId, id);
-    await paymentsService.approvePendingPayment(payment_id);
-    await assert.rejects(paymentsService.approvePendingPayment(payment_id), /đang chờ duyệt/);
+    await paymentsService.approvePendingPayment(centerId, payment_id);
+    await assert.rejects(paymentsService.approvePendingPayment(centerId, payment_id), /đang chờ duyệt/);
   });
 
   it('từ chối payment → rejected, công nợ không đổi', async () => {
     const id = await createInvoice(1000000);
     const { payment_id } = await parentService.claimPaid(parentId, id);
-    await paymentsService.rejectPendingPayment(payment_id);
-    const st = ((await db.prepare('SELECT status FROM payments WHERE id = ?').get(payment_id)) as { status: string }).status;
+    await paymentsService.rejectPendingPayment(centerId, payment_id);
+    const st = (
+      (await db.prepare('SELECT status FROM payments WHERE id = ?').get(payment_id)) as { status: string }
+    ).status;
     assert.equal(st, 'rejected');
     assert.equal(await confirmedPaid(id), 0);
     assert.equal(await invoiceStatus(id), 'unpaid');
   });
 
   it('duyệt payment không tồn tại → throw 404', async () => {
-    await assert.rejects(paymentsService.approvePendingPayment(99999), /đang chờ duyệt/);
+    await assert.rejects(paymentsService.approvePendingPayment(centerId, 99999), /đang chờ duyệt/);
   });
 
   it('listPendingPayments chỉ liệt kê pending', async () => {
@@ -189,7 +221,7 @@ describe('payments.service - duyệt/từ chối', () => {
     const id2 = await createInvoice(500000);
     const p1 = await parentService.claimPaid(parentId, id1);
     await parentService.claimPaid(parentId, id2);
-    await paymentsService.approvePendingPayment(p1.payment_id);
+    await paymentsService.approvePendingPayment(centerId, p1.payment_id);
     const list = (await paymentsService.listPendingPayments(centerId)) as { data: { invoice_id: number }[] };
     assert.equal(list.data.length, 1);
     assert.equal(Number(list.data[0].invoice_id), id2);
@@ -197,13 +229,17 @@ describe('payments.service - duyệt/từ chối', () => {
 });
 
 describe('parent.service - claimPaid (báo chuyển khoản)', () => {
-  beforeEach(async () => { await resetDb(); });
+  beforeEach(async () => {
+    await resetDb();
+  });
 
   it('báo chuyển khoản tạo payment pending đúng số còn nợ', async () => {
     const id = await createInvoice(1000000);
     const r = await parentService.claimPaid(parentId, id);
     assert.equal(r.status, 'pending');
-    const p = (await db.prepare('SELECT amount, method, status FROM payments WHERE id = ?').get(r.payment_id)) as {
+    const p = (await db
+      .prepare('SELECT amount, method, status FROM payments WHERE id = ?')
+      .get(r.payment_id)) as {
       amount: number;
       method: string;
       status: string;
@@ -221,14 +257,20 @@ describe('parent.service - claimPaid (báo chuyển khoản)', () => {
 
   it('phụ huynh khác không báo được cho con người khác', async () => {
     const id = await createInvoice(1000000);
-    const pr = await db.prepare("INSERT INTO parents (phone, password_hash, name, center_id) VALUES ('0900000002', 'x', 'PH 2', ?)").run(centerId);
+    const pr = await db
+      .prepare(
+        "INSERT INTO parents (phone, password_hash, name, center_id) VALUES ('0900000002', 'x', 'PH 2', ?)"
+      )
+      .run(centerId);
     const otherParent = Number(pr.lastInsertRowid);
     await assert.rejects(parentService.claimPaid(otherParent, id), /Không tìm thấy hóa đơn/);
   });
 });
 
 describe('invoices.service - công nợ & xóa', () => {
-  beforeEach(async () => { await resetDb(); });
+  beforeEach(async () => {
+    await resetDb();
+  });
 
   it('getDebtReport tính đúng total/paid/debt', async () => {
     const id1 = await createInvoice(1000000);

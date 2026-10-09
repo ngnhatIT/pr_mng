@@ -35,21 +35,23 @@ export interface AuditEntry {
 
 export async function audit(entry: AuditEntry): Promise<void> {
   try {
-    await db.prepare(
-      `INSERT INTO audit_logs (center_id, actor_id, actor_name, actor_role, action, entity, entity_id, summary, meta, ip)
+    await db
+      .prepare(
+        `INSERT INTO audit_logs (center_id, actor_id, actor_name, actor_role, action, entity, entity_id, summary, meta, ip)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-    ).run(
-      entry.centerId,
-      entry.actor?.id ?? null,
-      entry.actor?.name ?? null,
-      entry.actor?.role ?? null,
-      entry.action,
-      entry.entity,
-      entry.entityId ?? null,
-      entry.summary,
-      entry.meta ? JSON.stringify(entry.meta) : null,
-      entry.actor?.ip ?? null
-    );
+      )
+      .run(
+        entry.centerId,
+        entry.actor?.id ?? null,
+        entry.actor?.name ?? null,
+        entry.actor?.role ?? null,
+        entry.action,
+        entry.entity,
+        entry.entityId ?? null,
+        entry.summary,
+        entry.meta ? JSON.stringify(entry.meta) : null,
+        entry.actor?.ip ?? null
+      );
   } catch (err) {
     // Audit không được làm hỏng nghiệp vụ chính
     log.error('Ghi audit log thất bại', { error: String(err), entity: entry.entity });

@@ -45,10 +45,13 @@ export function GradeModal({ homework, onClose }: { homework: HomeworkItem; onCl
   useEffect(() => {
     void load(false);
     if (homework.rubric_id) {
-      homeworkApi.listRubrics().then((rs) => {
-        const r = rs.find((x) => x.id === homework.rubric_id);
-        if (r) setRubric(r);
-      }).catch(() => {});
+      homeworkApi
+        .listRubrics()
+        .then((rs) => {
+          const r = rs.find((x) => x.id === homework.rubric_id);
+          if (r) setRubric(r);
+        })
+        .catch(() => {});
     }
   }, [homework.id]);
 
@@ -97,13 +100,18 @@ export function GradeModal({ homework, onClose }: { homework: HomeworkItem; onCl
         <div className="rubric-banner">
           <strong>{t('grade.rubric', { name: rubric.name })}</strong>
           <div className="muted grade-sub">
-            {rubric.criteria.map((c) => t('form.rubricOption', { name: c.name, score: c.max_score })).join(', ')}
+            {rubric.criteria
+              .map((c) => t('form.rubricOption', { name: c.name, score: c.max_score }))
+              .join(', ')}
           </div>
         </div>
       )}
       <div className="grade-progress">
         <span className="muted grade-progress-label">
-          {t('grade.progressDone')} <strong className="num">{graded}/{rows.length}</strong>
+          {t('grade.progressDone')}{' '}
+          <strong className="num">
+            {graded}/{rows.length}
+          </strong>
           {homework.max_score != null && ` · ${t('grade.scale', { max: homework.max_score })}`}
         </span>
         <div className="hw-progress-track" aria-hidden="true">
@@ -130,9 +138,7 @@ export function GradeModal({ homework, onClose }: { homework: HomeworkItem; onCl
               >
                 <span className="grade-name">{r.student_name}</span>
                 {rowStatus(r)}
-                <span className="num">
-                  {r.score !== null ? r.score : '-'}
-                </span>
+                <span className="num">{r.score !== null ? r.score : '-'}</span>
               </button>
             ))}
           </div>
@@ -156,9 +162,7 @@ export function GradeModal({ homework, onClose }: { homework: HomeworkItem; onCl
                     placeholder={t('grade.score')}
                     aria-label={t('grade.score')}
                   />
-                  {homework.max_score != null && (
-                    <span className="muted">/ {homework.max_score}</span>
-                  )}
+                  {homework.max_score != null && <span className="muted">/ {homework.max_score}</span>}
                 </div>
                 <textarea
                   className="text-input"
@@ -169,8 +173,13 @@ export function GradeModal({ homework, onClose }: { homework: HomeworkItem; onCl
                   aria-label={t('grade.feedback')}
                 />
                 <div className="modal-actions grade-actions">
-                  <button className="btn btn-primary hw-action-icon" disabled={busy} onClick={() => void save(current.student_id)}>
-                    <Icon name="check" size={15} /> {busy ? t('actions.saving', { ns: 'common' }) : t('grade.saveScore')}
+                  <button
+                    className="btn btn-primary hw-action-icon"
+                    disabled={busy}
+                    onClick={() => void save(current.student_id)}
+                  >
+                    <Icon name="check" size={15} />{' '}
+                    {busy ? t('actions.saving', { ns: 'common' }) : t('grade.saveScore')}
                   </button>
                 </div>
               </>

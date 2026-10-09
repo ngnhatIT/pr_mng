@@ -9,9 +9,9 @@ const log = logger.scope('zalo-listener');
  * Listener: gửi thông báo Zalo khi bài tập được đăng.
  * Tách khỏi business logic — service chỉ phát event, không biết Zalo tồn tại.
  */
-function handleHomeworkPublished(event: HomeworkPublishedEvent): void {
+async function handleHomeworkPublished(event: HomeworkPublishedEvent): Promise<void> {
   try {
-    notifyHomework(event.centerId, event.homeworkId);
+    await notifyHomework(event.centerId, event.homeworkId);
   } catch (err) {
     log.warn('Gửi Zalo thất bại', {
       homeworkId: event.homeworkId,

@@ -55,11 +55,7 @@ export function System() {
       {loading ? (
         <TableSkeleton cols={6} />
       ) : centers.length === 0 ? (
-        <EmptyState
-          icon="building"
-          title={t('system.empty.title')}
-          desc={t('system.empty.desc')}
-        />
+        <EmptyState icon="building" title={t('system.empty.title')} desc={t('system.empty.desc')} />
       ) : (
         <div className="table-wrap">
           <table className="table">
@@ -205,7 +201,9 @@ function CreateCenterModal({ onClose, onDone }: { onClose: () => void; onDone: (
             <Field label={t('system.createForm.plan')}>
               <select className="text-input" value={plan} onChange={(e) => setPlan(e.target.value)}>
                 {planOptions.map((p) => (
-                  <option key={p} value={p}>{t(`system.plan.${p}`)}</option>
+                  <option key={p} value={p}>
+                    {t(`system.plan.${p}`)}
+                  </option>
                 ))}
               </select>
             </Field>
@@ -300,7 +298,9 @@ function EditPlanModal({
               onChange={(e) => setPlan(e.target.value as CenterItem['plan'])}
             >
               {planOptions.map((p) => (
-                <option key={p} value={p}>{t(`system.plan.${p}`)}</option>
+                <option key={p} value={p}>
+                  {t(`system.plan.${p}`)}
+                </option>
               ))}
             </select>
           </Field>

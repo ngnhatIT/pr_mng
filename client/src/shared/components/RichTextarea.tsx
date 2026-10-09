@@ -90,7 +90,9 @@ export function RichTextarea({
 /** Render markdown đơn giản cho nội dung bài tập (bold/italic/list/quote/heading). */
 export function renderMarkdown(text: string): string {
   return text
-    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
     .replace(/^## (.+)$/gm, '<strong class="md-h">$1</strong>')
     .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
     .replace(/\*(.+?)\*/g, '<em>$1</em>')

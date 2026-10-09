@@ -68,11 +68,7 @@ export function ParentReferral() {
     return (
       <div className="parent-page">
         <h1 className="parent-title">{t('referral.title')}</h1>
-        <EmptyState
-          icon="gift"
-          title={t('referral.dataErrorTitle')}
-          desc={t('referral.dataErrorDesc')}
-        />
+        <EmptyState icon="gift" title={t('referral.dataErrorTitle')} desc={t('referral.dataErrorDesc')} />
       </div>
     );
 

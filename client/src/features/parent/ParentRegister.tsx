@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { setAuth } from '../../shared/api/client';
+import { setAuth, api } from '../../shared/api/client';
 import { parentApi } from './parent.api';
 import { useToast } from '../../shared/ui/toast';
 import { Icon } from '../../shared/components/icons';
@@ -15,8 +15,15 @@ export function ParentRegister() {
   const [confirm, setConfirm] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const [center, setCenter] = useState<{ id: number; name: string } | null>(null);
   const navigate = useNavigate();
   const toast = useToast();
+
+  useEffect(() => {
+    api<{ id: number; name: string }>('/public/center')
+      .then(setCenter)
+      .catch(() => setCenter(null));
+  }, []);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -33,10 +40,16 @@ export function ParentRegister() {
       toast(msg, 'error');
       return;
     }
+    if (!center) {
+      const msg = t('auth.centerRequired');
+      setError(msg);
+      toast(msg, 'error');
+      return;
+    }
     setBusy(true);
     setError('');
     try {
-      const data = await parentApi.register(phone, password, name);
+      const data = await parentApi.register(phone, password, name, center.id);
       setAuth(data.token, { ...data.parent, role: 'parent', username: data.parent.phone });
       toast(t('auth.registerSuccess'), 'success');
       navigate('/parent');
@@ -55,6 +68,7 @@ export function ParentRegister() {
         <div className="login-logo">E</div>
         <h1 className="login-title">{t('auth.registerTitle')}</h1>
         <p className="login-sub">{t('auth.registerSub')}</p>
+        {center && <p className="login-sub">{t('auth.registerAtCenter', { name: center.name })}</p>}
         {error && (
           <div className="auth-error" role="alert">
             <Icon name="alert" size={16} />

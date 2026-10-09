@@ -152,7 +152,8 @@
       "addTitle": "Add room",
       "capacity": "Capacity",
       "editTitle": "Edit room",
-      "name": "Room name *"
+      "name": "Room name *",
+      "capacityPlaceholder": "E.g. 40 students"
     },
     "loadError": "Could not load room list",
     "saved": "Room saved",

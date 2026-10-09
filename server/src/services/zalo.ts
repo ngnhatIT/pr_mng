@@ -187,14 +187,15 @@ export async function sendTuitionReminder(
   kind: 'overdue' | 'upcoming',
   centerId?: number
 ): Promise<ReminderResult> {
-  const inv = await db.prepare(
+  const inv = (await db
+    .prepare(
       `SELECT i.id, i.amount, i.due_date, i.status,
          COALESCE((SELECT SUM(amount) FROM payments WHERE invoice_id = i.id AND status = 'confirmed'), 0) as paid,
          s.id as student_id, s.name as student_name, s.phone as student_phone, s.center_id
        FROM invoices i JOIN students s ON s.id = i.student_id
        WHERE i.id = ?`
     )
-    .get(invoiceId) as
+    .get(invoiceId)) as
     | {
         id: number;
         amount: number;
@@ -232,12 +233,21 @@ export async function sendTuitionReminder(
   };
 
   const insertLog = await db.prepare(
-    'INSERT INTO reminders (invoice_id, student_id, phone, kind, status, message, response) VALUES (?, ?, ?, ?, ?, ?, ?)'
+    'INSERT INTO reminders (center_id, invoice_id, student_id, phone, kind, status, message, response) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
   );
 
   if (!phone) {
     const msg = `Học viên ${inv.student_name} chưa có số điện thoại hợp lệ`;
-    await insertLog.run(invoiceId, inv.student_id, inv.student_phone, kind, 'failed', msg, null);
+    await insertLog.run(
+      inv.center_id,
+      invoiceId,
+      inv.student_id,
+      inv.student_phone,
+      kind,
+      'failed',
+      msg,
+      null
+    );
     return { demo: false, status: 'failed', message: msg, phone: inv.student_phone };
   }
 
@@ -248,7 +258,7 @@ export async function sendTuitionReminder(
   const demoMessage = buildDemoMessage(invoice, student, kind, cfg.center_name);
 
   if (demoMode) {
-    await insertLog.run(invoiceId, inv.student_id, phone, kind, 'demo', demoMessage, null);
+    await insertLog.run(inv.center_id, invoiceId, inv.student_id, phone, kind, 'demo', demoMessage, null);
     return {
       demo: true,
       status: 'demo',
@@ -259,11 +269,17 @@ export async function sendTuitionReminder(
 
   if (!templateId) {
     const msg = 'Chưa cấu hình Template ID cho loại nhắc này';
-    await insertLog.run(invoiceId, inv.student_id, phone, kind, 'failed', msg, null);
+    await insertLog.run(inv.center_id, invoiceId, inv.student_id, phone, kind, 'failed', msg, null);
     return { demo: false, status: 'failed', message: msg, phone };
   }
 
-  // Gửi ZNS thật
+  // Gửi ZNS thật — ghi log status='sending' TRƯỚC khi gọi ZNS để nếu process
+  // crash giữa chừng, lần chạy sau không gửi trùng (wasRemindedRecently đã thấy row).
+  // Lưu ý: cần migration thêm 'sending' vào chk_reminders_status.
+  const logId = Number(
+    (await insertLog.run(inv.center_id, invoiceId, inv.student_id, phone, kind, 'sending', demoMessage, null))
+      .lastInsertRowid
+  );
   const r = await sendZNS({
     phone,
     templateId,
@@ -272,15 +288,9 @@ export async function sendTuitionReminder(
   });
   const status = r.ok ? 'sent' : 'failed';
   const msg = r.ok ? demoMessage : r.error || 'Gửi thất bại';
-  await insertLog.run(
-    invoiceId,
-    inv.student_id,
-    phone,
-    kind,
-    status,
-    msg,
-    r.data ? JSON.stringify(r.data).slice(0, 2000) : r.error || null
-  );
+  await db
+    .prepare('UPDATE reminders SET status = ?, message = ?, response = ? WHERE id = ?')
+    .run(status, msg, r.data ? JSON.stringify(r.data).slice(0, 2000) : r.error || null, logId);
   return {
     demo: false,
     status,
@@ -309,10 +319,12 @@ export async function notifyHomeworkPublished(
   ].join('\n');
   // Lưu vào bảng reminders để tra cứu lịch sử (giống nhắc học phí demo mode)
   try {
-    await db.prepare(
-      `INSERT INTO reminders (center_id, kind, message, status, created_at)
+    await db
+      .prepare(
+        `INSERT INTO reminders (center_id, kind, message, status, created_at)
        VALUES (?, 'homework', ?, 'demo', datetime('now'))`
-    ).run(centerId, msg);
+      )
+      .run(centerId, msg);
   } catch {
     /* bảng reminders có thể chưa có cột kind — bỏ qua */
   }

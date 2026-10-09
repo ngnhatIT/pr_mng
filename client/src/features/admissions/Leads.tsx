@@ -147,13 +147,18 @@ export function Leads() {
                       {l.note && <p className="pipeline-note">{l.note}</p>}
                       <div className="muted">{formatDate(l.created_at)}</div>
                       <div className="pipeline-actions">
-                        <button
-                          className="btn btn-sm btn-primary"
-                          onClick={() => setConverting(l)}
-                          title={t('leads.convertTitle')}
-                        >
-                          {t('leads.convert')}
-                        </button>
+                        {/* HIGH-3: ẩn nút convert khi lead đã thành học viên để tránh tạo trùng */}
+                        {l.status !== 'enrolled' ? (
+                          <button
+                            className="btn btn-sm btn-primary"
+                            onClick={() => setConverting(l)}
+                            title={t('leads.convertTitle')}
+                          >
+                            {t('leads.convert')}
+                          </button>
+                        ) : (
+                          <span className="badge badge-enrolled">{t('leads.status.enrolled')}</span>
+                        )}
                         <button
                           className="btn btn-sm"
                           onClick={() => setEditing(l)}
@@ -173,7 +178,10 @@ export function Leads() {
                             className="btn btn-sm btn-icon"
                             onClick={() => void moveStatus(l, NEXT_STATUS[col])}
                             title={t('leads.moveNext', { label: statusLabel(NEXT_STATUS[col]) })}
-                            aria-label={t('leads.moveNextAria', { name: l.name, label: statusLabel(NEXT_STATUS[col]) })}
+                            aria-label={t('leads.moveNextAria', {
+                              name: l.name,
+                              label: statusLabel(NEXT_STATUS[col]),
+                            })}
                           >
                             <Icon name="arrow-right" size={15} />
                           </button>

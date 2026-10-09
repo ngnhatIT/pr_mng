@@ -67,11 +67,7 @@ export function Payroll() {
       {loading ? (
         <TableSkeleton cols={5} />
       ) : rows.length === 0 ? (
-        <EmptyState
-          icon="banknote"
-          title={t('payroll.emptyTitle')}
-          desc={t('payroll.emptyDesc')}
-        />
+        <EmptyState icon="banknote" title={t('payroll.emptyTitle')} desc={t('payroll.emptyDesc')} />
       ) : (
         <div className="table-wrap sticky">
           <table className="table">

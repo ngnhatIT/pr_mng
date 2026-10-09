@@ -5,10 +5,18 @@ import { Modal } from '../../shared/components/Modal';
 import { EmptyState } from '../../shared/components/EmptyState';
 import { Icon } from '../../shared/components/icons';
 import { formatDateTime } from '../../shared/types';
-import { getToken } from '../../shared/api/client';
+import { useSecureFileUrl } from '../../shared/components/SecureFile';
 
 /** Giáo viên xem bài nộp của học viên (ảnh/file + ghi chú). */
-export function SubmissionsModal({ homeworkId, title, onClose }: { homeworkId: number; title: string; onClose: () => void }) {
+export function SubmissionsModal({
+  homeworkId,
+  title,
+  onClose,
+}: {
+  homeworkId: number;
+  title: string;
+  onClose: () => void;
+}) {
   const { t } = useTranslation(['homework', 'common']);
   const [subs, setSubs] = useState<Submission[]>([]);
   const [loading, setLoading] = useState(true);
@@ -23,11 +31,6 @@ export function SubmissionsModal({ homeworkId, title, onClose }: { homeworkId: n
   }, [homeworkId]);
 
   const isImage = (url: string | null) => !!url && /\.(jpg|jpeg|png|gif|webp)$/i.test(url);
-  const fileUrl = (url: string | null) => {
-    if (!url) return '';
-    const token = getToken();
-    return token ? `${url}?token=${encodeURIComponent(token)}` : url;
-  };
 
   return (
     <Modal title={t('submissions.title', { title })} onClose={onClose} wide>
@@ -39,34 +42,46 @@ export function SubmissionsModal({ homeworkId, title, onClose }: { homeworkId: n
         <EmptyState icon="file" title={t('submissions.empty')} desc={t('submissions.emptyDesc')} />
       ) : (
         <>
-          <div className="muted submissions-count">
-            {t('submissions.count', { count: subs.length })}
-          </div>
+          <div className="muted submissions-count">{t('submissions.count', { count: subs.length })}</div>
           <div className="submission-list">
             {subs.map((s) => (
-              <div key={s.id} className="submission-item">
-                <div className="submission-body">
-                  <div className="submission-student">{s.student_name}</div>
-                  <div className="muted submission-time">
-                    {t('submissions.submittedAt', { time: formatDateTime(s.submitted_at) })}
-                  </div>
-                  {s.note && <div className="submission-note">{s.note}</div>}
-                  {s.file_url && !isImage(s.file_url) && (
-                    <a className="link submission-file-link" href={fileUrl(s.file_url)} target="_blank" rel="noreferrer">
-                      <Icon name="paperclip" size={14} /> {s.file_name || t('submissions.downloadFile')}
-                    </a>
-                  )}
-                </div>
-                {s.file_url && isImage(s.file_url) && (
-                  <a href={fileUrl(s.file_url)} target="_blank" rel="noreferrer" title={t('submissions.viewLarge')}>
-                    <img src={fileUrl(s.file_url)} alt={s.file_name || t('submissions.imageAlt')} className="submission-thumb" loading="lazy" />
-                  </a>
-                )}
-              </div>
+              <SubmissionRow key={s.id} s={s} isImage={isImage(s.file_url)} />
             ))}
           </div>
         </>
       )}
     </Modal>
+  );
+}
+
+/** Một dòng bài nộp: tải file qua Authorization header (blob URL), không gắn JWT vào URL. */
+function SubmissionRow({ s, isImage }: { s: Submission; isImage: boolean }) {
+  const { t } = useTranslation(['homework', 'common']);
+  const fileUrl = useSecureFileUrl(s.file_url);
+  return (
+    <div className="submission-item">
+      <div className="submission-body">
+        <div className="submission-student">{s.student_name}</div>
+        <div className="muted submission-time">
+          {t('submissions.submittedAt', { time: formatDateTime(s.submitted_at) })}
+        </div>
+        {s.note && <div className="submission-note">{s.note}</div>}
+        {s.file_url && !isImage && fileUrl && (
+          <a className="link submission-file-link" href={fileUrl} target="_blank" rel="noreferrer">
+            <Icon name="paperclip" size={14} /> {s.file_name || t('submissions.downloadFile')}
+          </a>
+        )}
+      </div>
+      {s.file_url && isImage && fileUrl && (
+        <a href={fileUrl} target="_blank" rel="noreferrer" title={t('submissions.viewLarge')}>
+          <img
+            src={fileUrl}
+            alt={s.file_name || t('submissions.imageAlt')}
+            className="submission-thumb"
+            loading="lazy"
+          />
+        </a>
+      )}
+    </div>
   );
 }

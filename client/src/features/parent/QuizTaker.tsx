@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { parentApi, type QuizQuestion, type QuizAttempt } from './parent.api';
-import { HomeworkItem } from '../../shared/types';
+import { HomeworkItem, formatDate } from '../../shared/types';
 import { useToast } from '../../shared/ui/toast';
 import { Modal } from '../../shared/components/Modal';
 import { EmptyState } from '../../shared/components/EmptyState';
@@ -33,7 +33,12 @@ export function QuizTaker({
   const [qIndex, setQIndex] = useState(0);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-  const [result, setResult] = useState<{ score: number; max_score: number; attempt_id: number; attempt_no: number } | null>(null);
+  const [result, setResult] = useState<{
+    score: number;
+    max_score: number;
+    attempt_id: number;
+    attempt_no: number;
+  } | null>(null);
   const [review, setReview] = useState<QuizAttemptDetail[] | null>(null);
   const [showReview, setShowReview] = useState(false);
   const [history, setHistory] = useState<QuizAttempt[]>([]);
@@ -69,8 +74,18 @@ export function QuizTaker({
         studentId,
         Object.entries(answers).map(([qid, oid]) => ({ question_id: Number(qid), option_id: oid }))
       );
+      // HIGH-1: KHÔNG gọi onDone() ngay, hiện màn hình kết quả trước.
       setResult(res);
-      onDone();
+      setHistory((h) => [
+        {
+          id: res.attempt_id,
+          score: res.score,
+          max_score: res.max_score,
+          submitted_at: new Date().toISOString(),
+          answers: [],
+        },
+        ...h,
+      ]);
     } catch (err) {
       toast(err instanceof Error ? err.message : t('quiz.submitError'), 'error');
     } finally {
@@ -88,6 +103,15 @@ export function QuizTaker({
     }
   };
 
+  // MEDIUM-12: làm lại quiz (server cho phép không giới hạn, giữ điểm cao nhất)
+  const retry = () => {
+    setResult(null);
+    setReview(null);
+    setShowReview(false);
+    setAnswers({});
+    setQIndex(0);
+  };
+
   const pct = result && result.max_score > 0 ? (result.score / result.max_score) * 100 : 0;
 
   return (
@@ -98,12 +122,17 @@ export function QuizTaker({
           <span className="muted" style={{ fontSize: 13 }}>
             {t('quiz.questionCount', { count: questions.length })}
             {homework.max_score != null && ` ${t('quiz.maxScore', { score: homework.max_score })}`}
-            {homework.due_date && ` ${t('quiz.dueDate', { date: homework.due_date })}`}
+            {homework.due_date && ` ${t('quiz.dueDate', { date: formatDate(homework.due_date) })}`}
           </span>
           {history.length > 0 && (
             <span className="muted" style={{ fontSize: 13 }}>
               {t('quiz.attempted', { count: history.length })} · {t('quiz.bestScore')}{' '}
-              <strong>{t('quiz.bestScoreLine', { best: Math.max(...history.map((h) => h.score)), max: history[0].max_score })}</strong>
+              <strong>
+                {t('quiz.bestScoreLine', {
+                  best: Math.max(...history.map((h) => h.score)),
+                  max: history[0].max_score,
+                })}
+              </strong>
             </span>
           )}
         </div>
@@ -119,7 +148,9 @@ export function QuizTaker({
             {result.score}/{result.max_score}
           </div>
           <div>
-            <span className={`badge ${pct >= 80 ? 'badge-paid' : pct >= 50 ? 'badge-late' : 'badge-overdue'}`}>
+            <span
+              className={`badge ${pct >= 80 ? 'badge-paid' : pct >= 50 ? 'badge-late' : 'badge-overdue'}`}
+            >
               {pct.toFixed(0)}%
             </span>
             {result.attempt_no > 1 && (
@@ -135,7 +166,12 @@ export function QuizTaker({
             <button className="btn" onClick={() => void loadReview(result.attempt_id)}>
               {t('quiz.viewAnswers')}
             </button>
-            <button className="btn btn-primary" onClick={onClose}>{t('actions.close', { ns: 'common' })}</button>
+            <button className="btn" onClick={retry}>
+              {t('quiz.retry')}
+            </button>
+            <button className="btn btn-primary" onClick={onDone}>
+              {t('actions.close', { ns: 'common' })}
+            </button>
           </div>
         </div>
       ) : showReview && review ? (
@@ -150,9 +186,7 @@ export function QuizTaker({
                   ) : (
                     <Icon name="x" size={18} className="icon-bad" />
                   )}
-                  <span>
-                    {t('quiz.questionLabel', { num: qi + 1, question: q.question })}
-                  </span>
+                  <span>{t('quiz.questionLabel', { num: qi + 1, question: q.question })}</span>
                 </div>
                 {q.options.map((o) => (
                   <div
@@ -167,15 +201,24 @@ export function QuizTaker({
                       <span className="opt-dot" aria-hidden="true" />
                     )}
                     <span>{o.text}</span>
-                    {o.chosen && <span className="muted" style={{ fontSize: 12 }}> {t('quiz.youChose')}</span>}
+                    {o.chosen && (
+                      <span className="muted" style={{ fontSize: 12 }}>
+                        {' '}
+                        {t('quiz.youChose')}
+                      </span>
+                    )}
                   </div>
                 ))}
               </div>
             );
           })}
           <div className="modal-actions">
-            <button className="btn" onClick={() => setShowReview(false)}>{t('actions.back', { ns: 'common' })}</button>
-            <button className="btn btn-primary" onClick={onClose}>{t('actions.close', { ns: 'common' })}</button>
+            <button className="btn" onClick={() => setShowReview(false)}>
+              {t('actions.back', { ns: 'common' })}
+            </button>
+            <button className="btn btn-primary" onClick={onDone}>
+              {t('actions.close', { ns: 'common' })}
+            </button>
           </div>
         </div>
       ) : questions.length === 0 ? (
@@ -191,8 +234,17 @@ export function QuizTaker({
                 {t('quiz.answeredCount', { answered: Object.keys(answers).length, total: questions.length })}
               </span>
             </div>
-            <div className="quiz-progress-bar" role="progressbar" aria-valuenow={qIndex + 1} aria-valuemin={1} aria-valuemax={questions.length}>
-              <div className="quiz-progress-fill" style={{ width: `${((qIndex + 1) / questions.length) * 100}%` }} />
+            <div
+              className="quiz-progress-bar"
+              role="progressbar"
+              aria-valuenow={qIndex + 1}
+              aria-valuemin={1}
+              aria-valuemax={questions.length}
+            >
+              <div
+                className="quiz-progress-fill"
+                style={{ width: `${((qIndex + 1) / questions.length) * 100}%` }}
+              />
             </div>
           </div>
           {(() => {
@@ -201,7 +253,10 @@ export function QuizTaker({
               <div key={q.id} className="quiz-take-q">
                 <div style={{ fontWeight: 600, marginBottom: 12 }}>
                   {q.question}
-                  <span className="muted" style={{ fontWeight: 400 }}> {t('quiz.points', { points: q.points })}</span>
+                  <span className="muted" style={{ fontWeight: 400 }}>
+                    {' '}
+                    {t('quiz.points', { points: q.points })}
+                  </span>
                 </div>
                 {q.options.map((o) => (
                   <button

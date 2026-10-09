@@ -10,7 +10,10 @@ export function AnalyticsModal({ onClose }: { onClose: () => void }) {
   const [data, setData] = useState<HomeworkAnalytics | null>(null);
 
   useEffect(() => {
-    homeworkApi.analytics().then(setData);
+    void homeworkApi
+      .analytics()
+      .then(setData)
+      .catch(() => setData(null));
   }, []);
 
   return (
@@ -40,13 +43,13 @@ export function AnalyticsModal({ onClose }: { onClose: () => void }) {
                     <td>{c.class_name}</td>
                     <td className="td-center">{c.total}</td>
                     <td className="td-center">
-                      <span className={`badge ${c.avg_completion >= 0.8 ? 'badge-done' : c.avg_completion >= 0.5 ? 'badge-pending' : 'badge-overdue'}`}>
+                      <span
+                        className={`badge ${c.avg_completion >= 0.8 ? 'badge-done' : c.avg_completion >= 0.5 ? 'badge-pending' : 'badge-overdue'}`}
+                      >
                         {Math.round(c.avg_completion * 100)}%
                       </span>
                     </td>
-                    <td className="td-center">
-                      {c.avg_score !== null ? c.avg_score.toFixed(1) : '-'}
-                    </td>
+                    <td className="td-center">{c.avg_score !== null ? c.avg_score.toFixed(1) : '-'}</td>
                   </tr>
                 ))}
               </tbody>

@@ -39,12 +39,17 @@ export interface LeaveForm {
 export const parentApi = {
   login: (phone: string, password: string) =>
     http.post<{ token: string; parent: ParentUser }>('/parent/login', { phone, password }),
-  register: (phone: string, password: string, name: string) =>
-    http.post<{ token: string; parent: ParentUser }>('/parent/register', { phone, password, name }),
+  register: (phone: string, password: string, name: string, center_id: number) =>
+    http.post<{ token: string; parent: ParentUser }>('/parent/register', {
+      phone,
+      password,
+      name,
+      center_id,
+    }),
 
   children: () => http.get<ParentChild[]>('/parent/children'),
-  linkChild: (studentCode: string) =>
-    http.post<{ ok: boolean; student: ParentChild }>('/parent/link', { student_code: studentCode }),
+  linkChild: (studentCode: string, dob: string) =>
+    http.post<{ ok: boolean; student: ParentChild }>('/parent/link', { student_code: studentCode, dob }),
   childOverview: (id: number | string) => http.get<ChildOverview>(`/parent/children/${id}/overview`),
 
   vietqr: (invoiceId: number) => http.get<VietQRInfo>(`/parent/invoices/${invoiceId}/vietqr`),
@@ -63,11 +68,18 @@ export const parentApi = {
     http.del<{ ok: boolean }>(`/parent/homework/${homeworkId}/complete?student_id=${studentId}`),
   getQuiz: (homeworkId: number, studentId: number) =>
     http.get<QuizQuestion[]>(`/parent/homework/${homeworkId}/quiz?student_id=${studentId}`),
-  submitQuiz: (homeworkId: number, studentId: number, answers: { question_id: number; option_id: number }[]) =>
-    http.post<{ score: number; max_score: number; attempt_id: number; attempt_no: number }>(`/parent/homework/${homeworkId}/quiz/submit`, {
-      student_id: studentId,
-      answers,
-    }),
+  submitQuiz: (
+    homeworkId: number,
+    studentId: number,
+    answers: { question_id: number; option_id: number }[]
+  ) =>
+    http.post<{ score: number; max_score: number; attempt_id: number; attempt_no: number }>(
+      `/parent/homework/${homeworkId}/quiz/submit`,
+      {
+        student_id: studentId,
+        answers,
+      }
+    ),
   getQuizAttempts: (homeworkId: number, studentId: number) =>
     http.get<QuizAttempt[]>(`/parent/homework/${homeworkId}/quiz/attempts?student_id=${studentId}`),
   getAttemptReview: (attemptId: number, studentId: number) =>

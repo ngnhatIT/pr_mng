@@ -31,6 +31,7 @@ router.post(
       phone: v.string({ required: true, label: 'Số điện thoại' }),
       password: v.string({ required: true, min: 4, label: 'Mật khẩu' }),
       name: v.string({ required: true, max: 100, label: 'Họ tên' }),
+      center_id: v.number({ required: true, label: 'Trung tâm' }),
     });
     const result = await parentService.registerParent(input);
     res.status(201).json(result);
@@ -44,6 +45,7 @@ router.post(
     const input = validate(req.body, {
       phone: v.string({ required: true, label: 'Số điện thoại' }),
       password: v.string({ required: true, label: 'Mật khẩu' }),
+      center_id: v.number({ required: false, label: 'Trung tâm' }),
     });
     res.json(await parentService.loginParent(input));
   })
@@ -56,10 +58,11 @@ router.post(
   '/link',
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const { parentId, centerId } = ctx(req);
-    const { student_code } = validate(req.body, {
+    const { student_code, dob } = validate(req.body, {
       student_code: v.string({ required: true, label: 'Mã học viên' }),
+      dob: v.string({ required: true, label: 'Ngày sinh' }),
     });
-    const student = await parentService.linkStudent(parentId, centerId, student_code);
+    const student = await parentService.linkStudent(parentId, centerId, student_code, dob);
     res.json({ ok: true, student });
   })
 );
@@ -168,7 +171,7 @@ router.post(
     const { student_id } = validate(req.body, {
       student_id: v.number({ integer: true, min: 1, label: 'Học viên' }),
     });
-    parentService.markHomeworkComplete(parentId, student_id as number, homeworkId);
+    await parentService.markHomeworkComplete(parentId, student_id as number, homeworkId);
     res.json({ ok: true });
   })
 );
@@ -180,7 +183,7 @@ router.delete(
     const { parentId } = ctx(req);
     const homeworkId = paramId(req.params, 'homeworkId');
     const studentId = reqStudentId(req);
-    parentService.unmarkHomeworkComplete(parentId, studentId, homeworkId);
+    await parentService.unmarkHomeworkComplete(parentId, studentId, homeworkId);
     res.json({ ok: true });
   })
 );
@@ -210,7 +213,9 @@ router.post(
       res.status(400).json({ error: 'Bài làm không hợp lệ' });
       return;
     }
-    res.json(await parentService.submitChildQuiz(parentId, student_id as number, homeworkId, answers as never));
+    res.json(
+      await parentService.submitChildQuiz(parentId, student_id as number, homeworkId, answers as never)
+    );
   })
 );
 
@@ -238,8 +243,6 @@ router.get(
 
 /* ------------------------------- Nộp bài ------------------------------- */
 
-
-
 /** Phụ huynh/học viên nộp bài (ảnh/file + ghi chú) */
 router.post(
   '/homework/:homeworkId/submit',
@@ -254,7 +257,7 @@ router.post(
     }
     const note = String(req.body.note || '').slice(0, 1000);
     try {
-      parentService.submitHomework(parentId, studentId, homeworkId, {
+      await parentService.submitHomework(parentId, studentId, homeworkId, {
         file_url: req.file ? `/uploads/${req.file.filename}` : null,
         file_name: req.file ? req.file.originalname : null,
         note: note || null,

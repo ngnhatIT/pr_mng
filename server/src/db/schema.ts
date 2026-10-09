@@ -59,7 +59,6 @@ export interface TableDoc {
   columns: Record<string, string>;
 }
 
-
 export const TABLE_DOCS: Record<string, TableDoc> = {
   users: {
     description: 'Tài khoản đăng nhập của nhân sự (admin/staff/teacher) và superadmin hệ thống.',
@@ -246,7 +245,8 @@ export const TABLE_DOCS: Record<string, TableDoc> = {
       paid_at: 'Thời điểm thu (UTC).',
       method: 'Hình thức thu (tự do: Tiền mặt, bank_transfer, vnpay...).',
       note: 'Ghi chú.',
-      status: "Trạng thái: 'pending' (chờ duyệt) | 'confirmed' | 'rejected'. Chỉ 'confirmed' được tính công nợ.",
+      status:
+        "Trạng thái: 'pending' (chờ duyệt) | 'confirmed' | 'rejected'. Chỉ 'confirmed' được tính công nợ.",
       updated_at: 'Tự động cập nhật bởi trigger.',
       version: 'Phiên bản optimistic locking — tăng tự động mỗi lần UPDATE.',
     },
@@ -1255,9 +1255,9 @@ CREATE TABLE IF NOT EXISTS reminders (
     CONSTRAINT fk_reminders_student REFERENCES students(id) ON DELETE SET NULL,
   phone TEXT,
   kind TEXT NOT NULL DEFAULT 'overdue'
-    CONSTRAINT chk_reminders_kind CHECK (kind IN ('overdue', 'upcoming', 'receipt')),
+    CONSTRAINT chk_reminders_kind CHECK (kind IN ('overdue','upcoming','receipt','test','absence','leave_result','payment_confirmed','grade','homework','general')),
   status TEXT NOT NULL DEFAULT 'sent'
-    CONSTRAINT chk_reminders_status CHECK (status IN ('sent', 'failed', 'demo')),
+    CONSTRAINT chk_reminders_status CHECK (status IN ('sending', 'sent', 'failed', 'demo')),
   message TEXT,
   response TEXT,
   created_at TEXT NOT NULL DEFAULT (to_char(NOW(), 'YYYY-MM-DD HH24:MI:SS')),
@@ -1318,6 +1318,13 @@ const MAINTAIN_TABLES = [
   'trial_registrations',
   'leads',
   'reminders',
+  // Các bảng có updated_at nhưng trước đây thiếu trigger maintain
+  'roles',
+  'salary_rules',
+  'payment_txns',
+  'parent_students',
+  'homework_targets',
+  'homework_scores',
 ] as const;
 
 /** Bảng có optimistic locking (cột version). */
@@ -1389,20 +1396,32 @@ CREATE INDEX IF NOT EXISTS idx_payment_history_payment ON payment_history(paymen
 CREATE INDEX IF NOT EXISTS idx_invoice_history_invoice ON invoice_history(invoice_id, changed_at DESC);
 
 CREATE OR REPLACE FUNCTION audit_payment() RETURNS TRIGGER AS $$
+DECLARE
+  -- Actor của request ('<userId>:<role>') do middleware auth gắn qua
+  -- SET LOCAL app.user_id. missing_ok=true -> NULL khi chạy ngoài request
+  -- (seed, scheduler, migration); ép kiểu an toàn, rác -> NULL chứ không lỗi.
+  v_changed_by INTEGER;
 BEGIN
+  BEGIN
+    v_changed_by := NULLIF(split_part(current_setting('app.user_id', true), ':', 1), '')::INTEGER;
+  EXCEPTION WHEN invalid_text_representation THEN
+    v_changed_by := NULL;
+  END;
   IF TG_OP = 'INSERT' THEN
-    INSERT INTO payment_history (payment_id, action, new_data)
+    INSERT INTO payment_history (payment_id, action, new_data, changed_by)
     VALUES (NEW.id, 'insert',
       json_build_object('id', NEW.id, 'invoice_id', NEW.invoice_id, 'amount', NEW.amount,
-                        'status', NEW.status, 'method', NEW.method, 'paid_at', NEW.paid_at));
+                        'status', NEW.status, 'method', NEW.method, 'paid_at', NEW.paid_at),
+      v_changed_by);
     RETURN NEW;
   ELSIF TG_OP = 'UPDATE' THEN
-    INSERT INTO payment_history (payment_id, action, old_data, new_data)
+    INSERT INTO payment_history (payment_id, action, old_data, new_data, changed_by)
     VALUES (NEW.id, 'update',
       json_build_object('id', OLD.id, 'invoice_id', OLD.invoice_id, 'amount', OLD.amount,
                         'status', OLD.status, 'method', OLD.method, 'paid_at', OLD.paid_at),
       json_build_object('id', NEW.id, 'invoice_id', NEW.invoice_id, 'amount', NEW.amount,
-                        'status', NEW.status, 'method', NEW.method, 'paid_at', NEW.paid_at));
+                        'status', NEW.status, 'method', NEW.method, 'paid_at', NEW.paid_at),
+      v_changed_by);
     IF NEW.updated_at IS NULL OR NEW.updated_at = OLD.updated_at THEN
       NEW.updated_at := ${TS_EXPR};
     END IF;
@@ -1411,10 +1430,11 @@ BEGIN
     END IF;
     RETURN NEW;
   ELSIF TG_OP = 'DELETE' THEN
-    INSERT INTO payment_history (payment_id, action, old_data)
+    INSERT INTO payment_history (payment_id, action, old_data, changed_by)
     VALUES (OLD.id, 'delete',
       json_build_object('id', OLD.id, 'invoice_id', OLD.invoice_id, 'amount', OLD.amount,
-                        'status', OLD.status, 'method', OLD.method, 'paid_at', OLD.paid_at));
+                        'status', OLD.status, 'method', OLD.method, 'paid_at', OLD.paid_at),
+      v_changed_by);
     RETURN OLD;
   END IF;
   RETURN NULL;
@@ -1422,20 +1442,29 @@ END;
 $$ LANGUAGE plpgsql;
 
 CREATE OR REPLACE FUNCTION audit_invoice() RETURNS TRIGGER AS $$
+DECLARE
+  v_changed_by INTEGER;
 BEGIN
+  BEGIN
+    v_changed_by := NULLIF(split_part(current_setting('app.user_id', true), ':', 1), '')::INTEGER;
+  EXCEPTION WHEN invalid_text_representation THEN
+    v_changed_by := NULL;
+  END;
   IF TG_OP = 'INSERT' THEN
-    INSERT INTO invoice_history (invoice_id, action, new_data)
+    INSERT INTO invoice_history (invoice_id, action, new_data, changed_by)
     VALUES (NEW.id, 'insert',
       json_build_object('id', NEW.id, 'student_id', NEW.student_id, 'amount', NEW.amount,
-                        'status', NEW.status, 'due_date', NEW.due_date));
+                        'status', NEW.status, 'due_date', NEW.due_date),
+      v_changed_by);
     RETURN NEW;
   ELSIF TG_OP = 'UPDATE' THEN
-    INSERT INTO invoice_history (invoice_id, action, old_data, new_data)
+    INSERT INTO invoice_history (invoice_id, action, old_data, new_data, changed_by)
     VALUES (NEW.id, 'update',
       json_build_object('id', OLD.id, 'student_id', OLD.student_id, 'amount', OLD.amount,
                         'status', OLD.status, 'due_date', OLD.due_date),
       json_build_object('id', NEW.id, 'student_id', NEW.student_id, 'amount', NEW.amount,
-                        'status', NEW.status, 'due_date', NEW.due_date));
+                        'status', NEW.status, 'due_date', NEW.due_date),
+      v_changed_by);
     IF NEW.updated_at IS NULL OR NEW.updated_at = OLD.updated_at THEN
       NEW.updated_at := ${TS_EXPR};
     END IF;
@@ -1444,10 +1473,11 @@ BEGIN
     END IF;
     RETURN NEW;
   ELSIF TG_OP = 'DELETE' THEN
-    INSERT INTO invoice_history (invoice_id, action, old_data)
+    INSERT INTO invoice_history (invoice_id, action, old_data, changed_by)
     VALUES (OLD.id, 'delete',
       json_build_object('id', OLD.id, 'student_id', OLD.student_id, 'amount', OLD.amount,
-                        'status', OLD.status, 'due_date', OLD.due_date));
+                        'status', OLD.status, 'due_date', OLD.due_date),
+      v_changed_by);
     RETURN OLD;
   END IF;
   RETURN NULL;
@@ -1543,6 +1573,11 @@ const EXPECTED_FK_COUNT: Record<string, number> = {
   audit_logs: 0,
   payment_history: 0,
   invoice_history: 0,
+  // RBAC (trước đây thiếu kiểm tra)
+  roles: 1,
+  role_permissions: 2,
+  user_roles: 2,
+  permissions: 0,
 };
 
 export async function validateSchema(db: Db): Promise<void> {

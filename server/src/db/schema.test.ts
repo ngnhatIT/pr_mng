@@ -13,7 +13,8 @@
 import { describe, it, before, beforeEach, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { db } from './pg-compat';
-import { validateSchema, TABLE_DOCS, SCHEMA_VERSION } from './schema';
+import { validateSchema, TABLE_DOCS } from './schema';
+import { LATEST_MIGRATION_VERSION } from './migrations';
 import { setupTestDb, resetTestDb, teardownTestDb } from './test-utils';
 
 describe('schema enterprise (PostgreSQL)', () => {
@@ -29,9 +30,9 @@ describe('schema enterprise (PostgreSQL)', () => {
     await teardownTestDb();
   });
 
-  it('SCHEMA_VERSION khớp migration mới nhất', async () => {
+  it('migration đã chạy tới version mới nhất của code', async () => {
     const r = await db.query('SELECT MAX(version) as v FROM schema_migrations');
-    assert.equal((r.rows[0] as { v: number }).v, SCHEMA_VERSION);
+    assert.equal((r.rows[0] as { v: number }).v, LATEST_MIGRATION_VERSION);
   });
 
   it('validateSchema() đạt — đủ bảng, đủ FK, đủ trigger, đủ view, không mồ côi', async () => {
@@ -61,55 +62,80 @@ describe('schema enterprise (PostgreSQL)', () => {
     const centerId = Number(cr.lastInsertRowid);
     // role sai
     await assert.rejects(() =>
-      db.prepare("INSERT INTO users (username, password_hash, role, name) VALUES ('u1','x','hacker','X')").run()
+      db
+        .prepare("INSERT INTO users (username, password_hash, role, name) VALUES ('u1','x','hacker','X')")
+        .run()
     );
     // status học viên sai
     await assert.rejects(() =>
-      db.prepare('INSERT INTO students (code, name, status, center_id) VALUES (?,?,?,?)').run('HV1', 'A', 'bogus', centerId)
+      db
+        .prepare('INSERT INTO students (code, name, status, center_id) VALUES (?,?,?,?)')
+        .run('HV1', 'A', 'bogus', centerId)
     );
     // tiền hóa đơn âm
-    const sr = await db.prepare('INSERT INTO students (code, name, center_id) VALUES (?,?,?)').run('HV2', 'B', centerId);
+    const sr = await db
+      .prepare('INSERT INTO students (code, name, center_id) VALUES (?,?,?)')
+      .run('HV2', 'B', centerId);
     const stId = Number(sr.lastInsertRowid);
     await assert.rejects(() =>
-      db.prepare('INSERT INTO invoices (student_id, amount, center_id) VALUES (?,?,?)').run(stId, -1000, centerId)
+      db
+        .prepare('INSERT INTO invoices (student_id, amount, center_id) VALUES (?,?,?)')
+        .run(stId, -1000, centerId)
     );
     // rating vượt thang 1-5
-    await assert.rejects(() => db.prepare('INSERT INTO reviews (center_id, rating) VALUES (?,?)').run(centerId, 9));
+    await assert.rejects(() =>
+      db.prepare('INSERT INTO reviews (center_id, rating) VALUES (?,?)').run(centerId, 9)
+    );
     // điểm vượt max_score
     await assert.rejects(() =>
-      db.prepare('INSERT INTO grades (student_id, title, score, max_score) VALUES (?,?,?,?)').run(stId, 'KT', 11, 10)
+      db
+        .prepare('INSERT INTO grades (student_id, title, score, max_score) VALUES (?,?,?,?)')
+        .run(stId, 'KT', 11, 10)
     );
     // plan sai
     await assert.rejects(() => db.prepare("INSERT INTO centers (name, plan) VALUES ('X','vip')").run());
     // ngày nghỉ ngược
     await assert.rejects(() =>
-      db.prepare('INSERT INTO leave_requests (student_id, from_date, to_date) VALUES (?,?,?)').run(stId, '2026-10-10', '2026-10-01')
+      db
+        .prepare('INSERT INTO leave_requests (student_id, from_date, to_date) VALUES (?,?,?)')
+        .run(stId, '2026-10-10', '2026-10-01')
     );
   });
 
   it('FK chặn bản ghi mồ côi', async () => {
-    await assert.rejects(() => db.prepare('INSERT INTO payments (invoice_id, amount) VALUES (?,?)').run(999999, 1000));
-    await assert.rejects(() => db.prepare('INSERT INTO enrollments (student_id, class_id) VALUES (?,?)').run(999999, 999999));
+    await assert.rejects(() =>
+      db.prepare('INSERT INTO payments (invoice_id, amount) VALUES (?,?)').run(999999, 1000)
+    );
+    await assert.rejects(() =>
+      db.prepare('INSERT INTO enrollments (student_id, class_id) VALUES (?,?)').run(999999, 999999)
+    );
   });
 
   it('ON DELETE CASCADE xóa đúng chính sách', async () => {
     const cr = await db.prepare("INSERT INTO centers (name) VALUES ('TT2')").run();
     const centerId = Number(cr.lastInsertRowid);
-    const sr = await db.prepare('INSERT INTO students (code, name, center_id) VALUES (?,?,?)').run('HVX', 'X', centerId);
+    const sr = await db
+      .prepare('INSERT INTO students (code, name, center_id) VALUES (?,?,?)')
+      .run('HVX', 'X', centerId);
     const stId = Number(sr.lastInsertRowid);
     const clr = await db.prepare('INSERT INTO classes (name, center_id) VALUES (?,?)').run('LopX', centerId);
     const clId = Number(clr.lastInsertRowid);
     await db.prepare('INSERT INTO enrollments (student_id, class_id) VALUES (?,?)').run(stId, clId);
-    const ser = await db.prepare('INSERT INTO sessions (class_id, date) VALUES (?,?)').run(clId, '2026-10-09');
+    const ser = await db
+      .prepare('INSERT INTO sessions (class_id, date) VALUES (?,?)')
+      .run(clId, '2026-10-09');
     const seId = Number(ser.lastInsertRowid);
     await db.prepare('INSERT INTO attendance (session_id, student_id) VALUES (?,?)').run(seId, stId);
-    const ir = await db.prepare('INSERT INTO invoices (student_id, amount, center_id) VALUES (?,?,?)').run(stId, 1000, centerId);
+    const ir = await db
+      .prepare('INSERT INTO invoices (student_id, amount, center_id) VALUES (?,?,?)')
+      .run(stId, 1000, centerId);
     const inId = Number(ir.lastInsertRowid);
     await db.prepare('INSERT INTO payments (invoice_id, amount) VALUES (?,?)').run(inId, 1000);
 
     await db.prepare('DELETE FROM students WHERE id = ?').run(stId);
 
-    const count = async (t: string) => ((await db.query(`SELECT COUNT(*)::int as c FROM ${t}`)).rows[0] as { c: number }).c;
+    const count = async (t: string) =>
+      ((await db.query(`SELECT COUNT(*)::int as c FROM ${t}`)).rows[0] as { c: number }).c;
     assert.equal(await count('enrollments'), 0);
     assert.equal(await count('attendance'), 0);
     assert.equal(await count('invoices'), 0);
@@ -130,35 +156,53 @@ describe('schema enterprise (PostgreSQL)', () => {
     const centerId = Number(cr.lastInsertRowid);
     const tr = await db.prepare('INSERT INTO teachers (name, center_id) VALUES (?,?)').run('GV', centerId);
     const tId = Number(tr.lastInsertRowid);
-    const clr = await db.prepare('INSERT INTO classes (name, center_id, teacher_id) VALUES (?,?,?)').run('LopY', centerId, tId);
+    const clr = await db
+      .prepare('INSERT INTO classes (name, center_id, teacher_id) VALUES (?,?,?)')
+      .run('LopY', centerId, tId);
     const clId = Number(clr.lastInsertRowid);
     await db.prepare('DELETE FROM teachers WHERE id = ?').run(tId);
-    const row = (await db.prepare('SELECT teacher_id FROM classes WHERE id = ?').get(clId)) as { teacher_id: number | null };
+    const row = (await db.prepare('SELECT teacher_id FROM classes WHERE id = ?').get(clId)) as {
+      teacher_id: number | null;
+    };
     assert.equal(row.teacher_id, null);
   });
 
   it('trigger tự chạm updated_at khi UPDATE', async () => {
     const cr = await db.prepare("INSERT INTO centers (name) VALUES ('TT5')").run();
     const centerId = Number(cr.lastInsertRowid);
-    const sr = await db.prepare('INSERT INTO students (code, name, center_id) VALUES (?,?,?)').run('HVZ', 'Z', centerId);
+    const sr = await db
+      .prepare('INSERT INTO students (code, name, center_id) VALUES (?,?,?)')
+      .run('HVZ', 'Z', centerId);
     const stId = Number(sr.lastInsertRowid);
     await db.exec(`UPDATE students SET updated_at = '2000-01-01 00:00:00' WHERE id = ${stId}`);
     // UPDATE không đụng updated_at -> trigger phải tự chạm
     await db.prepare('UPDATE students SET note = ? WHERE id = ?').run('ghi chú', stId);
-    const row = (await db.prepare('SELECT updated_at FROM students WHERE id = ?').get(stId)) as { updated_at: string };
+    const row = (await db.prepare('SELECT updated_at FROM students WHERE id = ?').get(stId)) as {
+      updated_at: string;
+    };
     assert.notEqual(row.updated_at, '2000-01-01 00:00:00');
   });
 
   it('view v_invoice_balance tính đúng công nợ', async () => {
     const cr = await db.prepare("INSERT INTO centers (name) VALUES ('TT6')").run();
     const centerId = Number(cr.lastInsertRowid);
-    const sr = await db.prepare('INSERT INTO students (code, name, center_id) VALUES (?,?,?)').run('HVW', 'W', centerId);
+    const sr = await db
+      .prepare('INSERT INTO students (code, name, center_id) VALUES (?,?,?)')
+      .run('HVW', 'W', centerId);
     const stId = Number(sr.lastInsertRowid);
-    const ir = await db.prepare('INSERT INTO invoices (student_id, amount, center_id) VALUES (?,?,?)').run(stId, 1000000, centerId);
+    const ir = await db
+      .prepare('INSERT INTO invoices (student_id, amount, center_id) VALUES (?,?,?)')
+      .run(stId, 1000000, centerId);
     const inId = Number(ir.lastInsertRowid);
-    await db.prepare("INSERT INTO payments (invoice_id, amount, status) VALUES (?,?,'confirmed')").run(inId, 400000);
-    await db.prepare("INSERT INTO payments (invoice_id, amount, status) VALUES (?,?,'pending')").run(inId, 900000);
-    const row = (await db.prepare('SELECT paid_confirmed, balance FROM v_invoice_balance WHERE invoice_id = ?').get(inId)) as {
+    await db
+      .prepare("INSERT INTO payments (invoice_id, amount, status) VALUES (?,?,'confirmed')")
+      .run(inId, 400000);
+    await db
+      .prepare("INSERT INTO payments (invoice_id, amount, status) VALUES (?,?,'pending')")
+      .run(inId, 900000);
+    const row = (await db
+      .prepare('SELECT paid_confirmed, balance FROM v_invoice_balance WHERE invoice_id = ?')
+      .get(inId)) as {
       paid_confirmed: number;
       balance: number;
     };
@@ -172,32 +216,52 @@ describe('schema enterprise (PostgreSQL)', () => {
     );
     assert.equal((r.rows[0] as { c: number }).c, 0);
     // vẫn ghi log được cho entity đã bị xóa
-    await db.prepare('INSERT INTO audit_logs (action, entity, entity_id, summary) VALUES (?,?,?,?)').run(
-      'student.delete', 'student', 999999, 'Xóa học viên'
-    );
+    await db
+      .prepare('INSERT INTO audit_logs (action, entity, entity_id, summary) VALUES (?,?,?,?)')
+      .run('student.delete', 'student', 999999, 'Xóa học viên');
   });
 
   it('payment_history/invoice_history ghi lại mọi INSERT/UPDATE/DELETE (bất biến)', async () => {
     const cr = await db.prepare("INSERT INTO centers (name) VALUES ('TTH')").run();
     const centerId = Number(cr.lastInsertRowid);
-    const sr = await db.prepare('INSERT INTO students (code, name, center_id) VALUES (?,?,?)').run('HVH', 'H', centerId);
+    const sr = await db
+      .prepare('INSERT INTO students (code, name, center_id) VALUES (?,?,?)')
+      .run('HVH', 'H', centerId);
     const stId = Number(sr.lastInsertRowid);
-    const ir = await db.prepare('INSERT INTO invoices (student_id, amount, center_id) VALUES (?,?,?)').run(stId, 1000000, centerId);
+    const ir = await db
+      .prepare('INSERT INTO invoices (student_id, amount, center_id) VALUES (?,?,?)')
+      .run(stId, 1000000, centerId);
     const inId = Number(ir.lastInsertRowid);
-    const pr = await db.prepare("INSERT INTO payments (invoice_id, amount, status) VALUES (?,?,'pending')").run(inId, 500000);
+    const pr = await db
+      .prepare("INSERT INTO payments (invoice_id, amount, status) VALUES (?,?,'pending')")
+      .run(inId, 500000);
     const pId = Number(pr.lastInsertRowid);
 
     // insert đã được ghi
-    let h = (await db.prepare('SELECT action FROM payment_history WHERE payment_id = ?').all(pId)) as { action: string }[];
-    assert.deepEqual(h.map((x) => x.action), ['insert']);
-    const ih = (await db.prepare('SELECT action FROM invoice_history WHERE invoice_id = ?').all(inId)) as { action: string }[];
-    assert.deepEqual(ih.map((x) => x.action), ['insert']);
+    let h = (await db.prepare('SELECT action FROM payment_history WHERE payment_id = ?').all(pId)) as {
+      action: string;
+    }[];
+    assert.deepEqual(
+      h.map((x) => x.action),
+      ['insert']
+    );
+    const ih = (await db.prepare('SELECT action FROM invoice_history WHERE invoice_id = ?').all(inId)) as {
+      action: string;
+    }[];
+    assert.deepEqual(
+      ih.map((x) => x.action),
+      ['insert']
+    );
 
     // update: đổi trạng thái payment + sửa hóa đơn
     await db.prepare("UPDATE payments SET status = 'confirmed' WHERE id = ?").run(pId);
     await db.prepare("UPDATE invoices SET status = 'partial' WHERE id = ?").run(inId);
-    const h2 = (await db.prepare('SELECT action, old_data, new_data FROM payment_history WHERE payment_id = ? ORDER BY id').all(pId)) as {
-      action: string; old_data?: string | null; new_data?: string | null;
+    const h2 = (await db
+      .prepare('SELECT action, old_data, new_data FROM payment_history WHERE payment_id = ? ORDER BY id')
+      .all(pId)) as {
+      action: string;
+      old_data?: string | null;
+      new_data?: string | null;
     }[];
     assert.equal(h2.length, 2);
     assert.equal(h2[1].action, 'update');
@@ -206,19 +270,29 @@ describe('schema enterprise (PostgreSQL)', () => {
 
     // delete payment: dấu vết còn lại dù payment đã mất
     await db.prepare('DELETE FROM payments WHERE id = ?').run(pId);
-    h = (await db.prepare('SELECT action FROM payment_history WHERE payment_id = ? ORDER BY id').all(pId)) as { action: string }[];
-    assert.deepEqual(h.map((x) => x.action), ['insert', 'update', 'delete']);
-    const cnt = (await db.query('SELECT COUNT(*)::int as c FROM payments WHERE id = $1', [pId])).rows[0] as { c: number };
+    h = (await db
+      .prepare('SELECT action FROM payment_history WHERE payment_id = ? ORDER BY id')
+      .all(pId)) as { action: string }[];
+    assert.deepEqual(
+      h.map((x) => x.action),
+      ['insert', 'update', 'delete']
+    );
+    const cnt = (await db.query('SELECT COUNT(*)::int as c FROM payments WHERE id = $1', [pId])).rows[0] as {
+      c: number;
+    };
     assert.equal(cnt.c, 0);
   });
 
   it('version tăng tự động mỗi lần UPDATE (optimistic locking)', async () => {
     const cr = await db.prepare("INSERT INTO centers (name) VALUES ('TTV')").run();
     const centerId = Number(cr.lastInsertRowid);
-    const sr = await db.prepare('INSERT INTO students (code, name, center_id) VALUES (?,?,?)').run('HVV', 'V', centerId);
+    const sr = await db
+      .prepare('INSERT INTO students (code, name, center_id) VALUES (?,?,?)')
+      .run('HVV', 'V', centerId);
     const stId = Number(sr.lastInsertRowid);
     const get = async () =>
-      ((await db.prepare('SELECT version FROM students WHERE id = ?').get(stId)) as { version: number }).version;
+      ((await db.prepare('SELECT version FROM students WHERE id = ?').get(stId)) as { version: number })
+        .version;
     assert.equal(await get(), 0);
     await db.prepare('UPDATE students SET note = ? WHERE id = ?').run('a', stId);
     assert.equal(await get(), 1);
@@ -232,15 +306,21 @@ describe('schema enterprise (PostgreSQL)', () => {
   it('updated_at phủ mọi bảng mutable (vd: payments, reminders)', async () => {
     const cr = await db.prepare("INSERT INTO centers (name) VALUES ('TTU')").run();
     const centerId = Number(cr.lastInsertRowid);
-    const sr = await db.prepare('INSERT INTO students (code, name, center_id) VALUES (?,?,?)').run('HVU', 'U', centerId);
+    const sr = await db
+      .prepare('INSERT INTO students (code, name, center_id) VALUES (?,?,?)')
+      .run('HVU', 'U', centerId);
     const stId = Number(sr.lastInsertRowid);
-    const ir = await db.prepare('INSERT INTO invoices (student_id, amount, center_id) VALUES (?,?,?)').run(stId, 1000, centerId);
+    const ir = await db
+      .prepare('INSERT INTO invoices (student_id, amount, center_id) VALUES (?,?,?)')
+      .run(stId, 1000, centerId);
     const inId = Number(ir.lastInsertRowid);
     const pr = await db.prepare('INSERT INTO payments (invoice_id, amount) VALUES (?,?)').run(inId, 1000);
     const pId = Number(pr.lastInsertRowid);
     await db.exec(`UPDATE payments SET updated_at = '2000-01-01 00:00:00' WHERE id = ${pId}`);
     await db.prepare("UPDATE payments SET status = 'confirmed' WHERE id = ?").run(pId);
-    const row = (await db.prepare('SELECT updated_at FROM payments WHERE id = ?').get(pId)) as { updated_at: string };
+    const row = (await db.prepare('SELECT updated_at FROM payments WHERE id = ?').get(pId)) as {
+      updated_at: string;
+    };
     assert.notEqual(row.updated_at, '2000-01-01 00:00:00');
   });
 });

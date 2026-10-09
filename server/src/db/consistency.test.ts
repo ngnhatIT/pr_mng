@@ -33,17 +33,25 @@ describe('checkFinancialConsistency (PostgreSQL)', () => {
   });
 
   it('DB sạch thì không có issue', async () => {
-    const r = await db.prepare('INSERT INTO invoices (student_id, amount, center_id) VALUES (?, ?, ?)').run(studentId, 1000000, centerId);
+    const r = await db
+      .prepare('INSERT INTO invoices (student_id, amount, center_id) VALUES (?, ?, ?)')
+      .run(studentId, 1000000, centerId);
     const inId = Number(r.lastInsertRowid);
-    await db.prepare("INSERT INTO payments (invoice_id, amount, status) VALUES (?, ?, 'confirmed')").run(inId, 400000);
+    await db
+      .prepare("INSERT INTO payments (invoice_id, amount, status) VALUES (?, ?, 'confirmed')")
+      .run(inId, 400000);
     await db.prepare("UPDATE invoices SET status = 'partial' WHERE id = ?").run(inId);
     assert.deepEqual(await checkFinancialConsistency(db), []);
   });
 
   it('phát hiện status hóa đơn bị lệch', async () => {
-    const r = await db.prepare('INSERT INTO invoices (student_id, amount, center_id) VALUES (?, ?, ?)').run(studentId, 1000000, centerId);
+    const r = await db
+      .prepare('INSERT INTO invoices (student_id, amount, center_id) VALUES (?, ?, ?)')
+      .run(studentId, 1000000, centerId);
     const inId = Number(r.lastInsertRowid);
-    await db.prepare("INSERT INTO payments (invoice_id, amount, status) VALUES (?, ?, 'confirmed')").run(inId, 1000000);
+    await db
+      .prepare("INSERT INTO payments (invoice_id, amount, status) VALUES (?, ?, 'confirmed')")
+      .run(inId, 1000000);
     // cố tình không recalc -> status vẫn unpaid trong khi đã thu đủ
     const issues = await checkFinancialConsistency(db);
     assert.equal(issues.length, 1);
@@ -52,13 +60,19 @@ describe('checkFinancialConsistency (PostgreSQL)', () => {
   });
 
   it('phát hiện thu vượt và payment mồ côi', async () => {
-    const r = await db.prepare('INSERT INTO invoices (student_id, amount, center_id) VALUES (?, ?, ?)').run(studentId, 500000, centerId);
+    const r = await db
+      .prepare('INSERT INTO invoices (student_id, amount, center_id) VALUES (?, ?, ?)')
+      .run(studentId, 500000, centerId);
     const inId = Number(r.lastInsertRowid);
-    await db.prepare("INSERT INTO payments (invoice_id, amount, status) VALUES (?, ?, 'confirmed')").run(inId, 700000);
+    await db
+      .prepare("INSERT INTO payments (invoice_id, amount, status) VALUES (?, ?, 'confirmed')")
+      .run(inId, 700000);
     // payment mồ côi: dùng session_replication_role để bypass FK (mô phỏng DB cũ trước thời FK)
     await db.exec('SET session_replication_role = replica');
     try {
-      await db.prepare('INSERT INTO payments (invoice_id, amount, status) VALUES (?, ?, ?)').run(999999, 100000, 'confirmed');
+      await db
+        .prepare('INSERT INTO payments (invoice_id, amount, status) VALUES (?, ?, ?)')
+        .run(999999, 100000, 'confirmed');
     } finally {
       await db.exec('SET session_replication_role = DEFAULT');
     }
@@ -69,9 +83,13 @@ describe('checkFinancialConsistency (PostgreSQL)', () => {
   });
 
   it('payment pending không tính vào công nợ nên không báo drift', async () => {
-    const r = await db.prepare('INSERT INTO invoices (student_id, amount, center_id) VALUES (?, ?, ?)').run(studentId, 1000000, centerId);
+    const r = await db
+      .prepare('INSERT INTO invoices (student_id, amount, center_id) VALUES (?, ?, ?)')
+      .run(studentId, 1000000, centerId);
     const inId = Number(r.lastInsertRowid);
-    await db.prepare("INSERT INTO payments (invoice_id, amount, status) VALUES (?, ?, 'pending')").run(inId, 1000000);
+    await db
+      .prepare("INSERT INTO payments (invoice_id, amount, status) VALUES (?, ?, 'pending')")
+      .run(inId, 1000000);
     assert.deepEqual(await checkFinancialConsistency(db), []);
   });
 });

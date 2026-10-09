@@ -29,12 +29,13 @@ export async function checkFinancialConsistency(db: Db): Promise<ConsistencyIssu
   const issues: ConsistencyIssue[] = [];
 
   // 1. Trạng thái hóa đơn phải khớp với công thức: paid>=amount → paid, >0 → partial, còn lại unpaid
-  const drifted = await db.prepare(
+  const drifted = (await db
+    .prepare(
       `SELECT i.id, i.amount, i.status,
               COALESCE((SELECT SUM(p.amount) FROM payments p WHERE p.invoice_id = i.id AND p.status = 'confirmed'), 0) AS paid
        FROM invoices i`
     )
-    .all() as { id: number; amount: number; status: string; paid: number }[];
+    .all()) as { id: number; amount: number; status: string; paid: number }[];
   for (const inv of drifted) {
     const expected = inv.paid >= inv.amount - 0.01 ? 'paid' : inv.paid > 0 ? 'partial' : 'unpaid';
     if (inv.status !== expected) {
@@ -63,13 +64,14 @@ export async function checkFinancialConsistency(db: Db): Promise<ConsistencyIssu
   }
 
   // 3+4. Payment mồ côi / số tiền bất thường
-  const badPayments = await db.prepare(
+  const badPayments = (await db
+    .prepare(
       `SELECT p.id, p.invoice_id, p.amount,
               CASE WHEN i.id IS NULL THEN 1 ELSE 0 END AS is_orphan
        FROM payments p LEFT JOIN invoices i ON i.id = p.invoice_id
        WHERE i.id IS NULL OR p.amount <= 0`
     )
-    .all() as { id: number; invoice_id: number; amount: number; is_orphan: number }[];
+    .all()) as { id: number; invoice_id: number; amount: number; is_orphan: number }[];
   for (const p of badPayments) {
     if (p.is_orphan) {
       issues.push({

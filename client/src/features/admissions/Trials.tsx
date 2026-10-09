@@ -75,20 +75,14 @@ export function Trials() {
           ))}
         </select>
         {pagination && (
-          <span className="toolbar-summary">
-            {t('trials.totalCount', { total: pagination.total })}
-          </span>
+          <span className="toolbar-summary">{t('trials.totalCount', { total: pagination.total })}</span>
         )}
       </div>
 
       {loading ? (
         <TableSkeleton cols={7} />
       ) : trials.length === 0 ? (
-        <EmptyState
-          icon="play"
-          title={t('trials.empty.title')}
-          desc={t('trials.empty.desc')}
-        />
+        <EmptyState icon="play" title={t('trials.empty.title')} desc={t('trials.empty.desc')} />
       ) : (
         <div className="table-wrap sticky">
           <table className="table">
@@ -112,9 +106,7 @@ export function Trials() {
                   <td>{formatDate(tr.desired_date)}</td>
                   <td className="mono">{tr.referral_code || '-'}</td>
                   <td>
-                    <span className={`badge badge-${tr.status} trial-badge`}>
-                      {statusLabel(tr.status)}
-                    </span>
+                    <span className={`badge badge-${tr.status} trial-badge`}>{statusLabel(tr.status)}</span>
                   </td>
                   <td className="td-right">
                     <span className="trial-actions">
@@ -131,9 +123,14 @@ export function Trials() {
                           </option>
                         ))}
                       </select>
-                      <button className="btn btn-sm btn-primary" onClick={() => setConverting(tr)}>
-                        {t('trials.convert')}
-                      </button>
+                      {/* HIGH-3: ẩn nút convert khi trial đã chuyển đổi để tránh tạo trùng */}
+                      {tr.status !== 'converted' ? (
+                        <button className="btn btn-sm btn-primary" onClick={() => setConverting(tr)}>
+                          {t('trials.convert')}
+                        </button>
+                      ) : (
+                        <span className="badge badge-converted">{t('trials.status.converted')}</span>
+                      )}
                     </span>
                   </td>
                 </tr>

@@ -3,7 +3,7 @@ import { db } from '../../db';
 import { AuthRequest, reqCenterId } from '../../middleware/auth';
 import { requirePermission } from '../authorization/authorization.middleware';
 import { asyncHandler } from '../../shared/http';
-import { listTrials, TRIAL_STATUS } from './trials.service';
+import { listTrials, TRIAL_STATUS, convertTrial } from './trials.service';
 
 const router = Router();
 
@@ -21,7 +21,7 @@ router.get(
       page?: string;
       limit?: string;
     };
-    res.json(listTrials(reqCenterId(req), { status }, { page, limit }));
+    res.json(await listTrials(reqCenterId(req), { status }, { page, limit }));
   })
 );
 
@@ -37,7 +37,7 @@ router.put(
       res.status(400).json({ error: 'Trạng thái không hợp lệ' });
       return;
     }
-    const trial = await db.prepare('SELECT id, center_id FROM trial_registrations WHERE id = ?').get(id) as
+    const trial = (await db.prepare('SELECT id, center_id FROM trial_registrations WHERE id = ?').get(id)) as
       { id: number; center_id: number | null } | undefined;
     if (!trial || (cid !== null && trial.center_id !== cid)) {
       res.status(404).json({ error: 'Không tìm thấy đăng ký học thử' });
@@ -48,15 +48,6 @@ router.put(
   })
 );
 
-async function genStudentCode(): Promise<string> {
-  for (let i = 0; i < 10; i++) {
-    const code = `HV${Date.now().toString().slice(-6)}`;
-    const exists = await db.prepare('SELECT 1 FROM students WHERE code = ?').get(code);
-    if (!exists) return code;
-  }
-  return `HV${Date.now().toString().slice(-8)}`;
-}
-
 /** Chuyển đăng ký học thử thành học viên chính thức */
 router.post(
   '/:id/convert',
@@ -64,58 +55,9 @@ router.post(
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const cid = reqCenterId(req);
     const id = Number(req.params.id);
-    const trial = await db.prepare('SELECT * FROM trial_registrations WHERE id = ?').get(id) as
-      | {
-          id: number;
-          center_id: number | null;
-          name: string;
-          phone: string;
-          class_id: number | null;
-          referral_code: string | null;
-          status: string;
-        }
-      | undefined;
-    if (!trial || (cid !== null && trial.center_id !== cid)) {
-      res.status(404).json({ error: 'Không tìm thấy đăng ký học thử' });
-      return;
-    }
     const { class_id } = req.body as { class_id?: number };
-    let enrollClassId: number | null = null;
-    if (class_id) {
-      const cls = await db.prepare('SELECT id, center_id FROM classes WHERE id = ?').get(Number(class_id)) as
-        { id: number; center_id: number | null } | undefined;
-      if (!cls || (cid !== null && cls.center_id !== cid)) {
-        res.status(404).json({ error: 'Không tìm thấy lớp học' });
-        return;
-      }
-      enrollClassId = cls.id;
-    } else if (trial.class_id) {
-      enrollClassId = trial.class_id;
-    }
-
-    const code = genStudentCode();
-    const studentId = await db.transaction(async (tx) => {
-      const r = await tx.prepare(
-          "INSERT INTO students (code, name, phone, status, center_id) VALUES (?, ?, ?, 'studying', ?)"
-        )
-        .run(code, trial.name, trial.phone, trial.center_id);
-      const studentId = Number(r.lastInsertRowid);
-      if (enrollClassId) {
-        await tx.prepare('INSERT OR IGNORE INTO enrollments (student_id, class_id) VALUES (?, ?)').run(
-          studentId,
-          enrollClassId
-        );
-      }
-      await tx.prepare("UPDATE trial_registrations SET status = 'converted' WHERE id = ?").run(id);
-      // Gắn referral đang chờ theo SĐT (nếu trial đăng ký bằng mã giới thiệu)
-      if (trial.referral_code && trial.phone) {
-        await tx.prepare(
-          "UPDATE referrals SET referred_student_id = ? WHERE referred_phone = ? AND status = 'pending' AND referred_student_id IS NULL"
-        ).run(studentId, trial.phone);
-      }
-      return studentId;
-    });
-    res.json({ ok: true, student_id: studentId });
+    // convertTrial ném 404 (không tồn tại/khác center) hoặc 409 (đã convert)
+    res.json({ ok: true, ...(await convertTrial(cid, id, class_id ?? null)) });
   })
 );
 

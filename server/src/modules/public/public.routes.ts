@@ -41,7 +41,8 @@ router.get(
   asyncHandler(async (req: Request, res: Response) => {
     const center = await landingCenter(req, res);
     if (!center) return;
-    const rows = await db.prepare(
+    const rows = (await db
+      .prepare(
         `SELECT c.id, c.name, t.name as teacher_name, c.schedule, c.tuition_fee, r.name as room_name,
          (SELECT COUNT(*) FROM enrollments e WHERE e.class_id = c.id AND e.status = 'active') as student_count
        FROM classes c
@@ -50,7 +51,7 @@ router.get(
        WHERE c.center_id = ? AND c.status = 'active'
        ORDER BY c.name ASC`
       )
-      .all(center.id) as {
+      .all(center.id)) as {
       id: number;
       name: string;
       teacher_name: string | null;
@@ -79,7 +80,8 @@ router.get(
   asyncHandler(async (req: Request, res: Response) => {
     const center = await landingCenter(req, res);
     if (!center) return;
-    const rows = await db.prepare('SELECT id, name, subject FROM teachers WHERE center_id = ? ORDER BY name ASC')
+    const rows = await db
+      .prepare('SELECT id, name, subject FROM teachers WHERE center_id = ? ORDER BY name ASC')
       .all(center.id);
     res.json(rows);
   })
@@ -91,7 +93,8 @@ router.get(
   asyncHandler(async (req: Request, res: Response) => {
     const center = await landingCenter(req, res);
     if (!center) return;
-    const items = await db.prepare(
+    const items = await db
+      .prepare(
         `SELECT r.id, r.rating, r.comment, p.name as parent_name, r.created_at
        FROM reviews r
        LEFT JOIN parents p ON p.id = r.parent_id
@@ -99,10 +102,11 @@ router.get(
        ORDER BY r.id DESC LIMIT 20`
       )
       .all(center.id);
-    const agg = await db.prepare(
+    const agg = (await db
+      .prepare(
         "SELECT COALESCE(AVG(rating), 0) as avg, COUNT(*) as total FROM reviews WHERE center_id = ? AND status = 'approved'"
       )
-      .get(center.id) as { avg: number; total: number };
+      .get(center.id)) as { avg: number; total: number };
     res.json({
       avg: Math.round(Number(agg.avg) * 10) / 10,
       total: agg.total,
@@ -136,9 +140,11 @@ router.post(
     }
     const source = body?.source ? String(body.source).trim() : null;
     const note = body?.note ? String(body.note).trim() : null;
-    await db.prepare(
-      "INSERT INTO leads (center_id, name, phone, source, status, note) VALUES (?, ?, ?, ?, 'new', ?)"
-    ).run(center.id, name, phone, source, note);
+    await db
+      .prepare(
+        "INSERT INTO leads (center_id, name, phone, source, status, note) VALUES (?, ?, ?, ?, 'new', ?)"
+      )
+      .run(center.id, name, phone, source, note);
     res.json({ ok: true });
   })
 );
@@ -171,27 +177,47 @@ router.post(
         res.status(400).json({ error: 'Lớp học không hợp lệ' });
         return;
       }
-      const cls = await db.prepare('SELECT id FROM classes WHERE id = ? AND center_id = ?').get(classId, center.id);
+      const cls = await db
+        .prepare('SELECT id FROM classes WHERE id = ? AND center_id = ?')
+        .get(classId, center.id);
       if (!cls) {
         res.status(400).json({ error: 'Lớp học không tồn tại' });
         return;
       }
     }
     const referralCode = body?.referral_code ? String(body.referral_code).trim() : '';
-    let referrer: { id: number } | undefined;
+    let referrer: { id: number; phone: string | null } | undefined;
     if (referralCode) {
-      referrer = await db.prepare('SELECT id FROM parents WHERE referral_code = ? AND center_id = ?')
-        .get(referralCode, center.id) as { id: number } | undefined;
+      referrer = (await db
+        .prepare('SELECT id, phone FROM parents WHERE referral_code = ? AND center_id = ?')
+        .get(referralCode, center.id)) as { id: number; phone: string | null } | undefined;
+      // Chặn tự giới thiệu chính mình: SĐT đăng ký trùng SĐT của referrer
+      if (referrer && normalizePhone(referrer.phone) === phone) {
+        res.status(400).json({ error: 'Không thể dùng mã giới thiệu của chính mình' });
+        return;
+      }
     }
     const desiredDate = body?.desired_date ? String(body.desired_date).trim() : null;
     const note = body?.note ? String(body.note).trim() : null;
-    await db.prepare(
-      "INSERT INTO trial_registrations (center_id, name, phone, class_id, desired_date, note, referral_code, status) VALUES (?, ?, ?, ?, ?, ?, ?, 'new')"
-    ).run(center.id, name, phone, classId, desiredDate, note, referralCode || null);
+    await db
+      .prepare(
+        "INSERT INTO trial_registrations (center_id, name, phone, class_id, desired_date, note, referral_code, status) VALUES (?, ?, ?, ?, ?, ?, ?, 'new')"
+      )
+      .run(center.id, name, phone, classId, desiredDate, note, referralCode || null);
     if (referrer) {
-      await db.prepare(
-        "INSERT INTO referrals (referrer_parent_id, referred_phone, referred_student_id, status) VALUES (?, ?, NULL, 'pending')"
-      ).run(referrer.id, phone);
+      // Không tạo referral pending trùng SĐT (tránh rows rác tích tụ)
+      const existing = await db
+        .prepare(
+          "SELECT 1 FROM referrals WHERE referrer_parent_id = ? AND referred_phone = ? AND status = 'pending'"
+        )
+        .get(referrer.id, phone);
+      if (!existing) {
+        await db
+          .prepare(
+            "INSERT INTO referrals (referrer_parent_id, referred_phone, referred_student_id, status) VALUES (?, ?, NULL, 'pending')"
+          )
+          .run(referrer.id, phone);
+      }
     }
     res.json({ ok: true });
   })

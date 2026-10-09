@@ -132,7 +132,13 @@ export const homeworkApi = {
 };
 
 export interface HomeworkAnalytics {
-  byClass: { class_id: number; class_name: string; total: number; avg_completion: number; avg_score: number | null }[];
+  byClass: {
+    class_id: number;
+    class_name: string;
+    total: number;
+    avg_completion: number;
+    avg_score: number | null;
+  }[];
   recent: { id: number; title: string; class_name: string; completion_rate: number }[];
 }
 

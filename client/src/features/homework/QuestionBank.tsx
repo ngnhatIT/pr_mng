@@ -64,9 +64,7 @@ export function QuestionBank({
   const doImport = () => {
     if (!onImport || !selected.length) return;
     // Giữ lựa chọn theo ID độc lập với filter: lấy từ cache tất cả câu đã thấy
-    const picked = selected
-      .map((id) => allSeen.current.get(id))
-      .filter((q): q is BankQuestion => !!q);
+    const picked = selected.map((id) => allSeen.current.get(id)).filter((q): q is BankQuestion => !!q);
     if (picked.length < selected.length) {
       toast(t('bank.toast.staleSelection', { count: selected.length - picked.length }), 'error');
       return;
@@ -87,7 +85,12 @@ export function QuestionBank({
             onChange={(e) => setSearch(e.target.value)}
           />
           {search && (
-            <button type="button" className="hw-search-clear" onClick={() => setSearch('')} aria-label={t('bank.clearSearch')}>
+            <button
+              type="button"
+              className="hw-search-clear"
+              onClick={() => setSearch('')}
+              aria-label={t('bank.clearSearch')}
+            >
               <Icon name="x" size={14} />
             </button>
           )}
@@ -95,7 +98,9 @@ export function QuestionBank({
         <select className="text-input" value={tag} onChange={(e) => setTag(e.target.value)}>
           <option value="">{t('bank.allTags')}</option>
           {tags.map((tg) => (
-            <option key={tg} value={tg}>{tg}</option>
+            <option key={tg} value={tg}>
+              {tg}
+            </option>
           ))}
         </select>
         <button className="btn btn-primary hw-action-icon" onClick={() => setShowForm(true)}>
@@ -107,7 +112,10 @@ export function QuestionBank({
         <BankQuestionForm
           tags={tags}
           onClose={() => setShowForm(false)}
-          onSaved={() => { setShowForm(false); void load(); }}
+          onSaved={() => {
+            setShowForm(false);
+            void load();
+          }}
         />
       )}
 
@@ -146,7 +154,9 @@ export function QuestionBank({
         <div className="modal-actions">
           <span className="muted">{t('bank.selected', { count: selected.length })}</span>
           <span className="spacer" />
-          <button className="btn" onClick={onClose}>{t('actions.cancel', { ns: 'common' })}</button>
+          <button className="btn" onClick={onClose}>
+            {t('actions.cancel', { ns: 'common' })}
+          </button>
           <button className="btn btn-primary hw-action-icon" disabled={!selected.length} onClick={doImport}>
             <Icon name="plus" size={15} /> {t('bank.import', { count: selected.length })}
           </button>
@@ -178,7 +188,10 @@ function BankQuestionForm({
   const [busy, setBusy] = useState(false);
 
   const save = async () => {
-    if (!question.trim()) { toast(t('bank.form.questionRequired'), 'error'); return; }
+    if (!question.trim()) {
+      toast(t('bank.form.questionRequired'), 'error');
+      return;
+    }
     if (options.length < 2 || !options.some((o) => o.is_correct && o.text.trim())) {
       toast(t('bank.form.answersRequired'), 'error');
       return;
@@ -203,48 +216,84 @@ function BankQuestionForm({
   return (
     <div className="bank-form">
       <Field label={t('bank.form.question')}>
-        <input className="text-input" value={question} onChange={(e) => setQuestion(e.target.value)}
-          placeholder={t('bank.form.questionPh')} />
+        <input
+          className="text-input"
+          value={question}
+          onChange={(e) => setQuestion(e.target.value)}
+          placeholder={t('bank.form.questionPh')}
+        />
       </Field>
       <div className="form-grid">
         <Field label={t('bank.form.tag')}>
           <div className="bank-form-row">
             <select className="text-input" value={tag} onChange={(e) => setTag(e.target.value)}>
               <option value="">{t('bank.form.chooseTag')}</option>
-              {tags.map((tg) => <option key={tg} value={tg}>{tg}</option>)}
+              {tags.map((tg) => (
+                <option key={tg} value={tg}>
+                  {tg}
+                </option>
+              ))}
             </select>
-            <input className="text-input" placeholder={t('bank.form.newTagPh')} value={newTag}
-              onChange={(e) => setNewTag(e.target.value)} />
+            <input
+              className="text-input"
+              placeholder={t('bank.form.newTagPh')}
+              value={newTag}
+              onChange={(e) => setNewTag(e.target.value)}
+            />
           </div>
         </Field>
         <Field label={t('bank.form.points')}>
-          <input className="text-input" type="number" min="0.5" step="0.5" value={points}
-            onChange={(e) => setPoints(e.target.value)} />
+          <input
+            className="text-input"
+            type="number"
+            min="0.5"
+            step="0.5"
+            value={points}
+            onChange={(e) => setPoints(e.target.value)}
+          />
         </Field>
       </div>
       <Field label={t('bank.form.answers')}>
         {options.map((o, i) => (
           <div key={i} className="quiz-opt bank-opt">
-            <button type="button" className={`quiz-correct ${o.is_correct ? 'active' : ''}`}
-              onClick={() => setOptions((x) => x.map((y, j) => ({ ...y, is_correct: j === i })))}>
+            <button
+              type="button"
+              className={`quiz-correct ${o.is_correct ? 'active' : ''}`}
+              onClick={() => setOptions((x) => x.map((y, j) => ({ ...y, is_correct: j === i })))}
+            >
               {o.is_correct ? '●' : '○'}
             </button>
-            <input className="text-input input-sm bank-opt-input" value={o.text}
-              onChange={(e) => setOptions((x) => x.map((y, j) => (j === i ? { ...y, text: e.target.value } : y)))}
-              placeholder={t('form.optionPh', { letter: String.fromCharCode(65 + i) })} />
+            <input
+              className="text-input input-sm bank-opt-input"
+              value={o.text}
+              onChange={(e) =>
+                setOptions((x) => x.map((y, j) => (j === i ? { ...y, text: e.target.value } : y)))
+              }
+              placeholder={t('form.optionPh', { letter: String.fromCharCode(65 + i) })}
+            />
             {options.length > 2 && (
-              <button type="button" className="btn btn-sm btn-danger-ghost"
-                onClick={() => setOptions((x) => x.filter((_, j) => j !== i))}>×</button>
+              <button
+                type="button"
+                className="btn btn-sm btn-danger-ghost"
+                onClick={() => setOptions((x) => x.filter((_, j) => j !== i))}
+              >
+                ×
+              </button>
             )}
           </div>
         ))}
-        <button type="button" className="btn btn-sm"
-          onClick={() => setOptions((x) => [...x, { text: '', is_correct: false }])}>
+        <button
+          type="button"
+          className="btn btn-sm"
+          onClick={() => setOptions((x) => [...x, { text: '', is_correct: false }])}
+        >
           {t('form.addOption')}
         </button>
       </Field>
       <div className="bank-form-actions">
-        <button type="button" className="btn" onClick={onClose}>{t('actions.cancel', { ns: 'common' })}</button>
+        <button type="button" className="btn" onClick={onClose}>
+          {t('actions.cancel', { ns: 'common' })}
+        </button>
         <button type="button" className="btn btn-primary" disabled={busy} onClick={save}>
           {busy ? t('actions.saving', { ns: 'common' }) : t('bank.form.save')}
         </button>

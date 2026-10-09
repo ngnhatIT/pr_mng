@@ -42,26 +42,30 @@ export async function getUserPermissions(userId: number): Promise<Map<string, Sc
   if (hit && Date.now() - hit.at < CACHE_TTL_MS) return hit.perms;
 
   // Role chính từ users.role + custom roles từ user_roles
-  const userRow = (await db.prepare('SELECT role, center_id FROM users WHERE id = ?').get(userId)) as {
-    role: string;
-    center_id: number | null;
-  } | undefined;
+  const userRow = (await db.prepare('SELECT role, center_id FROM users WHERE id = ?').get(userId)) as
+    | {
+        role: string;
+        center_id: number | null;
+      }
+    | undefined;
   if (!userRow) return new Map();
 
   const roleCodes = [userRow.role];
-  const extraRoles = (await db.prepare(
-    `SELECT r.code FROM user_roles ur JOIN roles r ON r.id = ur.role_id WHERE ur.user_id = ?`
-  ).all(userId)) as { code: string }[];
+  const extraRoles = (await db
+    .prepare(`SELECT r.code FROM user_roles ur JOIN roles r ON r.id = ur.role_id WHERE ur.user_id = ?`)
+    .all(userId)) as { code: string }[];
   for (const r of extraRoles) roleCodes.push(r.code);
 
   const perms = new Map<string, Scope>();
   for (const code of [...new Set(roleCodes)]) {
-    const rows = (await db.prepare(
-      `SELECT p.code, rp.scope FROM role_permissions rp
+    const rows = (await db
+      .prepare(
+        `SELECT p.code, rp.scope FROM role_permissions rp
        JOIN roles r ON r.id = rp.role_id
        JOIN permissions p ON p.id = rp.permission_id
        WHERE r.code = ?`
-    ).all(code)) as { code: string; scope: Scope }[];
+      )
+      .all(code)) as { code: string; scope: Scope }[];
     for (const row of rows) {
       const cur = perms.get(row.code);
       if (!cur || SCOPE_RANK[row.scope] > SCOPE_RANK[cur]) {
@@ -80,12 +84,20 @@ export async function getPermissionScope(userId: number, permissionCode: string)
   return perms.get(permissionCode) ?? null;
 }
 
-/** Kiểm tra user có permission với scope tối thiểu yêu cầu không. */
+/** Kiểm tra user có permission với scope tối thiểu yêu cầu không.
+ * C1: fail-closed — token phụ huynh (kind/role = 'parent') KHÔNG BAO GIỜ có permission staff,
+ * kể cả khi parents.id trùng users.id của admin (namespace id tách biệt).
+ * Nhận number (tương thích cũ) hoặc AuthUser (khuyến nghị — để kiểm tra kind).
+ */
 export async function hasPermission(
-  userId: number,
+  user: number | AuthUser,
   permissionCode: string,
   minScope: Scope = 'own'
 ): Promise<boolean> {
+  const userId = typeof user === 'number' ? user : user.id;
+  if (typeof user !== 'number' && (user.kind === 'parent' || user.role === 'parent')) {
+    return false;
+  }
   const scope = await getPermissionScope(userId, permissionCode);
   if (!scope) return false;
   return SCOPE_RANK[scope] >= SCOPE_RANK[minScope];
@@ -100,6 +112,8 @@ export async function canAccess(
   permissionCode: string,
   resource: { centerId?: number | null; ownerId?: number | null }
 ): Promise<boolean> {
+  // C1: fail-closed cho token phụ huynh
+  if (user.kind === 'parent' || user.role === 'parent') return false;
   const scope = await getPermissionScope(user.id, permissionCode);
   if (!scope) return false;
   if (scope === 'all') return true;
@@ -111,7 +125,8 @@ export async function canAccess(
   // scope 'own'
   if (resource.ownerId != null && resource.ownerId === user.id) return true;
   // teacher_id link: giáo viên sở hữu dữ liệu lớp mình dạy
-  if (user.teacher_id != null && resource.ownerId != null && resource.ownerId === user.teacher_id) return true;
+  if (user.teacher_id != null && resource.ownerId != null && resource.ownerId === user.teacher_id)
+    return true;
   return false;
 }
 
@@ -120,34 +135,42 @@ export async function seedAuthorization(): Promise<void> {
   const { PERMISSIONS, SYSTEM_ROLES } = await import('./permissions');
 
   for (const p of PERMISSIONS) {
-    await db.prepare(
-      `INSERT INTO permissions (code, name, description, module)
+    await db
+      .prepare(
+        `INSERT INTO permissions (code, name, description, module)
        VALUES (?, ?, ?, ?)
        ON CONFLICT (code) DO UPDATE SET name = excluded.name, description = excluded.description, module = excluded.module`
-    ).run(p.code, p.name, p.description, p.module);
+      )
+      .run(p.code, p.name, p.description, p.module);
   }
 
   for (const role of SYSTEM_ROLES) {
-    const r = await db.prepare(
-      `INSERT INTO roles (code, name, description, is_system)
+    const r = await db
+      .prepare(
+        `INSERT INTO roles (code, name, description, is_system)
        VALUES (?, ?, ?, TRUE)
        ON CONFLICT (code) DO UPDATE SET name = excluded.name, description = excluded.description
        RETURNING id`
-    ).run(role.code, role.name, role.description);
+      )
+      .run(role.code, role.name, role.description);
     // Lấy id (có thể đã tồn tại)
     const row = (await db.prepare('SELECT id FROM roles WHERE code = ?').get(role.code)) as { id: number };
     const roleId = Number(r.lastInsertRowid || row.id);
 
     for (const [permCode, scope] of Object.entries(role.permissions)) {
-      const permRow = (await db.prepare('SELECT id FROM permissions WHERE code = ?').get(permCode)) as {
-        id: number;
-      } | undefined;
+      const permRow = (await db.prepare('SELECT id FROM permissions WHERE code = ?').get(permCode)) as
+        | {
+            id: number;
+          }
+        | undefined;
       if (!permRow) continue;
-      await db.prepare(
-        `INSERT INTO role_permissions (role_id, permission_id, scope)
+      await db
+        .prepare(
+          `INSERT INTO role_permissions (role_id, permission_id, scope)
          VALUES (?, ?, ?)
          ON CONFLICT (role_id, permission_id) DO UPDATE SET scope = excluded.scope`
-      ).run(roleId, permRow.id, scope);
+        )
+        .run(roleId, permRow.id, scope);
     }
   }
   invalidateAllPermissions();

@@ -46,15 +46,25 @@ export function ReferralsAdmin() {
         <>
           <StatGridSkeleton count={3} />
           <div className="referral-skel-spacer" aria-hidden="true" />
-          <TableSkeleton cols={4} />
+          <TableSkeleton cols={5} />
         </>
       ) : (
         <>
           {stats && (
             <div className="stat-grid stat-grid-3">
               <StatCard icon="users" tone="blue" value={stats.total} label={t('referrals.stats.total')} />
-              <StatCard icon="clock" tone="amber" value={stats.pending} label={t('referrals.stats.pending')} />
-              <StatCard icon="gift" tone="green" value={stats.rewarded} label={t('referrals.stats.rewarded')} />
+              <StatCard
+                icon="clock"
+                tone="amber"
+                value={stats.pending}
+                label={t('referrals.stats.pending')}
+              />
+              <StatCard
+                icon="gift"
+                tone="green"
+                value={stats.rewarded}
+                label={t('referrals.stats.rewarded')}
+              />
             </div>
           )}
 
@@ -75,16 +85,13 @@ export function ReferralsAdmin() {
           </div>
 
           {referrals.length === 0 ? (
-            <EmptyState
-              icon="gift"
-              title={t('referrals.empty.title')}
-              desc={t('referrals.empty.desc')}
-            />
+            <EmptyState icon="gift" title={t('referrals.empty.title')} desc={t('referrals.empty.desc')} />
           ) : (
             <div className="table-wrap">
               <table className="table">
                 <thead>
                   <tr>
+                    <th>{t('referrals.col.referrer')}</th>
                     <th>{t('referrals.col.referred')}</th>
                     <th>{t('referrals.col.status')}</th>
                     <th>{t('referrals.col.reward')}</th>
@@ -95,12 +102,20 @@ export function ReferralsAdmin() {
                   {referrals.map((r) => (
                     <tr key={r.id}>
                       <td>
-                        {r.referred_name || <span className="muted">{t('referrals.noName')}</span>}
+                        {r.referrer_name || <span className="muted">{t('referrals.noName')}</span>}
+                        <div className="muted mono">{r.referrer_phone}</div>
+                      </td>
+                      <td>
+                        {r.referred_student_name || r.referred_name || (
+                          <span className="muted">{t('referrals.noName')}</span>
+                        )}
                         <div className="muted mono">{r.referred_phone}</div>
                       </td>
                       <td>
                         <span className={`badge badge-${r.status === 'rewarded' ? 'rewarded' : 'pending'}`}>
-                          {r.status === 'rewarded' ? t('referrals.status.rewarded') : t('referrals.status.pending')}
+                          {r.status === 'rewarded'
+                            ? t('referrals.status.rewarded')
+                            : t('referrals.status.pending')}
                         </span>
                       </td>
                       <td className="num">{r.reward_amount != null ? r.reward_amount : '-'}</td>

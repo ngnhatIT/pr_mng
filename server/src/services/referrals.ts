@@ -1,4 +1,4 @@
-import { db, getCenterSetting, recalcInvoiceStatus, confirmedPaid } from '../db';
+import { db, getCenterSetting, recalcInvoiceStatus } from '../db';
 import { logger } from '../shared/logger';
 
 const log = logger.scope('referrals');
@@ -15,7 +15,7 @@ export async function genReferralCode(): Promise<string> {
 
 /** Đảm bảo phụ huynh có referral_code, trả về mã */
 export async function ensureParentReferralCode(parentId: number): Promise<string> {
-  const row = await db.prepare('SELECT referral_code FROM parents WHERE id = ?').get(parentId) as
+  const row = (await db.prepare('SELECT referral_code FROM parents WHERE id = ?').get(parentId)) as
     { referral_code: string | null } | undefined;
   if (row?.referral_code) return row.referral_code;
   for (let i = 0; i < 5; i++) {
@@ -39,33 +39,40 @@ export async function ensureParentReferralCode(parentId: number): Promise<string
  */
 export async function afterInvoicePaid(invoiceId: number): Promise<void> {
   try {
-    const inv = await db.prepare('SELECT id, student_id, status FROM invoices WHERE id = ?').get(invoiceId) as
-      { id: number; student_id: number; status: string } | undefined;
+    const inv = (await db
+      .prepare('SELECT id, student_id, status FROM invoices WHERE id = ?')
+      .get(invoiceId)) as { id: number; student_id: number; status: string } | undefined;
     if (!inv || inv.status !== 'paid') return;
 
     // Chỉ thưởng cho hóa đơn đầu tiên thanh toán đủ của học viên
     const otherPaid = (
-      await db.prepare("SELECT COUNT(*) as c FROM invoices WHERE student_id = ? AND status = 'paid' AND id != ?")
-        .get(inv.student_id, invoiceId) as { c: number }
+      (await db
+        .prepare("SELECT COUNT(*) as c FROM invoices WHERE student_id = ? AND status = 'paid' AND id != ?")
+        .get(inv.student_id, invoiceId)) as { c: number }
     ).c;
     if (otherPaid > 0) return;
 
-    const student = await db.prepare('SELECT id, center_id, phone FROM students WHERE id = ?')
-      .get(inv.student_id) as { id: number; center_id: number | null; phone: string | null } | undefined;
+    const student = (await db
+      .prepare('SELECT id, center_id, phone FROM students WHERE id = ?')
+      .get(inv.student_id)) as { id: number; center_id: number | null; phone: string | null } | undefined;
     if (!student) return;
 
     // Tìm referral đang chờ: khớp student_id, hoặc khớp SĐT (khi đăng ký trial/lead bằng SĐT trước)
-    let ref = await db.prepare(
+    let ref = (await db
+      .prepare(
         "SELECT * FROM referrals WHERE referred_student_id = ? AND status = 'pending' ORDER BY id ASC LIMIT 1"
       )
-      .get(student.id) as { id: number; referrer_parent_id: number } | undefined;
+      .get(student.id)) as { id: number; referrer_parent_id: number } | undefined;
     if (!ref && student.phone) {
-      const byPhone = await db.prepare(
+      const byPhone = (await db
+        .prepare(
           "SELECT * FROM referrals WHERE referred_phone = ? AND status = 'pending' ORDER BY id ASC LIMIT 1"
         )
-        .get(student.phone) as { id: number; referrer_parent_id: number } | undefined;
+        .get(student.phone)) as { id: number; referrer_parent_id: number } | undefined;
       if (byPhone) {
-        await db.prepare('UPDATE referrals SET referred_student_id = ? WHERE id = ?').run(student.id, byPhone.id);
+        await db
+          .prepare('UPDATE referrals SET referred_student_id = ? WHERE id = ?')
+          .run(student.id, byPhone.id);
         ref = byPhone;
       }
     }
@@ -74,32 +81,42 @@ export async function afterInvoicePaid(invoiceId: number): Promise<void> {
     const centerId = student.center_id || 0;
     const amtReferrer = Math.max(
       0,
-      Number(getCenterSetting(centerId, 'referral_reward_referrer', '200000')) || 0
+      Number(await getCenterSetting(centerId, 'referral_reward_referrer', '200000')) || 0
     );
     const amtReferred = Math.max(
       0,
-      Number(getCenterSetting(centerId, 'referral_reward_referred', '200000')) || 0
+      Number(await getCenterSetting(centerId, 'referral_reward_referred', '200000')) || 0
     );
 
     // Tìm parent của học viên được giới thiệu (để nhận credits phía người được giới thiệu)
-    const childParent = await db.prepare('SELECT parent_id FROM parent_students WHERE student_id = ? ORDER BY parent_id ASC LIMIT 1')
-      .get(student.id) as { parent_id: number } | undefined;
+    const childParent = (await db
+      .prepare('SELECT parent_id FROM parent_students WHERE student_id = ? ORDER BY parent_id ASC LIMIT 1')
+      .get(student.id)) as { parent_id: number } | undefined;
 
-    await db.transaction(async (tx) => {
+    const rewarded = await db.transaction(async (tx) => {
+      // Chống double-reward đồng thời: chỉ 1 bên giành được chuyển trạng thái
+      const claimed = await tx
+        .prepare("UPDATE referrals SET status = 'rewarded' WHERE id = ? AND status = 'pending'")
+        .run(ref!.id);
+      if ((claimed.changes ?? 0) !== 1) return false; // đã có luồng khác thưởng rồi
       const addCredit = await tx.prepare('INSERT INTO credits (parent_id, amount, reason) VALUES (?, ?, ?)');
       if (amtReferrer > 0) {
         await addCredit.run(
           ref!.referrer_parent_id,
-          amtReferrer,
+          Math.round(amtReferrer),
           `Thưởng giới thiệu học viên mới (HD${invoiceId})`
         );
       }
       if (amtReferred > 0 && childParent) {
-        await addCredit.run(childParent.parent_id, amtReferred, `Ưu đãi học viên được giới thiệu (HD${invoiceId})`);
+        await addCredit.run(
+          childParent.parent_id,
+          Math.round(amtReferred),
+          `Ưu đãi học viên được giới thiệu (HD${invoiceId})`
+        );
       }
-      await tx.prepare("UPDATE referrals SET status = 'rewarded' WHERE id = ?").run(ref!.id);
+      return true;
     });
-    log.info(`Đã thưởng credits cho referral #${ref.id} (hóa đơn HD${invoiceId})`);
+    if (rewarded) log.info(`Đã thưởng credits cho referral #${ref.id} (hóa đơn HD${invoiceId})`);
   } catch (err) {
     log.error('Lỗi afterInvoicePaid', { error: String(err) });
   }
@@ -112,35 +129,58 @@ export async function afterInvoicePaid(invoiceId: number): Promise<void> {
 export async function applyCreditToInvoice(
   invoiceId: number,
   creditId: number
-): Promise<{ applied: number; status: string; }> {
-  const inv = await db.prepare('SELECT id, student_id, amount FROM invoices WHERE id = ?').get(invoiceId) as
-    { id: number; student_id: number; amount: number } | undefined;
+): Promise<{ applied: number; status: string }> {
+  const inv = (await db
+    .prepare('SELECT id, student_id, amount FROM invoices WHERE id = ?')
+    .get(invoiceId)) as { id: number; student_id: number; amount: number } | undefined;
   if (!inv) throw new Error('Không tìm thấy hóa đơn');
 
-  const credit = await db.prepare('SELECT * FROM credits WHERE id = ?').get(creditId) as
+  const credit = (await db.prepare('SELECT * FROM credits WHERE id = ?').get(creditId)) as
     { id: number; parent_id: number; amount: number; used_amount: number } | undefined;
   if (!credit) throw new Error('Không tìm thấy credits');
 
   // Credits phải thuộc về phụ huynh đã liên kết với học viên của hóa đơn
-  const owner = await db.prepare('SELECT 1 FROM parent_students WHERE parent_id = ? AND student_id = ?')
+  const owner = await db
+    .prepare('SELECT 1 FROM parent_students WHERE parent_id = ? AND student_id = ?')
     .get(credit.parent_id, inv.student_id);
   if (!owner) throw new Error('Credits này không thuộc phụ huynh của học viên');
 
-  const available = credit.amount - credit.used_amount;
-  if (available <= 0) throw new Error('Credits đã dùng hết');
+  // Toàn bộ tính toán + ghi nhận trong 1 transaction, lock cả hóa đơn và credit
+  // (chống 2 request đồng thời cùng áp vượt số nợ).
+  const { applied } = await db.transaction(async (tx) => {
+    const lockedInv = (await tx
+      .prepare('SELECT amount FROM invoices WHERE id = ? FOR UPDATE')
+      .get(invoiceId)) as { amount: number } | undefined;
+    if (!lockedInv) throw new Error('Không tìm thấy hóa đơn');
+    const lockedCredit = (await tx
+      .prepare('SELECT amount, used_amount FROM credits WHERE id = ? FOR UPDATE')
+      .get(creditId)) as { amount: number; used_amount: number } | undefined;
+    if (!lockedCredit) throw new Error('Không tìm thấy credits');
 
-  const remaining = inv.amount - (await confirmedPaid(invoiceId));
-  if (remaining <= 0.01) throw new Error('Hóa đơn đã thanh toán đủ');
+    const available = lockedCredit.amount - lockedCredit.used_amount;
+    if (available <= 0) throw new Error('Credits đã dùng hết');
 
-  const applied = Math.min(available, remaining);
+    const paidRow = (await tx
+      .prepare(
+        "SELECT COALESCE(SUM(amount),0) as paid FROM payments WHERE invoice_id = ? AND status = 'confirmed'"
+      )
+      .get(invoiceId)) as { paid: number };
+    const remaining = lockedInv.amount - Number(paidRow.paid);
+    if (remaining <= 0.01) throw new Error('Hóa đơn đã thanh toán đủ');
 
-  await db.transaction(async (tx) => {
-    await tx.prepare(
-      "INSERT INTO payments (invoice_id, amount, method, note, status) VALUES (?, ?, 'credit', ?, 'confirmed')"
-    ).run(invoiceId, applied, `Áp dụng credits #${creditId}`);
+    const applied = Math.round(Math.min(available, remaining));
+    await tx
+      .prepare(
+        "INSERT INTO payments (invoice_id, amount, method, note, status) VALUES (?, ?, 'credit', ?, 'confirmed')"
+      )
+      .run(invoiceId, applied, `Áp dụng credits #${creditId}`);
     await tx.prepare('UPDATE credits SET used_amount = used_amount + ? WHERE id = ?').run(applied, creditId);
+    const newStatus = Number(paidRow.paid) + applied >= lockedInv.amount - 0.01 ? 'paid' : 'partial';
+    await tx.prepare('UPDATE invoices SET status = ? WHERE id = ?').run(newStatus, invoiceId);
+    return { applied };
   });
 
+  if (applied <= 0) throw new Error('Không áp dụng được credits');
   const status = await recalcInvoiceStatus(invoiceId);
   if (status === 'paid') await afterInvoicePaid(invoiceId);
   return { applied, status };

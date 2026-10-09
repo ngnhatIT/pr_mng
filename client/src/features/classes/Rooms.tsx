@@ -121,7 +121,10 @@ export function Rooms() {
                         <Icon name="pencil" size={13} />
                         {t('actions.edit', { ns: 'common' })}
                       </button>
-                      <button className="btn btn-sm btn-inline btn-danger-ghost" onClick={() => setDeleting(r)}>
+                      <button
+                        className="btn btn-sm btn-inline btn-danger-ghost"
+                        onClick={() => setDeleting(r)}
+                      >
                         <Icon name="trash" size={13} />
                         {t('actions.delete', { ns: 'common' })}
                       </button>

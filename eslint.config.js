@@ -9,7 +9,7 @@ export default tseslint.config(
   {
     languageOptions: {
       parserOptions: {
-        projectService: false,
+        projectService: true,
       },
     },
     rules: {
@@ -20,13 +20,23 @@ export default tseslint.config(
       'no-console': 'error',
       // Prefer const
       'prefer-const': 'error',
+      // CẤM promise trôi nổi: root cause của ~40 lỗi IDOR/res.json({})/unhandled rejection (audit 2026-10-09)
+      '@typescript-eslint/no-floating-promises': 'error',
+      '@typescript-eslint/no-misused-promises': ['error', { checksVoidReturn: false }],
     },
   },
   {
-    // Test files: nới lỏng một số rule
+    // Test files: nới lỏng một số rule (không cần type-aware lint)
     files: ['**/*.test.ts'],
+    languageOptions: {
+      parserOptions: {
+        projectService: false,
+      },
+    },
     rules: {
       '@typescript-eslint/no-unused-expressions': 'off',
+      '@typescript-eslint/no-floating-promises': 'off',
+      '@typescript-eslint/no-misused-promises': 'off',
     },
   },
   {

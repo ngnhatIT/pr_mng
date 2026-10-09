@@ -92,11 +92,7 @@ export function LeavesAdmin() {
       {loading ? (
         <TableSkeleton cols={6} />
       ) : leaves.length === 0 ? (
-        <EmptyState
-          icon="calendar-x"
-          title={t('leaves.empty.title')}
-          desc={t('leaves.empty.desc')}
-        />
+        <EmptyState icon="calendar-x" title={t('leaves.empty.title')} desc={t('leaves.empty.desc')} />
       ) : (
         <div className="table-wrap">
           <table className="table">
@@ -150,7 +146,10 @@ export function LeavesAdmin() {
       {pagination && <Pagination pagination={pagination} onChange={(p) => setPage(p)} />}
 
       {approving && (
-        <Modal title={t('leaves.approvedTitle', { name: approving.student_name })} onClose={() => setApproving(null)}>
+        <Modal
+          title={t('leaves.approvedTitle', { name: approving.student_name })}
+          onClose={() => setApproving(null)}
+        >
           <p className="confirm-text">{t('leaves.makeupHint')}</p>
           {suggestions && suggestions.length > 0 ? (
             <ul className="makeup-list">

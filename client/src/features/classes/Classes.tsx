@@ -124,7 +124,8 @@ export function Classes() {
       ) : (
         <div className="card-grid">
           {classes.map((c) => {
-            const pct = c.max_students > 0 ? Math.min(100, Math.round((c.student_count / c.max_students) * 100)) : 0;
+            const pct =
+              c.max_students > 0 ? Math.min(100, Math.round((c.student_count / c.max_students) * 100)) : 0;
             const isFull = c.max_students > 0 && c.student_count >= c.max_students;
             return (
               <div key={c.id} className="card class-card card-hover">
@@ -134,9 +135,7 @@ export function Classes() {
                       {c.name}
                     </Link>
                   </h2>
-                  <span className={`badge badge-${c.status}`}>
-                    {t('classStatus.' + c.status)}
-                  </span>
+                  <span className={`badge badge-${c.status}`}>{t('classStatus.' + c.status)}</span>
                 </div>
                 <dl className="dl dl-compact">
                   <dt>{t('table.teacher')}</dt>
@@ -151,9 +150,7 @@ export function Classes() {
                       <span className="num">
                         {c.student_count}/{c.max_students}
                       </span>
-                      {isFull && (
-                        <span className="badge badge-danger">{t('classes.full')}</span>
-                      )}
+                      {isFull && <span className="badge badge-danger">{t('classes.full')}</span>}
                     </span>
                     <div
                       className={`capacity-meter${isFull ? ' is-full' : ''}`}
@@ -371,9 +368,7 @@ function ClassFormModal({
               </button>
             </div>
           ))}
-          {form.schedule.length === 0 && (
-            <p className="muted">{t('form.noSchedule')}</p>
-          )}
+          {form.schedule.length === 0 && <p className="muted">{t('form.noSchedule')}</p>}
         </div>
 
         <div className="modal-actions">

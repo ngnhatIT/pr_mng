@@ -51,7 +51,13 @@ export function PaymentConfig() {
     if (!form || busy) return;
     setBusy(true);
     try {
-      await paymentsApi.saveConfig(form);
+      // CRITICAL: không bao giờ gửi secret dạng mask ('••••••••' hoặc 'abcd••••••••wxyz')
+      // lên server, giữ nguyên secret cũ khi người dùng không đổi.
+      const payload: Partial<PaymentConfigData> = { ...form };
+      if (payload.pay_vnp_hashsecret?.includes('•')) {
+        delete payload.pay_vnp_hashsecret;
+      }
+      await paymentsApi.saveConfig(payload);
       toast(t('config.saved'), 'success');
       void load();
     } catch (err) {
@@ -64,10 +70,7 @@ export function PaymentConfig() {
   if (loading)
     return (
       <div className="page">
-        <PageHeader
-          title={t('config.title')}
-          desc={t('config.pageDesc')}
-        />
+        <PageHeader title={t('config.title')} desc={t('config.pageDesc')} />
         {[0, 1, 2].map((i) => (
           <section key={i} className="card" aria-hidden="true">
             <Skeleton width="35%" height={18} />
@@ -84,20 +87,14 @@ export function PaymentConfig() {
   if (!form)
     return (
       <div className="page">
-        <PageHeader
-          title={t('config.title')}
-          desc={t('config.pageDesc')}
-        />
+        <PageHeader title={t('config.title')} desc={t('config.pageDesc')} />
         <EmptyState icon="settings" title={t('config.loadFailTitle')} desc={t('config.loadFailDesc')} />
       </div>
     );
 
   return (
     <div className="page">
-      <PageHeader
-        title={t('config.title')}
-        desc={t('config.pageDesc')}
-      />
+      <PageHeader title={t('config.title')} desc={t('config.pageDesc')} />
       <form onSubmit={submit}>
         <section className="card">
           <h2 className="card-title">
@@ -153,7 +150,17 @@ export function PaymentConfig() {
                 type="password"
                 value={form.pay_vnp_hashsecret}
                 onChange={set('pay_vnp_hashsecret')}
-                placeholder={form.pay_vnp_hashsecret === '••••••••' ? t('config.vnpay.savedPlaceholder') : ''}
+                onFocus={(e) => {
+                  // Xoá mask khi focus để người dùng nhập secret mới sạch sẽ
+                  if (e.target.value.includes('•')) {
+                    setForm((f) => (f ? { ...f, pay_vnp_hashsecret: '' } : f));
+                  }
+                }}
+                placeholder={
+                  form.pay_vnp_hashsecret.includes('•')
+                    ? t('config.vnpay.savedPlaceholder')
+                    : t('config.vnpay.newSecretPlaceholder')
+                }
               />
             </Field>
             <Field label={t('config.vnpay.status')}>

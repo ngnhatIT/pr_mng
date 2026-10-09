@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { getUser } from '../../shared/api/client';
 import { zaloApi } from './notifications.api';
+import { rolesApi } from '../system/roles.api';
 import { useToast } from '../../shared/ui/toast';
 import { Modal } from '../../shared/components/Modal';
 import { Field } from '../../shared/components/Form';
@@ -10,12 +10,7 @@ import { EmptyState } from '../../shared/components/EmptyState';
 import { TableSkeleton, Skeleton } from '../../shared/components/Skeleton';
 import { Pagination, type PaginationMeta } from '../../shared/components/Pagination';
 import { Icon } from '../../shared/components/icons';
-import {
-  ZaloConfig,
-  ReminderItem,
-  formatVND,
-  formatDate,
-} from '../../shared/types';
+import { ZaloConfig, ReminderItem, formatVND, formatDate } from '../../shared/types';
 import './Zalo.css';
 
 const EMPTY_CONFIG: ZaloConfig = {
@@ -32,9 +27,12 @@ const EMPTY_CONFIG: ZaloConfig = {
 
 export function ZaloReminders() {
   const { t } = useTranslation(['ops', 'common']);
-  const user = getUser();
-  const isAdmin = user?.role === 'admin';
   const toast = useToast();
+
+  // HIGH-6: kiểm tra permission notifications.manage thay vì role cứng.
+  // Superadmin được seed toàn bộ permission nên vẫn vào được.
+  const [canManage, setCanManage] = useState<boolean | null>(null);
+  const isAdmin = canManage === true;
 
   const [config, setConfig] = useState<ZaloConfig>(EMPTY_CONFIG);
   const [loading, setLoading] = useState(true);
@@ -63,6 +61,17 @@ export function ZaloReminders() {
     }
   }, [isAdmin, toast, t]);
 
+  const checkPermission = useCallback(async () => {
+    try {
+      const res = await rolesApi.mine();
+      const codes = new Set(res.data.map((p) => p.code));
+      setCanManage(codes.has('notifications.manage'));
+    } catch {
+      // fail-closed: không kiểm tra được permission thì không hiện form cấu hình
+      setCanManage(false);
+    }
+  }, []);
+
   const loadHistory = useCallback(async () => {
     setLoadingHistory(true);
     try {
@@ -76,17 +85,29 @@ export function ZaloReminders() {
   }, [toast, t]);
 
   useEffect(() => {
+    void checkPermission();
+  }, [checkPermission]);
+
+  useEffect(() => {
+    if (canManage === null) return;
     void loadConfig();
     void loadHistory();
-  }, [loadConfig, loadHistory]);
+  }, [canManage, loadConfig, loadHistory]);
 
   const set = (k: keyof ZaloConfig) => (v: string) => setConfig((c) => ({ ...c, [k]: v }));
 
   const save = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (saving) return;
     setSaving(true);
     try {
-      const data = await zaloApi.saveConfig(config);
+      // CRITICAL: không bao giờ gửi token dạng mask ('••••••••' hoặc 'abcd••••••••wxyz')
+      // lên server, giữ nguyên token cũ khi người dùng không đổi.
+      const payload: Partial<ZaloConfig> = { ...config };
+      if (payload.zalo_access_token?.includes('•')) {
+        delete payload.zalo_access_token;
+      }
+      const data = await zaloApi.saveConfig(payload);
       setConfig({ ...EMPTY_CONFIG, ...data });
       toast(t('zalo.toast.savedConfig'), 'success');
     } catch (err) {
@@ -128,10 +149,7 @@ export function ZaloReminders() {
 
   return (
     <div className="page">
-      <PageHeader
-        title={t('zalo.title')}
-        desc={t('zalo.desc')}
-      />
+      <PageHeader title={t('zalo.title')} desc={t('zalo.desc')} />
 
       {isAdmin && !loading && (
         <div className="zalo-status">
@@ -141,9 +159,7 @@ export function ZaloReminders() {
           <div className="status-text">
             <div className="status-title">{t('zalo.status.title')}</div>
             <div className="status-desc">
-              {config.zalo_access_token
-                ? t('zalo.status.descConfigured')
-                : t('zalo.status.descDemo')}
+              {config.zalo_access_token ? t('zalo.status.descConfigured') : t('zalo.status.descDemo')}
             </div>
           </div>
           {config.zalo_enabled === '1' ? (
@@ -154,11 +170,9 @@ export function ZaloReminders() {
         </div>
       )}
 
-      {!isAdmin && (
+      {canManage === false && (
         <div className="card">
-          <p className="confirm-text">
-            {t('zalo.notAdmin')}
-          </p>
+          <p className="confirm-text">{t('zalo.notAdmin')}</p>
         </div>
       )}
 
@@ -166,9 +180,7 @@ export function ZaloReminders() {
         <>
           <div className="card">
             <h2 className="card-title">{t('zalo.config.title')}</h2>
-            <p className="card-desc">
-              {t('zalo.config.desc')}
-            </p>
+            <p className="card-desc">{t('zalo.config.desc')}</p>
             {loading ? (
               <div aria-hidden="true">
                 <Skeleton height={38} radius={8} />
@@ -206,10 +218,14 @@ export function ZaloReminders() {
                         type="password"
                         value={config.zalo_access_token}
                         onChange={(e) => set('zalo_access_token')(e.target.value)}
+                        onFocus={(e) => {
+                          // Xoá mask khi focus để người dùng nhập token mới sạch sẽ
+                          if (e.target.value.includes('•')) {
+                            set('zalo_access_token')('');
+                          }
+                        }}
                         placeholder={
-                          config.zalo_access_token
-                            ? t('zalo.ph.tokenSaved')
-                            : t('zalo.ph.tokenNew')
+                          config.zalo_access_token ? t('zalo.ph.tokenSaved') : t('zalo.ph.tokenNew')
                         }
                         autoComplete="off"
                       />
@@ -256,9 +272,7 @@ export function ZaloReminders() {
 
           <div className="card">
             <h2 className="card-title">{t('zalo.schedule.title')}</h2>
-            <p className="card-desc">
-              {t('zalo.schedule.desc')}
-            </p>
+            <p className="card-desc">{t('zalo.schedule.desc')}</p>
             <form
               onSubmit={(e) => {
                 e.preventDefault();
@@ -334,11 +348,7 @@ export function ZaloReminders() {
         {loadingHistory ? (
           <TableSkeleton cols={7} />
         ) : reminders.length === 0 ? (
-          <EmptyState
-            icon="bell"
-            title={t('zalo.empty.title')}
-            desc={t('zalo.empty.desc')}
-          />
+          <EmptyState icon="bell" title={t('zalo.empty.title')} desc={t('zalo.empty.desc')} />
         ) : (
           <>
             <div className="table-wrap">
@@ -420,9 +430,7 @@ export function ZaloReminders() {
           <div className="message-preview">{viewing.message || t('zalo.view.noContent')}</div>
           {viewing.response && (
             <>
-              <p className="card-desc zalo-response-label">
-                {t('zalo.view.responseLabel')}
-              </p>
+              <p className="card-desc zalo-response-label">{t('zalo.view.responseLabel')}</p>
               <div className="message-preview mono">{viewing.response}</div>
             </>
           )}

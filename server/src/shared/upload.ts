@@ -1,4 +1,5 @@
 import multer from 'multer';
+import crypto from 'crypto';
 import path from 'path';
 import fs from 'fs';
 import { AppError } from './errors';
@@ -22,7 +23,8 @@ const storage = multer.diskStorage({
   destination: (_req, _file, cb) => cb(null, getUploadDir()),
   filename: (_req, file, cb) => {
     const ext = path.extname(file.originalname).toLowerCase();
-    cb(null, `hw_${Date.now()}_${Math.random().toString(36).slice(2, 8)}${ext}`);
+    // M13: UUID v4 (CSPRNG) thay vì Math.random() — tên file khó đoán, chống brute-force khi kết hợp C3
+    cb(null, `hw_${crypto.randomUUID()}${ext}`);
   },
 });
 
@@ -41,11 +43,15 @@ export const uploadSingle = multer({
 /** Xóa file đã upload khi nghiệp vụ thất bại (tránh rác trên đĩa). */
 export function cleanupUploadedFile(file: { path: string } | undefined): void {
   if (file?.path) {
-    fs.unlink(file.path, () => { /* bỏ qua lỗi */ });
+    fs.unlink(file.path, () => {
+      /* bỏ qua lỗi */
+    });
   }
 }
 
-/** Kiểm tra tên file hợp lệ (do server sinh). */
+/** Kiểm tra tên file hợp lệ (do server sinh). Chấp nhận cả định dạng cũ và UUID mới. */
 export function isValidUploadFilename(filename: string): boolean {
-  return /^hw_\d+_[a-z0-9]+\.[a-z0-9]+$/i.test(path.basename(filename));
+  return /^hw_(?:\d+_[a-z0-9]+|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\.[a-z0-9]+$/i.test(
+    path.basename(filename)
+  );
 }

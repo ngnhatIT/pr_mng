@@ -1,3 +1,5 @@
+import { logger } from '../logger';
+
 /**
  * Event Bus — nền tảng kiến trúc event-driven (chuẩn enterprise).
  *
@@ -22,6 +24,8 @@ export interface DomainEvent {
 }
 
 type EventHandler<E extends DomainEvent = DomainEvent> = (event: E) => void | Promise<void>;
+
+const busLog = logger.scope('eventBus');
 
 class EventBus {
   private handlers = new Map<string, EventHandler[]>();
@@ -56,8 +60,14 @@ class EventBus {
     for (const h of [...handlers, ...this.wildcardHandlers]) {
       try {
         await h(event);
-      } catch {
-        /* listener lỗi không được làm hỏng flow chính — log ở listener */
+      } catch (err) {
+        // Listener lỗi không được làm hỏng flow chính — nhưng PHẢI log,
+        // không nuốt im lặng (vd: Zalo notification lỗi = mất thông báo).
+        busLog.error('event listener failed', {
+          event: event.name,
+          correlationId: event.correlationId,
+          error: String(err),
+        });
       }
     }
   }

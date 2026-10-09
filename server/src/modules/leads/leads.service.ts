@@ -25,7 +25,7 @@ export async function listLeads(
   centerId: number | null,
   query: LeadQuery,
   pageOpts: PageOptions = {}
-):  Promise<Paginated<LeadRow>> {
+): Promise<Paginated<LeadRow>> {
   const { status = '', search = '' } = query;
   const conds: string[] = [];
   const params: unknown[] = [];
@@ -44,8 +44,11 @@ export async function listLeads(
   }
   const where = conds.length ? `WHERE ${conds.join(' AND ')}` : '';
   const { page, limit, offset } = parsePagination(pageOpts);
-  const total = (await db.prepare(`SELECT COUNT(*) as c FROM leads ${where}`).get(...params) as { c: number }).c;
-  const rows = await db.prepare(`SELECT * FROM leads ${where} ORDER BY id DESC LIMIT ? OFFSET ?`)
-    .all(...params, limit, offset) as LeadRow[];
+  const total = (
+    (await db.prepare(`SELECT COUNT(*) as c FROM leads ${where}`).get(...params)) as { c: number }
+  ).c;
+  const rows = (await db
+    .prepare(`SELECT * FROM leads ${where} ORDER BY id DESC LIMIT ? OFFSET ?`)
+    .all(...params, limit, offset)) as LeadRow[];
   return paginate(rows, total, page, limit);
 }

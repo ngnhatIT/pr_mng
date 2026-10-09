@@ -19,7 +19,8 @@ export function currentMonth(): string {
  * số buổi đã điểm danh/check-in × đơn giá buổi dạy.
  */
 export async function calcPayroll(teacherId: number, month: string): Promise<PayrollResult> {
-  const row = await db.prepare(
+  const row = (await db
+    .prepare(
       `SELECT
          (SELECT COUNT(*) FROM sessions s
             JOIN classes c ON c.id = s.class_id
@@ -29,7 +30,7 @@ export async function calcPayroll(teacherId: number, month: string): Promise<Pay
                  OR EXISTS (SELECT 1 FROM teacher_checkins tc WHERE tc.session_id = s.id))) as sessions,
          COALESCE((SELECT per_session_amount FROM salary_rules sr WHERE sr.teacher_id = ?), 0) as per_session`
     )
-    .get(teacherId, month, teacherId) as { sessions: number; per_session: number };
+    .get(teacherId, month, teacherId)) as { sessions: number; per_session: number };
   const sessions = row.sessions || 0;
   const perSession = row.per_session || 0;
   return { sessions, per_session: perSession, total: sessions * perSession };

@@ -21,9 +21,7 @@ export function PaymentResult() {
         <h1 className="parent-title" style={{ marginTop: 12 }}>
           {success ? t('payment.successTitle') : t('payment.failTitle')}
         </h1>
-        <p className="muted">
-          {success ? t('payment.successDesc') : t('payment.failDesc')}
-        </p>
+        <p className="muted">{success ? t('payment.successDesc') : t('payment.failDesc')}</p>
         <Link className="btn btn-primary btn-block" to="/parent">
           {t('payment.backHome')}
         </Link>

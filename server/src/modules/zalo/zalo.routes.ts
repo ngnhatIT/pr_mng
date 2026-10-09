@@ -73,7 +73,8 @@ router.post(
   '/zalo/test',
   requirePermission('notifications.manage'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
-    const cfg = await getZaloConfig(await cidOf(req));
+    const cid = await cidOf(req);
+    const cfg = await getZaloConfig(cid);
     const phone = normalizePhone(req.body?.phone as string | undefined);
     if (!phone) {
       res.status(400).json({ error: 'Số điện thoại không hợp lệ (cần 10 số, bắt đầu bằng 0)' });
@@ -93,12 +94,12 @@ router.post(
       `Quý khách vui lòng hoàn tất học phí sớm. Xin cảm ơn!`;
 
     const insertLog = await db.prepare(
-      'INSERT INTO reminders (invoice_id, student_id, phone, kind, status, message, response) VALUES (NULL, NULL, ?, ?, ?, ?, ?)'
+      'INSERT INTO reminders (center_id, invoice_id, student_id, phone, kind, status, message, response) VALUES (?, NULL, NULL, ?, ?, ?, ?, ?)'
     );
 
     // Chế độ demo: chưa có token hoặc chưa bật
     if (cfg.zalo_enabled !== '1' || !cfg.zalo_access_token) {
-      await insertLog.run(phone, 'test', 'demo', demoMessage, null);
+      await insertLog.run(cid ?? null, phone, 'general', 'demo', demoMessage, null);
       res.json({
         demo: true,
         status: 'demo',
@@ -118,8 +119,9 @@ router.post(
     });
     const status = r.ok ? 'sent' : 'failed';
     await insertLog.run(
+      cid ?? null,
       phone,
-      'test',
+      'general',
       status,
       r.ok ? demoMessage : r.error || 'Gửi thất bại',
       r.data ? JSON.stringify(r.data).slice(0, 2000) : r.error || null
@@ -159,8 +161,10 @@ router.get(
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const cid = reqCenterId(req);
     const limit = Math.min(500, Math.max(1, Number(req.query.limit) || 100));
-    const where = cid !== null ? 'WHERE (s.center_id = ? OR r.student_id IS NULL)' : '';
-    const rows = await db.prepare(
+    // Lọc center cho cả 2 nhánh: row có student và row student_id NULL (dùng r.center_id)
+    const where = cid !== null ? 'WHERE (s.center_id = ? OR (r.student_id IS NULL AND r.center_id = ?))' : '';
+    const rows = await db
+      .prepare(
         `SELECT r.*, s.name as student_name, s.code as student_code, i.amount as invoice_amount, i.due_date
        FROM reminders r
        LEFT JOIN students s ON s.id = r.student_id
@@ -168,7 +172,7 @@ router.get(
        ${where}
        ORDER BY r.id DESC LIMIT ?`
       )
-      .all(...(cid !== null ? [cid] : []), limit);
+      .all(...(cid !== null ? [cid, cid] : []), limit);
     res.json(rows);
   })
 );
@@ -183,7 +187,8 @@ router.post(
     const cid = reqCenterId(req);
     const id = Number(req.params.id);
     if (cid !== null) {
-      const inv = await db.prepare(
+      const inv = await db
+        .prepare(
           'SELECT i.id FROM invoices i JOIN students s ON s.id = i.student_id WHERE i.id = ? AND s.center_id = ?'
         )
         .get(id, cid);

@@ -25,12 +25,23 @@ router.get(
     let dbSize = 0;
     let tableCount = 0;
     try {
-      const pageCount = (await db.prepare('PRAGMA page_count').get() as { page_count: number }).page_count;
-      const pageSize = (await db.prepare('PRAGMA page_size').get() as { page_size: number }).page_size;
-      dbSize = pageCount * pageSize;
-      tableCount = (await db.prepare("SELECT COUNT(*) as c FROM sqlite_master WHERE type = 'table'").get() as { c: number }).c;
-    } catch {
-      /* bỏ qua */
+      // PostgreSQL: dùng pg_database_size + information_schema (không còn PRAGMA/sqlite_master)
+      const sizeRow = (await db
+        .query('SELECT pg_database_size(current_database()) as size')
+        .then((r) => r.rows[0])) as {
+        size: string;
+      };
+      dbSize = Number(sizeRow?.size) || 0;
+      const tableRow = (await db
+        .query(
+          "SELECT COUNT(*) as c FROM information_schema.tables WHERE table_schema = 'public' AND table_type = 'BASE TABLE'"
+        )
+        .then((r) => r.rows[0])) as { c: string };
+      tableCount = Number(tableRow?.c) || 0;
+    } catch (err) {
+      // Không để metrics hỏng vì lỗi DB — endpoint vẫn trả các metric còn lại
+      const { logger } = await import('../../shared/logger');
+      logger.scope('metrics').warn('db metrics failed', { error: String(err) });
     }
 
     const lines = [

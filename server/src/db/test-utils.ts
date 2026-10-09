@@ -51,6 +51,46 @@ export async function setupTestDb(): Promise<void> {
       const r = await p.query(pgSql, params as unknown[]);
       return { rows: r.rows, rowCount: r.rowCount };
     },
+    // Tối thiểu cho runMigrations (mỗi migration chạy trong transaction riêng).
+    transaction: async <T>(
+      fn: (tx: {
+        prepare: (sql: string) => {
+          get: (...params: unknown[]) => Promise<unknown>;
+          all: (...params: unknown[]) => Promise<unknown[]>;
+          run: (...params: unknown[]) => Promise<{ changes: number; lastInsertRowid: number | undefined }>;
+        };
+        exec: (sql: string) => Promise<void>;
+      }) => Promise<T>
+    ): Promise<T> => {
+      const client = await p.connect();
+      const q = async (text: string, params: unknown[] = []) => {
+        let i = 0;
+        const pgSql = text.replace(/\?/g, () => `$${++i}`);
+        return client.query(pgSql, params as unknown[]);
+      };
+      try {
+        await client.query('BEGIN');
+        const tx = {
+          prepare: (sql: string) => ({
+            get: async (...params: unknown[]) => (await q(sql, params)).rows[0] ?? undefined,
+            all: async (...params: unknown[]) => (await q(sql, params)).rows,
+            run: async (...params: unknown[]) => {
+              const r = await q(sql, params);
+              return { changes: r.rowCount ?? 0, lastInsertRowid: undefined };
+            },
+          }),
+          exec: (sql: string) => client.query(sql).then(() => undefined),
+        };
+        const result = await fn(tx);
+        await client.query('COMMIT');
+        return result;
+      } catch (e) {
+        await client.query('ROLLBACK');
+        throw e;
+      } finally {
+        client.release();
+      }
+    },
   };
   const { createSchema, createTriggers, createViews, createHistoryTables } = await import('./schema');
   await createSchema(dbAdapter as never);
@@ -91,7 +131,10 @@ export async function seedMinimal(): Promise<{ centerId: number; studentId: numb
   const p = getPool();
   const c = await p.query(`INSERT INTO centers (name) VALUES ('TT Test') RETURNING id`);
   const centerId = Number(c.rows[0].id);
-  const s = await p.query(`INSERT INTO students (code, name, center_id) VALUES ('HV1', 'Học viên Test', $1) RETURNING id`, [centerId]);
+  const s = await p.query(
+    `INSERT INTO students (code, name, center_id) VALUES ('HV1', 'Học viên Test', $1) RETURNING id`,
+    [centerId]
+  );
   const studentId = Number(s.rows[0].id);
   return { centerId, studentId };
 }

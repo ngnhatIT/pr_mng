@@ -29,7 +29,8 @@
       "savedPlaceholder": "Đã lưu (để trống nếu không đổi)",
       "status": "Trạng thái",
       "title": "VNPay",
-      "tmnCode": "Mã website (TMN Code)"
+      "tmnCode": "Mã website (TMN Code)",
+      "newSecretPlaceholder": "Nhập secret mới (để trống = giữ nguyên)"
     }
   },
   "credit": {

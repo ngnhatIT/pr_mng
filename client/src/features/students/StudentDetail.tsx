@@ -3,15 +3,9 @@ import { Link, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { http } from '../../shared/api/client';
 import { studentsApi } from './students.api';
+import { classesApi, type ClassItem } from '../classes/classes.api';
 import { useToast } from '../../shared/ui/toast';
-import {
-  Student,
-  InvoiceItem,
-  Grade,
-  ClassItem,
-  formatVND,
-  formatDate,
-} from '../../shared/types';
+import { Student, InvoiceItem, Grade, formatVND, formatDate } from '../../shared/types';
 import { Modal, ConfirmDialog } from '../../shared/components/Modal';
 import { Field } from '../../shared/components/Form';
 import { EmptyState } from '../../shared/components/EmptyState';
@@ -33,7 +27,7 @@ export function StudentDetail() {
   const toast = useToast();
 
   useEffect(() => {
-    (async () => {
+    void (async () => {
       try {
         const d = await http.get<Detail>(`/students/${id}`);
         setData(d);
@@ -71,11 +65,7 @@ export function StudentDetail() {
   if (!data)
     return (
       <div className="page">
-        <EmptyState
-          icon="user"
-          title={t('detail.notFoundTitle')}
-          desc={t('detail.notFoundDesc')}
-        />
+        <EmptyState icon="user" title={t('detail.notFoundTitle')} desc={t('detail.notFoundDesc')} />
       </div>
     );
   const { student } = data;
@@ -227,11 +217,7 @@ function GradesSection({ studentId }: { studentId: number }) {
       {loading ? (
         <TableSkeleton cols={6} />
       ) : grades.length === 0 ? (
-        <EmptyState
-          icon="cap"
-          title={t('detail.grades.emptyTitle')}
-          desc={t('detail.grades.emptyDesc')}
-        />
+        <EmptyState icon="cap" title={t('detail.grades.emptyTitle')} desc={t('detail.grades.emptyDesc')} />
       ) : (
         <div className="table-wrap">
           <table className="table">
@@ -258,10 +244,7 @@ function GradesSection({ studentId }: { studentId: number }) {
                   <td>{g.comment || '-'}</td>
                   <td>{formatDate(g.created_at)}</td>
                   <td className="td-right">
-                    <button
-                      className="btn btn-sm btn-inline btn-danger-ghost"
-                      onClick={() => setDeleting(g)}
-                    >
+                    <button className="btn btn-sm btn-inline btn-danger-ghost" onClick={() => setDeleting(g)}>
                       <Icon name="trash" size={13} />
                       {t('actions.delete', { ns: 'common' })}
                     </button>
@@ -319,9 +302,10 @@ function StudentGradeFormModal({
   const toast = useToast();
 
   useEffect(() => {
-    http
-      .get<ClassItem[]>('/classes')
-      .then((c) => setClasses(c.filter((x) => x.status === 'active')))
+    // HIGH-2: GET /classes trả envelope {data, pagination}, phải lấy .data trước khi filter
+    classesApi
+      .list({ limit: 100 })
+      .then((r) => setClasses(r.data.filter((x) => x.status === 'active')))
       .catch((err: Error) => toast(err.message, 'error'));
   }, [toast]);
 

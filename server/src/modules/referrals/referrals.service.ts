@@ -25,7 +25,7 @@ export async function listReferrals(
   centerId: number | null,
   query: ReferralQuery,
   pageOpts: PageOptions = {}
-):  Promise<Paginated<ReferralRow>> {
+): Promise<Paginated<ReferralRow>> {
   const { status = '' } = query;
   const conds: string[] = [];
   const params: unknown[] = [];
@@ -42,14 +42,16 @@ export async function listReferrals(
        LEFT JOIN students s ON s.id = rf.referred_student_id`;
   const where = conds.length ? `WHERE ${conds.join(' AND ')}` : '';
   const { page, limit, offset } = parsePagination(pageOpts);
-  const total = (await db.prepare(`SELECT COUNT(*) as c ${from} ${where}`).get(...params) as { c: number }).c;
-  const rows = await db.prepare(
+  const total = ((await db.prepare(`SELECT COUNT(*) as c ${from} ${where}`).get(...params)) as { c: number })
+    .c;
+  const rows = (await db
+    .prepare(
       `SELECT rf.id, p.name as referrer_name, p.phone as referrer_phone,
          rf.referred_phone, s.name as referred_student_name,
          rf.status, rf.created_at
        ${from} ${where}
        ORDER BY rf.id DESC LIMIT ? OFFSET ?`
     )
-    .all(...params, limit, offset) as ReferralRow[];
+    .all(...params, limit, offset)) as ReferralRow[];
   return paginate(rows, total, page, limit);
 }

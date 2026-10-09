@@ -1,4 +1,5 @@
 import { Pool, PoolClient, types } from 'pg';
+import { AsyncLocalStorage } from 'async_hooks';
 import dotenv from 'dotenv';
 
 // Nạp .env (nếu có) trước khi đọc DATABASE_URL — dev tiện, production dùng env thật.
@@ -8,6 +9,18 @@ dotenv.config();
 // App này dùng COUNT cho pagination — ép về number cho đồng nhất với SQLite cũ.
 // (Giá trị > Number.MAX_SAFE_INTEGER không xảy ra với COUNT trong app này.)
 types.setTypeParser(20, (v) => (v === null ? null : Number(v)));
+
+/**
+ * Actor của request HTTP hiện tại ('<userId>:<role>'), do middleware
+ * auth (requireAuth/parentAuth) thiết lập qua AsyncLocalStorage.
+ *
+ * poolQuery/transaction đọc context này để gắn `SET LOCAL app.user_id`
+ * lên ĐÚNG connection thực thi query — trigger audit (audit_payment,
+ * audit_invoice) đọc qua `current_setting('app.user_id', true)` để ghi
+ * `changed_by`. Ngoài request (boot, scheduler, health check) thì không
+ * có actor — query chạy đường nhanh như cũ.
+ */
+export const requestActor = new AsyncLocalStorage<string>();
 
 /**
  * PostgreSQL connection + lớp tương thích API cho codebase.
@@ -35,6 +48,14 @@ types.setTypeParser(20, (v) => (v === null ? null : Number(v)));
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   max: 20,
+  // Không treo vô hạn khi DB unreachable: fail-fast sau 5s để request báo lỗi
+  // thay vì kẹt worker.
+  connectionTimeoutMillis: 5000,
+  // Thu hồi connection nhàn rỗi sau 30s.
+  idleTimeoutMillis: 30000,
+  // statement_timeout: kill query chạy quá 30s (chống runaway làm cạn pool).
+  // timezone=UTC: NOW() nhất quán mọi môi trường (trước đây theo TZ của server PG).
+  options: '-c statement_timeout=30000 -c timezone=UTC',
 });
 
 pool.on('error', (err) => {
@@ -45,15 +66,17 @@ pool.on('error', (err) => {
 
 /* ------------------------- Dịch SQL SQLite -> PG ------------------------- */
 
-/** Đổi `?` thành `$n`, bỏ qua `?` nằm trong string literal / comment. */
+/** Đổi `?` thành `$n` và `LIKE` thành `ILIKE`, bỏ qua literal / comment / identifier. */
 function toPgPlaceholders(sql: string): string {
   let out = '';
   let n = 0;
   let i = 0;
   const len = sql.length;
+  const isWordStart = (ch: string): boolean => /[A-Za-z_]/.test(ch);
+  const isWordChar = (ch: string): boolean => /[A-Za-z0-9_$]/.test(ch);
   while (i < len) {
     const ch = sql[i];
-    // string literal '...'
+    // string literal '...' — giữ nguyên, kể cả từ LIKE nằm bên trong
     if (ch === "'") {
       out += ch;
       i++;
@@ -109,6 +132,17 @@ function toPgPlaceholders(sql: string): string {
       }
       continue;
     }
+    // Từ khóa LIKE ngoài literal/comment -> ILIKE (SQLite LIKE không phân biệt
+    // hoa thường). Quét theo từ để 'I LIKE apples' trong literal không bị đổi,
+    // và từ đã là ILIKE không bị đổi lần 2 (idempotent).
+    if (isWordStart(ch)) {
+      let j = i + 1;
+      while (j < len && isWordChar(sql[j])) j++;
+      const word = sql.slice(i, j);
+      out += word.toUpperCase() === 'LIKE' ? 'ILIKE' : word;
+      i = j;
+      continue;
+    }
     if (ch === '?') {
       n++;
       out += `$${n}`;
@@ -132,8 +166,7 @@ function translateSqlite(sql: string): string {
   s = s.replace(/date\('now'\)/gi, `to_char(NOW(), 'YYYY-MM-DD')`);
   // json_object( -> json_build_object(
   s = s.replace(/json_object\(/gi, 'json_build_object(');
-  // LIKE -> ILIKE (giữ nguyên ý nghĩa tìm kiếm không phân biệt hoa thường)
-  s = s.replace(/\bLIKE\b/gi, 'ILIKE');
+  // LIKE -> ILIKE được xử lý trong toPgPlaceholders (nhận biết string literal)
   // INSERT OR IGNORE INTO t ... -> INSERT INTO t ... ON CONFLICT DO NOTHING
   if (/^\s*INSERT\s+OR\s+IGNORE\s+/i.test(s)) {
     s = s.replace(/^\s*INSERT\s+OR\s+IGNORE\s+INTO/i, 'INSERT INTO');
@@ -165,7 +198,19 @@ export interface Statement {
 type QueryFn = (text: string, params?: unknown[]) => Promise<{ rows: unknown[]; rowCount: number | null }>;
 
 /** Bảng không có cột id (khóa chính composite) — không RETURNING id được. */
-const NO_ID_TABLES = new Set(['center_settings', 'settings', 'salary_rules', 'payment_txns', 'parent_students', 'homework_targets', 'homework_scores', 'quiz_answers', 'role_permissions', 'user_roles']);
+const NO_ID_TABLES = new Set([
+  'center_settings',
+  'settings',
+  'salary_rules',
+  'payment_txns',
+  'parent_students',
+  'homework_targets',
+  'homework_scores',
+  'quiz_answers',
+  'role_permissions',
+  'user_roles',
+  'schema_migrations',
+]);
 
 function makeStatement(queryFn: QueryFn, sql: string): Statement {
   let pgSql = translateSqlite(sql);
@@ -213,7 +258,31 @@ export interface Db {
 }
 
 async function poolQuery(text: string, params?: unknown[]) {
-  return pool.query(translateSqlite(text), params as unknown[]);
+  const sql = translateSqlite(text);
+  const actor = requestActor.getStore();
+  // Không có actor (boot, scheduler, health check, test): đường nhanh như cũ.
+  if (!actor) return pool.query(sql, params as unknown[]);
+  // Có actor (request đã đăng nhập): giữ 1 connection riêng, mở transaction,
+  // gắn SET LOCAL app.user_id rồi mới chạy query — đảm bảo trigger audit đọc
+  // được actor trên ĐÚNG connection ghi. SET LOCAL tự hết hiệu lực khi
+  // COMMIT/ROLLBACK nên không rò sang request khác dùng chung pool.
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    try {
+      await client.query('SELECT set_config($1, $2, true)', ['app.user_id', actor]);
+    } catch {
+      // Audit là best-effort: thiếu actor thì changed_by = NULL, không chặn nghiệp vụ.
+    }
+    const r = await client.query(sql, params as unknown[]);
+    await client.query('COMMIT');
+    return r;
+  } catch (e) {
+    await client.query('ROLLBACK').catch(() => undefined);
+    throw e;
+  } finally {
+    client.release();
+  }
 }
 
 function makeTx(client: PoolClient): Tx {
@@ -228,14 +297,23 @@ function makeTx(client: PoolClient): Tx {
 
 export const db: Db = {
   prepare: (sql) => makeStatement(poolQuery, sql),
+  // poolQuery đã tự dịch SQL — không dịch 2 lần.
   exec: async (sql) => {
-    await poolQuery(translateSqlite(sql));
+    await poolQuery(sql);
   },
   query: poolQuery,
   async transaction<T>(fn: (tx: Tx) => Promise<T>): Promise<T> {
     const client = await pool.connect();
+    const actor = requestActor.getStore();
     try {
       await client.query('BEGIN');
+      if (actor) {
+        try {
+          await client.query('SELECT set_config($1, $2, true)', ['app.user_id', actor]);
+        } catch {
+          // Audit là best-effort — không chặn transaction nghiệp vụ.
+        }
+      }
       const result = await fn(makeTx(client));
       await client.query('COMMIT');
       return result;

@@ -25,6 +25,8 @@ import viAuth from './locales/vi/auth.json';
 import enAuth from './locales/en/auth.json';
 import viLanding from './locales/vi/landing.json';
 import enLanding from './locales/en/landing.json';
+import viRoles from './locales/vi/roles.json';
+import enRoles from './locales/en/roles.json';
 
 export const NAMESPACES = [
   'common',
@@ -39,6 +41,7 @@ export const NAMESPACES = [
   'teacher',
   'auth',
   'landing',
+  'roles',
 ] as const;
 
 export type AppLang = 'vi' | 'en';
@@ -69,6 +72,7 @@ void i18n.use(initReactI18next).init({
       teacher: viTeacher,
       auth: viAuth,
       landing: viLanding,
+      roles: viRoles,
     },
     en: {
       common: enCommon,
@@ -83,6 +87,7 @@ void i18n.use(initReactI18next).init({
       teacher: enTeacher,
       auth: enAuth,
       landing: enLanding,
+      roles: enRoles,
     },
   },
   lng: detectLang(),

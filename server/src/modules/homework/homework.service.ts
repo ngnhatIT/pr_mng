@@ -98,10 +98,10 @@ function scopeConds(ctx: ScopeCtx, params: unknown[]): string[] {
 function dueCond(due: string, conds: string[], params: unknown[]): void {
   const today = todayVN();
   if (due === 'overdue') {
-    conds.push("h.due_date IS NOT NULL AND h.due_date < ?");
+    conds.push('h.due_date IS NOT NULL AND h.due_date < ?');
     params.push(today);
   } else if (due === 'upcoming') {
-    conds.push("h.due_date IS NOT NULL AND h.due_date >= ?");
+    conds.push('h.due_date IS NOT NULL AND h.due_date >= ?');
     params.push(today);
   } else if (due === 'nodate') {
     conds.push('h.due_date IS NULL');
@@ -117,7 +117,7 @@ export async function listHomework(
   ctx: ScopeCtx,
   query: HomeworkQuery,
   pageOpts: PageOptions = {}
-):  Promise<Paginated<HomeworkRow>> {
+): Promise<Paginated<HomeworkRow>> {
   const params: unknown[] = [];
   const conds = scopeConds(ctx, params);
   const { class_id = '', search = '', due = '', status = '', kind = '' } = query;
@@ -142,32 +142,46 @@ export async function listHomework(
   const from = `FROM homework h JOIN classes c ON c.id = h.class_id`;
   const where = `WHERE ${conds.join(' AND ')}`;
   const { page, limit, offset } = parsePagination(pageOpts);
-  const total = (await db.prepare(`SELECT COUNT(*) as c ${from} ${where}`).get(...params) as { c: number }).c;
-  const rows = await db.prepare(
+  const total = ((await db.prepare(`SELECT COUNT(*) as c ${from} ${where}`).get(...params)) as { c: number })
+    .c;
+  const rows = (await db
+    .prepare(
       `SELECT h.*, c.name as class_name,
         (SELECT COUNT(*) FROM homework_completions hc WHERE hc.homework_id = h.id) as completed_count,
         ${assignedCountExpr('h', 'h')} as student_count,
         (SELECT COUNT(*) FROM quiz_questions qq WHERE qq.homework_id = h.id) as question_count
        ${from} ${where} ORDER BY h.id DESC LIMIT ? OFFSET ?`
     )
-    .all(...params, limit, offset) as HomeworkRow[];
+    .all(...params, limit, offset)) as HomeworkRow[];
   return paginate(rows, total, page, limit);
 }
 
 /** Thống kê nhanh cho header: tổng, sắp hết hạn (≤3 ngày), quá hạn. Chỉ tính bài đã đăng. */
-export async function getHomeworkStats(ctx: ScopeCtx): Promise<{ total: number; dueSoon: number; overdue: number; drafts: number }> {
+export async function getHomeworkStats(
+  ctx: ScopeCtx
+): Promise<{ total: number; dueSoon: number; overdue: number; drafts: number }> {
   const params: unknown[] = [];
   const conds = scopeConds(ctx, params);
   const from = `FROM homework h JOIN classes c ON c.id = h.class_id`;
   const where = `WHERE ${conds.join(' AND ')}`;
   const today = todayVN();
-  const soon = new Date(Date.now() + 3 * 86400000).toLocaleDateString('en-CA', { timeZone: 'Asia/Ho_Chi_Minh' });
+  const soon = new Date(Date.now() + 3 * 86400000).toLocaleDateString('en-CA', {
+    timeZone: 'Asia/Ho_Chi_Minh',
+  });
   const q = async (extra: string, ...p: unknown[]) =>
-    (await db.prepare(`SELECT COUNT(*) as c ${from} ${where} ${extra}`).get(...params, ...p) as { c: number }).c;
+    (
+      (await db.prepare(`SELECT COUNT(*) as c ${from} ${where} ${extra}`).get(...params, ...p)) as {
+        c: number;
+      }
+    ).c;
   const pub = `AND h.status = 'published'`;
   return {
     total: await q(pub),
-    dueSoon: await q(`${pub} AND h.due_date IS NOT NULL AND h.due_date >= ? AND h.due_date <= ?`, today, soon),
+    dueSoon: await q(
+      `${pub} AND h.due_date IS NOT NULL AND h.due_date >= ? AND h.due_date <= ?`,
+      today,
+      soon
+    ),
     overdue: await q(`${pub} AND h.due_date IS NOT NULL AND h.due_date < ?`, today),
     drafts: await q(`AND h.status IN ('draft', 'scheduled')`),
   };
@@ -215,13 +229,11 @@ export function prepareCreateInput(raw: Record<string, unknown>): PreparedHomewo
   if (!(HOMEWORK_STATUS as readonly string[]).includes(status))
     throw AppError.badRequest('Trạng thái không hợp lệ');
   const publish_at = raw.publish_at ? String(raw.publish_at) : null;
-  if (status === 'scheduled' && !publish_at)
-    throw AppError.badRequest('Hẹn giờ đăng cần chọn thời gian');
+  if (status === 'scheduled' && !publish_at) throw AppError.badRequest('Hẹn giờ đăng cần chọn thời gian');
 
   const kind: HomeworkKind = raw.kind === 'quiz' ? 'quiz' : 'homework';
   const questions = Array.isArray(raw.questions) ? raw.questions : [];
-  if (kind === 'quiz' && questions.length === 0)
-    throw AppError.badRequest('Quiz cần ít nhất 1 câu hỏi');
+  if (kind === 'quiz' && questions.length === 0) throw AppError.badRequest('Quiz cần ít nhất 1 câu hỏi');
 
   // Quiz: max_score tự tính từ tổng điểm câu hỏi (1 thang điểm duy nhất)
   let max_score: number | null = null;
@@ -232,8 +244,7 @@ export function prepareCreateInput(raw: Record<string, unknown>): PreparedHomewo
     );
   } else if (raw.max_score !== null && raw.max_score !== undefined && raw.max_score !== '') {
     max_score = Number(raw.max_score);
-    if (!Number.isFinite(max_score) || max_score < 0)
-      throw AppError.badRequest('Điểm tối đa không hợp lệ');
+    if (!Number.isFinite(max_score) || max_score < 0) throw AppError.badRequest('Điểm tối đa không hợp lệ');
   }
 
   const attachments = Array.isArray(raw.attachments)
@@ -262,16 +273,26 @@ export function prepareCreateInput(raw: Record<string, unknown>): PreparedHomewo
 
 export async function createHomeworkBatch(input: CreateHomeworkInput): Promise<HomeworkRow[]> {
   const {
-    class_ids, title, content, due_date, created_by, centerId,
-    status = 'published', publish_at, max_score, close_date,
-    kind = 'homework', rubric_id, attachments = [], target_student_ids = [],
+    class_ids,
+    title,
+    content,
+    due_date,
+    created_by,
+    centerId,
+    status = 'published',
+    publish_at,
+    max_score,
+    close_date,
+    kind = 'homework',
+    rubric_id,
+    attachments = [],
+    target_student_ids = [],
   } = input;
   if (!class_ids.length) throw AppError.badRequest('Vui lòng chọn ít nhất 1 lớp học');
   if (!title.trim()) throw AppError.badRequest('Vui lòng nhập tiêu đề bài tập');
   if (!(HOMEWORK_STATUS as readonly string[]).includes(status))
     throw AppError.badRequest('Trạng thái không hợp lệ');
-  if (status === 'scheduled' && !publish_at)
-    throw AppError.badRequest('Hẹn giờ đăng cần chọn thời gian');
+  if (status === 'scheduled' && !publish_at) throw AppError.badRequest('Hẹn giờ đăng cần chọn thời gian');
   assertValidDates(due_date, close_date);
 
   const created: HomeworkRow[] = [];
@@ -284,20 +305,29 @@ export async function createHomeworkBatch(input: CreateHomeworkInput): Promise<H
     const attStmt = await tx.prepare(
       'INSERT INTO homework_attachments (homework_id, name, url, kind) VALUES (?, ?, ?, ?)'
     );
-    const tgtStmt = await tx.prepare(
-      'INSERT INTO homework_targets (homework_id, student_id) VALUES (?, ?)'
-    );
+    const tgtStmt = await tx.prepare('INSERT INTO homework_targets (homework_id, student_id) VALUES (?, ?)');
     for (const cid of class_ids) {
       const r = await insert.run(
-        centerId, cid, title.trim(), content?.trim() || null, due_date || null, created_by,
-        status, publish_at || null, max_score ?? null, close_date || null, kind, rubric_id ?? null
+        centerId,
+        cid,
+        title.trim(),
+        content?.trim() || null,
+        due_date || null,
+        created_by,
+        status,
+        publish_at || null,
+        max_score ?? null,
+        close_date || null,
+        kind,
+        rubric_id ?? null
       );
       const hid = Number(r.lastInsertRowid);
       for (const a of attachments) {
-        if (a.name.trim() && a.url.trim()) await attStmt.run(hid, a.name.trim(), a.url.trim(), a.kind || 'link');
+        if (a.name.trim() && a.url.trim())
+          await attStmt.run(hid, a.name.trim(), a.url.trim(), a.kind || 'link');
       }
       for (const sid of target_student_ids) await tgtStmt.run(hid, sid);
-      created.push(await tx.prepare('SELECT * FROM homework WHERE id = ?').get(hid) as HomeworkRow);
+      created.push((await tx.prepare('SELECT * FROM homework WHERE id = ?').get(hid)) as HomeworkRow);
     }
   });
   // Phát domain events — listeners (Zalo, Audit...) tự xử lý side-effects
@@ -312,15 +342,24 @@ export async function createHomeworkBatch(input: CreateHomeworkInput): Promise<H
 
 /** Lấy chi tiết bài tập kèm đính kèm + targets. */
 export async function getHomeworkDetail(id: number): Promise<HomeworkRow | null> {
-  const hw = await db.prepare('SELECT h.*, c.name as class_name FROM homework h JOIN classes c ON c.id = h.class_id WHERE h.id = ?').get(id) as HomeworkRow | undefined;
+  const hw = (await db
+    .prepare(
+      'SELECT h.*, c.name as class_name FROM homework h JOIN classes c ON c.id = h.class_id WHERE h.id = ?'
+    )
+    .get(id)) as HomeworkRow | undefined;
   if (!hw) return null;
-  hw.attachments = await db.prepare('SELECT id, name, url, kind FROM homework_attachments WHERE homework_id = ?')
-    .all(id) as { id: number; name: string; url: string; kind: string }[];
+  hw.attachments = (await db
+    .prepare('SELECT id, name, url, kind FROM homework_attachments WHERE homework_id = ?')
+    .all(id)) as { id: number; name: string; url: string; kind: string }[];
   return hw;
 }
 
 /** Tái sử dụng: copy bài tập cũ thành bản mới (Classroom: Reuse Post). */
-export async function reuseHomework(id: number, createdBy: number, centerId: number | null): Promise<HomeworkRow[]> {
+export async function reuseHomework(
+  id: number,
+  createdBy: number,
+  centerId: number | null
+): Promise<HomeworkRow[]> {
   const src = await getHomeworkDetail(id);
   if (!src) throw AppError.notFound('Không tìm thấy bài tập gốc');
   const created = await createHomeworkBatch({
@@ -336,27 +375,43 @@ export async function reuseHomework(id: number, createdBy: number, centerId: num
     rubric_id: src.rubric_id,
     attachments: (src.attachments || []).map((a) => ({ name: a.name, url: a.url, kind: a.kind })),
   });
-  // Copy câu hỏi quiz nếu có
+  // Copy câu hỏi quiz nếu có — bọc transaction (tránh bài mới thiếu câu hỏi/đáp án)
   if (src.kind === 'quiz') {
-    const qs = await db.prepare('SELECT id, question, points FROM quiz_questions WHERE homework_id = ? ORDER BY position')
-      .all(id) as { id: number; question: string; points: number }[];
+    const qs = (await db
+      .prepare('SELECT id, question, points FROM quiz_questions WHERE homework_id = ? ORDER BY position')
+      .all(id)) as { id: number; question: string; points: number }[];
+    const optsAll = (await db
+      .prepare(
+        `SELECT qo.question_id, qo.text, qo.is_correct
+         FROM quiz_options qo JOIN quiz_questions qq ON qq.id = qo.question_id
+         WHERE qq.homework_id = ? ORDER BY qo.question_id, qo.position`
+      )
+      .all(id)) as { question_id: number; text: string; is_correct: number }[];
     const newId = created[0].id;
-    const qStmt = await db.prepare('INSERT INTO quiz_questions (homework_id, position, question, points) VALUES (?, ?, ?, ?)');
-    const oStmt = await db.prepare('INSERT INTO quiz_options (question_id, position, text, is_correct) VALUES (?, ?, ?, ?)');
-    for (const [qi, q] of qs.entries()) {
-      const qr = await qStmt.run(newId, qi, q.question, q.points);
-      const nqid = Number(qr.lastInsertRowid);
-      const opts = await db.prepare('SELECT text, is_correct FROM quiz_options WHERE question_id = ? ORDER BY position')
-        .all(q.id) as { text: string; is_correct: number }[];
-      for (const [oi, o] of opts.entries()) await oStmt.run(nqid, oi, o.text, o.is_correct);
-    }
+    await db.transaction(async (tx) => {
+      const qStmt = await tx.prepare(
+        'INSERT INTO quiz_questions (homework_id, position, question, points) VALUES (?, ?, ?, ?)'
+      );
+      const oStmt = await tx.prepare(
+        'INSERT INTO quiz_options (question_id, position, text, is_correct) VALUES (?, ?, ?, ?)'
+      );
+      for (const [qi, q] of qs.entries()) {
+        const qr = await qStmt.run(newId, qi, q.question, q.points);
+        const nqid = Number(qr.lastInsertRowid);
+        const opts = optsAll.filter((o) => o.question_id === q.id);
+        for (const [oi, o] of opts.entries()) await oStmt.run(nqid, oi, o.text, o.is_correct);
+      }
+    });
   }
-  // Copy danh sách học viên được giao riêng
-  const targets = await db.prepare('SELECT student_id FROM homework_targets WHERE homework_id = ?')
-    .all(id) as { student_id: number }[];
+  // Copy danh sách học viên được giao riêng — cùng trong transaction
+  const targets = (await db
+    .prepare('SELECT student_id FROM homework_targets WHERE homework_id = ?')
+    .all(id)) as { student_id: number }[];
   if (targets.length > 0) {
-    const tStmt = await db.prepare('INSERT INTO homework_targets (homework_id, student_id) VALUES (?, ?)');
-    for (const t of targets) await tStmt.run(created[0].id, t.student_id);
+    await db.transaction(async (tx) => {
+      const tStmt = await tx.prepare('INSERT INTO homework_targets (homework_id, student_id) VALUES (?, ?)');
+      for (const t of targets) await tStmt.run(created[0].id, t.student_id);
+    });
   }
   return created;
 }
@@ -395,22 +450,43 @@ export async function updateHomework(
   if (data.status === 'scheduled' && !data.publish_at) {
     throw AppError.badRequest('Hẹn giờ đăng cần chọn thời gian');
   }
-  await db.prepare(
-    `UPDATE homework SET title = ?, content = ?, due_date = ?,
+  // Validate status enum (tránh DB CHECK ném 500)
+  const status = data.status || 'published';
+  if (!['draft', 'scheduled', 'published'].includes(status)) {
+    throw AppError.badRequest('Trạng thái bài tập không hợp lệ');
+  }
+  // Validate max_score > 0
+  const maxScore = data.max_score ?? null;
+  if (maxScore !== null && (!Number.isFinite(maxScore) || maxScore <= 0)) {
+    throw AppError.badRequest('Điểm tối đa phải lớn hơn 0');
+  }
+  // Chặn hạ max_score dưới điểm cao nhất đã chấm
+  if (maxScore !== null) {
+    const top = (await db
+      .prepare('SELECT MAX(score) as m FROM homework_scores WHERE homework_id = ?')
+      .get(id)) as { m: number | null };
+    if (top.m !== null && maxScore < top.m) {
+      throw AppError.badRequest(`Không thể hạ điểm tối đa xuống dưới điểm đã chấm (${top.m})`);
+    }
+  }
+  await db
+    .prepare(
+      `UPDATE homework SET title = ?, content = ?, due_date = ?,
        max_score = ?, close_date = ?, status = ?, publish_at = ?, rubric_id = ?
      WHERE id = ?`
-  ).run(
-    data.title.trim(),
-    data.content?.trim() || null,
-    data.due_date || null,
-    data.max_score ?? null,
-    data.close_date || null,
-    data.status || 'published',
-    data.publish_at || null,
-    data.rubric_id ?? null,
-    id
-  );
-  return await db.prepare('SELECT * FROM homework WHERE id = ?').get(id) as HomeworkRow;
+    )
+    .run(
+      data.title.trim(),
+      data.content?.trim() || null,
+      data.due_date || null,
+      maxScore,
+      data.close_date || null,
+      status,
+      data.publish_at || null,
+      data.rubric_id ?? null,
+      id
+    );
+  return (await db.prepare('SELECT * FROM homework WHERE id = ?').get(id)) as HomeworkRow;
 }
 
 export async function deleteHomework(id: number, centerId: number | null = null): Promise<void> {
@@ -420,7 +496,11 @@ export async function deleteHomework(id: number, centerId: number | null = null)
 
 /** Đánh dấu học viên đã hoàn thành bài tập. */
 /** Đặt trạng thái đăng/gỡ đăng cho bài tập (publish/unpublish). */
-export async function setHomeworkStatus(id: number, status: 'published' | 'draft', centerId: number | null = null): Promise<void> {
+export async function setHomeworkStatus(
+  id: number,
+  status: 'published' | 'draft',
+  centerId: number | null = null
+): Promise<void> {
   await homeworkRepo.setStatus(id, status);
   if (status === 'published') {
     eventBus.emitSync(new HomeworkPublishedEvent(id, centerId));
@@ -430,34 +510,39 @@ export async function setHomeworkStatus(id: number, status: 'published' | 'draft
 }
 
 /** Lấy thông tin lớp tối thiểu để kiểm tra scope. */
-export async function getClassScope(id: number): Promise<{ id: number; center_id: number | null; teacher_id: number | null } | null> {
-  const row = await db.prepare('SELECT id, center_id, teacher_id FROM classes WHERE id = ?').get(id) as
-    | { id: number; center_id: number | null; teacher_id: number | null }
-    | undefined;
+export async function getClassScope(
+  id: number
+): Promise<{ id: number; center_id: number | null; teacher_id: number | null } | null> {
+  const row = (await db.prepare('SELECT id, center_id, teacher_id FROM classes WHERE id = ?').get(id)) as
+    { id: number; center_id: number | null; teacher_id: number | null } | undefined;
   return row ?? null;
 }
 
 /** Lấy bài tập kèm thông tin scope của lớp (để route kiểm tra quyền). */
-export async function getHomeworkWithScope(id: number): Promise<(HomeworkRow & { class_center_id: number | null; teacher_id: number | null }) | null> {
+export async function getHomeworkWithScope(
+  id: number
+): Promise<(HomeworkRow & { class_center_id: number | null; teacher_id: number | null }) | null> {
   return await homeworkRepo.findWithScope(id);
 }
 
 /** Lọc target students hợp lệ (thuộc các lớp được chọn và đang học). */
-export async function filterValidTargets(classIds: number[], targetStudentIds: unknown[]):  Promise<number[]> {
+export async function filterValidTargets(classIds: number[], targetStudentIds: unknown[]): Promise<number[]> {
   const tids = (targetStudentIds as unknown[]).map(Number).filter((n) => Number.isInteger(n) && n > 0);
   if (!tids.length || !classIds.length) return [];
   const placeholders = classIds.map(() => '?').join(',');
-  const rows = await db.prepare(
+  const rows = (await db
+    .prepare(
       `SELECT DISTINCT student_id FROM enrollments
        WHERE class_id IN (${placeholders}) AND student_id IN (${tids.map(() => '?').join(',')}) AND status = 'active'`
     )
-    .all(...classIds, ...tids) as { student_id: number }[];
+    .all(...classIds, ...tids)) as { student_id: number }[];
   return rows.map((r) => r.student_id);
 }
 
 /** Danh sách bài nộp của 1 bài tập (staff xem). */
 export async function getHomeworkSubmissions(id: number): Promise<unknown[]> {
-  return await db.prepare(
+  return await db
+    .prepare(
       `SELECT hs.*, s.name as student_name FROM homework_submissions hs
        JOIN students s ON s.id = hs.student_id
        WHERE hs.homework_id = ? ORDER BY hs.submitted_at DESC`
@@ -466,32 +551,36 @@ export async function getHomeworkSubmissions(id: number): Promise<unknown[]> {
 }
 
 export async function markComplete(homeworkId: number, studentId: number, by = 'parent'): Promise<void> {
-  await db.prepare(
-    `INSERT INTO homework_completions (homework_id, student_id, completed_by)
+  await db
+    .prepare(
+      `INSERT INTO homework_completions (homework_id, student_id, completed_by)
      VALUES (?, ?, ?)
      ON CONFLICT(homework_id, student_id) DO UPDATE SET completed_at = datetime('now'), completed_by = ?`
-  ).run(homeworkId, studentId, by, by);
+    )
+    .run(homeworkId, studentId, by, by);
   eventBus.emitSync(new HomeworkCompletedEvent(homeworkId, studentId, by));
 }
 
 /** Bỏ đánh dấu hoàn thành. */
 export async function unmarkComplete(homeworkId: number, studentId: number): Promise<void> {
-  await db.prepare('DELETE FROM homework_completions WHERE homework_id = ? AND student_id = ?').run(
-    homeworkId,
-    studentId
-  );
+  await db
+    .prepare('DELETE FROM homework_completions WHERE homework_id = ? AND student_id = ?')
+    .run(homeworkId, studentId);
 }
 
 /** Kiểm tra học viên đã hoàn thành bài tập chưa. */
 export async function isComplete(homeworkId: number, studentId: number): Promise<boolean> {
-  const r = await db.prepare('SELECT 1 FROM homework_completions WHERE homework_id = ? AND student_id = ?')
+  const r = await db
+    .prepare('SELECT 1 FROM homework_completions WHERE homework_id = ? AND student_id = ?')
     .get(homeworkId, studentId);
   return !!r;
 }
 
 /* --------------------------------- Chấm điểm --------------------------------- */
 
-/** Chấm điểm bài tập thường (tay hoặc theo rubric). */
+/** Chấm điểm bài tập thường (tay hoặc theo rubric).
+ * - Bọc transaction: điểm + đánh dấu hoàn thành là 1 đơn vị nguyên tử.
+ * - Kiểm tra học viên thuộc lớp của bài tập (chống điểm "mồ côi"). */
 export async function gradeHomework(
   homeworkId: number,
   studentId: number,
@@ -499,27 +588,44 @@ export async function gradeHomework(
   feedback: string | null,
   gradedBy: number | null
 ): Promise<void> {
+  const hw = (await db.prepare('SELECT class_id, max_score FROM homework WHERE id = ?').get(homeworkId)) as
+    { class_id: number; max_score: number | null } | undefined;
+  if (!hw) throw AppError.notFound('Không tìm thấy bài tập');
   // Chặn điểm vượt quá điểm tối đa (gõ nhầm 15/10)
   if (score !== null) {
-    const hw = await db.prepare('SELECT max_score FROM homework WHERE id = ?').get(homeworkId) as
-      | { max_score: number | null }
-      | undefined;
-    if (hw?.max_score != null && score > hw.max_score) {
+    if (score < 0) throw AppError.badRequest('Điểm không được âm');
+    if (hw.max_score != null && score > hw.max_score) {
       throw AppError.badRequest(`Điểm không được vượt quá ${hw.max_score}`);
     }
   }
-  await db.prepare(
-    `INSERT INTO homework_scores (homework_id, student_id, score, feedback, graded_by)
-     VALUES (?, ?, ?, ?, ?)
-     ON CONFLICT(homework_id, student_id)
-     DO UPDATE SET score = ?, feedback = ?, graded_at = datetime('now'), graded_by = ?`
-  ).run(homeworkId, studentId, score, feedback, gradedBy, score, feedback, gradedBy);
-  if (score !== null) {
-    await db.prepare(
-      `INSERT INTO homework_completions (homework_id, student_id, completed_by)
-       VALUES (?, ?, 'teacher') ON CONFLICT(homework_id, student_id) DO NOTHING`
-    ).run(homeworkId, studentId);
+  // Học viên phải đang học lớp của bài tập (hoặc nằm trong danh sách giao riêng)
+  const enrolled = await db
+    .prepare(`SELECT 1 FROM enrollments WHERE student_id = ? AND class_id = ? AND status = 'active'`)
+    .get(studentId, hw.class_id);
+  if (!enrolled) {
+    const targeted = await db
+      .prepare('SELECT 1 FROM homework_targets WHERE homework_id = ? AND student_id = ?')
+      .get(homeworkId, studentId);
+    if (!targeted) throw AppError.badRequest('Học viên không thuộc lớp của bài tập này');
   }
+  await db.transaction(async (tx) => {
+    await tx
+      .prepare(
+        `INSERT INTO homework_scores (homework_id, student_id, score, feedback, graded_by)
+       VALUES (?, ?, ?, ?, ?)
+       ON CONFLICT(homework_id, student_id)
+       DO UPDATE SET score = ?, feedback = ?, graded_at = datetime('now'), graded_by = ?`
+      )
+      .run(homeworkId, studentId, score, feedback, gradedBy, score, feedback, gradedBy);
+    if (score !== null) {
+      await tx
+        .prepare(
+          `INSERT INTO homework_completions (homework_id, student_id, completed_by)
+         VALUES (?, ?, 'teacher') ON CONFLICT(homework_id, student_id) DO NOTHING`
+        )
+        .run(homeworkId, studentId);
+    }
+  });
   eventBus.emitSync(new HomeworkGradedEvent(homeworkId, studentId, score, gradedBy));
 }
 
@@ -535,7 +641,8 @@ export interface HomeworkScoreRow {
 }
 
 export async function getHomeworkScores(homeworkId: number): Promise<HomeworkScoreRow[]> {
-  return await db.prepare(
+  return (await db
+    .prepare(
       `SELECT s.id as student_id, s.name as student_name,
         hs.score, hs.feedback, hs.graded_at,
         CASE WHEN hc.id IS NOT NULL THEN 1 ELSE 0 END as completed,
@@ -552,17 +659,20 @@ export async function getHomeworkScores(homeworkId: number): Promise<HomeworkSco
               OR EXISTS (SELECT 1 FROM homework_targets ht WHERE ht.homework_id = ? AND ht.student_id = s.id))
        ORDER BY s.name`
     )
-    .all(homeworkId, homeworkId, homeworkId, homeworkId, homeworkId, homeworkId) as HomeworkScoreRow[];
+    .all(homeworkId, homeworkId, homeworkId, homeworkId, homeworkId, homeworkId)) as HomeworkScoreRow[];
 }
 
 /** Điểm của 1 học viên cho 1 bài (parent view). */
-export async function getStudentScore(homeworkId: number, studentId: number): Promise<{ score: number | null; feedback: string | null; max_score: number | null } | null> {
-  const hw = await db.prepare('SELECT max_score FROM homework WHERE id = ?').get(homeworkId) as
-    | { max_score: number | null }
-    | undefined;
+export async function getStudentScore(
+  homeworkId: number,
+  studentId: number
+): Promise<{ score: number | null; feedback: string | null; max_score: number | null } | null> {
+  const hw = (await db.prepare('SELECT max_score FROM homework WHERE id = ?').get(homeworkId)) as
+    { max_score: number | null } | undefined;
   if (!hw) return null;
-  const s = await db.prepare('SELECT score, feedback FROM homework_scores WHERE homework_id = ? AND student_id = ?')
-    .get(homeworkId, studentId) as { score: number | null; feedback: string | null } | undefined;
+  const s = (await db
+    .prepare('SELECT score, feedback FROM homework_scores WHERE homework_id = ? AND student_id = ?')
+    .get(homeworkId, studentId)) as { score: number | null; feedback: string | null } | undefined;
   return { score: s?.score ?? null, feedback: s?.feedback ?? null, max_score: hw.max_score };
 }
 
@@ -570,7 +680,13 @@ export async function getStudentScore(homeworkId: number, studentId: number): Pr
 
 /** Phân tích tổng quan bài tập: hoàn thành, điểm TB theo lớp. */
 export async function getHomeworkAnalytics(ctx: ScopeCtx): Promise<{
-  byClass: { class_id: number; class_name: string; total: number; avg_completion: number; avg_score: number | null }[];
+  byClass: {
+    class_id: number;
+    class_name: string;
+    total: number;
+    avg_completion: number;
+    avg_score: number | null;
+  }[];
   recent: { id: number; title: string; class_name: string; completion_rate: number }[];
 }> {
   const params: unknown[] = [];
@@ -581,7 +697,8 @@ export async function getHomeworkAnalytics(ctx: ScopeCtx): Promise<{
   // Mẫu số: số học viên được giao (target riêng) hoặc cả lớp
   const denominator = assignedCountExpr('h', 'h');
 
-  const byClass = await db.prepare(
+  const byClass = (await db
+    .prepare(
       `SELECT c.id as class_id, c.name as class_name,
         COUNT(DISTINCT h.id) as total,
         COALESCE(AVG(
@@ -593,9 +710,16 @@ export async function getHomeworkAnalytics(ctx: ScopeCtx): Promise<{
          WHERE h2.class_id = c.id AND hs.score IS NOT NULL) as avg_score
        ${from} ${where} GROUP BY c.id, c.name ORDER BY c.name`
     )
-    .all(...params) as { class_id: number; class_name: string; total: number; avg_completion: number; avg_score: number | null }[];
+    .all(...params)) as {
+    class_id: number;
+    class_name: string;
+    total: number;
+    avg_completion: number;
+    avg_score: number | null;
+  }[];
 
-  const recent = await db.prepare(
+  const recent = (await db
+    .prepare(
       `SELECT h.id, h.title, c.name as class_name,
         COALESCE(
           (SELECT COUNT(*) FROM homework_completions hc WHERE hc.homework_id = h.id) * 100.0 /
@@ -603,7 +727,7 @@ export async function getHomeworkAnalytics(ctx: ScopeCtx): Promise<{
         ) as completion_rate
        ${from} ${where} ORDER BY h.id DESC LIMIT 10`
     )
-    .all(...params) as { id: number; title: string; class_name: string; completion_rate: number }[];
+    .all(...params)) as { id: number; title: string; class_name: string; completion_rate: number }[];
 
   return { byClass, recent };
 }

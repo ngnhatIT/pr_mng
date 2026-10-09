@@ -55,11 +55,7 @@ export function ParentLeaves() {
           ))}
         </div>
       ) : leaves.length === 0 ? (
-        <EmptyState
-          icon="calendar-x"
-          title={t('leaves.emptyTitle')}
-          desc={t('leaves.emptyDesc')}
-        />
+        <EmptyState icon="calendar-x" title={t('leaves.emptyTitle')} desc={t('leaves.emptyDesc')} />
       ) : (
         <div className="leave-list">
           {leaves.map((l) => (

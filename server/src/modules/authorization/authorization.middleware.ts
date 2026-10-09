@@ -24,7 +24,7 @@ export function requirePermission(permissionCode: string, minScope: Scope = 'own
       return;
     }
     try {
-      const ok = await hasPermission(req.user.id, permissionCode, minScope);
+      const ok = await hasPermission(req.user, permissionCode, minScope);
       if (!ok) {
         res.status(403).json({
           error: 'Không có quyền thực hiện',

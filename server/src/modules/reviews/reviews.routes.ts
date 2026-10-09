@@ -15,7 +15,7 @@ interface ReviewRow {
 
 /** Lấy review và kiểm tra thuộc trung tâm của user */
 async function getReview(id: number, cid: number | null): Promise<ReviewRow | undefined> {
-  const row = await db.prepare('SELECT * FROM reviews WHERE id = ?').get(id) as ReviewRow | undefined;
+  const row = (await db.prepare('SELECT * FROM reviews WHERE id = ?').get(id)) as ReviewRow | undefined;
   if (!row) return undefined;
   if (cid !== null && row.center_id !== cid) return undefined;
   return row;
@@ -36,7 +36,7 @@ router.get(
       page?: string;
       limit?: string;
     };
-    res.json(listReviews(reqCenterId(req), { status }, { page, limit }));
+    res.json(await listReviews(reqCenterId(req), { status }, { page, limit }));
   })
 );
 
@@ -49,7 +49,7 @@ router.post(
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const cid = reqCenterId(req);
     const id = Number(req.params.id);
-    const review = getReview(id, cid);
+    const review = await getReview(id, cid);
     if (!review) {
       res.status(404).json({ error: 'Không tìm thấy đánh giá' });
       return;
@@ -67,7 +67,7 @@ router.post(
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const cid = reqCenterId(req);
     const id = Number(req.params.id);
-    const review = getReview(id, cid);
+    const review = await getReview(id, cid);
     if (!review) {
       res.status(404).json({ error: 'Không tìm thấy đánh giá' });
       return;
@@ -87,7 +87,7 @@ router.delete(
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const cid = reqCenterId(req);
     const id = Number(req.params.id);
-    const review = getReview(id, cid);
+    const review = await getReview(id, cid);
     if (!review) {
       res.status(404).json({ error: 'Không tìm thấy đánh giá' });
       return;

@@ -5,6 +5,7 @@ import { asyncHandler } from '../../shared/http';
 import { validate, v, paramId } from '../../shared/validate';
 import * as sessionService from './sessions.service';
 import type { ScopeCtx } from './sessions.service';
+import { actorFromReq } from '../../shared/audit';
 
 const router = Router();
 
@@ -62,7 +63,7 @@ router.delete(
   '/sessions/:id',
   requirePermission('sessions.manage'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
-    sessionService.deleteSession(scopeOf(req), paramId(req.params));
+    await sessionService.deleteSession(scopeOf(req), paramId(req.params), actorFromReq(req));
     res.json({ ok: true });
   })
 );

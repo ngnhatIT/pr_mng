@@ -152,7 +152,8 @@
       "addTitle": "Thêm phòng học",
       "capacity": "Sức chứa",
       "editTitle": "Sửa phòng học",
-      "name": "Tên phòng *"
+      "name": "Tên phòng *",
+      "capacityPlaceholder": "VD: 40 học viên"
     },
     "loadError": "Không tải được danh sách phòng",
     "saved": "Đã lưu phòng học",

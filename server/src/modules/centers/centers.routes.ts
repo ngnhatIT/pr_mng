@@ -1,4 +1,4 @@
-import { Router, Response } from 'express';
+import { Router, Response, NextFunction } from 'express';
 import bcrypt from 'bcryptjs';
 import { db } from '../../db';
 import { AuthRequest } from '../../middleware/auth';
@@ -9,24 +9,38 @@ import { asyncHandler } from '../../shared/http';
 const router = Router();
 router.use(requirePermission('system.manage'));
 
+/**
+ * Chỉ superadmin được xem/sửa danh sách trung tâm.
+ * Role admin có permission 'system.manage' scope 'center' nên KHÔNG đủ —
+ * phải kiểm tra role trực tiếp (chống leo thang đặc quyền: admin tự đổi plan).
+ */
+function superadminOnly(req: AuthRequest, res: Response, next: NextFunction): void {
+  if (req.user?.role !== 'superadmin') {
+    res.status(403).json({ error: 'Chỉ quản trị hệ thống mới có quyền này' });
+    return;
+  }
+  next();
+}
+
 async function withCounts(c: Center) {
   const studentCount = (
-    await db.prepare('SELECT COUNT(*) as c FROM students WHERE center_id = ?').get(c.id) as { c: number }
+    (await db.prepare('SELECT COUNT(*) as c FROM students WHERE center_id = ?').get(c.id)) as { c: number }
   ).c;
   const userCount = (
-    await db.prepare('SELECT COUNT(*) as c FROM users WHERE center_id = ?').get(c.id) as { c: number }
+    (await db.prepare('SELECT COUNT(*) as c FROM users WHERE center_id = ?').get(c.id)) as { c: number }
   ).c;
   const classCount = (
-    await db.prepare('SELECT COUNT(*) as c FROM classes WHERE center_id = ?').get(c.id) as { c: number }
+    (await db.prepare('SELECT COUNT(*) as c FROM classes WHERE center_id = ?').get(c.id)) as { c: number }
   ).c;
   return { ...c, student_count: studentCount, user_count: userCount, class_count: classCount };
 }
 
 /* ------------------------- Danh sách trung tâm ------------------------- */
 
-// GET /api/centers
+// GET /api/centers — chỉ superadmin
 router.get(
   '/',
+  superadminOnly,
   asyncHandler(async (_req: AuthRequest, res: Response) => {
     res.json(await Promise.all((await listCenters()).map(withCounts)));
   })
@@ -80,15 +94,18 @@ router.post(
     }
 
     const centerId = await db.transaction(async (tx) => {
-      const r = await tx.prepare(
+      const r = await tx
+        .prepare(
           'INSERT INTO centers (name, subdomain, phone, address, plan, plan_expires_at) VALUES (?, ?, ?, ?, ?, ?)'
         )
         .run(name, subdomain, phone, address, plan, planExpiresAt);
       const centerId = Number(r.lastInsertRowid);
       const hash = bcrypt.hashSync(adminPassword, 10);
-      await tx.prepare(
-        "INSERT INTO users (username, password_hash, role, name, center_id) VALUES (?, ?, 'admin', ?, ?)"
-      ).run(adminUsername, hash, `Quản trị ${name}`, centerId);
+      await tx
+        .prepare(
+          "INSERT INTO users (username, password_hash, role, name, center_id) VALUES (?, ?, 'admin', ?, ?)"
+        )
+        .run(adminUsername, hash, `Quản trị ${name}`, centerId);
       return centerId;
     });
     res.status(201).json({ ok: true, center_id: centerId });
@@ -97,9 +114,10 @@ router.post(
 
 /* ------------------------- Cập nhật trung tâm ------------------------- */
 
-// PUT /api/centers/:id
+// PUT /api/centers/:id — chỉ superadmin (admin không được đổi plan của bất kỳ center nào)
 router.put(
   '/:id',
+  superadminOnly,
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const id = Number(req.params.id);
     const center = await getCenter(id);

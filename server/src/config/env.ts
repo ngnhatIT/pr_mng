@@ -44,6 +44,18 @@ export const env = {
   LOGIN_RATE_LIMIT: optionalInt('LOGIN_RATE_LIMIT', 10),
   LOGIN_RATE_WINDOW_MS: optionalInt('LOGIN_RATE_WINDOW_MS', 60_000),
 
+  /**
+   * Chỉ tin header X-Forwarded-For (cho rate limit) khi chạy sau reverse proxy đáng tin.
+   * Mặc định false → rate limit key theo req.socket.remoteAddress (chống bypass bằng header giả).
+   */
+  TRUST_PROXY: optional('TRUST_PROXY', 'false').toLowerCase() === 'true',
+
+  /**
+   * CORS allowlist, phân tách bằng dấu phẩy. Mặc định chỉ cho client local dev.
+   * Production BẮT BUỘC đặt đúng domain frontend.
+   */
+  CORS_ORIGIN: optional('CORS_ORIGIN', 'http://localhost:5173,http://localhost:4000'),
+
   /** VNPay */
   VNPAY_TMN_CODE: optional('VNPAY_TMN_CODE', ''),
   VNPAY_HASH_SECRET: optional('VNPAY_HASH_SECRET', ''),
@@ -53,6 +65,18 @@ export const env = {
   /** Zalo OA */
   ZALO_OA_ID: optional('ZALO_OA_ID', ''),
   ZALO_ACCESS_TOKEN: optional('ZALO_ACCESS_TOKEN', ''),
+
+  /**
+   * Seed dữ liệu demo (tài khoản root/teacher1/0900000001 + trung tâm demo).
+   * Mặc định TẮT — chỉ bật ở môi trường dev/demo.
+   */
+  SEED_DEMO: process.env.SEED_DEMO === 'true',
+
+  /** Lịch backup tự động (cron expression), mặc định 2h sáng. */
+  BACKUP_CRON: optional('BACKUP_CRON', '0 2 * * *'),
+
+  /** Số bản backup giữ lại khi xoay vòng. */
+  BACKUP_KEEP: optionalInt('BACKUP_KEEP', 7),
 } as const;
 
 // Giữ hàm required export để module nào cần biến bắt buộc riêng thì dùng

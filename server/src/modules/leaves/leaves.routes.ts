@@ -1,10 +1,13 @@
 import { Router, Response } from 'express';
-import { db, toISODate } from '../../db';
+import { db } from '../../db';
 import { AuthRequest, reqCenterId } from '../../middleware/auth';
 import { requirePermission } from '../authorization/authorization.middleware';
 import { notifyParents } from '../../services/notify';
+import { logger } from '../../shared/logger';
 import { asyncHandler } from '../../shared/http';
 import { listLeaves } from './leaves.service';
+
+const log = logger.scope('leaves');
 
 const router = Router();
 
@@ -22,17 +25,18 @@ router.get(
       page?: string;
       limit?: string;
     };
-    res.json(listLeaves(reqCenterId(req), { status }, { page, limit }));
+    res.json(await listLeaves(reqCenterId(req), { status }, { page, limit }));
   })
 );
 
 async function getLeave(id: number) {
-  return await db.prepare(
+  return (await db
+    .prepare(
       `SELECT lr.*, s.name as student_name, s.center_id
        FROM leave_requests lr JOIN students s ON s.id = lr.student_id
        WHERE lr.id = ?`
     )
-    .get(id) as
+    .get(id)) as
     | {
         id: number;
         student_id: number;
@@ -59,28 +63,36 @@ router.post(
       return;
     }
     const now = new Date().toISOString().slice(0, 19).replace('T', ' ');
-    await db.prepare(
-      "UPDATE leave_requests SET status = 'approved', decided_by = ?, decided_at = ? WHERE id = ?"
-    ).run(req.user!.id, now, id);
-    // Gợi ý học bù: các buổi từ hôm nay trở đi mà học viên chưa có điểm danh
+    // Chỉ duyệt đơn đang pending — đơn đã xử lý thì báo 409
+    const upd = await db
+      .prepare(
+        "UPDATE leave_requests SET status = 'approved', decided_by = ?, decided_at = ? WHERE id = ? AND status = 'pending'"
+      )
+      .run(req.user!.id, now, id);
+    if ((upd.changes ?? 0) !== 1) {
+      res.status(409).json({ error: 'Đơn xin nghỉ đã được xử lý trước đó' });
+      return;
+    }
+    // Gợi ý học bù: các buổi BỊ MISS trong khoảng nghỉ [from_date, to_date]
+    // (không phải mọi buổi tương lai — học viên vốn sẽ học các buổi đó)
     let suggestions: { session_id: number; date: string; topic: string | null }[] = [];
     if (leave.class_id) {
-      const today = toISODate(new Date());
-      suggestions = await db.prepare(
+      suggestions = (await db
+        .prepare(
           `SELECT s.id as session_id, s.date, s.topic
          FROM sessions s
-         WHERE s.class_id = ? AND s.date >= ?
+         WHERE s.class_id = ? AND s.date >= ? AND s.date <= ?
            AND NOT EXISTS (SELECT 1 FROM attendance a WHERE a.session_id = s.id AND a.student_id = ?)
          ORDER BY s.date ASC LIMIT 5`
         )
-        .all(leave.class_id, today, leave.student_id) as typeof suggestions;
+        .all(leave.class_id, leave.from_date, leave.to_date, leave.student_id)) as typeof suggestions;
     }
-    notifyParents(
+    await notifyParents(
       leave.student_id,
       'leave_result',
       `Đơn xin nghỉ từ ${leave.from_date} đến ${leave.to_date} của học viên ${leave.student_name} đã được duyệt.`,
       null
-    );
+    ).catch((err) => log.warn('notifyParents failed', { error: String(err) }));
     res.json({ ok: true, suggestions });
   })
 );
@@ -98,15 +110,21 @@ router.post(
       return;
     }
     const now = new Date().toISOString().slice(0, 19).replace('T', ' ');
-    await db.prepare(
-      "UPDATE leave_requests SET status = 'rejected', decided_by = ?, decided_at = ? WHERE id = ?"
-    ).run(req.user!.id, now, id);
-    notifyParents(
+    const upd = await db
+      .prepare(
+        "UPDATE leave_requests SET status = 'rejected', decided_by = ?, decided_at = ? WHERE id = ? AND status = 'pending'"
+      )
+      .run(req.user!.id, now, id);
+    if ((upd.changes ?? 0) !== 1) {
+      res.status(409).json({ error: 'Đơn xin nghỉ đã được xử lý trước đó' });
+      return;
+    }
+    await notifyParents(
       leave.student_id,
       'leave_result',
       `Đơn xin nghỉ từ ${leave.from_date} đến ${leave.to_date} của học viên ${leave.student_name} đã bị từ chối. Vui lòng liên hệ trung tâm để biết thêm chi tiết.`,
       null
-    );
+    ).catch((err) => log.warn('notifyParents failed', { error: String(err) }));
     res.json({ ok: true });
   })
 );

@@ -4,7 +4,7 @@ import { Modal } from '../../shared/components/Modal';
 import { EmptyState } from '../../shared/components/EmptyState';
 import { parentApi, type Submission } from './parent.api';
 import { formatDateTime } from '../../shared/types';
-import { getToken } from '../../shared/api/client';
+import { useSecureFileUrl } from '../../shared/components/SecureFile';
 import { Icon } from '../../shared/components/icons';
 import type { HomeworkItem } from '../../shared/types';
 import './parent.css';
@@ -32,12 +32,6 @@ export function MySubmissionsModal({
       .finally(() => setLoading(false));
   }, [homework.id, studentId]);
 
-  const fileUrl = (url: string | null) => {
-    if (!url) return '';
-    const token = getToken();
-    return token ? `${url}?token=${encodeURIComponent(token)}` : url;
-  };
-
   return (
     <Modal title={t('submissions.title', { title: homework.title })} onClose={onClose}>
       {loading ? (
@@ -49,25 +43,34 @@ export function MySubmissionsModal({
       ) : (
         <div className="submission-list">
           {subs.map((s) => (
-            <div key={s.id} className="submission-item">
-              <div style={{ flex: 1 }}>
-                <div className="muted" style={{ fontSize: 13 }}>
-                  {t('submissions.submittedAt', { time: formatDateTime(s.submitted_at) })}
-                </div>
-                {s.note && <div style={{ marginTop: 6 }}>{s.note}</div>}
-                {s.file_url && (
-                  <div style={{ marginTop: 6 }}>
-                    <a className="link file-link" href={fileUrl(s.file_url)} target="_blank" rel="noreferrer">
-                      <Icon name="paperclip" size={14} />
-                      {s.file_name || t('submissions.viewFile')}
-                    </a>
-                  </div>
-                )}
-              </div>
-            </div>
+            <MySubmissionRow key={s.id} s={s} />
           ))}
         </div>
       )}
     </Modal>
+  );
+}
+
+/** Một dòng bài nộp: tải file qua Authorization header (blob URL), không gắn JWT vào URL. */
+function MySubmissionRow({ s }: { s: Submission }) {
+  const { t } = useTranslation(['parent', 'common']);
+  const fileUrl = useSecureFileUrl(s.file_url);
+  return (
+    <div className="submission-item">
+      <div style={{ flex: 1 }}>
+        <div className="muted" style={{ fontSize: 13 }}>
+          {t('submissions.submittedAt', { time: formatDateTime(s.submitted_at) })}
+        </div>
+        {s.note && <div style={{ marginTop: 6 }}>{s.note}</div>}
+        {s.file_url && fileUrl && (
+          <div style={{ marginTop: 6 }}>
+            <a className="link file-link" href={fileUrl} target="_blank" rel="noreferrer">
+              <Icon name="paperclip" size={14} />
+              {s.file_name || t('submissions.viewFile')}
+            </a>
+          </div>
+        )}
+      </div>
+    </div>
   );
 }

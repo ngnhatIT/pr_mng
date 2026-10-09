@@ -80,7 +80,9 @@ export function SubmitModal({
         />
       </Field>
       <div className="modal-actions">
-        <button className="btn" onClick={onClose}>{t('actions.cancel', { ns: 'common' })}</button>
+        <button className="btn" onClick={onClose}>
+          {t('actions.cancel', { ns: 'common' })}
+        </button>
         <button className="btn btn-primary" disabled={busy} onClick={submit}>
           {busy ? t('submit.submitting') : t('submit.submitAction')}
         </button>

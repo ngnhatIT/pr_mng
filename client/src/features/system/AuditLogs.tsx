@@ -9,7 +9,16 @@ import { auditApi, type AuditLog } from './audit.api';
 import { formatDateTime } from '../../shared/types';
 import './SystemAdmin.css';
 
-const ACTIONS = ['create', 'update', 'delete', 'approve', 'reject', 'payment', 'apply_credit', 'login'] as const;
+const ACTIONS = [
+  'create',
+  'update',
+  'delete',
+  'approve',
+  'reject',
+  'payment',
+  'apply_credit',
+  'login',
+] as const;
 const ENTITIES = ['invoices', 'payments', 'students', 'teachers', 'classes'] as const;
 
 function actionBadge(action: string): string {
@@ -55,10 +64,7 @@ export function AuditLogs() {
 
   return (
     <div className="page">
-      <PageHeader
-        title={t('audit.title')}
-        desc={t('audit.desc')}
-      />
+      <PageHeader title={t('audit.title')} desc={t('audit.desc')} />
 
       <div className="toolbar">
         <select
@@ -103,11 +109,7 @@ export function AuditLogs() {
       {loading ? (
         <TableSkeleton cols={5} />
       ) : logs.length === 0 ? (
-        <EmptyState
-          icon="shield"
-          title={t('audit.empty.title')}
-          desc={t('audit.empty.desc')}
-        />
+        <EmptyState icon="shield" title={t('audit.empty.title')} desc={t('audit.empty.desc')} />
       ) : (
         <div className="table-wrap sticky">
           <table className="table">

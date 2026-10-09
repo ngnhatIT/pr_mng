@@ -1,4 +1,5 @@
 import { db } from './connection';
+import { env } from '../config/env';
 import { toISODate, addDays, ourDayOfWeek, parseISODate, ScheduleEntry, ClassRow } from './date-utils';
 
 /**
@@ -18,6 +19,9 @@ export async function ensureDemoCenter(): Promise<number> {
 }
 
 async function backfillCenters(): Promise<void> {
+  // CHỈ chạy khi SEED_DEMO=true: tự gán center_id cho dữ liệu NULL là hành vi
+  // nguy hiểm trên production (gán nhầm tenant mà không ai hay).
+  if (!env.SEED_DEMO) return;
   const demoId = await ensureDemoCenter();
   const tables = [
     'students',
@@ -41,7 +45,9 @@ async function backfillCenters(): Promise<void> {
   }
   // users: gán center cho tất cả trừ superadmin (giữ NULL để bypass)
   try {
-    await db.prepare("UPDATE users SET center_id = ? WHERE center_id IS NULL AND role != 'superadmin'").run(demoId);
+    await db
+      .prepare("UPDATE users SET center_id = ? WHERE center_id IS NULL AND role != 'superadmin'")
+      .run(demoId);
   } catch {
     /* bỏ qua */
   }
@@ -112,8 +118,6 @@ export async function generateSessionsForClass(classId: number): Promise<void> {
   const start = cls.start_date ? parseISODate(cls.start_date) : addDays(new Date(), -90);
   const end = cls.end_date ? parseISODate(cls.end_date) : addDays(new Date(), 60);
   if (start > end) return;
-  const exists = db.prepare('SELECT 1 FROM sessions WHERE class_id = ? AND date = ?');
-  const insert = db.prepare('INSERT INTO sessions (class_id, date, topic) VALUES (?, ?, ?)');
   await db.transaction(async (tx) => {
     const txExists = tx.prepare('SELECT 1 FROM sessions WHERE class_id = ? AND date = ?');
     const txInsert = tx.prepare('INSERT INTO sessions (class_id, date, topic) VALUES (?, ?, ?)');
@@ -123,8 +127,6 @@ export async function generateSessionsForClass(classId: number): Promise<void> {
       if (!(await txExists.get(classId, iso))) await txInsert.run(classId, iso, '');
     }
   });
-  void exists;
-  void insert;
 }
 
 /* ------------------------- Cập nhật trạng thái hóa đơn ------------------------- */

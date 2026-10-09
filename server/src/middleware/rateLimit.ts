@@ -25,11 +25,7 @@ setInterval(
 
 export function publicRateLimit(maxPerWindow = 30, windowMs = 60 * 1000) {
   return (req: Request, res: Response, next: NextFunction): void => {
-    const ip =
-      (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() ||
-      req.ip ||
-      req.socket.remoteAddress ||
-      'unknown';
+    const ip = trustedClientIp(req);
     const now = Date.now();
     let b = buckets.get(ip);
     if (!b || now > b.reset) {
@@ -58,13 +54,17 @@ export interface RateLimitOptions {
   keyFn?: (req: Request) => string;
 }
 
-function clientIp(req: Request): string {
-  return (
-    (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() ||
-    req.ip ||
-    req.socket.remoteAddress ||
-    'unknown'
-  );
+/**
+ * IP client dùng cho rate limit.
+ * Mặc định key theo req.socket.remoteAddress. CHỈ tin X-Forwarded-For khi
+ * env TRUST_PROXY=true (chạy sau reverse proxy đáng tin) — chống bypass H6.
+ */
+function trustedClientIp(req: Request): string {
+  if (env.TRUST_PROXY) {
+    const xff = (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim();
+    if (xff) return xff;
+  }
+  return req.socket.remoteAddress || req.ip || 'unknown';
 }
 
 /**
@@ -76,7 +76,7 @@ function clientIp(req: Request): string {
 export function createRateLimit(opts: RateLimitOptions) {
   const { windowMs, max } = opts;
   const message = opts.message ?? 'Bạn thao tác quá nhanh, vui lòng thử lại sau ít phút.';
-  const keyFn = opts.keyFn ?? clientIp;
+  const keyFn = opts.keyFn ?? trustedClientIp;
   // key -> timestamps của các request trong cửa sổ (sliding window)
   const hits = new Map<string, number[]>();
 
@@ -151,11 +151,7 @@ const loginHits = new Map<string, number[]>();
  */
 export function loginRateLimit(req: Request, res: Response, next: NextFunction): void {
   const now = Date.now();
-  const ip =
-    (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() ||
-    req.ip ||
-    req.socket.remoteAddress ||
-    'unknown';
+  const ip = trustedClientIp(req);
   const key = `${ip}:${req.path}`;
   const prev = loginHits.get(key) || [];
   const recent = prev.filter((t) => now - t < LOGIN_WINDOW_MS);

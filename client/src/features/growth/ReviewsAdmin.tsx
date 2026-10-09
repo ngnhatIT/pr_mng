@@ -79,10 +79,7 @@ export function ReviewsAdmin() {
 
   return (
     <div className="page">
-      <PageHeader
-        title={t('reviews.title')}
-        desc={t('reviews.desc')}
-      />
+      <PageHeader title={t('reviews.title')} desc={t('reviews.desc')} />
 
       <div className="tabs">
         <button className={`tab${tab === 'pending' ? ' active' : ''}`} onClick={() => switchTab('pending')}>

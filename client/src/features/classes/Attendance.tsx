@@ -31,8 +31,9 @@ export function Attendance() {
   const toast = useToast();
 
   useEffect(() => {
+    // MEDIUM-4: dropdown lớp phải thấy hết lớp, không chỉ 20 lớp đầu (default limit)
     classesApi
-      .list()
+      .list({ limit: 200 })
       .then((r) => setClasses(r.data.filter((x) => x.status === 'active')))
       .catch((err: Error) => toast(err.message, 'error'));
   }, [toast]);
@@ -150,7 +151,12 @@ export function Attendance() {
       <PageHeader title={t('attendance.title')} desc={t('attendance.desc')} />
 
       <div className="toolbar">
-        <select className="text-input" value={classId} onChange={(e) => pickClass(e.target.value)} aria-label={t('attendance.selectClass')}>
+        <select
+          className="text-input"
+          value={classId}
+          onChange={(e) => pickClass(e.target.value)}
+          aria-label={t('attendance.selectClass')}
+        >
           <option value="">{t('attendance.selectClass')}</option>
           {classes.map((c) => (
             <option key={c.id} value={c.id}>
@@ -220,11 +226,7 @@ export function Attendance() {
               ))}
             </div>
           ) : rows.length === 0 ? (
-            <EmptyState
-              icon="users"
-              title={t('attendance.emptyTitle')}
-              desc={t('attendance.emptyDesc')}
-            />
+            <EmptyState icon="users" title={t('attendance.emptyTitle')} desc={t('attendance.emptyDesc')} />
           ) : (
             <>
               <div className="att-list">
@@ -236,7 +238,11 @@ export function Attendance() {
                         <div className="att-item-name">{r.name}</div>
                         <div className="att-item-code mono muted">{r.code}</div>
                       </div>
-                      <div className="seg seg-lg" role="radiogroup" aria-label={t('attendance.row.statusAria', { name: r.name })}>
+                      <div
+                        className="seg seg-lg"
+                        role="radiogroup"
+                        aria-label={t('attendance.row.statusAria', { name: r.name })}
+                      >
                         {(['present', 'late', 'absent'] as Status[]).map((s) => (
                           <button
                             key={s}
@@ -303,9 +309,7 @@ export function Attendance() {
 
       {checkinCode && (
         <Modal title={t('attendance.checkin.codeTitle')} onClose={() => setCheckinCode(null)}>
-          <p className="confirm-text">
-            {t('attendance.checkin.help')}
-          </p>
+          <p className="confirm-text">{t('attendance.checkin.help')}</p>
           <div className="checkin-code">{checkinCode}</div>
           <div className="modal-actions">
             <button className="btn btn-primary" onClick={() => setCheckinCode(null)}>

@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { env } from '../config/env';
+import { requestActor } from '../db/pg-compat';
 
 /**
  * Secret ký JWT — NGUỒN DUY NHẤT là config/env (đọc từ biến môi trường JWT_SECRET).
@@ -13,11 +14,21 @@ export interface AuthUser {
   username: string;
   role: string; // superadmin | admin | staff | teacher | parent
   name: string;
+  /** Namespace phân biệt id: 'parent' = id của bảng parents, 'staff' = id của bảng users. Chống C1. */
+  kind?: 'parent' | 'staff';
   /** null = superadmin (thấy mọi trung tâm) */
   center_id?: number | null;
   parent_id?: number;
   teacher_id?: number | null;
 }
+
+/**
+ * Hash bcrypt giả dùng khi user không tồn tại — luôn chạy compare để chống
+ * timing side-channel (M6). Giá trị cố định, KHÔNG phải mật khẩu thật của ai.
+ */
+export const DUMMY_PASSWORD_HASH = '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy';
+
+const JWT_VERIFY_OPTS: jwt.VerifyOptions = { algorithms: ['HS256'] };
 
 export interface AuthRequest extends Request {
   user?: AuthUser;
@@ -29,6 +40,12 @@ export function signToken(user: AuthUser): string {
   return jwt.sign(user, JWT_SECRET, { expiresIn: '7d' });
 }
 
+/** Chạy downstream trong AsyncLocalStorage mang actor '<id>:<role>' để trigger audit ghi changed_by. */
+function withActorContext(user: AuthUser, next: NextFunction): void {
+  const role = typeof user.role === 'string' && /^[A-Za-z_]+$/.test(user.role) ? user.role : 'unknown';
+  requestActor.run(`${user.id}:${role}`, () => next());
+}
+
 export function requireAuth(req: AuthRequest, res: Response, next: NextFunction): void {
   const header = req.headers.authorization;
   if (!header || !header.startsWith('Bearer ')) {
@@ -36,9 +53,9 @@ export function requireAuth(req: AuthRequest, res: Response, next: NextFunction)
     return;
   }
   try {
-    const payload = jwt.verify(header.slice(7), JWT_SECRET) as AuthUser;
+    const payload = jwt.verify(header.slice(7), JWT_SECRET, JWT_VERIFY_OPTS) as AuthUser;
     req.user = payload;
-    next();
+    withActorContext(payload, next);
   } catch {
     res.status(401).json({ error: 'Token không hợp lệ hoặc đã hết hạn' });
   }
@@ -52,13 +69,13 @@ export function parentAuth(req: AuthRequest, res: Response, next: NextFunction):
     return;
   }
   try {
-    const payload = jwt.verify(header.slice(7), JWT_SECRET) as AuthUser;
+    const payload = jwt.verify(header.slice(7), JWT_SECRET, JWT_VERIFY_OPTS) as AuthUser;
     if (payload.role !== 'parent' || !payload.parent_id) {
       res.status(403).json({ error: 'Tài khoản này không phải phụ huynh' });
       return;
     }
     req.user = payload;
-    next();
+    withActorContext(payload, next);
   } catch {
     res.status(401).json({ error: 'Token không hợp lệ hoặc đã hết hạn' });
   }

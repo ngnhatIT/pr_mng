@@ -10,8 +10,8 @@ import type { Db } from './connection';
  * - FK columns: JOIN không index = full table scan
  * - status/date: filter dashboard và scheduler
  */
-export function createIndexes(db: Db): void {
-  db.exec(`
+export async function createIndexes(db: Db): Promise<void> {
+  await db.exec(`
 -- ===== Multi-tenant scope (hầu hết query đều có center_id) =====
 CREATE INDEX IF NOT EXISTS idx_students_center ON students(center_id, status);
 CREATE INDEX IF NOT EXISTS idx_teachers_center ON teachers(center_id);
@@ -95,5 +95,8 @@ CREATE INDEX IF NOT EXISTS idx_leads_center ON leads(center_id, status);
 CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);
 CREATE INDEX IF NOT EXISTS idx_users_center ON users(center_id);
 CREATE INDEX IF NOT EXISTS idx_users_teacher ON users(teacher_id);
+
+-- Mỗi phụ huynh 1 đánh giá / trung tâm (bổ sung cho migration v3)
+CREATE UNIQUE INDEX IF NOT EXISTS parent_reviews_unique ON reviews(parent_id, center_id) WHERE parent_id IS NOT NULL;
 `);
 }

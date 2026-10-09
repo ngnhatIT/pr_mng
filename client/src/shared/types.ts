@@ -1,3 +1,7 @@
+// Lưu ý: import i18n (leaf module, chỉ chứa JSON + i18next) để format theo ngôn ngữ hiện tại.
+// i18n/index.ts không import ngược types.ts nên không có circular import.
+import i18n from '../i18n';
+
 export interface User {
   id: number;
   username: string;
@@ -201,7 +205,17 @@ export const DAY_NAMES: Record<number, string> = {
   8: 'Chủ Nhật',
 };
 
-export function formatVND(n: number): string {
+/**
+ * Format tiền VND theo ngôn ngữ hiện tại của app.
+ * - vi: "1.000.000đ" (toLocaleString vi-VN)
+ * - en: "1,000,000 VND" (toLocaleString en-US)
+ * Có thể truyền locale tường minh để override (hữu ích cho test).
+ */
+export function formatVND(n: number, locale?: string): string {
+  const lang = locale ?? i18n.language;
+  if (lang === 'en') {
+    return `${Math.round(n).toLocaleString('en-US')} VND`;
+  }
   return `${Math.round(n).toLocaleString('vi-VN')}đ`;
 }
 
@@ -354,7 +368,7 @@ export interface TrialItem {
   desired_date: string | null;
   note: string | null;
   referral_code: string | null;
-  status: 'new' | 'contacted' | 'trialed' | 'enrolled' | 'lost';
+  status: 'new' | 'contacted' | 'trialed' | 'enrolled' | 'lost' | 'converted';
   created_at: string;
 }
 
@@ -371,8 +385,11 @@ export interface LeadItem {
 
 export interface ReferralItem {
   id: number;
+  referrer_name?: string | null;
+  referrer_phone?: string | null;
   referred_phone: string;
   referred_name?: string | null;
+  referred_student_name?: string | null;
   status: 'pending' | 'rewarded' | string;
   reward_amount?: number | null;
   created_at: string;
