@@ -113,13 +113,14 @@ async function doAfterInvoicePaid(inv: { id: number; student_id: number; status:
     if (!ref) return;
 
     const centerId = student.center_id ?? null;
+    // Học viên legacy chưa có center → dùng default reward, credit center_id = null
     const amtReferrer = Math.max(
       0,
-      Number(await getCenterSetting(centerId, 'referral_reward_referrer', '200000')) || 0
+      Number(centerId !== null ? await getCenterSetting(centerId, 'referral_reward_referrer', '200000') : '200000') || 0
     );
     const amtReferred = Math.max(
       0,
-      Number(await getCenterSetting(centerId, 'referral_reward_referred', '200000')) || 0
+      Number(centerId !== null ? await getCenterSetting(centerId, 'referral_reward_referred', '200000') : '200000') || 0
     );
 
     // Tìm parent của học viên được giới thiệu (để nhận credits phía người được giới thiệu)
