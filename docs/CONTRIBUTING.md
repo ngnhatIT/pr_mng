@@ -11,7 +11,7 @@ Tài liệu này dành cho dev mới join. Đọc `docs/ARCHITECTURE.md` trướ
    ```ts
    router.post(
      '/',
-     staffOnly,
+     requirePermission('students.create'),
      asyncHandler(async (req: AuthRequest, res: Response) => {
        const input = validate(req.body, { name: v.string({ required: true, max: 100, label: 'Tên' }) });
        res.status(201).json(myService.create(reqCenterId(req), input));
