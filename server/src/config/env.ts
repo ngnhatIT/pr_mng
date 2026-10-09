@@ -86,6 +86,9 @@ export const env = {
   /** Số bản backup giữ lại khi xoay vòng. */
   BACKUP_KEEP: optionalInt('BACKUP_KEEP', 7),
 
+  /** Webhook nhận cảnh báo vận hành (backup fail...). Optional. */
+  ALERT_WEBHOOK_URL: optional('ALERT_WEBHOOK_URL', ''),
+
   /** Access token sống bao lâu (chuỗi jwt, vd: '1h', '30m'). Mặc định 1 giờ. */
   ACCESS_TOKEN_TTL: optional('ACCESS_TOKEN_TTL', '1h'),
 

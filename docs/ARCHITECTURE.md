@@ -34,8 +34,9 @@ server/src/
 │   ├── <domain>.routes.ts    # CHỈ HTTP: validate input → gọi service → res.json
 │   └── <domain>.service.ts   # MỌI query SQL + nghiệp vụ (pure functions, dễ test)
 ├── services/           # Service dùng chung nhiều domain (zalo, vnpay, notify... + vnpay.test.ts)
-├── jobs/               # Tác vụ nền (reminderScheduler)
-├── middleware/         # auth, rateLimit
+├── jobs/               # Tác vụ nền: reminderScheduler (Zalo), backup, consistency
+├── middleware/         # auth, requireFeature (gói cước), rateLimit, idempotency
+├──          # auth, rateLimit
 ├── shared/             # Dùng chung toàn server
 │   ├── errors.ts       # AppError (badRequest/forbidden/notFound/...)
 │   ├── http.ts         # asyncHandler + errorHandler + notFoundHandler

@@ -4,21 +4,24 @@ Phần mềm quản lý trung tâm ngoại ngữ / lớp học / gym — bản f
 
 ## Cấu trúc truy cập
 
-| Đường dẫn | Đối tượng |
-|---|---|
-| `/` | Landing page công khai của trung tâm (giới thiệu, đăng ký tư vấn/học thử) |
-| `/login` | Đăng nhập quản trị / giáo viên |
-| `/app/*` | App quản trị trung tâm (admin, nhân viên) |
-| `/parent/*` | Cổng phụ huynh (đăng nhập bằng SĐT) |
-| `/teacher/*` | Portal giáo viên |
+| Đường dẫn    | Đối tượng                                                                 |
+| ------------ | ------------------------------------------------------------------------- |
+| `/`          | Landing page công khai của trung tâm (giới thiệu, đăng ký tư vấn/học thử) |
+| `/login`     | Đăng nhập quản trị / giáo viên                                            |
+| `/app/*`     | App quản trị trung tâm (admin, nhân viên)                                 |
+| `/parent/*`  | Cổng phụ huynh (đăng nhập bằng SĐT)                                       |
+| `/teacher/*` | Portal giáo viên                                                          |
 
 ## Tài khoản demo (mật khẩu `123456`)
 
-| Tài khoản | Mật khẩu | Vai trò |
-|---|---|---|
-| `admin` | `123456` | Quản trị trung tâm demo |
-| `teacher1` | `123456` | Giáo viên (dạy lớp demo) |
-| `root` | `123456` | Superadmin — quản trị hệ thống đa trung tâm |
+> Để có dữ liệu demo, đặt `SEED_DEMO=true` trong `server/.env` trước khi chạy lần đầu
+> (mặc định TẮT để an toàn production).
+
+| Tài khoản        | Mật khẩu | Vai trò                                                                   |
+| ---------------- | -------- | ------------------------------------------------------------------------- |
+| `admin`          | `123456` | Quản trị trung tâm demo                                                   |
+| `teacher1`       | `123456` | Giáo viên (dạy lớp demo)                                                  |
+| `root`           | `123456` | Superadmin — quản trị hệ thống đa trung tâm                               |
 | SĐT `0900000001` | `123456` | Phụ huynh demo (đã liên kết HV001, HV002) — đăng nhập tại `/parent/login` |
 
 Dữ liệu lưu trong PostgreSQL (tự tạo schema + seed khi chạy lần đầu).
@@ -77,7 +80,7 @@ reset sequence và đối chiếu số dòng từng bảng.
 
 Vào `/app/cau-hinh-thanh-toan` (quyền admin), theo từng trung tâm:
 
-1. **VietQR (không cần đăng ký):** nhập *mã ngân hàng* (vietcombank, mb, techcombank...), *số tài khoản*, *tên tài khoản*. Phụ huynh sẽ thấy nút "Quét VietQR" kèm mã QR đúng số tiền + nội dung `HD<mã hóa đơn>`.
+1. **VietQR (không cần đăng ký):** nhập _mã ngân hàng_ (vietcombank, mb, techcombank...), _số tài khoản_, _tên tài khoản_. Phụ huynh sẽ thấy nút "Quét VietQR" kèm mã QR đúng số tiền + nội dung `HD<mã hóa đơn>`.
 2. **VNPay:** đăng ký merchant tại VNPay để có `TMN Code` và `Hash Secret`; nhập vào form và bật công tắc. Hệ thống đang dùng **môi trường SANDBOX** (`sandbox.vnpayment.vn`) để demo — khi chạy thật, đổi `VNPAY_PAY_URL` trong `server/src/services/vnpay.ts` sang `https://www.vnpayment.vn/paymentv2/vpcpay.html`.
 3. **Thưởng giới thiệu:** nhập số tiền credits cho người giới thiệu / người được giới thiệu (mặc định 200.000đ).
 
@@ -108,10 +111,10 @@ npm start   # phục vụ cả client đã build tại http://localhost:4000
 
 Đặt các biến môi trường sau trước khi chạy production:
 
-| Biến | Bắt buộc | Mô tả |
-|---|---|---|
-| `JWT_SECRET` | **Có** | Chuỗi bí mật để ký JWT (tối thiểu 32 ký tự ngẫu nhiên). Nếu không đặt, server dùng secret mặc định và in cảnh báo — **không an toàn cho production**. |
-| `PORT` | Không | Cổng chạy server (mặc định `4000`). |
+| Biến         | Bắt buộc | Mô tả                                                                                                                                                 |
+| ------------ | -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `JWT_SECRET` | **Có**   | Chuỗi bí mật để ký JWT (tối thiểu 32 ký tự ngẫu nhiên). Nếu không đặt, server dùng secret mặc định và in cảnh báo — **không an toàn cho production**. |
+| `PORT`       | Không    | Cổng chạy server (mặc định `4000`).                                                                                                                   |
 
 Ví dụ:
 
@@ -123,32 +126,32 @@ Lưu ý: đổi `JWT_SECRET` sẽ làm mọi token đang đăng nhập hết hi�
 
 ## API chính (mới trong bản full)
 
-| Method | Endpoint | Quyền | Mô tả |
-|---|---|---|---|
-| POST | /api/parent/register · /api/parent/login | public | Đăng ký/đăng nhập phụ huynh (SĐT) |
-| POST | /api/parent/link | parent | Liên kết con theo mã học viên |
-| GET | /api/parent/children/:id/overview | parent | Tổng quan 1 con |
-| GET | /api/parent/invoices/:id/vietqr | parent | Link QR VietQR |
-| POST | /api/parent/invoices/:id/claim-paid | parent | Báo đã chuyển khoản (pending) |
-| POST | /api/parent/invoices/:id/vnpay | parent | Tạo URL thanh toán VNPay |
-| GET | /api/payments/vnpay-return | public | VNPay callback (verify HMAC SHA512) |
-| GET | /api/payments/pending | staff | Khoản chờ duyệt |
-| POST | /api/payments/pending/:id/approve\|reject | staff | Duyệt/từ chối |
-| GET/PUT | /api/payments/config | admin | Cấu hình thanh toán theo trung tâm |
-| POST | /api/invoices/:id/apply-credit | staff | Áp credits trừ học phí |
-| GET/POST | /api/leaves · POST /api/leaves/:id/approve\|reject | staff | Duyệt nghỉ phép (+ gợi ý học bù) |
-| GET/POST/DELETE | /api/grades | staff | Sổ liên lạc điện tử |
-| CRUD | /api/homework · /api/rooms | staff | Bài tập · Phòng học |
-| GET/PUT | /api/payroll · /api/payroll/rules | staff/admin | Bảng lương · đơn giá |
-| GET/POST | /api/trials · POST /api/trials/:id/convert | staff | Đăng ký học thử |
-| GET | /api/teacher/today · POST /api/teacher/checkin | teacher | Buổi dạy · chấm công bằng mã |
-| POST | /api/sessions/:id/checkin-code | staff | Tạo mã điểm danh 6 số |
-| GET | /api/public/center·classes·teachers·reviews | public | Dữ liệu landing |
-| POST | /api/public/leads · /api/public/trials | public | Form landing (rate-limit) |
-| CRUD | /api/leads · POST /api/leads/:id/convert | staff | Mini-CRM |
-| GET | /api/referrals · /api/referrals/stats | staff | Giới thiệu bạn bè |
-| GET/POST | /api/reviews · POST /api/reviews/:id/approve\|reject | staff | Duyệt đánh giá |
-| GET/POST/PUT | /api/centers | superadmin | Quản trị đa trung tâm |
+| Method          | Endpoint                                                | Quyền       | Mô tả                               |
+| --------------- | ------------------------------------------------------- | ----------- | ----------------------------------- |
+| POST            | /api/v1/parent/register · /api/parent/login             | public      | Đăng ký/đăng nhập phụ huynh (SĐT)   |
+| POST            | /api/v1/parent/link                                     | parent      | Liên kết con theo mã học viên       |
+| GET             | /api/v1/parent/children/:id/overview                    | parent      | Tổng quan 1 con                     |
+| GET             | /api/v1/parent/invoices/:id/vietqr                      | parent      | Link QR VietQR                      |
+| POST            | /api/v1/parent/invoices/:id/claim-paid                  | parent      | Báo đã chuyển khoản (pending)       |
+| POST            | /api/v1/parent/invoices/:id/vnpay                       | parent      | Tạo URL thanh toán VNPay            |
+| GET             | /api/v1/payments/vnpay-return                           | public      | VNPay callback (verify HMAC SHA512) |
+| GET             | /api/v1/payments/pending                                | staff       | Khoản chờ duyệt                     |
+| POST            | /api/v1/payments/pending/:id/approve\|reject            | staff       | Duyệt/từ chối                       |
+| GET/PUT         | /api/v1/payments/config                                 | admin       | Cấu hình thanh toán theo trung tâm  |
+| POST            | /api/v1/invoices/:id/apply-credit                       | staff       | Áp credits trừ học phí              |
+| GET/POST        | /api/v1/leaves · POST /api/leaves/:id/approve\|reject   | staff       | Duyệt nghỉ phép (+ gợi ý học bù)    |
+| GET/POST/DELETE | /api/v1/grades                                          | staff       | Sổ liên lạc điện tử                 |
+| CRUD            | /api/v1/homework · /api/rooms                           | staff       | Bài tập · Phòng học                 |
+| GET/PUT         | /api/v1/payroll · /api/payroll/rules                    | staff/admin | Bảng lương · đơn giá                |
+| GET/POST        | /api/v1/trials · POST /api/trials/:id/convert           | staff       | Đăng ký học thử                     |
+| GET             | /api/v1/teacher/today · POST /api/teacher/checkin       | teacher     | Buổi dạy · chấm công bằng mã        |
+| POST            | /api/v1/sessions/:id/checkin-code                       | staff       | Tạo mã điểm danh 6 số               |
+| GET             | /api/v1/public/center·classes·teachers·reviews          | public      | Dữ liệu landing                     |
+| POST            | /api/v1/public/leads · /api/public/trials               | public      | Form landing (rate-limit)           |
+| CRUD            | /api/v1/leads · POST /api/leads/:id/convert             | staff       | Mini-CRM                            |
+| GET             | /api/v1/referrals · /api/referrals/stats                | staff       | Giới thiệu bạn bè                   |
+| GET/POST        | /api/v1/reviews · POST /api/reviews/:id/approve\|reject | staff       | Duyệt đánh giá                      |
+| GET/POST/PUT    | /api/v1/centers                                         | superadmin  | Quản trị đa trung tâm               |
 
 API cũ (`/api/students`, `/api/classes`, `/api/sessions`, `/api/invoices`, `/api/dashboard`, `/api/teachers`, `/api/zalo`, `/api/reminders`) giữ nguyên và đã được lọc theo trung tâm.
 

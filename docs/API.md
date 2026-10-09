@@ -29,16 +29,15 @@ Quy ước chung:
 
 ## Public (không cần token)
 
-| Method | Endpoint                 | Mô tả                              |
-| ------ | ------------------------ | ---------------------------------- |
-| GET    | `/health`                | Health check                       |
-| POST   | `/auth/login`            | Đăng nhập staff                    |
-| POST   | `/parent/register`       | Phụ huynh đăng ký bằng SĐT         |
-| POST   | `/parent/login`          | Phụ huynh đăng nhập bằng SĐT       |
-| GET    | `/public/lookup?phone=`  | Tra cứu học phí công khai theo SĐT |
-| POST   | `/public/trials`         | Đăng ký học thử                    |
-| POST   | `/public/leads`          | Để lại thông tin tư vấn            |
-| GET    | `/payments/vnpay-return` | VNPay return URL (idempotent)      |
+| Method | Endpoint                 | Mô tả                         |
+| ------ | ------------------------ | ----------------------------- |
+| GET    | `/health`                | Health check                  |
+| POST   | `/auth/login`            | Đăng nhập staff               |
+| POST   | `/parent/register`       | Phụ huynh đăng ký bằng SĐT    |
+| POST   | `/parent/login`          | Phụ huynh đăng nhập bằng SĐT  |
+| POST   | `/public/trials`         | Đăng ký học thử               |
+| POST   | `/public/leads`          | Để lại thông tin tư vấn       |
+| GET    | `/payments/vnpay-return` | VNPay return URL (idempotent) |
 
 ## Staff — tài chính (luồng tiền)
 
@@ -89,5 +88,4 @@ Quy ước chung:
 ## Rate limiting
 
 - `/auth/login`, `/parent/login`, `/parent/register`: 10 req / 60s / IP → `429`.
-- `/public/lookup`: 30 req / 60s / IP.
 - Ghi (POST/PUT/DELETE) staff: 120 req / 60s / IP.

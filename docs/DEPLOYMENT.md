@@ -92,7 +92,7 @@ server {
 
 - **Audit log**: mọi thao tác tiền bạc và xóa quan trọng được ghi `audit_logs` (xem `/app/nhat-ky`).
 - **Backup tự động**: theo lịch cron trong app.
-- **Health check**: `GET /health` (public), `GET /api/v1/health` (chi tiết, cần quyền).
+- **Health check**: `GET /api/health` (public, có ping DB), `GET /api/v1/health` (chi tiết, cần quyền).
 - **Metrics**: `GET /api/v1/metrics` (Prometheus).
 - **Rate limiting**: login 10 req/60s/IP; ghi dữ liệu 120 req/60s/IP.
 

@@ -1,4 +1,5 @@
 import { logger } from './logger';
+import { env } from '../config/env';
 
 const log = logger.scope('alert');
 
@@ -8,7 +9,7 @@ const log = logger.scope('alert');
  * Không bao giờ throw (alert không được làm hỏng flow chính).
  */
 export async function sendAlert(title: string, detail: string): Promise<void> {
-  const url = process.env.ALERT_WEBHOOK_URL;
+  const url = env.ALERT_WEBHOOK_URL;
   log.error('ALERT: ' + title, { detail });
   if (!url) return;
   try {
