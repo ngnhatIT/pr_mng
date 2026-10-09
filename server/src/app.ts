@@ -181,11 +181,12 @@ export function createApp(): Express {
     })
   );
 
-  // Health check CHI TIẾT (DB, disk, memory) — yêu cầu đăng nhập.
+  // Health check CHI TIẾT (DB, disk, memory) — chỉ admin mới xem được chi tiết hệ thống.
   // Mount trên v1 router → /api/v1/health (legacy /api/health vẫn trúng route public ở trên nhờ thứ tự đăng ký).
   v1.get(
     '/health',
     requireAuth,
+    requirePermission('system.manage'),
     asyncHandler(async (_req: express.Request, res: express.Response) => {
       const checks: Record<string, { ok: boolean; detail?: string }> = {};
       // DB: query đơn giản + version PostgreSQL
