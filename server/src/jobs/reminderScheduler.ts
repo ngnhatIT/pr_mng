@@ -3,6 +3,7 @@ import { db, toISODate } from '../db';
 import { getZaloConfig, sendTuitionReminder } from '../services/zalo';
 import { listCenters, hasFeature, Center } from '../utils/plans';
 import { logger } from '../shared/logger';
+import { formatError } from '../shared/errorFormat';
 import { DAY_MS } from '../shared/time';
 import { publishScheduled } from '../modules/homework/homework.service';
 import { withAdvisoryLock } from '../shared/advisoryLock';
