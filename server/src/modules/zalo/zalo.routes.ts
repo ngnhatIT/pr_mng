@@ -157,6 +157,14 @@ router.post(
   requirePermission('notifications.manage'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const r = await runReminderOnce(await cidOf(req));
+    if (r.wasLocked) {
+      res.status(409).json({
+        ok: false,
+        code: 'ALREADY_RUNNING',
+        message: 'Có phiên bản khác đang chạy, vui lòng thử lại sau',
+      });
+      return;
+    }
     res.json({
       ok: true,
       overdue: r.overdue,

@@ -99,6 +99,7 @@ export interface RunOnceResult {
   overdue: number;
   upcoming: number;
   skipped: number;
+  wasLocked?: boolean;
   details: { invoiceId: number; kind: string; status: string; message: string }[];
 }
 
@@ -174,6 +175,7 @@ export async function runReminderOnce(centerId?: number): Promise<RunOnceResult>
   });
   if (outcome.status === 'locked') {
     log.info('Bỏ qua vòng nhắc: instance khác đang chạy', { lockKey });
+    result.wasLocked = true;
   }
   return result;
 }
