@@ -3,7 +3,7 @@ import { AuthRequest, reqCenterId } from '../../middleware/auth';
 import { requirePermission } from '../authorization/authorization.middleware';
 import { asyncHandler } from '../../shared/http';
 import { AppError } from '../../shared/errors';
-import { validate, v } from '../../shared/validate';
+import { validate, v, paramId } from '../../shared/validate';
 import { audit, actorFromReq } from '../../shared/audit';
 import {
   listHomework,
@@ -277,7 +277,7 @@ router.get(
   '/:id/quiz/attempts',
   requirePermission('homework.grade'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
-    const id = Number(req.params.id);
+    const id = paramId(req.params);
     await requireHomework(req, id);
     res.json(await getAllAttempts(id));
   })
@@ -288,7 +288,7 @@ router.get(
   '/:id/quiz/edit',
   requirePermission('homework.create'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
-    const id = Number(req.params.id);
+    const id = paramId(req.params);
     await requireHomework(req, id);
     res.json(await getQuizForStaff(id));
   })
@@ -299,7 +299,7 @@ router.put(
   '/:id/quiz',
   requirePermission('homework.create'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
-    const id = Number(req.params.id);
+    const id = paramId(req.params);
     await requireHomework(req, id);
     const { questions } = req.body as { questions: unknown };
     if (!Array.isArray(questions)) {
@@ -358,7 +358,7 @@ router.post(
   '/:id/quiz/import',
   requirePermission('homework.create'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
-    const id = Number(req.params.id);
+    const id = paramId(req.params);
     await requireHomework(req, id);
     const { bank_ids } = req.body as { bank_ids: number[] };
     if (!Array.isArray(bank_ids) || !bank_ids.length) {
