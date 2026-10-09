@@ -176,7 +176,7 @@ export function loginRateLimit(req: Request, res: Response, next: NextFunction):
   const recent = prev.filter((t) => now - t < LOGIN_WINDOW_MS);
 
   if (recent.length >= LOGIN_MAX) {
-    res.status(429).json({ error: 'Thử quá nhiều lần, vui lòng đợi một phút rồi thử lại' });
+    res.status(429).json({ error: 'Thử quá nhiều lần, vui lòng đợi một phút rồi thử lại', code: 'RATE_LIMITED' });
     return;
   }
 
