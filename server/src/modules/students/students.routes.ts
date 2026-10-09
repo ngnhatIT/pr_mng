@@ -13,7 +13,7 @@ const studentSchema = {
   name: v.string({ required: true, max: 100, label: 'Tên học viên' }),
   phone: v.string({ max: 20, label: 'Số điện thoại' }),
   email: v.string({ max: 100, label: 'Email' }),
-  dob: v.string({ label: 'Ngày sinh' }),
+  dob: v.date({ label: 'Ngày sinh' }),
   address: v.string({ max: 255, label: 'Địa chỉ' }),
   status: v.string({ label: 'Trạng thái' }),
   note: v.string({ max: 500, label: 'Ghi chú' }),
