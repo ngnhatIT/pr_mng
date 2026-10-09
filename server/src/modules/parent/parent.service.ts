@@ -417,7 +417,7 @@ export async function createVnpayPayment(
       .get(invoiceId)) as { ref: string; amount: number } | undefined;
     if (existing && Math.abs(existing.amount - remaining) <= 1) {
       const payUrl = buildVnpayUrl(
-        { tmnCode, hashSecret, returnUrl: `${baseUrl}/api/payments/vnpay-return` },
+        { tmnCode, hashSecret, returnUrl: `${baseUrl}/api/v1/payments/vnpay-return` },
         {
           amountVnd: existing.amount,
           txnRef: existing.ref,
@@ -434,7 +434,7 @@ export async function createVnpayPayment(
     await db.query('SELECT pg_advisory_unlock(hashtext($1))', [lockKey]).catch(() => {});
   }
   const payUrl = buildVnpayUrl(
-    { tmnCode, hashSecret, returnUrl: `${baseUrl}/api/payments/vnpay-return` },
+    { tmnCode, hashSecret, returnUrl: `${baseUrl}/api/v1/payments/vnpay-return` },
     { amountVnd: remaining, txnRef: ref, orderInfo: 'Thanh toan hoc phi HD' + invoiceId, ipAddr }
   );
   return { pay_url: payUrl };
