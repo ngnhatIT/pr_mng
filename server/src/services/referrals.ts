@@ -24,7 +24,7 @@ export async function ensureParentReferralCode(parentId: number): Promise<string
     { referral_code: string | null } | undefined;
   if (row?.referral_code) return row.referral_code;
   for (let i = 0; i < 5; i++) {
-    const code = genReferralCode();
+    const code = await genReferralCode();
     try {
       await db.prepare('UPDATE parents SET referral_code = ? WHERE id = ?').run(code, parentId);
       return code;
