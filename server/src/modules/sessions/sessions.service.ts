@@ -178,9 +178,9 @@ export async function saveAttendance(
   if (!Array.isArray(records)) throw AppError.badRequest('Dữ liệu điểm danh không hợp lệ');
   const sc = await getSessionOr404(ctx, id);
   const valid = records.filter(
-    (r) => r.student_id && (ATTENDANCE_STATUS as readonly string[]).includes(r.status)
+    (r) => r && r.student_id && (ATTENDANCE_STATUS as readonly string[]).includes(r.status)
   );
-  if (!valid.length) return { saved: 0, date: toISODate(new Date()) };
+  if (!valid.length) return { saved: 0, date: sc.date };
   // Whitelist: chỉ học viên đang học lớp này
   const enrolledRows = (await db
     .prepare("SELECT student_id FROM enrollments WHERE class_id = ? AND status = 'active'")
@@ -215,7 +215,7 @@ export async function saveAttendance(
       ).catch((err) => log.warn('notifyParents failed', { error: String(err) }));
     }
   }
-  return { saved: accepted.length, date: toISODate(new Date()) };
+  return { saved: accepted.length, date: sc.date };
 }
 
 /** Sinh mã điểm danh 6 số cho buổi học (staff) — dùng crypto CSPRNG. */

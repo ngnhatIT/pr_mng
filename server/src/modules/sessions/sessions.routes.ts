@@ -34,7 +34,7 @@ router.post(
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const input = validate(req.body, {
       class_id: v.number({ required: true, integer: true, label: 'Lớp học' }),
-      date: v.string({ required: true, label: 'Ngày học' }),
+      date: v.date({ required: true, label: 'Ngày học' }),
       topic: v.string({ max: 255, label: 'Chủ đề' }),
     });
     const created = await sessionService.createSession(scopeOf(req), {
