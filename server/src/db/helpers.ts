@@ -7,7 +7,9 @@ import { toISODate, addDays, ourDayOfWeek, parseISODate, ScheduleEntry, ClassRow
  * (Về lâu dài nên chuyển vào modules/<domain>/*.service.ts)
  */
 export async function ensureDemoCenter(): Promise<number> {
-  const row = (await db.prepare('SELECT id FROM centers ORDER BY id ASC LIMIT 1').get()) as
+  // Chỉ trả về center DEMO (subdomain='demo'), KHÔNG trả về center đầu tiên bất kỳ
+  // (tránh nhét dữ liệu demo vào tenant thật khi SEED_DEMO bật nhầm)
+  const row = (await db.prepare("SELECT id FROM centers WHERE subdomain = 'demo' LIMIT 1").get()) as
     { id: number } | undefined;
   if (row) return row.id;
   const r = await db

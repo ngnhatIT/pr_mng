@@ -200,9 +200,10 @@ export async function seedDatabase(): Promise<void> {
     for (const inv of allInv) await recalcInvoiceStatus(inv.id);
 
     console.log('Đã tạo xong dữ liệu demo.');
+    // seedExtraAccounts CHỈ chạy khi DB trống (trong block count===0)
+    // — không chạy mỗi boot để tránh nhét tài khoản demo vào DB đã có dữ liệu thật
+    await seedExtraAccounts();
   }
-
-  await seedExtraAccounts();
 }
 
 /** Tài khoản bổ sung (idempotent — chạy được trên DB cũ lẫn mới) */
