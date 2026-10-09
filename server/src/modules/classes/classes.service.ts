@@ -403,7 +403,7 @@ export async function deleteClass(ctx: ScopeCtx, id: number, actor?: AuditActor)
     await tx.prepare('DELETE FROM enrollments WHERE class_id = ?').run(id);
     await tx.prepare('DELETE FROM classes WHERE id = ?').run(id);
   });
-  void audit({
+  await audit({
     centerId: ctx.centerId,
     actor,
     action: 'delete',
