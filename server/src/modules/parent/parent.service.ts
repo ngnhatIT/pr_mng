@@ -390,7 +390,11 @@ export async function claimPaid(
     return { payment_id: Number(r.lastInsertRowid), status: 'pending' };
   });
   if (outcome.status !== 'done' || !outcome.result) {
-    throw new Error('Không thể tạo phiếu thu, vui lòng thử lại');
+    // Lock bận hoặc lỗi: trả 409/503 có code để client phân biệt "thử lại" với lỗi hệ thống
+    if (outcome.status === 'locked') {
+      throw AppError.conflict('Hệ thống đang bận, vui lòng thử lại sau giây lát');
+    }
+    throw new AppError(503, 'Không thể tạo phiếu thu lúc này, vui lòng thử lại', 'SERVICE_UNAVAILABLE');
   }
   return outcome.result;
 }
