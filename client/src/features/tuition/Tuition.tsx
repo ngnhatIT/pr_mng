@@ -614,6 +614,7 @@ function PayModal({
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (busy) return; // Chống double-submit khi Enter nhanh 2 lần
     setBusy(true);
     try {
       await invoicesApi.recordPayment(invoice.id, {
@@ -696,6 +697,7 @@ function RefundModal({
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (busy) return; // Chống double-submit
     setBusy(true);
     try {
       await invoicesApi.refund(invoice.id, {
