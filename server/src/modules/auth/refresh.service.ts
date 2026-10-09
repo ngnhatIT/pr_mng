@@ -62,6 +62,20 @@ export async function issueTokenPair(
   const token = signToken(user, ACCESS_TOKEN_TTL);
   const refreshToken = newRefreshToken();
   const isParent = user.kind === 'parent' || user.role === 'parent';
+  const kind = isParent ? 'parent' : 'staff';
+  const ownerId = isParent ? (user.parent_id ?? user.id) : user.id;
+  // Giới hạn 10 session đồng thời: revoke session cũ nhất khi vượt
+  const oldSessions = (await db
+    .prepare(
+      `SELECT id FROM refresh_tokens
+       WHERE kind = ? AND ${isParent ? 'parent_id' : 'user_id'} = ?
+         AND revoked_at IS NULL AND expires_at > NOW()
+       ORDER BY created_at DESC OFFSET 9`
+    )
+    .all(kind, ownerId)) as { id: number }[];
+  for (const s of oldSessions) {
+    await db.prepare('UPDATE refresh_tokens SET revoked_at = NOW() WHERE id = ?').run(s.id);
+  }
   await db
     .prepare(
       `INSERT INTO refresh_tokens (token_hash, user_id, parent_id, kind, expires_at, ip, user_agent)

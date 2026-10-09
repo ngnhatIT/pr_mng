@@ -108,6 +108,11 @@ function startConsistencyScheduler(): void {
         if (issues.length > 0) {
           logger.error('Phát hiện lệch dữ liệu tài chính', { count: issues.length, issues });
         }
+        // Dọn refresh token hết hạn (chống phình bảng)
+        const r = await db
+          .prepare("DELETE FROM refresh_tokens WHERE expires_at < NOW() - INTERVAL '7 days'")
+          .run();
+        if ((r.changes ?? 0) > 0) logger.info('Đã dọn refresh token hết hạn', { count: r.changes });
       } catch (err: unknown) {
         logger.error('Kiểm tra nhất quán tài chính thất bại', { error: String(err) });
       }

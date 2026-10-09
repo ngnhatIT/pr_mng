@@ -1,11 +1,11 @@
 import { Router, Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import { db } from '../../db';
-import { AuthUser, DUMMY_PASSWORD_HASH } from '../../middleware/auth';
+import { AuthUser, DUMMY_PASSWORD_HASH, requireAuth, type AuthRequest } from '../../middleware/auth';
 import { loginRateLimit } from '../../middleware/rateLimit';
 import { asyncHandler } from '../../shared/http';
 import { validate, v } from '../../shared/validate';
-import { issueTokenPair, rotateRefreshToken, revokeRefreshToken } from './refresh.service';
+import { issueTokenPair, rotateRefreshToken, revokeRefreshToken, revokeAllForOwner } from './refresh.service';
 
 const router = Router();
 
@@ -73,6 +73,18 @@ router.post(
   asyncHandler(async (req: Request, res: Response) => {
     const { refresh_token } = (req.body ?? {}) as { refresh_token?: string };
     if (refresh_token) await revokeRefreshToken(refresh_token);
+    res.json({ ok: true });
+  })
+);
+
+/** Đăng xuất mọi thiết bị: thu hồi toàn bộ refresh token của user (khi nghi lộ credential). */
+router.post(
+  '/logout-all',
+  requireAuth,
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const u = req.user!;
+    const isParent = u.kind === 'parent' || u.role === 'parent';
+    await revokeAllForOwner(isParent ? 'parent' : 'staff', isParent ? (u.parent_id ?? u.id) : u.id);
     res.json({ ok: true });
   })
 );
