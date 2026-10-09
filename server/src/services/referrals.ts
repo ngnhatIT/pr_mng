@@ -205,7 +205,7 @@ export async function applyCreditToInvoice(
   // Audit: credits là tiền thật
   await audit({
     centerId: null,
-    action: 'credit.apply',
+    action: 'apply_credit',
     entity: 'credits',
     entityId: creditId,
     summary: `Áp ${applied.toLocaleString('vi-VN')}đ credits vào HD${invoiceId}`,
