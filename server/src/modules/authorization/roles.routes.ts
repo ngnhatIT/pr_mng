@@ -135,10 +135,14 @@ router.delete(
   requirePermission('roles.manage'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const id = Number(req.params.id);
-    const role = (await db.prepare('SELECT is_system FROM roles WHERE id = ?').get(id)) as
-      { is_system: boolean } | undefined;
+    const role = (await db.prepare('SELECT is_system, center_id FROM roles WHERE id = ?').get(id)) as
+      | { is_system: boolean; center_id: number | null }
+      | undefined;
     if (!role) throw AppError.notFound('Không tìm thấy vai trò');
     if (role.is_system) throw AppError.badRequest('Không được xóa vai trò hệ thống');
+    // Admin chỉ xóa role của trung tâm mình
+    const cid = reqCenterId(req);
+    if (cid !== null && role.center_id !== cid) throw AppError.notFound('Không tìm thấy vai trò');
     await db.prepare('DELETE FROM roles WHERE id = ?').run(id);
     invalidateAllPermissions();
     // Audit xóa role (thao tác phân quyền nhạy cảm)
@@ -160,6 +164,14 @@ router.put(
   requirePermission('roles.manage'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const id = Number(req.params.id);
+    // Admin chỉ sửa permissions của role thuộc trung tâm mình
+    const role = (await db
+      .prepare('SELECT is_system, center_id FROM roles WHERE id = ?')
+      .get(id)) as { is_system: boolean; center_id: number | null } | undefined;
+    if (!role) throw AppError.notFound('Không tìm thấy vai trò');
+    if (role.is_system) throw AppError.badRequest('Không được sửa vai trò hệ thống');
+    const cid = reqCenterId(req);
+    if (cid !== null && role.center_id !== cid) throw AppError.notFound('Không tìm thấy vai trò');
     const items = (req.body as { permissions?: { code: string; scope: string }[] }).permissions ?? [];
     res.json({ ok: true, ...(await setRolePermissions(id, items)) });
   })
