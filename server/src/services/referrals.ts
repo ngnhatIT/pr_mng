@@ -1,3 +1,4 @@
+import { randomBytes } from 'crypto';
 import { db, getCenterSetting, recalcInvoiceStatus } from '../db';
 import { AppError } from '../shared/errors';
 import { logger } from '../shared/logger';
@@ -5,14 +6,16 @@ import { audit } from '../shared/audit';
 
 const log = logger.scope('referrals');
 
-/** Sinh mã giới thiệu: 'GT' + base36 (ngắn, dễ đọc) */
+/** Sinh mã giới thiệu: 'GT' + base36 (ngắn, dễ đọc). Dùng CSPRNG vì mã gắn với tiền. */
 export async function genReferralCode(): Promise<string> {
-  const part = Math.random()
+  const bytes = randomBytes(4); // 32 bit
+  const part = BigInt(`0x${bytes.toString('hex')}`)
     .toString(36)
-    .slice(2, 8)
     .toUpperCase()
-    .replace(/[^A-Z0-9]/g, 'X');
-  return `GT${part.padEnd(6, 'X')}`;
+    .replace(/[^A-Z0-9]/g, 'X')
+    .padStart(6, 'X')
+    .slice(-6);
+  return `GT${part}`;
 }
 
 /** Đảm bảo phụ huynh có referral_code, trả về mã */
