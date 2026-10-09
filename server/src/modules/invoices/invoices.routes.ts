@@ -134,6 +134,7 @@ router.post(
 router.post(
   '/:id/payments',
   requirePermission('payments.collect'),
+  idempotency,
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const input = validate(req.body, {
       amount: v.number({ required: true, label: 'Số tiền' }),
