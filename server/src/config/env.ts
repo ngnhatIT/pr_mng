@@ -115,8 +115,15 @@ export const env = {
   /**
    * Seed dữ liệu demo (tài khoản root/teacher1/0900000001 + trung tâm demo).
    * Mặc định TẮT — chỉ bật ở môi trường dev/demo.
+   * Fail-fast nếu bật trên production (tránh tạo nhầm center demo trên DB thật).
    */
-  SEED_DEMO: process.env.SEED_DEMO === 'true',
+  SEED_DEMO: (() => {
+    const v = process.env.SEED_DEMO === 'true';
+    if (v && process.env.NODE_ENV === 'production') {
+      throw new Error('[CONFIG] SEED_DEMO=true không được phép trên production');
+    }
+    return v;
+  })(),
 
   /** Lịch backup tự động (cron expression), mặc định 2h sáng. */
   BACKUP_CRON: optional('BACKUP_CRON', '0 2 * * *'),
