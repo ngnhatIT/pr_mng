@@ -38,7 +38,7 @@
     "empty": "Chưa có ai làm bài",
     "title": "Kết quả quiz: {{title}}",
     "attempts_one": "attempt",
-    "attempts_other": "attempts"
+    "attempts_other": "lượt nộp"
   },
   "bank": {
     "add": "Thêm câu hỏi",
@@ -87,7 +87,7 @@
     "overdueDays": "Quá hạn {{count}} ngày",
     "today": "Hết hạn hôm nay",
     "daysLeft_one": "{{count}} day left",
-    "daysLeft_other": "{{count}} days left",
+    "daysLeft_other": "{{count}} ngày còn lại",
     "overdueDays_one": "Overdue by {{count}} day",
     "overdueDays_other": "Overdue by {{count}} days"
   },
@@ -130,7 +130,10 @@
     "correctAnswer": "Đáp án đúng",
     "criterion": "Tiêu chí",
     "criterionScore": "{{score}}đ",
-    "defaultCriteria": ["Phát âm", "Từ vựng"],
+    "defaultCriteria": [
+      "Phát âm",
+      "Từ vựng"
+    ],
     "deselectAll": "Bỏ chọn",
     "dueDate": "Hạn nộp",
     "dueNextWeek": "Tuần sau",
@@ -210,7 +213,7 @@
       "scheduled": "Đã hẹn đăng {{count}} lớp",
       "updated": "Đã cập nhật",
       "assigned_one": "Assigned to {{count}} class",
-      "assigned_other": "Assigned to {{count}} classes",
+      "assigned_other": "Đã giao cho {{count}} lớp",
       "bankImported_one": "Added {{count}} question from the bank",
       "bankImported_other": "Added {{count}} questions from the bank",
       "scheduled_one": "Scheduled for {{count}} class",
@@ -277,7 +280,7 @@
     "title": "Bài nộp - {{title}}",
     "viewLarge": "Xem ảnh lớn",
     "count_one": "{{count}} submission",
-    "count_other": "{{count}} submissions"
+    "count_other": "{{count}} bài nộp"
   },
   "table": {
     "actions": "Thao tác",
