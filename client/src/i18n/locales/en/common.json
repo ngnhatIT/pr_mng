@@ -74,7 +74,8 @@
     "roles": "Roles",
     "systemAdmin": "System",
     "tagline": "Center management",
-    "main": "Main navigation"
+    "main": "Main navigation",
+    "skipToContent": "Skip to main content"
   },
   "states": {
     "deleteError": "Delete failed",

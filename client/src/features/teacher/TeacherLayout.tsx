@@ -54,7 +54,10 @@ export function TeacherLayout() {
         </div>
       </header>
 
-      <main className="parent-content">
+      <a href="#main-content" className="skip-link">
+        {t('nav.skipToContent', { ns: 'common' })}
+      </a>
+      <main className="parent-content" id="main-content" tabIndex={-1}>
         <Outlet />
       </main>
 

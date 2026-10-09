@@ -3537,3 +3537,21 @@ a:focus-visible,
     max-width: none;
   }
 }
+
+/* ---------- Skip link (WCAG 2.4.1) ---------- */
+.skip-link {
+  position: absolute;
+  top: -48px;
+  left: 12px;
+  z-index: 1000;
+  padding: 8px 16px;
+  background: var(--primary);
+  color: #fff;
+  border-radius: 6px;
+  text-decoration: none;
+  font-weight: 600;
+  transition: top 0.15s ease;
+}
+.skip-link:focus {
+  top: 8px;
+}

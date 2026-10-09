@@ -74,7 +74,8 @@
     "roles": "Phân quyền",
     "systemAdmin": "Hệ thống",
     "tagline": "Quản lý trung tâm",
-    "main": "Điều hướng chính"
+    "main": "Điều hướng chính",
+    "skipToContent": "Bỏ qua tới nội dung chính"
   },
   "states": {
     "deleteError": "Xóa thất bại",

@@ -227,6 +227,9 @@ export function Layout() {
         </div>
       </aside>
 
+      <a href="#main-content" className="skip-link">
+        {t('nav.skipToContent')}
+      </a>
       <div className="main-col">
         <header className="topbar">
           <button
@@ -252,7 +255,7 @@ export function Layout() {
             <Icon name="logout" size={18} />
           </button>
         </header>
-        <main className="page-scroll">
+        <main className="page-scroll" id="main-content" tabIndex={-1}>
           <Outlet />
         </main>
       </div>
