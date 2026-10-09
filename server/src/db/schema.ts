@@ -543,6 +543,7 @@ export const TABLE_DOCS: Record<string, TableDoc> = {
     columns: {
       id: 'Khóa chính.',
       parent_id: 'Phụ huynh sở hữu. CASCADE khi xóa phụ huynh.',
+      center_id: 'Trung tâm sở hữu credit (chống áp chéo). CASCADE khi xóa trung tâm.',
       amount: 'Tổng credit được cấp (VND, > 0).',
       reason: 'Lý do cấp.',
       used_amount: 'Đã sử dụng (0 <= used_amount <= amount).',
@@ -1639,7 +1640,7 @@ const EXPECTED_FK_COUNT: Record<string, number> = {
   invoices: 3,
   payments: 1,
   payment_txns: 1,
-  credits: 1,
+  credits: 2,
   parents: 1,
   parent_students: 2,
   leave_requests: 4,
