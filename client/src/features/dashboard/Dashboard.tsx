@@ -4,10 +4,12 @@ import { dashboardApi } from './dashboard.api';
 import { DebtRow } from '../tuition/tuition.api';
 import { useToast } from '../../shared/ui/toast';
 import { DashboardData, formatVND } from '../../shared/types';
+import { getUser } from '../../shared/api/client';
 import { PageHeader } from '../../shared/components/PageHeader';
 import { StatCard } from '../../shared/components/StatCard';
 import { StatGridSkeleton } from '../../shared/components/Skeleton';
 import { Icon, IconName } from '../../shared/components/icons';
+import './Dashboard.css';
 
 const QUICK_ACTIONS: { to: string; label: string; desc: string; icon: IconName }[] = [
   { to: '/app/students', label: 'Thêm học viên', desc: 'Tạo hồ sơ học viên mới', icon: 'plus' },
@@ -16,11 +18,26 @@ const QUICK_ACTIONS: { to: string; label: string; desc: string; icon: IconName }
   { to: '/app/zalo-reminders', label: 'Nhắc học phí', desc: 'Gửi nhắc qua Zalo', icon: 'bell' },
 ];
 
+function greeting(): string {
+  const h = new Date().getHours();
+  if (h < 11) return 'Chào buổi sáng';
+  if (h < 13) return 'Chào buổi trưa';
+  if (h < 18) return 'Chào buổi chiều';
+  return 'Chào buổi tối';
+}
+
+function todayLine(): string {
+  const d = new Date();
+  const days = ['Chủ nhật', 'Thứ hai', 'Thứ ba', 'Thứ tư', 'Thứ năm', 'Thứ sáu', 'Thứ bảy'];
+  return `${days[d.getDay()]}, ngày ${d.getDate()} tháng ${d.getMonth() + 1} năm ${d.getFullYear()}`;
+}
+
 export function Dashboard() {
   const [data, setData] = useState<DashboardData | null>(null);
   const [debts, setDebts] = useState<DebtRow[]>([]);
   const [loading, setLoading] = useState(true);
   const toast = useToast();
+  const user = getUser();
 
   useEffect(() => {
     (async () => {
@@ -86,7 +103,18 @@ export function Dashboard() {
 
   return (
     <div className="page">
-      <PageHeader title="Tổng quan" desc="Tình hình hoạt động của trung tâm hôm nay" />
+      <div className="dash-greet">
+        <div>
+          <h1 className="dash-greet-title">
+            {greeting()}, {user?.name || 'bạn'}
+          </h1>
+          <p className="dash-greet-sub">
+            {todayLine()} · {data.todaySessions.length > 0
+              ? `Hôm nay có ${data.todaySessions.length} buổi học`
+              : 'Hôm nay không có buổi học nào'}
+          </p>
+        </div>
+      </div>
 
       <div className="stat-grid">
         {stats.map((s) => (
@@ -94,32 +122,28 @@ export function Dashboard() {
         ))}
       </div>
 
-      <section className="card">
-        <div className="card-head">
-          <h2>Thao tác nhanh</h2>
-        </div>
-        <div className="quick-actions">
-          {QUICK_ACTIONS.map((q) => (
-            <Link key={q.to} to={q.to} className="quick-action">
-              <span className="quick-action-icon">
-                <Icon name={q.icon} size={20} />
-              </span>
-              <span className="quick-action-text">
-                <strong>{q.label}</strong>
-                <small>{q.desc}</small>
-              </span>
-              <Icon name="chevron-right" size={16} />
-            </Link>
-          ))}
-        </div>
-      </section>
+      <div className="dash-section-label">Thao tác nhanh</div>
+      <div className="quick-actions dash-quick">
+        {QUICK_ACTIONS.map((q) => (
+          <Link key={q.to} to={q.to} className="quick-action">
+            <span className="quick-action-icon">
+              <Icon name={q.icon} size={20} />
+            </span>
+            <span className="quick-action-text">
+              <strong>{q.label}</strong>
+              <small>{q.desc}</small>
+            </span>
+            <Icon name="chevron-right" size={16} className="quick-action-chev" />
+          </Link>
+        ))}
+      </div>
 
-      <div className="two-col">
+      <div className="two-col dash-cols">
         <section className="card">
           <div className="card-head">
             <h2>Buổi học hôm nay</h2>
             <Link className="link" to="/app/attendance">
-              Điểm danh →
+              Điểm danh <Icon name="arrow-right" size={14} />
             </Link>
           </div>
           {data.todaySessions.length === 0 ? (
@@ -148,7 +172,7 @@ export function Dashboard() {
           <div className="card-head">
             <h2>Công nợ cao nhất</h2>
             <Link className="link" to="/app/tuition?tab=debt">
-              Xem tất cả →
+              Xem tất cả <Icon name="arrow-right" size={14} />
             </Link>
           </div>
           {debts.length === 0 ? (

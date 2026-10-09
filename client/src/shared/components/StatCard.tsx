@@ -17,12 +17,12 @@ export function StatCard({
   return (
     <div className={`stat-card tone-${tone}`}>
       <div className="stat-top">
-        <div className={`stat-icon tone-${tone}`}>
+        <div className="stat-label">{label}</div>
+        <div className={`stat-icon`}>
           <Icon name={icon} size={20} />
         </div>
-        <div className="stat-value">{value}</div>
       </div>
-      <div className="stat-label">{label}</div>
+      <div className="stat-value">{value}</div>
       {sub && <div className="stat-sub">{sub}</div>}
     </div>
   );

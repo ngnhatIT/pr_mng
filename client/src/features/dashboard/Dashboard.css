@@ -1,0 +1,61 @@
+/* ================= Dashboard ================= */
+
+.dash-greet {
+  margin-bottom: var(--sp-5);
+}
+
+.dash-greet-title {
+  margin: 0;
+  font-size: 26px;
+  font-weight: 800;
+  letter-spacing: -0.025em;
+  color: var(--text-strong);
+  line-height: 1.25;
+}
+
+.dash-greet-sub {
+  margin: var(--sp-1) 0 0;
+  color: var(--text-muted);
+  font-size: var(--font-size-md);
+}
+
+.dash-section-label {
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-faint);
+  margin: var(--sp-6) 0 var(--sp-3);
+}
+
+.dash-quick {
+  margin-bottom: var(--sp-2);
+}
+
+.quick-action-chev {
+  color: var(--text-faint);
+  flex: none;
+  transition: transform 0.15s ease;
+}
+
+.quick-action:hover .quick-action-chev {
+  transform: translateX(3px);
+  color: var(--primary);
+}
+
+.dash-cols {
+  margin-top: var(--sp-5);
+}
+
+.dash-cols .link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.debt-amount {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--danger);
+  white-space: nowrap;
+}

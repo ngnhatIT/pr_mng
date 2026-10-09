@@ -484,7 +484,7 @@ export function Roles() {
                       {changedCount} thay đổi chưa lưu
                     </span>
                     <div className="roles-savebar-actions">
-                      <button className="btn btn-ghost" onClick={cancelEdit} disabled={saving}>
+                      <button className="btn btn-ghost btn-ghost-dark" onClick={cancelEdit} disabled={saving}>
                         Hủy
                       </button>
                       <button className="btn btn-primary" onClick={savePermissions} disabled={saving}>

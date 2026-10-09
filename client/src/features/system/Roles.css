@@ -398,13 +398,14 @@
   gap: var(--sp-2);
 }
 
-.roles-savebar .btn-ghost {
+.roles-savebar .btn-ghost-dark {
   color: #fff;
   border-color: rgba(255, 255, 255, 0.25);
 }
 
-.roles-savebar .btn-ghost:hover {
+.roles-savebar .btn-ghost-dark:hover {
   background: rgba(255, 255, 255, 0.12);
+  color: #fff;
 }
 
 /* ---------- Responsive ---------- */
