@@ -33,13 +33,23 @@ export interface StudentRow {
 export async function listStudents(
   centerId: number | null,
   query: { search?: string; status?: string },
-  pageOpts: PageOptions = {}
+  pageOpts: PageOptions = {},
+  opts?: { teacherId?: number | null }
 ): Promise<Paginated<unknown>> {
   const conds: string[] = [];
   const params: unknown[] = [];
   if (centerId !== null) {
     conds.push('center_id = ?');
     params.push(centerId);
+  }
+  // Teacher chỉ xem học viên các lớp mình dạy (scope 'own')
+  if (opts?.teacherId) {
+    conds.push(`id IN (
+      SELECT DISTINCT e.student_id FROM enrollments e
+      JOIN classes c ON c.id = e.class_id
+      WHERE c.teacher_id = ?
+    )`);
+    params.push(opts.teacherId);
   }
   const { search = '', status = '' } = query;
   if (search) {
@@ -64,9 +74,22 @@ export async function listStudents(
 
 export async function getStudentDetail(
   centerId: number | null,
-  id: number
+  id: number,
+  opts?: { teacherId?: number | null }
 ): Promise<Record<string, unknown>> {
   const student = await findByIdOr404<StudentRow>('students', id, centerId, 'Không tìm thấy học viên');
+  // Teacher chỉ xem chi tiết học viên các lớp mình dạy
+  if (opts?.teacherId) {
+    const teaches = (await db
+      .prepare(
+        `SELECT 1 FROM enrollments e JOIN classes c ON c.id = e.class_id
+         WHERE e.student_id = ? AND c.teacher_id = ? LIMIT 1`
+      )
+      .get(id, opts.teacherId)) as { '1'?: number } | undefined;
+    if (!teaches) {
+      throw AppError.forbidden('Không có quyền xem học viên này');
+    }
+  }
   const classes = await db
     .prepare(
       `SELECT c.id, c.name, e.status as enroll_status, e.enrolled_at

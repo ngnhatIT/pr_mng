@@ -29,7 +29,16 @@ router.get(
       page?: string;
       limit?: string;
     };
-    res.json(await studentService.listStudents(reqCenterId(req), { search, status }, { page, limit }));
+    res.json(
+      await studentService.listStudents(
+        reqCenterId(req),
+        { search, status },
+        { page, limit },
+        {
+          teacherId: req.user?.teacher_id ?? null,
+        }
+      )
+    );
   })
 );
 
@@ -37,7 +46,11 @@ router.get(
   '/:id',
   requirePermission('students.view'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
-    res.json(await studentService.getStudentDetail(reqCenterId(req), paramId(req.params)));
+    res.json(
+      await studentService.getStudentDetail(reqCenterId(req), paramId(req.params), {
+        teacherId: (req as AuthRequest).user?.teacher_id ?? null,
+      })
+    );
   })
 );
 
