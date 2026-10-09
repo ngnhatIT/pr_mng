@@ -252,6 +252,8 @@ export function createApp(): Express {
     (req, res, next) => {
       res.setHeader('Deprecation', 'true');
       res.setHeader('Sunset', LEGACY_SUNSET);
+      // RFC 8594: chỉ client biết version mới ở đâu
+      res.setHeader('Link', '</api/v1>; rel="successor-version"');
       next();
     },
     v1
