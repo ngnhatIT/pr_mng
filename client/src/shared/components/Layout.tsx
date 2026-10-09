@@ -81,6 +81,14 @@ export function Layout() {
   const location = useLocation();
   const user = getUser();
   const [drawerOpen, setDrawerOpen] = useState(false);
+  // Chỉ inert sidebar khi ở mobile và drawer đóng (desktop sidebar luôn hiển thị, không được inert)
+  const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' && window.innerWidth <= 768);
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 768px)');
+    const onChange = (e: MediaQueryListEvent) => setIsMobile(e.matches);
+    mq.addEventListener('change', onChange);
+    return () => mq.removeEventListener('change', onChange);
+  }, []);
   const [myPerms, setMyPerms] = useState<Set<string> | null>(null);
   const isSuperadmin = user?.role === 'superadmin';
 
@@ -162,6 +170,9 @@ export function Layout() {
 
   return (
     <div className="app-shell">
+      <a href="#main-content" className="skip-link">
+        {t('nav.skipToContent')}
+      </a>
       <div
         className={`scrim${drawerOpen ? ' show' : ''}`}
         onClick={() => setDrawerOpen(false)}
@@ -170,9 +181,9 @@ export function Layout() {
       <aside
         className={`sidebar${drawerOpen ? ' open' : ''}`}
         aria-label={t('nav.main')}
-        aria-hidden={!drawerOpen || undefined}
-        // inert: drawer đóng không focusable được (WCAG 2.4.3)
-        {...(!drawerOpen ? { inert: '' } : {})}
+        aria-hidden={isMobile && !drawerOpen ? true : undefined}
+        // inert: chỉ khi mobile và drawer đóng (desktop sidebar luôn tương tác được)
+        {...(isMobile && !drawerOpen ? { inert: '' } : {})}
       >
         <div className="brand">
           <div className="brand-logo">E</div>
@@ -227,9 +238,6 @@ export function Layout() {
         </div>
       </aside>
 
-      <a href="#main-content" className="skip-link">
-        {t('nav.skipToContent')}
-      </a>
       <div className="main-col">
         <header className="topbar">
           <button

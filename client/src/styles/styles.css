@@ -1763,7 +1763,8 @@ textarea.text-input {
 }
 .text-input:focus-visible,
 .seg-btn:focus-visible {
-  outline: none;
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
 }
 
 /* ---------- Buttons: variants bổ sung ---------- */
