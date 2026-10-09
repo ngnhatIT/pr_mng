@@ -160,7 +160,7 @@ export async function loginParent(input: {
     throw AppError.badRequest('Trung tâm không hợp lệ');
   const rows = (await db
     .prepare('SELECT * FROM parents WHERE phone = ?' + (centerId !== undefined ? ' AND center_id = ?' : ''))
-    .all(centerId !== undefined ? [normalized, centerId] : [normalized])) as ParentRow[];
+    .all(...(centerId !== undefined ? [normalized, centerId] : [normalized]))) as ParentRow[];
   if (rows.length > 1)
     throw AppError.badRequest('Số điện thoại này tồn tại ở nhiều trung tâm, vui lòng chọn trung tâm');
   const parent = rows[0];
@@ -198,7 +198,7 @@ export async function linkStudent(
       'SELECT id, code, name, dob FROM students WHERE code = ?' +
         (centerId !== null ? ' AND center_id = ?' : '')
     )
-    .get(centerId !== null ? [code, centerId] : [code])) as
+    .get(...(centerId !== null ? [code, centerId] : [code]))) as
     (LinkedStudent & { dob: string | null }) | undefined;
   if (!student) throw AppError.notFound('Không tìm thấy học viên với mã này');
   if (!student.dob || student.dob.slice(0, 10) !== dob) {
@@ -495,7 +495,7 @@ export async function createReview(
       'SELECT id FROM reviews WHERE parent_id = ? AND ' +
         (centerId === null ? 'center_id IS NULL' : 'center_id = ?')
     )
-    .get(centerId === null ? [parentId] : [parentId, centerId])) as { id: number } | undefined;
+    .get(...(centerId === null ? [parentId] : [parentId, centerId]))) as { id: number } | undefined;
   if (existing) {
     await db
       .prepare(

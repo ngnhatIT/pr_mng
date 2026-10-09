@@ -296,20 +296,37 @@ describe('invoices.service - công nợ & xóa', () => {
     assert.equal(Number(summary.debtorCount), 0);
   });
 
-  it('xóa hóa đơn cascade xóa payments', async () => {
+  it('xóa hóa đơn chưa có thanh toán xác nhận → cascade xóa payments', async () => {
     const id = await createInvoice(1000000);
-    await invoicesService.recordPayment(centerId, id, { amount: 200000 });
     await invoicesService.deleteInvoice(centerId, id);
     assert.equal(await count('invoices', `WHERE id = ${id}`), 0);
     assert.equal(await count('payments', `WHERE invoice_id = ${id}`), 0);
   });
 
-  it('update hóa đơn recalc status', async () => {
+  it('không xóa được hóa đơn đã có thanh toán được xác nhận (audit fix)', async () => {
+    const id = await createInvoice(1000000);
+    await invoicesService.recordPayment(centerId, id, { amount: 200000 });
+    await assert.rejects(invoicesService.deleteInvoice(centerId, id), /Không thể xóa phiếu thu/);
+    assert.equal(await count('invoices', `WHERE id = ${id}`), 1);
+    assert.equal(await count('payments', `WHERE invoice_id = ${id}`), 1);
+  });
+
+  it('update hóa đơn recalc status (chưa có thanh toán xác nhận)', async () => {
+    const id = await createInvoice(1000000);
+    await invoicesService.updateInvoice(centerId, id, { amount: 800000 });
+    assert.equal(await invoiceStatus(id), 'unpaid');
+    await invoicesService.recordPayment(centerId, id, { amount: 300000 });
+    assert.equal(await invoiceStatus(id), 'partial');
+  });
+
+  it('không sửa được số tiền hóa đơn đã có thanh toán được xác nhận (audit fix)', async () => {
     const id = await createInvoice(1000000);
     await invoicesService.recordPayment(centerId, id, { amount: 1000000 });
     assert.equal(await invoiceStatus(id), 'paid');
-    // Giảm amount xuống dưới số đã thu → vẫn paid (không âm nợ)
-    await invoicesService.updateInvoice(centerId, id, { amount: 800000 });
+    await assert.rejects(
+      invoicesService.updateInvoice(centerId, id, { amount: 800000 }),
+      /Không thể sửa số tiền/
+    );
     assert.equal(await invoiceStatus(id), 'paid');
   });
 });

@@ -212,6 +212,15 @@ const NO_ID_TABLES = new Set([
   'schema_migrations',
 ]);
 
+/**
+ * Chuẩn hóa params: nếu caller truyền 1 array duy nhất (vd: .all([a, b]))
+ * thì bung ra thành variadic. Phòng thủ cho cả lớp bug "bind message supplies
+ * 1 parameters" — từng làm sập loginParent/linkStudent (pentest 2026-10-09).
+ */
+function normParams(params: unknown[]): unknown[] {
+  return params.length === 1 && Array.isArray(params[0]) ? (params[0] as unknown[]) : params;
+}
+
 function makeStatement(queryFn: QueryFn, sql: string): Statement {
   let pgSql = translateSqlite(sql);
   // INSERT tự động lấy id về (thay cho better-sqlite3 lastInsertRowid).
@@ -225,15 +234,15 @@ function makeStatement(queryFn: QueryFn, sql: string): Statement {
   }
   return {
     async get(...params: unknown[]): Promise<unknown> {
-      const r = await queryFn(pgSql, params);
+      const r = await queryFn(pgSql, normParams(params));
       return r.rows[0] ?? undefined;
     },
     async all(...params: unknown[]): Promise<unknown[]> {
-      const r = await queryFn(pgSql, params);
+      const r = await queryFn(pgSql, normParams(params));
       return r.rows;
     },
     async run(...params: unknown[]): Promise<RunResult> {
-      const r = await queryFn(pgSql, params);
+      const r = await queryFn(pgSql, normParams(params));
       const first = r.rows[0] as { id?: number } | undefined;
       return {
         changes: r.rowCount ?? 0,
