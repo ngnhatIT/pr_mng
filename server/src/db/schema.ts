@@ -1473,6 +1473,10 @@ CREATE INDEX IF NOT EXISTS idx_teachers_center ON teachers(center_id);
 CREATE INDEX IF NOT EXISTS idx_homework_center ON homework(center_id);
 CREATE INDEX IF NOT EXISTS idx_homework_class ON homework(class_id);
 CREATE INDEX IF NOT EXISTS idx_grades_student ON grades(student_id);
+-- Index cho quiz hot path (chống N+1)
+CREATE INDEX IF NOT EXISTS idx_quiz_questions_hw ON quiz_questions(homework_id);
+CREATE INDEX IF NOT EXISTS idx_quiz_options_question ON quiz_options(question_id);
+CREATE INDEX IF NOT EXISTS idx_quiz_answers_attempt ON quiz_answers(attempt_id);
 CREATE INDEX IF NOT EXISTS idx_quiz_attempts_homework ON quiz_attempts(homework_id);
 CREATE INDEX IF NOT EXISTS idx_submissions_homework_student ON homework_submissions(homework_id, student_id);
 CREATE INDEX IF NOT EXISTS idx_leave_requests_student ON leave_requests(student_id);
