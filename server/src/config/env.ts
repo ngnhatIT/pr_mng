@@ -65,7 +65,26 @@ export const env = {
    * CORS allowlist, phân tách bằng dấu phẩy. Mặc định chỉ cho client local dev.
    * Production BẮT BUỘC đặt đúng domain frontend.
    */
-  CORS_ORIGIN: optional('CORS_ORIGIN', 'http://localhost:5173,http://localhost:4000'),
+  /** CORS origins (cách nhau bằng dấu phẩy). Không trailing slash, đúng format http(s)://host. */
+  CORS_ORIGIN: (() => {
+    const v = optional('CORS_ORIGIN', 'http://localhost:5173,http://localhost:4000');
+    const origins = v
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean);
+    for (const o of origins) {
+      if (!/^https?:\/\/[^/]+$/.test(o)) {
+        throw new Error(
+          `[CONFIG] CORS_ORIGIN sai format: "${o}" (đúng: "https://app.vn", không trailing slash)`
+        );
+      }
+    }
+    if (isProd && origins.every((o) => o.includes('localhost'))) {
+      // eslint-disable-next-line no-console
+      console.warn('[CONFIG] Cảnh báo: production đang dùng CORS localhost — kiểm tra lại CORS_ORIGIN');
+    }
+    return v;
+  })(),
 
   /**
    * VNPay / Zalo: credential thực tế lưu per-center trong DB (center_settings),
