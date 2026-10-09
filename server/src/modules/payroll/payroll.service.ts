@@ -1,7 +1,19 @@
 import { db, toISODate } from '../../db';
+import { AppError } from '../../shared/errors';
 
 /** Định dạng tháng YYYY-MM */
 export const MONTH_RE = /^\d{4}-\d{2}$/;
+
+/** Validate tháng có thật (không chỉ đúng format). */
+export function assertValidMonth(month: string): void {
+  if (!MONTH_RE.test(month)) {
+    throw AppError.badRequest('Tháng không hợp lệ (YYYY-MM)');
+  }
+  const mo = Number(month.slice(5, 7));
+  if (mo < 1 || mo > 12) {
+    throw AppError.badRequest('Tháng không tồn tại (01-12)');
+  }
+}
 
 export interface PayrollResult {
   sessions: number;
