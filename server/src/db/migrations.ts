@@ -221,6 +221,18 @@ const MIGRATIONS: Migration[] = [
       for (const sql of idx) await tx.exec(sql);
     },
   },
+  {
+    version: 11,
+    name: 'audit_logs_indexes',
+    up: async (tx) => {
+      // Index cho audit_logs (truy vấn theo center + thời gian)
+      const idx = [
+        'CREATE INDEX IF NOT EXISTS idx_audit_logs_center ON audit_logs(center_id, created_at DESC)',
+        'CREATE INDEX IF NOT EXISTS idx_audit_logs_entity ON audit_logs(entity, entity_id)',
+      ];
+      for (const sql of idx) await tx.exec(sql);
+    },
+  },
 ];
 
 /** Version migration cao nhất mà code hiện tại biết (để test đối chiếu). */

@@ -1,6 +1,7 @@
 import { db, getCenterSetting, recalcInvoiceStatus } from '../db';
 import { AppError } from '../shared/errors';
 import { logger } from '../shared/logger';
+import { audit } from '../shared/audit';
 
 const log = logger.scope('referrals');
 
@@ -201,5 +202,14 @@ export async function applyCreditToInvoice(
   if (applied <= 0) throw AppError.badRequest('Không áp dụng được credits');
   const status = await recalcInvoiceStatus(invoiceId);
   if (status === 'paid') await afterInvoicePaid(invoiceId);
+  // Audit: credits là tiền thật
+  await audit({
+    centerId: null,
+    action: 'credit.apply',
+    entity: 'credits',
+    entityId: creditId,
+    summary: `Áp ${applied.toLocaleString('vi-VN')}đ credits vào HD${invoiceId}`,
+    meta: { invoiceId, creditId, applied },
+  });
   return { applied, status };
 }

@@ -1477,6 +1477,8 @@ CREATE INDEX IF NOT EXISTS idx_refresh_token_hash ON refresh_tokens(token_hash);
 CREATE INDEX IF NOT EXISTS idx_sessions_class ON sessions(class_id);
 CREATE INDEX IF NOT EXISTS idx_teacher_checkins_lookup ON teacher_checkins(teacher_id, session_id);
 CREATE INDEX IF NOT EXISTS idx_salary_rules_teacher ON salary_rules(teacher_id);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_center ON audit_logs(center_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_entity ON audit_logs(entity, entity_id);
 CREATE INDEX IF NOT EXISTS idx_enrollments_class ON enrollments(class_id);
 CREATE INDEX IF NOT EXISTS idx_parent_students_parent ON parent_students(parent_id);
 CREATE INDEX IF NOT EXISTS idx_parent_students_student ON parent_students(student_id);
