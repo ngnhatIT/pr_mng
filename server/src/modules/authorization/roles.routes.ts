@@ -232,6 +232,22 @@ router.delete(
         role_id: v.number({ required: true, label: 'Role' }),
       }
     );
+    const cid = reqCenterId(req);
+    // Chặn gỡ role hệ thống (chỉ superadmin) và check center
+    const role = (await db
+      .prepare('SELECT is_system, center_id FROM roles WHERE id = ?')
+      .get(role_id)) as { is_system: boolean; center_id: number | null } | undefined;
+    if (!role) throw AppError.notFound('Không tìm thấy vai trò');
+    if (role.is_system && req.user?.role !== 'superadmin') {
+      throw AppError.forbidden('Chỉ superadmin được gỡ role hệ thống');
+    }
+    if (cid !== null && role.center_id !== cid) throw AppError.notFound('Không tìm thấy vai trò');
+    const targetUser = (await db
+      .prepare('SELECT center_id FROM users WHERE id = ?')
+      .get(user_id)) as { center_id: number | null } | undefined;
+    if (!targetUser || (cid !== null && targetUser.center_id !== cid)) {
+      throw AppError.notFound('Không tìm thấy người dùng');
+    }
     await db.prepare('DELETE FROM user_roles WHERE user_id = ? AND role_id = ?').run(user_id, role_id);
     invalidateUserPermissions(Number(user_id));
     res.json({ ok: true });

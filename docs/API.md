@@ -21,7 +21,7 @@ Quy ước chung:
 
 ## Phân quyền (RBAC)
 
-67 permissions theo module, gán cho role với scope `own` / `center` / `all` (scope mạnh nhất thắng).
+61 permissions theo module, gán cho role với scope `own` / `center` / `all` (scope mạnh nhất thắng).
 
 - `superadmin`: toàn hệ thống. `admin`: toàn trung tâm. `staff`: vận hành (không xóa hệ thống). `teacher`: scope `own`.
 - API: `GET /roles`, `POST /roles`, `PUT /roles/:id/permissions`, `POST /roles/assign`, `GET /roles/me/permissions` (client dùng để ẩn/hiện menu).
