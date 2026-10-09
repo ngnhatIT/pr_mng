@@ -52,7 +52,8 @@ export function Rooms() {
   };
 
   const remove = async () => {
-    if (!deleting) return;
+    if (!deleting || busy) return;
+    setBusy(true);
     try {
       await roomsApi.remove(deleting.id);
       toast(t('rooms.deleted'), 'success');
@@ -60,6 +61,8 @@ export function Rooms() {
       void load();
     } catch (err) {
       toast(err instanceof Error ? err.message : t('states.deleteError', { ns: 'common' }), 'error');
+    } finally {
+      setBusy(false);
     }
   };
 
