@@ -227,6 +227,7 @@ function GradeFormModal({
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (busy) return;
     setBusy(true);
     try {
       await teacherApi.createGrade({
