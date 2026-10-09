@@ -3,6 +3,7 @@ import { AuthRequest, reqCenterId } from '../../middleware/auth';
 import { requirePermission } from '../authorization/authorization.middleware';
 import { asyncHandler } from '../../shared/http';
 import { actorFromReq } from '../../shared/audit';
+import { paramId } from '../../shared/validate';
 import { listGrades, createGrade, deleteGrade, type ScopeCtx } from './grades.service';
 
 const router = Router();
