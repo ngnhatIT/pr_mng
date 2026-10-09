@@ -94,8 +94,10 @@ export async function listInvoices(
   const rows = (await db
     .prepare(
       `SELECT i.*, s.name as student_name, s.code as student_code, c.name as class_name,
-         COALESCE((SELECT SUM(amount) FROM payments WHERE invoice_id = i.id AND status = 'confirmed'), 0) as paid
-       ${from} ORDER BY i.id DESC LIMIT ? OFFSET ?`
+         COALESCE(p.paid, 0) as paid
+       ${from}
+       LEFT JOIN (SELECT invoice_id, SUM(amount) as paid FROM payments WHERE status = 'confirmed' GROUP BY invoice_id) p ON p.invoice_id = i.id
+       ORDER BY i.id DESC LIMIT ? OFFSET ?`
     )
     .all(...params, limit, offset)) as unknown[];
   return paginate(rows, total, page, limit);
