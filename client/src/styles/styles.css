@@ -5,6 +5,7 @@
   --bg-soft: #fcfdff;
   --bg-muted: #eef1f7;
   --bg-hover: #e8edf6;
+  --surface: #ffffff;
   --text: #16213a;
   --text-strong: #0e1526;
   --text-muted: #5b6b8c;
@@ -70,6 +71,7 @@
   --bg-soft: #131a2e;
   --bg-muted: #1a2338;
   --bg-hover: #222c46;
+  --surface: #131a2e;
   --text: #d9e1f2;
   --text-strong: #f2f6fd;
   --text-muted: #94a1bd;

@@ -22,7 +22,7 @@ export function TableSkeleton({ rows = 5, cols = 4 }: { rows?: number; cols?: nu
   return (
     <div className="table-wrap" aria-hidden="true">
       <table className="table">
-        <th scope="col"ead>
+        <thead>
           <tr>
             {Array.from({ length: cols }).map((_, i) => (
               <th scope="col" key={i}>
