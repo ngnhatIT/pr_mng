@@ -34,7 +34,7 @@ export function publicRateLimit(maxPerWindow = 30, windowMs = 60 * 1000) {
     }
     b.count += 1;
     if (b.count > maxPerWindow) {
-      res.status(429).json({ error: 'Bạn thao tác quá nhanh, vui lòng thử lại sau ít phút.' });
+      res.status(429).json({ error: 'Bạn thao tác quá nhanh, vui lòng thử lại sau ít phút.', code: 'RATE_LIMITED' });
       return;
     }
     next();

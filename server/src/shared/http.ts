@@ -39,6 +39,19 @@ export function errorHandler(err: unknown, req: Request, res: Response, _next: N
     res.status(400).json({ error: 'File không hợp lệ', code: 'INVALID_FILE' });
     return;
   }
+  // Lỗi PostgreSQL: dịch mã lỗi thành response thân thiện
+  if (code === '23505') {
+    res.status(409).json({ error: 'Dữ liệu đã tồn tại (trùng lặp)', code: 'DUPLICATE' });
+    return;
+  }
+  if (code === '23503') {
+    res.status(409).json({ error: 'Dữ liệu liên quan không tồn tại', code: 'FK_VIOLATION' });
+    return;
+  }
+  if (code === '22P02') {
+    res.status(400).json({ error: 'Định dạng dữ liệu không hợp lệ', code: 'INVALID_FORMAT' });
+    return;
+  }
   // Lỗi không lường trước: log để debug (kèm requestId để trace), client chỉ thấy message chung + mã lỗi
   logger.error('Unhandled error', {
     error: err instanceof Error ? err.stack || err.message : String(err),
