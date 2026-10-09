@@ -119,6 +119,19 @@ function startConsistencyScheduler(): void {
             .prepare("DELETE FROM refresh_tokens WHERE expires_at < NOW() - INTERVAL '7 days'")
             .run();
           if ((r.changes ?? 0) > 0) logger.info('Đã dọn refresh token hết hạn', { count: r.changes });
+          // Dọn idempotency keys hết hạn (TTL 24h)
+          await db
+            .prepare(
+              "DELETE FROM idempotency_keys WHERE created_at < to_char(NOW() - INTERVAL '24 hours', 'YYYY-MM-DD HH24:MI:SS')"
+            )
+            .run();
+          // Dọn audit_logs cũ hơn 1 năm (retention forensic 12 tháng)
+          const ar = await db
+            .prepare(
+              "DELETE FROM audit_logs WHERE created_at < to_char(NOW() - INTERVAL '1 year', 'YYYY-MM-DD HH24:MI:SS')"
+            )
+            .run();
+          if ((ar.changes ?? 0) > 0) logger.info('Đã dọn audit_logs cũ', { count: ar.changes });
         } catch (err: unknown) {
           logger.error('Kiểm tra nhất quán tài chính thất bại', { error: String(err) });
         }

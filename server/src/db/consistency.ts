@@ -67,11 +67,12 @@ export async function checkFinancialConsistency(db: Db): Promise<ConsistencyIssu
   const badPayments = (await db
     .prepare(
       `SELECT p.id, p.invoice_id, p.amount,
-              CASE WHEN i.id IS NULL THEN 1 ELSE 0 END AS is_orphan
+              CASE WHEN i.id IS NULL THEN 1 ELSE 0 END AS is_orphan,
+              p.method
        FROM payments p LEFT JOIN invoices i ON i.id = p.invoice_id
-       WHERE i.id IS NULL OR p.amount <= 0`
+       WHERE i.id IS NULL OR (p.amount <= 0 AND p.method != 'refund')`
     )
-    .all()) as { id: number; invoice_id: number; amount: number; is_orphan: number }[];
+    .all()) as { id: number; invoice_id: number; amount: number; is_orphan: number; method: string }[];
   for (const p of badPayments) {
     if (p.is_orphan) {
       issues.push({
@@ -80,7 +81,8 @@ export async function checkFinancialConsistency(db: Db): Promise<ConsistencyIssu
         payment_id: p.id,
       });
     }
-    if (p.amount <= 0) {
+    // Refund hợp lệ có amount âm — không flag
+    if (p.amount <= 0 && p.method !== 'refund') {
       issues.push({
         code: 'invalid_payment_amount',
         detail: `Payment #${p.id}: số tiền không hợp lệ (${p.amount})`,

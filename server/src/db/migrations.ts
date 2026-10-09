@@ -260,6 +260,18 @@ const MIGRATIONS: Migration[] = [
       );
     },
   },
+  {
+    version: 14,
+    name: 'reviews_unique_fix_partial',
+    up: async (tx) => {
+      // v13 bị dead code: tên index trùng với partial index của v3 (WHERE parent_id IS NOT NULL)
+      // nên IF NOT EXISTS luôn no-op trên DB cũ. Drop partial rồi tạo full unique index.
+      await tx.exec('DROP INDEX IF EXISTS parent_reviews_unique');
+      await tx.exec(
+        'CREATE UNIQUE INDEX IF NOT EXISTS parent_reviews_unique_full ON reviews(parent_id, center_id)'
+      );
+    },
+  },
 ];
 
 /** Version migration cao nhất mà code hiện tại biết (để test đối chiếu). */
