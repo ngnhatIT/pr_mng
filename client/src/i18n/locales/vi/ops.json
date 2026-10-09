@@ -36,7 +36,9 @@
     "toast": {
       "loadFail": "Không tải được nhật ký"
     },
-    "totalCount": "Tổng {{total}} dòng nhật ký"
+    "totalCount": "Tổng {{total}} dòng nhật ký",
+    "totalCount_one": "{{total}} log entry total",
+    "totalCount_other": "{{total}} log entries total"
   },
   "leads": {
     "add": "Thêm lead",
@@ -85,7 +87,9 @@
       "saveFail": "Lưu thất bại",
       "saved": "Đã lưu lead",
       "updateFail": "Cập nhật thất bại"
-    }
+    },
+    "countTitle_one": "{{count}} lead",
+    "countTitle_other": "{{count}} leads"
   },
   "leaves": {
     "allStatuses": "Tất cả trạng thái",
@@ -124,7 +128,9 @@
       "rejectFail": "Thất bại",
       "rejected": "Đã từ chối đơn xin nghỉ phép"
     },
-    "totalCount": "Tổng {{total}} đơn"
+    "totalCount": "Tổng {{total}} đơn",
+    "totalCount_one": "{{total}} request total",
+    "totalCount_other": "{{total}} requests total"
   },
   "referrals": {
     "allStatuses": "Tất cả trạng thái",

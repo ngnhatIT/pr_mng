@@ -36,7 +36,9 @@
       "submittedAt": "Nộp lúc"
     },
     "empty": "Chưa có ai làm bài",
-    "title": "Kết quả quiz: {{title}}"
+    "title": "Kết quả quiz: {{title}}",
+    "attempts_one": "attempt",
+    "attempts_other": "attempts"
   },
   "bank": {
     "add": "Thêm câu hỏi",
@@ -66,9 +68,15 @@
     "toast": {
       "deleteFail": "Xóa thất bại",
       "loadFail": "Không tải được ngân hàng",
-      "staleSelection": "Có {{count}} câu đã chọn không còn trong danh sách"
+      "staleSelection": "Có {{count}} câu đã chọn không còn trong danh sách",
+      "staleSelection_one": "{{count}} selected question is no longer in the list",
+      "staleSelection_other": "{{count}} selected questions are no longer in the list"
     },
-    "deleteTitle": "Xóa câu hỏi"
+    "deleteTitle": "Xóa câu hỏi",
+    "import_one": "Add {{count}} question to quiz",
+    "import_other": "Add {{count}} questions to quiz",
+    "selected_one": "{{count}} question selected",
+    "selected_other": "{{count}} questions selected"
   },
   "delete": {
     "message": "Xóa bài tập \"{{title}}\"?",
@@ -77,7 +85,11 @@
   "due": {
     "daysLeft": "Còn {{count}} ngày",
     "overdueDays": "Quá hạn {{count}} ngày",
-    "today": "Hết hạn hôm nay"
+    "today": "Hết hạn hôm nay",
+    "daysLeft_one": "{{count}} day left",
+    "daysLeft_other": "{{count}} days left",
+    "overdueDays_one": "Overdue by {{count}} day",
+    "overdueDays_other": "Overdue by {{count}} days"
   },
   "editor": {
     "bold": "In đậm",
@@ -118,7 +130,10 @@
     "correctAnswer": "Đáp án đúng",
     "criterion": "Tiêu chí",
     "criterionScore": "{{score}}đ",
-    "defaultCriteria": ["Phát âm", "Từ vựng"],
+    "defaultCriteria": [
+      "Phát âm",
+      "Từ vựng"
+    ],
     "deselectAll": "Bỏ chọn",
     "dueDate": "Hạn nộp",
     "dueNextWeek": "Tuần sau",
@@ -196,9 +211,23 @@
       "saveFail": "Lưu thất bại",
       "savedDraft": "Đã lưu nháp",
       "scheduled": "Đã hẹn đăng {{count}} lớp",
-      "updated": "Đã cập nhật"
+      "updated": "Đã cập nhật",
+      "assigned_one": "Assigned to {{count}} class",
+      "assigned_other": "Assigned to {{count}} classes",
+      "bankImported_one": "Added {{count}} question from the bank",
+      "bankImported_other": "Added {{count}} questions from the bank",
+      "scheduled_one": "Scheduled for {{count}} class",
+      "scheduled_other": "Scheduled for {{count}} classes"
     },
-    "wholeClass": "Cả lớp"
+    "wholeClass": "Cả lớp",
+    "publishFor_one": "Publish to {{count}} class",
+    "publishFor_other": "Publish to {{count}} classes",
+    "quizQuestions_one": "{{count}} quiz question, {{total}} pts total",
+    "quizQuestions_other": "{{count}} quiz questions, {{total}} pts total",
+    "scheduleFor_one": "Schedule ({{count}} class)",
+    "scheduleFor_other": "Schedule ({{count}} classes)",
+    "selectedCount_one": "{{count}} student selected",
+    "selectedCount_other": "{{count}} students selected"
   },
   "grade": {
     "empty": "Chưa có học viên",
@@ -249,7 +278,9 @@
     "imageAlt": "Ảnh bài nộp",
     "submittedAt": "Nộp lúc {{time}}",
     "title": "Bài nộp - {{title}}",
-    "viewLarge": "Xem ảnh lớn"
+    "viewLarge": "Xem ảnh lớn",
+    "count_one": "{{count}} submission",
+    "count_other": "{{count}} submissions"
   },
   "table": {
     "actions": "Thao tác",
