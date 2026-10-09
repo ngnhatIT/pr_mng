@@ -157,7 +157,17 @@ async function doAfterInvoicePaid(inv: { id: number; student_id: number; status:
       }
       return true;
     });
-    if (rewarded) log.info(`Đã thưởng credits cho referral #${ref.id} (hóa đơn HD${inv.id})`);
+    if (rewarded) {
+      log.info(`Đã thưởng credits cho referral #${ref.id} (hóa đơn HD${inv.id})`);
+      // Audit log: tiền thật được cấp, cần forensic trail
+      await audit({
+        action: 'referral.reward',
+        entity: 'referral',
+        entityId: ref.id,
+        centerId,
+        meta: { invoiceId: inv.id, referrerAmount: Math.round(amtReferrer), referredAmount: Math.round(amtReferred) },
+      });
+    }
 }
 
 /**
