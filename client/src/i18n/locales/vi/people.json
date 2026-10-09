@@ -1,1 +1,68 @@
-{"account":{"create":"Tạo tài khoản","createError":"Tạo tài khoản thất bại","created":"Đã tạo tài khoản \"{{username}}\" cho giáo viên {{name}}","creating":"Đang tạo...","desc":"Giáo viên sẽ dùng tài khoản này để đăng nhập vào cổng giáo viên (xem buổi dạy, điểm danh, chấm công...).","password":"Mật khẩu *","title":"Tạo tài khoản đăng nhập - {{name}}","username":"Tên đăng nhập *"},"add":"Thêm giáo viên","delete":{"message":"Bạn có chắc muốn xóa giáo viên \"{{name}}\"? Các lớp đang phân công sẽ chuyển thành \"Chưa phân công\".","title":"Xóa giáo viên"},"desc":"Quản lý giáo viên và tạo tài khoản đăng nhập cho họ","empty":{"desc":"Thêm giáo viên và tạo tài khoản để họ chấm công, điểm danh và giao bài tập.","title":"Chưa có giáo viên nào"},"form":{"addTitle":"Thêm giáo viên","editTitle":"Sửa giáo viên","email":"Email","name":"Họ tên *","phone":"Điện thoại","subject":"Môn dạy"},"payroll":{"desc":"Tính lương giáo viên theo số buổi đã dạy trong tháng","emptyDesc":"Chưa có dữ liệu lương cho tháng này.","emptyTitle":"Không có dữ liệu lương","loadError":"Không tải được bảng lương","month":"Tháng","rate":"Đơn giá","table":{"actions":"Thao tác","perSession":"Đơn giá / buổi","sessions":"Số buổi","teacher":"Giáo viên","total":"Tổng lương"},"title":"Lương giáo viên","totalSpent":"Tổng chi"},"rate":{"title":"Đơn giá dạy - {{name}}","unit":"Đơn giá mỗi buổi (đ)","updateError":"Cập nhật thất bại","updated":"Đã cập nhật đơn giá cho {{name}}"},"table":{"actions":"Thao tác","classes":"Lớp đang dạy","email":"Email","name":"Họ tên","phone":"Điện thoại","subject":"Môn dạy"},"teachers":{"createAccount":"Tạo tài khoản","title":"Giáo viên"},"title":"Giáo viên","toast":{"deleted":"Đã xóa giáo viên","loadError":"Không tải được danh sách","saved":"Đã lưu giáo viên"}}
+{
+  "account": {
+    "create": "Tạo tài khoản",
+    "createError": "Tạo tài khoản thất bại",
+    "created": "Đã tạo tài khoản \"{{username}}\" cho giáo viên {{name}}",
+    "creating": "Đang tạo...",
+    "desc": "Giáo viên sẽ dùng tài khoản này để đăng nhập vào cổng giáo viên (xem buổi dạy, điểm danh, chấm công...).",
+    "password": "Mật khẩu *",
+    "title": "Tạo tài khoản đăng nhập - {{name}}",
+    "username": "Tên đăng nhập *"
+  },
+  "add": "Thêm giáo viên",
+  "delete": {
+    "message": "Bạn có chắc muốn xóa giáo viên \"{{name}}\"? Các lớp đang phân công sẽ chuyển thành \"Chưa phân công\".",
+    "title": "Xóa giáo viên"
+  },
+  "desc": "Quản lý giáo viên và tạo tài khoản đăng nhập cho họ",
+  "empty": {
+    "desc": "Thêm giáo viên và tạo tài khoản để họ chấm công, điểm danh và giao bài tập.",
+    "title": "Chưa có giáo viên nào"
+  },
+  "form": {
+    "addTitle": "Thêm giáo viên",
+    "editTitle": "Sửa giáo viên",
+    "email": "Email",
+    "name": "Họ tên *",
+    "phone": "Điện thoại",
+    "subject": "Môn dạy"
+  },
+  "payroll": {
+    "desc": "Tính lương giáo viên theo số buổi đã dạy trong tháng",
+    "emptyDesc": "Chưa có dữ liệu lương cho tháng này.",
+    "emptyTitle": "Không có dữ liệu lương",
+    "loadError": "Không tải được bảng lương",
+    "month": "Tháng",
+    "rate": "Đơn giá",
+    "table": {
+      "actions": "Thao tác",
+      "perSession": "Đơn giá / buổi",
+      "sessions": "Số buổi",
+      "teacher": "Giáo viên",
+      "total": "Tổng lương"
+    },
+    "title": "Lương giáo viên",
+    "totalSpent": "Tổng chi"
+  },
+  "rate": {
+    "title": "Đơn giá dạy - {{name}}",
+    "unit": "Đơn giá mỗi buổi (đ)",
+    "updateError": "Cập nhật thất bại",
+    "updated": "Đã cập nhật đơn giá cho {{name}}"
+  },
+  "table": {
+    "actions": "Thao tác",
+    "classes": "Lớp đang dạy",
+    "email": "Email",
+    "name": "Họ tên",
+    "phone": "Điện thoại",
+    "subject": "Môn dạy"
+  },
+  "teachers": { "createAccount": "Tạo tài khoản", "title": "Giáo viên" },
+  "title": "Giáo viên",
+  "toast": {
+    "deleted": "Đã xóa giáo viên",
+    "loadError": "Không tải được danh sách",
+    "saved": "Đã lưu giáo viên"
+  }
+}

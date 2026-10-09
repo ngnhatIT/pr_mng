@@ -1,10 +1,12 @@
 import { Router, Response, NextFunction } from 'express';
-import bcrypt from 'bcryptjs';
-import { db } from '../../db';
 import { AuthRequest } from '../../middleware/auth';
 import { requirePermission } from '../authorization/authorization.middleware';
-import { PLANS, listCenters, getCenter, Center } from '../../utils/plans';
 import { asyncHandler } from '../../shared/http';
+import { validate, v } from '../../shared/validate';
+import { actorFromReq } from '../../shared/audit';
+import { listCentersWithCounts, createCenterWithAdmin, getCenter } from './centers.service';
+import { db } from '../../db';
+import { PLANS } from '../../utils/plans';
 
 const router = Router();
 router.use(requirePermission('system.manage'));
@@ -22,19 +24,6 @@ function superadminOnly(req: AuthRequest, res: Response, next: NextFunction): vo
   next();
 }
 
-async function withCounts(c: Center) {
-  const studentCount = (
-    (await db.prepare('SELECT COUNT(*) as c FROM students WHERE center_id = ?').get(c.id)) as { c: number }
-  ).c;
-  const userCount = (
-    (await db.prepare('SELECT COUNT(*) as c FROM users WHERE center_id = ?').get(c.id)) as { c: number }
-  ).c;
-  const classCount = (
-    (await db.prepare('SELECT COUNT(*) as c FROM classes WHERE center_id = ?').get(c.id)) as { c: number }
-  ).c;
-  return { ...c, student_count: studentCount, user_count: userCount, class_count: classCount };
-}
-
 /* ------------------------- Danh sách trung tâm ------------------------- */
 
 // GET /api/centers — chỉ superadmin
@@ -42,7 +31,7 @@ router.get(
   '/',
   superadminOnly,
   asyncHandler(async (_req: AuthRequest, res: Response) => {
-    res.json(await Promise.all((await listCenters()).map(withCounts)));
+    res.json(await listCentersWithCounts());
   })
 );
 
@@ -52,63 +41,30 @@ router.get(
 router.post(
   '/',
   asyncHandler(async (req: AuthRequest, res: Response) => {
-    const body = req.body as Record<string, unknown> | undefined;
-    const name = String(body?.name ?? '').trim();
-    const subdomain = body?.subdomain ? String(body.subdomain).trim().toLowerCase() : null;
-    const phone = body?.phone ? String(body.phone).trim() : null;
-    const address = body?.address ? String(body.address).trim() : null;
-    const plan = body?.plan ? String(body.plan) : 'standard';
-    const planExpiresAt = body?.plan_expires_at ? String(body.plan_expires_at).trim() : null;
-    const adminUsername = String(body?.admin_username ?? '').trim();
-    const adminPassword = String(body?.admin_password ?? '');
-
-    if (!name) {
-      res.status(400).json({ error: 'Tên trung tâm là bắt buộc' });
-      return;
-    }
-    if (adminUsername.length < 4) {
-      res.status(400).json({ error: 'Tên đăng nhập admin phải từ 4 ký tự trở lên' });
-      return;
-    }
-    if (adminPassword.length < 4) {
-      res.status(400).json({ error: 'Mật khẩu admin phải từ 4 ký tự trở lên' });
-      return;
-    }
-    if (!PLANS[plan]) {
-      res
-        .status(400)
-        .json({ error: `Gói cước không hợp lệ. Chọn một trong: ${Object.keys(PLANS).join(', ')}` });
-      return;
-    }
-    if (subdomain) {
-      const dup = await db.prepare('SELECT id FROM centers WHERE subdomain = ?').get(subdomain);
-      if (dup) {
-        res.status(400).json({ error: 'Subdomain đã được sử dụng' });
-        return;
-      }
-    }
-    const usernameTaken = await db.prepare('SELECT id FROM users WHERE username = ?').get(adminUsername);
-    if (usernameTaken) {
-      res.status(400).json({ error: 'Tên đăng nhập admin đã tồn tại' });
-      return;
-    }
-
-    const centerId = await db.transaction(async (tx) => {
-      const r = await tx
-        .prepare(
-          'INSERT INTO centers (name, subdomain, phone, address, plan, plan_expires_at) VALUES (?, ?, ?, ?, ?, ?)'
-        )
-        .run(name, subdomain, phone, address, plan, planExpiresAt);
-      const centerId = Number(r.lastInsertRowid);
-      const hash = bcrypt.hashSync(adminPassword, 10);
-      await tx
-        .prepare(
-          "INSERT INTO users (username, password_hash, role, name, center_id) VALUES (?, ?, 'admin', ?, ?)"
-        )
-        .run(adminUsername, hash, `Quản trị ${name}`, centerId);
-      return centerId;
+    const input = validate(req.body, {
+      name: v.string({ required: true, label: 'Tên trung tâm' }),
+      subdomain: v.string({ required: false, label: 'Subdomain' }),
+      phone: v.string({ required: false, label: 'Số điện thoại' }),
+      address: v.string({ required: false, label: 'Địa chỉ' }),
+      plan: v.string({ required: false, label: 'Gói cước' }),
+      plan_expires_at: v.string({ required: false, label: 'Hạn gói' }),
+      admin_username: v.string({ required: true, label: 'Tên đăng nhập admin' }),
+      admin_password: v.string({ required: true, label: 'Mật khẩu admin' }),
     });
-    res.status(201).json({ ok: true, center_id: centerId });
+    const result = await createCenterWithAdmin(
+      {
+        name: input.name,
+        subdomain: input.subdomain ?? null,
+        phone: input.phone ?? null,
+        address: input.address ?? null,
+        plan: input.plan ?? 'standard',
+        plan_expires_at: input.plan_expires_at ?? null,
+        admin_username: input.admin_username,
+        admin_password: input.admin_password,
+      },
+      actorFromReq(req)
+    );
+    res.status(201).json({ ok: true, ...result });
   })
 );
 

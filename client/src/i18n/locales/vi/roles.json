@@ -1,1 +1,83 @@
-{"badge":{"custom":"Tùy chỉnh","system":"Hệ thống"},"card":{"permCount":"{{count}} quyền","userCount":"{{count}} người dùng"},"confirmDelete":{"message":"Vai trò \"{{name}}\" sẽ bị xóa. Người dùng đang mang vai trò này sẽ mất các quyền đi kèm. Hành động này không thể hoàn tác.","title":"Xóa vai trò?"},"create":"Tạo vai trò","delete":"Xóa","desc":"Ai được làm gì, trên dữ liệu nào, trong phạm vi nào","disableScope":"Tắt quyền này","edit":"Sửa","emptySearch":{"desc":"Thử từ khóa khác.","title":"Không tìm thấy"},"forbidden":{"desc":"Tài khoản của bạn không được xem trang phân quyền. Liên hệ quản trị viên nếu cần.","title":"Không có quyền truy cập"},"form":{"code":"Mã vai trò","codePh":"vd: le_tan (tự sinh từ tên nếu bỏ trống)","create":"Tạo vai trò","desc":"Mô tả","descPh":"Vai trò này làm gì trong trung tâm?","name":"Tên vai trò","namePh":"vd: Lễ tân","needCode":"Vui lòng nhập mã vai trò","needName":"Vui lòng nhập tên vai trò","save":"Lưu thay đổi","saveFail":"Không lưu được"},"modal":{"createTitle":"Tạo vai trò mới","editTitle":"Sửa vai trò"},"module":{"attendance":"Điểm danh","classes":"Lớp học","grades":"Điểm số","homework":"Bài tập","invoices":"Học phí","leads":"Leads","leaves":"Nghỉ phép","notifications":"Thông báo","payroll":"Lương","referrals":"Giới thiệu","reports":"Báo cáo","reviews":"Đánh giá","roles":"Phân quyền","rooms":"Phòng học","sessions":"Buổi học","settings":"Cấu hình","students":"Học viên","system":"Hệ thống","teachers":"Giáo viên","trials":"Học thử","users":"Tài khoản"},"modulePermCount":"{{count}} quyền","noDesc":"Chưa có mô tả.","onCount":"{{on}}/{{total}} đang bật","savePerms":"Lưu quyền","savebar":"{{count}} thay đổi chưa lưu","saving":"Đang lưu...","scope":{"all":"Tất cả","center":"Trung tâm","own":"Của mình"},"scopeAria":"Phạm vi quyền {{name}}","scopeShort":{"all":"Tất cả","center":"Trung tâm","off":"Tắt","own":"Của mình"},"searchPh":"Tìm vai trò...","selectRole":{"desc":"Chọn vai trò ở danh sách bên trái để xem và chỉnh sửa quyền.","title":"Chọn một vai trò"},"systemNote":"Vai trò hệ thống: không sửa, không xóa","title":"Phân quyền","toast":{"created":"Đã tạo vai trò mới","deleteFail":"Không xóa được vai trò","deleted":"Đã xóa vai trò","loadDetailFail":"Không tải được chi tiết vai trò","loadRolesFail":"Không tải được danh sách vai trò","savePermsFail":"Không lưu được quyền","savedPerms":"Đã lưu {{count}} quyền cho vai trò","updated":"Đã cập nhật vai trò"},"turnOffAll":"Tắt hết","turnOnAll":"Bật hết"}
+{
+  "badge": { "custom": "Tùy chỉnh", "system": "Hệ thống" },
+  "card": { "permCount": "{{count}} quyền", "userCount": "{{count}} người dùng" },
+  "confirmDelete": {
+    "message": "Vai trò \"{{name}}\" sẽ bị xóa. Người dùng đang mang vai trò này sẽ mất các quyền đi kèm. Hành động này không thể hoàn tác.",
+    "title": "Xóa vai trò?"
+  },
+  "create": "Tạo vai trò",
+  "delete": "Xóa",
+  "desc": "Ai được làm gì, trên dữ liệu nào, trong phạm vi nào",
+  "disableScope": "Tắt quyền này",
+  "edit": "Sửa",
+  "emptySearch": { "desc": "Thử từ khóa khác.", "title": "Không tìm thấy" },
+  "forbidden": {
+    "desc": "Tài khoản của bạn không được xem trang phân quyền. Liên hệ quản trị viên nếu cần.",
+    "title": "Không có quyền truy cập"
+  },
+  "form": {
+    "code": "Mã vai trò",
+    "codePh": "vd: le_tan (tự sinh từ tên nếu bỏ trống)",
+    "create": "Tạo vai trò",
+    "desc": "Mô tả",
+    "descPh": "Vai trò này làm gì trong trung tâm?",
+    "name": "Tên vai trò",
+    "namePh": "vd: Lễ tân",
+    "needCode": "Vui lòng nhập mã vai trò",
+    "needName": "Vui lòng nhập tên vai trò",
+    "save": "Lưu thay đổi",
+    "saveFail": "Không lưu được"
+  },
+  "modal": { "createTitle": "Tạo vai trò mới", "editTitle": "Sửa vai trò" },
+  "module": {
+    "attendance": "Điểm danh",
+    "classes": "Lớp học",
+    "grades": "Điểm số",
+    "homework": "Bài tập",
+    "invoices": "Học phí",
+    "leads": "Leads",
+    "leaves": "Nghỉ phép",
+    "notifications": "Thông báo",
+    "payroll": "Lương",
+    "referrals": "Giới thiệu",
+    "reports": "Báo cáo",
+    "reviews": "Đánh giá",
+    "roles": "Phân quyền",
+    "rooms": "Phòng học",
+    "sessions": "Buổi học",
+    "settings": "Cấu hình",
+    "students": "Học viên",
+    "system": "Hệ thống",
+    "teachers": "Giáo viên",
+    "trials": "Học thử",
+    "users": "Tài khoản"
+  },
+  "modulePermCount": "{{count}} quyền",
+  "noDesc": "Chưa có mô tả.",
+  "onCount": "{{on}}/{{total}} đang bật",
+  "savePerms": "Lưu quyền",
+  "savebar": "{{count}} thay đổi chưa lưu",
+  "saving": "Đang lưu...",
+  "scope": { "all": "Tất cả", "center": "Trung tâm", "own": "Của mình" },
+  "scopeAria": "Phạm vi quyền {{name}}",
+  "scopeShort": { "all": "Tất cả", "center": "Trung tâm", "off": "Tắt", "own": "Của mình" },
+  "searchPh": "Tìm vai trò...",
+  "selectRole": {
+    "desc": "Chọn vai trò ở danh sách bên trái để xem và chỉnh sửa quyền.",
+    "title": "Chọn một vai trò"
+  },
+  "systemNote": "Vai trò hệ thống: không sửa, không xóa",
+  "title": "Phân quyền",
+  "toast": {
+    "created": "Đã tạo vai trò mới",
+    "deleteFail": "Không xóa được vai trò",
+    "deleted": "Đã xóa vai trò",
+    "loadDetailFail": "Không tải được chi tiết vai trò",
+    "loadRolesFail": "Không tải được danh sách vai trò",
+    "savePermsFail": "Không lưu được quyền",
+    "savedPerms": "Đã lưu {{count}} quyền cho vai trò",
+    "updated": "Đã cập nhật vai trò"
+  },
+  "turnOffAll": "Tắt hết",
+  "turnOnAll": "Bật hết"
+}

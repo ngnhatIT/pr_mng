@@ -4,7 +4,9 @@
  */
 
 .att-item {
-  transition: background-color 0.15s ease-out, box-shadow 0.15s ease-out;
+  transition:
+    background-color 0.15s ease-out,
+    box-shadow 0.15s ease-out;
 }
 
 /* Muộn: nền vàng nhạt; Vắng: nền đỏ nhạt - badge trạng thái vẫn là tín hiệu chính */

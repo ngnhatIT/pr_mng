@@ -1,9 +1,9 @@
 import { Router, Response } from 'express';
-import { db, type Tx } from '../../db';
+import { db } from '../../db';
 import { AuthRequest, reqCenterId } from '../../middleware/auth';
 import { requirePermission } from '../authorization/authorization.middleware';
 import { asyncHandler } from '../../shared/http';
-import { listLeads, LEAD_STATUS } from './leads.service';
+import { listLeads, LEAD_STATUS, convertLeadToStudent } from './leads.service';
 
 const router = Router();
 router.use(requirePermission('leads.view'));
@@ -165,82 +165,22 @@ router.delete(
 
 /* ------------------------- Chuyển lead thành học viên ------------------------- */
 
-/** Sinh mã học viên duy nhất (retry khi trùng) */
-async function genLeadStudentCode(tx: Tx): Promise<string> {
-  for (let i = 0; i < 10; i++) {
-    const code = `HV${Date.now().toString().slice(-6)}`;
-    const exists = await tx.prepare('SELECT 1 FROM students WHERE code = ?').get(code);
-    if (!exists) return code;
-  }
-  return `HV${Date.now().toString().slice(-8)}`;
-}
-
 // POST /api/leads/:id/convert { class_id? }
 router.post(
   '/:id/convert',
   requirePermission('leads.manage'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
-    const cid = reqCenterId(req);
-    const id = Number(req.params.id);
-    const lead = await getLead(id, cid);
-    if (!lead) {
-      res.status(404).json({ error: 'Không tìm thấy lead' });
-      return;
-    }
     const body = req.body as Record<string, unknown> | undefined;
-    let classId: number | null = null;
-    if (body?.class_id !== undefined && body?.class_id !== null && String(body.class_id).trim() !== '') {
-      classId = Number(body.class_id);
-      if (!Number.isInteger(classId)) {
-        res.status(400).json({ error: 'Lớp học không hợp lệ' });
-        return;
-      }
-      const cls = await db
-        .prepare(`SELECT id FROM classes WHERE id = ?${cid !== null ? ' AND center_id = ?' : ''}`)
-        .get(...(cid !== null ? [classId, cid] : [classId]));
-      if (!cls) {
-        res.status(400).json({ error: 'Lớp học không tồn tại' });
-        return;
-      }
-    }
-    const centerId = lead.center_id;
-    if (centerId === null) {
-      res.status(400).json({ error: 'Lead chưa gắn trung tâm' });
-      return;
-    }
-    // Guard: không convert trùng (retry / gọi 2 lần)
-    if (lead.status === 'enrolled') {
-      res.status(409).json({ error: 'Lead này đã được chuyển thành học viên' });
-      return;
-    }
-    // Guard: SĐT đã là học viên của trung tâm → không tạo trùng
-    if (lead.phone) {
-      const dup = await db
-        .prepare('SELECT id FROM students WHERE center_id = ? AND phone = ?')
-        .get(centerId, lead.phone);
-      if (dup) {
-        res.status(409).json({ error: 'Số điện thoại này đã là học viên của trung tâm' });
-        return;
-      }
-    }
-    // Bọc toàn bộ trong transaction: học viên mồ côi / lead kẹt 'new' không xảy ra
-    const studentId = await db.transaction(async (tx) => {
-      const code = await genLeadStudentCode(tx);
-      const r = await tx
-        .prepare(
-          "INSERT INTO students (code, name, phone, status, center_id) VALUES (?, ?, ?, 'studying', ?)"
-        )
-        .run(code, lead.name, lead.phone, centerId);
-      const studentId = Number(r.lastInsertRowid);
-      if (classId !== null) {
-        await tx
-          .prepare('INSERT OR IGNORE INTO enrollments (student_id, class_id) VALUES (?, ?)')
-          .run(studentId, classId);
-      }
-      await tx.prepare("UPDATE leads SET status = 'enrolled' WHERE id = ? AND status != 'enrolled'").run(id);
-      return studentId;
+    const rawClassId = body?.class_id;
+    const result = await convertLeadToStudent({
+      leadId: Number(req.params.id),
+      centerId: reqCenterId(req),
+      classId:
+        rawClassId !== undefined && rawClassId !== null && String(rawClassId).trim() !== ''
+          ? Number(rawClassId)
+          : null,
     });
-    res.json({ ok: true, student_id: studentId });
+    res.status(201).json({ ok: true, ...result });
   })
 );
 

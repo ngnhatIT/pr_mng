@@ -123,10 +123,7 @@
     "correctAnswer": "Correct answer",
     "criterion": "Criterion",
     "criterionScore": "{{score}} pts",
-    "defaultCriteria": [
-      "Pronunciation",
-      "Vocabulary"
-    ],
+    "defaultCriteria": ["Pronunciation", "Vocabulary"],
     "deselectAll": "Deselect",
     "dueDate": "Due date",
     "dueNextWeek": "Next week",

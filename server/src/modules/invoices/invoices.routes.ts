@@ -124,7 +124,7 @@ router.post(
       { amount: input.amount, reason: input.reason ?? undefined },
       actorFromReq(req)
     );
-    res.json({ ok: true, ...result });
+    res.status(201).json({ ok: true, ...result });
   })
 );
 
@@ -168,7 +168,7 @@ router.post(
       credit_id as number,
       actorFromReq(req)
     );
-    res.json({ ok: true, applied: result.applied, status: result.status });
+    res.status(201).json({ ok: true, applied: result.applied, status: result.status });
   })
 );
 

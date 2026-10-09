@@ -202,7 +202,7 @@ export async function createInvoice(
       student.center_id
     );
   const created = await db.prepare('SELECT * FROM invoices WHERE id = ?').get(Number(r.lastInsertRowid));
-  void audit({
+  await audit({
     centerId,
     actor,
     action: 'create',
@@ -241,7 +241,7 @@ export async function updateInvoice(
     .prepare('UPDATE invoices SET amount = ?, due_date = ?, note = ? WHERE id = ?')
     .run(amt, input.due_date || null, input.note || null, id);
   await recalcInvoiceStatus(id);
-  void audit({
+  await audit({
     centerId,
     actor,
     action: 'update',
@@ -284,7 +284,7 @@ export async function deleteInvoice(centerId: number | null, id: number, actor?:
     await tx.prepare('DELETE FROM payments WHERE invoice_id = ?').run(id);
     await tx.prepare('DELETE FROM invoices WHERE id = ?').run(id);
   });
-  void audit({
+  await audit({
     centerId,
     actor,
     action: 'delete',
@@ -338,7 +338,7 @@ export async function recordPayment(
     return newStatus;
   });
   if (status === 'paid') await afterInvoicePaid(id);
-  void audit({
+  await audit({
     centerId,
     actor,
     action: 'payment',
@@ -361,7 +361,7 @@ export async function applyCredit(
   if (!creditId) throw AppError.badRequest('Thiếu credit_id');
   try {
     const result = await applyCreditToInvoice(id, Number(creditId));
-    void audit({
+    await audit({
       centerId,
       actor,
       action: 'apply_credit',
@@ -372,6 +372,7 @@ export async function applyCredit(
     });
     return { applied: result.applied, status: result.status };
   } catch (err) {
+    if (err instanceof AppError) throw err;
     throw AppError.badRequest(err instanceof Error ? err.message : 'Không thể áp dụng credits');
   }
 }

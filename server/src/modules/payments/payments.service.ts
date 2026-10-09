@@ -1,4 +1,4 @@
-import { db, getCenterSetting, setCenterSetting } from '../../db';
+import { db, getCenterSetting, getCenterSettings, setCenterSetting } from '../../db';
 import { notifyParents } from '../../services/notify';
 import { afterInvoicePaid } from '../../services/referrals';
 import { verifyVnpayReturn } from '../../services/vnpay';
@@ -312,7 +312,7 @@ export async function approvePendingPayment(
   await notifyPaymentResult(payment.student_id, amount, payment.invoice_id, true).catch((err) =>
     log.warn('notifyPaymentResult failed', { error: String(err) })
   );
-  void audit({
+  await audit({
     centerId: payment.center_id,
     actor,
     action: 'approve',
@@ -340,7 +340,7 @@ export async function rejectPendingPayment(
   await notifyPaymentResult(payment.student_id, payment.amount, payment.invoice_id, false).catch((err) =>
     log.warn('notifyPaymentResult failed', { error: String(err) })
   );
-  void audit({
+  await audit({
     centerId: payment.center_id,
     actor,
     action: 'reject',
@@ -398,7 +398,7 @@ export async function refundInvoice(
     await tx.prepare('UPDATE invoices SET status = ? WHERE id = ?').run(newStatus, invoiceId);
     return newStatus;
   });
-  void audit({
+  await audit({
     centerId,
     actor,
     action: 'refund',
@@ -422,9 +422,10 @@ async function resolveConfigCenterId(centerId: number | null): Promise<number> {
 /** Xem cấu hình — hashsecret được che. */
 export async function getPaymentConfig(centerId: number | null): Promise<Record<string, string>> {
   const cid = await resolveConfigCenterId(centerId);
+  const settings = await getCenterSettings(cid, [...CONFIG_KEYS]);
   const out: Record<string, string> = {};
   for (const k of CONFIG_KEYS) {
-    const v = await getCenterSetting(cid, k);
+    const v = settings.get(k) ?? '';
     out[k] = k === 'pay_vnp_hashsecret' ? maskAccessToken(v) : v;
   }
   return out;

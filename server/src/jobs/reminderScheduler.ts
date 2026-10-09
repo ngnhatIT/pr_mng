@@ -3,6 +3,7 @@ import { db, toISODate } from '../db';
 import { getZaloConfig, sendTuitionReminder } from '../services/zalo';
 import { listCenters, hasFeature, Center } from '../utils/plans';
 import { logger } from '../shared/logger';
+import { DAY_MS } from '../shared/time';
 import { publishScheduled } from '../modules/homework/homework.service';
 
 const log = logger.scope('reminders');
@@ -59,7 +60,7 @@ async function findDueInvoices(centerId: number): Promise<{ overdue: DueInvoice[
   const today = nowVN().today;
 
   // Quá hạn: hạn nộp sớm hơn (hôm nay - overdue_days)
-  const overdueCutoff = toISODate(new Date(Date.now() - overdueDays * 86400000));
+  const overdueCutoff = toISODate(new Date(Date.now() - overdueDays * DAY_MS));
   const overdue = (await db
     .prepare(
       `SELECT i.id, i.due_date FROM invoices i
@@ -70,7 +71,7 @@ async function findDueInvoices(centerId: number): Promise<{ overdue: DueInvoice[
     .all(centerId, overdueCutoff)) as DueInvoice[];
 
   // Sắp đến hạn: hạn nộp từ hôm nay đến (hôm nay + upcoming_days)
-  const upcomingLimit = toISODate(new Date(Date.now() + upcomingDays * 86400000));
+  const upcomingLimit = toISODate(new Date(Date.now() + upcomingDays * DAY_MS));
   const upcoming = (await db
     .prepare(
       `SELECT i.id, i.due_date FROM invoices i

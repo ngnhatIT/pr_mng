@@ -3,7 +3,7 @@ import { db } from '../../db';
 import { AuthRequest, reqCenterId } from '../../middleware/auth';
 import { requirePermission } from '../authorization/authorization.middleware';
 import { asyncHandler } from '../../shared/http';
-import { calcPayroll, currentMonth, MONTH_RE } from './payroll.service';
+import { calcPayrollBulk, currentMonth, MONTH_RE } from './payroll.service';
 
 const router = Router();
 
@@ -22,16 +22,8 @@ router.get(
     const cid = reqCenterId(req);
     const q = String((req.query as { month?: string }).month || '');
     const month = MONTH_RE.test(q) ? q : currentMonth();
-    const teachers = (await db
-      .prepare(`SELECT id, name FROM teachers ${cid !== null ? 'WHERE center_id = ?' : ''} ORDER BY name`)
-      .all(...(cid !== null ? [cid] : []))) as { id: number; name: string }[];
-    const rows: PayrollRow[] = await Promise.all(
-      teachers.map(async (t) => ({
-        teacher_id: t.id,
-        teacher_name: t.name,
-        ...(await calcPayroll(t.id, month)),
-      }))
-    );
+    // 1 query duy nhất cho cả bảng lương (trước đây 1 + N query)
+    const rows: PayrollRow[] = await calcPayrollBulk(cid, month);
     res.json(rows);
   })
 );

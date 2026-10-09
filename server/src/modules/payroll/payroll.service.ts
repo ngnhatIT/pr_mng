@@ -35,3 +35,47 @@ export async function calcPayroll(teacherId: number, month: string): Promise<Pay
   const perSession = row.per_session || 0;
   return { sessions, per_session: perSession, total: sessions * perSession };
 }
+
+export interface PayrollRow {
+  teacher_id: number;
+  teacher_name: string;
+  sessions: number;
+  per_session: number;
+  total: number;
+}
+
+/**
+ * Bảng lương cả trung tâm trong 1 query duy nhất (GROUP BY teacher_id).
+ * Thay thế pattern 1 + N query (N = số giáo viên).
+ */
+export async function calcPayrollBulk(centerId: number | null, month: string): Promise<PayrollRow[]> {
+  const rows = (await db
+    .prepare(
+      `SELECT t.id as teacher_id, t.name as teacher_name,
+         COUNT(DISTINCT CASE WHEN s.id IS NOT NULL THEN s.id END) as sessions,
+         COALESCE(sr.per_session_amount, 0) as per_session
+       FROM teachers t
+       LEFT JOIN classes c ON c.teacher_id = t.id
+       LEFT JOIN sessions s ON s.class_id = c.id
+         AND substr(s.date, 1, 7) = ?
+         AND (EXISTS (SELECT 1 FROM attendance a WHERE a.session_id = s.id)
+              OR EXISTS (SELECT 1 FROM teacher_checkins tc WHERE tc.session_id = s.id))
+       LEFT JOIN salary_rules sr ON sr.teacher_id = t.id
+       ${centerId !== null ? 'WHERE t.center_id = ?' : ''}
+       GROUP BY t.id, t.name, sr.per_session_amount
+       ORDER BY t.name`
+    )
+    .all(month, ...(centerId !== null ? [centerId] : []))) as {
+    teacher_id: number;
+    teacher_name: string;
+    sessions: number;
+    per_session: number;
+  }[];
+  return rows.map((r) => ({
+    teacher_id: r.teacher_id,
+    teacher_name: r.teacher_name,
+    sessions: Number(r.sessions) || 0,
+    per_session: Number(r.per_session) || 0,
+    total: (Number(r.sessions) || 0) * (Number(r.per_session) || 0),
+  }));
+}

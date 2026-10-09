@@ -115,5 +115,9 @@
 }
 
 /* ---------- Leads: thay inline styles ---------- */
-.pipeline-skel { margin-top: 10px; }
-.pipeline-skel-2 { margin-top: 8px; }
+.pipeline-skel {
+  margin-top: 10px;
+}
+.pipeline-skel-2 {
+  margin-top: 8px;
+}

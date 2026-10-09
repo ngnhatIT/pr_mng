@@ -29,7 +29,9 @@
 
 /* Tabs học phí: underline rõ ràng, chạm 150ms */
 .tabs .tab {
-  transition: color 0.15s ease-out, border-color 0.15s ease-out;
+  transition:
+    color 0.15s ease-out,
+    border-color 0.15s ease-out;
 }
 
 @media (max-width: 640px) {

@@ -1,1 +1,64 @@
-{"account":{"create":"Create account","createError":"Could not create account","created":"Account \"{{username}}\" created for teacher {{name}}","creating":"Creating...","desc":"The teacher will use this account to sign in to the teacher portal (view sessions, take attendance, check in...).","password":"Password *","title":"Create login account - {{name}}","username":"Username *"},"add":"Add teacher","delete":{"message":"Are you sure you want to delete teacher \"{{name}}\"? Assigned classes will become \"Unassigned\".","title":"Delete teacher"},"desc":"Manage teachers and create login accounts for them","empty":{"desc":"Add teachers and create accounts so they can check in, take attendance and assign homework.","title":"No teachers yet"},"form":{"addTitle":"Add teacher","editTitle":"Edit teacher","email":"Email","name":"Full name *","phone":"Phone","subject":"Subject"},"payroll":{"desc":"Calculate teacher pay based on sessions taught this month","emptyDesc":"No payroll data for this month.","emptyTitle":"No payroll data","loadError":"Could not load payroll","month":"Month","rate":"Rate","table":{"actions":"Actions","perSession":"Rate / session","sessions":"Sessions","teacher":"Teacher","total":"Total pay"},"title":"Teacher payroll","totalSpent":"Total payout"},"rate":{"title":"Teaching rate - {{name}}","unit":"Rate per session (VND)","updateError":"Update failed","updated":"Rate updated for {{name}}"},"table":{"actions":"Actions","classes":"Classes teaching","email":"Email","name":"Full name","phone":"Phone","subject":"Subject"},"teachers":{"createAccount":"Create account","title":"Teachers"},"title":"Teachers","toast":{"deleted":"Teacher deleted","loadError":"Could not load the list","saved":"Teacher saved"}}
+{
+  "account": {
+    "create": "Create account",
+    "createError": "Could not create account",
+    "created": "Account \"{{username}}\" created for teacher {{name}}",
+    "creating": "Creating...",
+    "desc": "The teacher will use this account to sign in to the teacher portal (view sessions, take attendance, check in...).",
+    "password": "Password *",
+    "title": "Create login account - {{name}}",
+    "username": "Username *"
+  },
+  "add": "Add teacher",
+  "delete": {
+    "message": "Are you sure you want to delete teacher \"{{name}}\"? Assigned classes will become \"Unassigned\".",
+    "title": "Delete teacher"
+  },
+  "desc": "Manage teachers and create login accounts for them",
+  "empty": {
+    "desc": "Add teachers and create accounts so they can check in, take attendance and assign homework.",
+    "title": "No teachers yet"
+  },
+  "form": {
+    "addTitle": "Add teacher",
+    "editTitle": "Edit teacher",
+    "email": "Email",
+    "name": "Full name *",
+    "phone": "Phone",
+    "subject": "Subject"
+  },
+  "payroll": {
+    "desc": "Calculate teacher pay based on sessions taught this month",
+    "emptyDesc": "No payroll data for this month.",
+    "emptyTitle": "No payroll data",
+    "loadError": "Could not load payroll",
+    "month": "Month",
+    "rate": "Rate",
+    "table": {
+      "actions": "Actions",
+      "perSession": "Rate / session",
+      "sessions": "Sessions",
+      "teacher": "Teacher",
+      "total": "Total pay"
+    },
+    "title": "Teacher payroll",
+    "totalSpent": "Total payout"
+  },
+  "rate": {
+    "title": "Teaching rate - {{name}}",
+    "unit": "Rate per session (VND)",
+    "updateError": "Update failed",
+    "updated": "Rate updated for {{name}}"
+  },
+  "table": {
+    "actions": "Actions",
+    "classes": "Classes teaching",
+    "email": "Email",
+    "name": "Full name",
+    "phone": "Phone",
+    "subject": "Subject"
+  },
+  "teachers": { "createAccount": "Create account", "title": "Teachers" },
+  "title": "Teachers",
+  "toast": { "deleted": "Teacher deleted", "loadError": "Could not load the list", "saved": "Teacher saved" }
+}

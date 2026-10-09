@@ -1,5 +1,5 @@
 import bcrypt from 'bcryptjs';
-import { db, toISODate, confirmedPaid, getCenterSetting, formatSchedule } from '../../db';
+import { db, toISODate, confirmedPaid, getCenterSettings, formatSchedule } from '../../db';
 import { AuthUser, DUMMY_PASSWORD_HASH } from '../../middleware/auth';
 import { issueTokenPair, TokenPair } from '../auth/refresh.service';
 import { ensureParentReferralCode } from '../../services/referrals';
@@ -349,9 +349,10 @@ export async function getVietqrInfo(parentId: number, invoiceId: number): Promis
   const inv = await getParentInvoice(parentId, invoiceId);
   const remaining = await remainingOrThrow(invoiceId, inv.amount);
   const cid = inv.center_id ?? 0;
-  const bank = await getCenterSetting(cid, 'pay_bank_code');
-  const accountNo = await getCenterSetting(cid, 'pay_bank_account_no');
-  const accountName = await getCenterSetting(cid, 'pay_bank_account_name');
+  const s = await getCenterSettings(cid, ['pay_bank_code', 'pay_bank_account_no', 'pay_bank_account_name']);
+  const bank = s.get('pay_bank_code') || '';
+  const accountNo = s.get('pay_bank_account_no') || '';
+  const accountName = s.get('pay_bank_account_name') || '';
   if (!bank || !accountNo) throw AppError.badRequest('Trung tâm chưa cấu hình tài khoản ngân hàng');
   return {
     qr_url: `https://img.vietqr.io/image/${bank}-${accountNo}-compact2.png?amount=${remaining}&addInfo=HD${invoiceId}&accountName=${encodeURIComponent(accountName)}`,
@@ -386,9 +387,10 @@ export async function createVnpayPayment(
   const inv = await getParentInvoice(parentId, invoiceId);
   const remaining = await remainingOrThrow(invoiceId, inv.amount);
   const cid = inv.center_id ?? 0;
-  const tmnCode = await getCenterSetting(cid, 'pay_vnp_tmncode');
-  const hashSecret = await getCenterSetting(cid, 'pay_vnp_hashsecret');
-  const enabled = await getCenterSetting(cid, 'pay_vnp_enabled');
+  const s = await getCenterSettings(cid, ['pay_vnp_tmncode', 'pay_vnp_hashsecret', 'pay_vnp_enabled']);
+  const tmnCode = s.get('pay_vnp_tmncode') || '';
+  const hashSecret = s.get('pay_vnp_hashsecret') || '';
+  const enabled = s.get('pay_vnp_enabled') || '';
   if (enabled !== '1' || !tmnCode || !hashSecret) {
     throw AppError.badRequest('Trung tâm chưa cấu hình thanh toán VNPay');
   }

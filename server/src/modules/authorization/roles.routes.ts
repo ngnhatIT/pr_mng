@@ -13,6 +13,7 @@ import {
   invalidateUserPermissions,
   invalidateAllPermissions,
   getUserPermissions,
+  setRolePermissions,
 } from './authorization.service';
 import { PERMISSIONS } from './permissions';
 
@@ -144,25 +145,8 @@ router.put(
   requirePermission('roles.manage'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const id = Number(req.params.id);
-    const role = (await db.prepare('SELECT is_system FROM roles WHERE id = ?').get(id)) as
-      { is_system: boolean } | undefined;
-    if (!role) throw AppError.notFound('Không tìm thấy vai trò');
-    if (role.is_system) throw AppError.badRequest('Không được sửa quyền của vai trò hệ thống');
     const items = (req.body as { permissions?: { code: string; scope: string }[] }).permissions ?? [];
-    await db.transaction(async (tx) => {
-      await tx.prepare('DELETE FROM role_permissions WHERE role_id = ?').run(id);
-      for (const item of items) {
-        const perm = (await tx.prepare('SELECT id FROM permissions WHERE code = ?').get(item.code)) as
-          { id: number } | undefined;
-        if (!perm) continue;
-        const scope = ['own', 'center', 'all'].includes(item.scope) ? item.scope : 'center';
-        await tx
-          .prepare('INSERT INTO role_permissions (role_id, permission_id, scope) VALUES (?, ?, ?)')
-          .run(id, perm.id, scope);
-      }
-    });
-    invalidateAllPermissions();
-    res.json({ ok: true, count: items.length });
+    res.json({ ok: true, ...(await setRolePermissions(id, items)) });
   })
 );
 

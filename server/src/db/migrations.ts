@@ -133,6 +133,35 @@ const MIGRATIONS: Migration[] = [
         END $$;`);
     },
   },
+  {
+    version: 7,
+    name: 'hot_fk_indexes',
+    up: async (tx) => {
+      // Index cho các FK nóng (audit performance 2026-10-09): PostgreSQL không
+      // tự index FK. DB mới đã có từ schema.ts -> IF NOT EXISTS an toàn cả 2 đường.
+      const idx = [
+        'CREATE INDEX IF NOT EXISTS idx_payments_invoice ON payments(invoice_id)',
+        'CREATE INDEX IF NOT EXISTS idx_invoices_student ON invoices(student_id)',
+        'CREATE INDEX IF NOT EXISTS idx_invoices_center ON invoices(center_id)',
+        'CREATE INDEX IF NOT EXISTS idx_students_center ON students(center_id)',
+        'CREATE INDEX IF NOT EXISTS idx_classes_center ON classes(center_id)',
+        'CREATE INDEX IF NOT EXISTS idx_teachers_center ON teachers(center_id)',
+        'CREATE INDEX IF NOT EXISTS idx_homework_center ON homework(center_id)',
+        'CREATE INDEX IF NOT EXISTS idx_homework_class ON homework(class_id)',
+        'CREATE INDEX IF NOT EXISTS idx_grades_student ON grades(student_id)',
+        'CREATE INDEX IF NOT EXISTS idx_quiz_attempts_homework ON quiz_attempts(homework_id)',
+        'CREATE INDEX IF NOT EXISTS idx_submissions_homework_student ON homework_submissions(homework_id, student_id)',
+        'CREATE INDEX IF NOT EXISTS idx_leave_requests_student ON leave_requests(student_id)',
+        'CREATE INDEX IF NOT EXISTS idx_sessions_date ON sessions(date)',
+        'CREATE INDEX IF NOT EXISTS idx_enrollments_class ON enrollments(class_id)',
+        'CREATE INDEX IF NOT EXISTS idx_parent_students_parent ON parent_students(parent_id)',
+        'CREATE INDEX IF NOT EXISTS idx_parent_students_student ON parent_students(student_id)',
+        'CREATE INDEX IF NOT EXISTS idx_checkins_session ON teacher_checkins(session_id)',
+        'CREATE INDEX IF NOT EXISTS idx_checkins_teacher ON teacher_checkins(teacher_id)',
+      ];
+      for (const sql of idx) await tx.exec(sql);
+    },
+  },
 ];
 
 /** Version migration cao nhất mà code hiện tại biết (để test đối chiếu). */

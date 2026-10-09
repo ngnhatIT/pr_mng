@@ -78,5 +78,9 @@
 }
 
 /* ---------- ZaloReminders: thay inline styles ---------- */
-.zalo-skel-gap { margin-top: 12px; }
-.zalo-response-label { margin-top: 12px; }
+.zalo-skel-gap {
+  margin-top: 12px;
+}
+.zalo-response-label {
+  margin-top: 12px;
+}

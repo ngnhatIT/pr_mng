@@ -14,6 +14,7 @@
  */
 import { db } from '../../db/pg-compat';
 import type { AuthUser } from '../../middleware/auth';
+import { AppError } from '../../shared/errors';
 
 export type Scope = 'own' | 'center' | 'all';
 
@@ -174,4 +175,32 @@ export async function seedAuthorization(): Promise<void> {
     }
   }
   invalidateAllPermissions();
+}
+
+/**
+ * Gán permissions cho role (thay thế toàn bộ).
+ * Logic nghiệp vụ ở service-layer; route chỉ parse input.
+ */
+export async function setRolePermissions(
+  roleId: number,
+  items: { code: string; scope: string }[]
+): Promise<{ count: number }> {
+  const role = (await db.prepare('SELECT is_system FROM roles WHERE id = ?').get(roleId)) as
+    { is_system: boolean } | undefined;
+  if (!role) throw AppError.notFound('Không tìm thấy vai trò');
+  if (role.is_system) throw AppError.badRequest('Không được sửa quyền của vai trò hệ thống');
+  await db.transaction(async (tx) => {
+    await tx.prepare('DELETE FROM role_permissions WHERE role_id = ?').run(roleId);
+    for (const item of items) {
+      const perm = (await tx.prepare('SELECT id FROM permissions WHERE code = ?').get(item.code)) as
+        { id: number } | undefined;
+      if (!perm) continue;
+      const scope = ['own', 'center', 'all'].includes(item.scope) ? item.scope : 'center';
+      await tx
+        .prepare('INSERT INTO role_permissions (role_id, permission_id, scope) VALUES (?, ?, ?)')
+        .run(roleId, perm.id, scope);
+    }
+  });
+  invalidateAllPermissions();
+  return { count: items.length };
 }

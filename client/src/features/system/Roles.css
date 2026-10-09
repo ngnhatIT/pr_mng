@@ -53,7 +53,10 @@
   border-radius: var(--radius-md);
   padding: var(--sp-3) var(--sp-4);
   cursor: pointer;
-  transition: border-color 150ms ease-out, box-shadow 150ms ease-out, transform 150ms ease-out;
+  transition:
+    border-color 150ms ease-out,
+    box-shadow 150ms ease-out,
+    transform 150ms ease-out;
   width: 100%;
   font: inherit;
   color: inherit;
@@ -307,7 +310,9 @@
   padding: 6px 10px;
   border-radius: var(--radius-sm);
   cursor: pointer;
-  transition: background-color 150ms ease-out, color 150ms ease-out;
+  transition:
+    background-color 150ms ease-out,
+    color 150ms ease-out;
   white-space: nowrap;
 }
 
@@ -376,7 +381,9 @@
   transform: translateY(16px);
   opacity: 0;
   pointer-events: none;
-  transition: transform 200ms ease-out, opacity 200ms ease-out;
+  transition:
+    transform 200ms ease-out,
+    opacity 200ms ease-out;
 }
 
 .roles-savebar.show {

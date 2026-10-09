@@ -1,1 +1,71 @@
-{"courses":{"capacity":"Class size","empty":"Courses coming soon...","schedule":"Schedule","students":"{{count}} students","sub":"Find the right course for your child's level and goals","teacher":"Teacher","title":"Featured courses","trial":"Book trial","tuition":"Tuition"},"fields":{"class":"Preferred class","date":"Preferred date","name":"Full name *","noClass":"- Not selected -","note":"Notes","phone":"Phone *","referral":"Referral code","referralPh":"Enter code if referred"},"footerLogin":"Sign in","footerParent":"Parent portal","formTitle":"Book a consultation or trial","hero":{"badge":"Enrolling now - free trial class","ctaConsult":"Book a consultation","ctaTrial":"Book a trial class","fallbackName":"Your center","imgAlt":"Classroom at the center","sub":"Small classes, dedicated teachers, transparent tuition - growing with your child every step."},"lead":{"desc":"Leave your details and we'll call back with course advice.","fail":"Couldn't send","submit":"Send request","success":"Consultation request sent. We'll contact you soon!","title":"Book a consultation"},"loadError":"Couldn't load data","nav":{"courses":"Courses","login":"Sign in","parent":"Parent portal","reviews":"Reviews","teachers":"Teachers"},"reviews":{"count":"({{total}} reviews)","empty":"No reviews yet.","fallbackName":"Parent","stars":"{{rating}} out of 5 stars","sub":"Real reviews from our parents","title":"What parents say"},"sending":"Sending...","teachers":{"empty":"Coming soon...","fallback":"Teacher","sub":"Dedicated, experienced teachers","title":"Our teachers"},"trial":{"desc":"Try one class free before deciding.","fail":"Couldn't send","submit":"Book trial class","success":"Trial class booked!","title":"Book a trial class"}}
+{
+  "courses": {
+    "capacity": "Class size",
+    "empty": "Courses coming soon...",
+    "schedule": "Schedule",
+    "students": "{{count}} students",
+    "sub": "Find the right course for your child's level and goals",
+    "teacher": "Teacher",
+    "title": "Featured courses",
+    "trial": "Book trial",
+    "tuition": "Tuition"
+  },
+  "fields": {
+    "class": "Preferred class",
+    "date": "Preferred date",
+    "name": "Full name *",
+    "noClass": "- Not selected -",
+    "note": "Notes",
+    "phone": "Phone *",
+    "referral": "Referral code",
+    "referralPh": "Enter code if referred"
+  },
+  "footerLogin": "Sign in",
+  "footerParent": "Parent portal",
+  "formTitle": "Book a consultation or trial",
+  "hero": {
+    "badge": "Enrolling now - free trial class",
+    "ctaConsult": "Book a consultation",
+    "ctaTrial": "Book a trial class",
+    "fallbackName": "Your center",
+    "imgAlt": "Classroom at the center",
+    "sub": "Small classes, dedicated teachers, transparent tuition - growing with your child every step."
+  },
+  "lead": {
+    "desc": "Leave your details and we'll call back with course advice.",
+    "fail": "Couldn't send",
+    "submit": "Send request",
+    "success": "Consultation request sent. We'll contact you soon!",
+    "title": "Book a consultation"
+  },
+  "loadError": "Couldn't load data",
+  "nav": {
+    "courses": "Courses",
+    "login": "Sign in",
+    "parent": "Parent portal",
+    "reviews": "Reviews",
+    "teachers": "Teachers"
+  },
+  "reviews": {
+    "count": "({{total}} reviews)",
+    "empty": "No reviews yet.",
+    "fallbackName": "Parent",
+    "stars": "{{rating}} out of 5 stars",
+    "sub": "Real reviews from our parents",
+    "title": "What parents say"
+  },
+  "sending": "Sending...",
+  "teachers": {
+    "empty": "Coming soon...",
+    "fallback": "Teacher",
+    "sub": "Dedicated, experienced teachers",
+    "title": "Our teachers"
+  },
+  "trial": {
+    "desc": "Try one class free before deciding.",
+    "fail": "Couldn't send",
+    "submit": "Book trial class",
+    "success": "Trial class booked!",
+    "title": "Book a trial class"
+  }
+}

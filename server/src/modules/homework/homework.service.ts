@@ -1,5 +1,6 @@
 import { db } from '../../db';
 import { parsePagination, paginate, type PageOptions, type Paginated } from '../../shared/pagination';
+import { DAY_MS } from '../../shared/time';
 import { AppError } from '../../shared/errors';
 import { todayVN, nowVNMinute, assignedCountExpr, assertValidDates } from './homework.helpers';
 import { homeworkRepo } from './homework.repo';
@@ -164,7 +165,7 @@ export async function getHomeworkStats(
   const from = `FROM homework h JOIN classes c ON c.id = h.class_id`;
   const where = `WHERE ${conds.join(' AND ')}`;
   const today = todayVN();
-  const soon = new Date(Date.now() + 3 * 86400000).toLocaleDateString('en-CA', {
+  const soon = new Date(Date.now() + 3 * DAY_MS).toLocaleDateString('en-CA', {
     timeZone: 'Asia/Ho_Chi_Minh',
   });
   const q = async (extra: string, ...p: unknown[]) =>

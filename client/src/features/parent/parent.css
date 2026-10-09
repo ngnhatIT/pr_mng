@@ -10,7 +10,9 @@
   gap: 6px;
 }
 .child-card {
-  transition: box-shadow 0.15s ease-out, border-color 0.15s ease-out;
+  transition:
+    box-shadow 0.15s ease-out,
+    border-color 0.15s ease-out;
 }
 .child-card:hover {
   box-shadow: var(--shadow-md);
@@ -244,7 +246,9 @@ button.quiz-take-opt {
   background: var(--bg-soft, #fff);
   cursor: pointer;
   font-size: 15px;
-  transition: border-color 0.15s ease, background 0.15s ease;
+  transition:
+    border-color 0.15s ease,
+    background 0.15s ease;
 }
 .file-drop:hover,
 .file-drop:focus-within {

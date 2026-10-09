@@ -1,1 +1,83 @@
-{"badge":{"custom":"Custom","system":"System"},"card":{"permCount":"{{count}} permissions","userCount":"{{count}} users"},"confirmDelete":{"message":"Role \"{{name}}\" will be deleted. Users with this role will lose its permissions. This cannot be undone.","title":"Delete role?"},"create":"Create role","delete":"Delete","desc":"Who can do what, on which data, in which scope","disableScope":"Turn off this permission","edit":"Edit","emptySearch":{"desc":"Try a different keyword.","title":"No roles found"},"forbidden":{"desc":"Your account cannot view the roles page. Contact an administrator if needed.","title":"No access"},"form":{"code":"Role code","codePh":"e.g. receptionist (auto-generated from name if empty)","create":"Create role","desc":"Description","descPh":"What does this role do in the center?","name":"Role name","namePh":"e.g. Receptionist","needCode":"Please enter a role code","needName":"Please enter a role name","save":"Save changes","saveFail":"Save failed"},"modal":{"createTitle":"Create new role","editTitle":"Edit role"},"module":{"attendance":"Attendance","classes":"Classes","grades":"Grades","homework":"Homework","invoices":"Tuition","leads":"Leads","leaves":"Leaves","notifications":"Notifications","payroll":"Payroll","referrals":"Referrals","reports":"Reports","reviews":"Reviews","roles":"Roles","rooms":"Rooms","sessions":"Sessions","settings":"Settings","students":"Students","system":"System","teachers":"Teachers","trials":"Trials","users":"Accounts"},"modulePermCount":"{{count}} permissions","noDesc":"No description yet.","onCount":"{{on}}/{{total}} enabled","savePerms":"Save permissions","savebar":"{{count}} unsaved changes","saving":"Saving...","scope":{"all":"All","center":"Center","own":"Own"},"scopeAria":"Scope for {{name}}","scopeShort":{"all":"All","center":"Center","off":"Off","own":"Own"},"searchPh":"Search roles...","selectRole":{"desc":"Select a role from the list on the left to view and edit its permissions.","title":"Select a role"},"systemNote":"System role: cannot be edited or deleted","title":"Roles","toast":{"created":"Role created","deleteFail":"Failed to delete role","deleted":"Role deleted","loadDetailFail":"Failed to load role details","loadRolesFail":"Failed to load role list","savePermsFail":"Failed to save permissions","savedPerms":"Saved {{count}} permissions for the role","updated":"Role updated"},"turnOffAll":"Turn all off","turnOnAll":"Turn all on"}
+{
+  "badge": { "custom": "Custom", "system": "System" },
+  "card": { "permCount": "{{count}} permissions", "userCount": "{{count}} users" },
+  "confirmDelete": {
+    "message": "Role \"{{name}}\" will be deleted. Users with this role will lose its permissions. This cannot be undone.",
+    "title": "Delete role?"
+  },
+  "create": "Create role",
+  "delete": "Delete",
+  "desc": "Who can do what, on which data, in which scope",
+  "disableScope": "Turn off this permission",
+  "edit": "Edit",
+  "emptySearch": { "desc": "Try a different keyword.", "title": "No roles found" },
+  "forbidden": {
+    "desc": "Your account cannot view the roles page. Contact an administrator if needed.",
+    "title": "No access"
+  },
+  "form": {
+    "code": "Role code",
+    "codePh": "e.g. receptionist (auto-generated from name if empty)",
+    "create": "Create role",
+    "desc": "Description",
+    "descPh": "What does this role do in the center?",
+    "name": "Role name",
+    "namePh": "e.g. Receptionist",
+    "needCode": "Please enter a role code",
+    "needName": "Please enter a role name",
+    "save": "Save changes",
+    "saveFail": "Save failed"
+  },
+  "modal": { "createTitle": "Create new role", "editTitle": "Edit role" },
+  "module": {
+    "attendance": "Attendance",
+    "classes": "Classes",
+    "grades": "Grades",
+    "homework": "Homework",
+    "invoices": "Tuition",
+    "leads": "Leads",
+    "leaves": "Leaves",
+    "notifications": "Notifications",
+    "payroll": "Payroll",
+    "referrals": "Referrals",
+    "reports": "Reports",
+    "reviews": "Reviews",
+    "roles": "Roles",
+    "rooms": "Rooms",
+    "sessions": "Sessions",
+    "settings": "Settings",
+    "students": "Students",
+    "system": "System",
+    "teachers": "Teachers",
+    "trials": "Trials",
+    "users": "Accounts"
+  },
+  "modulePermCount": "{{count}} permissions",
+  "noDesc": "No description yet.",
+  "onCount": "{{on}}/{{total}} enabled",
+  "savePerms": "Save permissions",
+  "savebar": "{{count}} unsaved changes",
+  "saving": "Saving...",
+  "scope": { "all": "All", "center": "Center", "own": "Own" },
+  "scopeAria": "Scope for {{name}}",
+  "scopeShort": { "all": "All", "center": "Center", "off": "Off", "own": "Own" },
+  "searchPh": "Search roles...",
+  "selectRole": {
+    "desc": "Select a role from the list on the left to view and edit its permissions.",
+    "title": "Select a role"
+  },
+  "systemNote": "System role: cannot be edited or deleted",
+  "title": "Roles",
+  "toast": {
+    "created": "Role created",
+    "deleteFail": "Failed to delete role",
+    "deleted": "Role deleted",
+    "loadDetailFail": "Failed to load role details",
+    "loadRolesFail": "Failed to load role list",
+    "savePermsFail": "Failed to save permissions",
+    "savedPerms": "Saved {{count}} permissions for the role",
+    "updated": "Role updated"
+  },
+  "turnOffAll": "Turn all off",
+  "turnOnAll": "Turn all on"
+}

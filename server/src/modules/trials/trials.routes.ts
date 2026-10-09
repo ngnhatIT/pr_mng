@@ -57,7 +57,7 @@ router.post(
     const id = Number(req.params.id);
     const { class_id } = req.body as { class_id?: number };
     // convertTrial ném 404 (không tồn tại/khác center) hoặc 409 (đã convert)
-    res.json({ ok: true, ...(await convertTrial(cid, id, class_id ?? null)) });
+    res.status(201).json({ ok: true, ...(await convertTrial(cid, id, class_id ?? null)) });
   })
 );
 

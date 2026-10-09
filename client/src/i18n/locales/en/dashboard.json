@@ -1,1 +1,46 @@
-{"debtEmpty":"No outstanding debt.","debtTitle":"Top debtors","fallbackName":"you","greeting":{"afternoon":"Good afternoon","evening":"Good evening","midday":"Good afternoon","morning":"Good morning"},"loadError":"Couldn't load data","noData":"No data","pageDesc":"Center activity today","pageTitle":"Overview","quick":{"actionsTitle":"Quick actions","addStudent":"Add student","addStudentDesc":"Create a new student profile","attendance":"Attendance","attendanceDesc":"Record a session","createInvoice":"Create invoice","createInvoiceDesc":"Issue a tuition receipt","zalo":"Tuition reminders","zaloDesc":"Send reminders via Zalo"},"stats":{"classes":"Open classes","classesSub":"{{total}} teachers","debt":"Outstanding debt","debtSub":"unpaid invoices","revenue":"This month's revenue","revenueSub":"collected payments","students":"Active students","studentsSub":"{{total}} total students"},"today":{"attendance":"Take attendance","count":"{{count}} sessions today","empty":"No sessions today.","none":"No sessions today","title":"Today's sessions","topic":"Topic: {{topic}}","unassigned":"Unassigned"},"viewAll":"View all"}
+{
+  "debtEmpty": "No outstanding debt.",
+  "debtTitle": "Top debtors",
+  "fallbackName": "you",
+  "greeting": {
+    "afternoon": "Good afternoon",
+    "evening": "Good evening",
+    "midday": "Good afternoon",
+    "morning": "Good morning"
+  },
+  "loadError": "Couldn't load data",
+  "noData": "No data",
+  "pageDesc": "Center activity today",
+  "pageTitle": "Overview",
+  "quick": {
+    "actionsTitle": "Quick actions",
+    "addStudent": "Add student",
+    "addStudentDesc": "Create a new student profile",
+    "attendance": "Attendance",
+    "attendanceDesc": "Record a session",
+    "createInvoice": "Create invoice",
+    "createInvoiceDesc": "Issue a tuition receipt",
+    "zalo": "Tuition reminders",
+    "zaloDesc": "Send reminders via Zalo"
+  },
+  "stats": {
+    "classes": "Open classes",
+    "classesSub": "{{total}} teachers",
+    "debt": "Outstanding debt",
+    "debtSub": "unpaid invoices",
+    "revenue": "This month's revenue",
+    "revenueSub": "collected payments",
+    "students": "Active students",
+    "studentsSub": "{{total}} total students"
+  },
+  "today": {
+    "attendance": "Take attendance",
+    "count": "{{count}} sessions today",
+    "empty": "No sessions today.",
+    "none": "No sessions today",
+    "title": "Today's sessions",
+    "topic": "Topic: {{topic}}",
+    "unassigned": "Unassigned"
+  },
+  "viewAll": "View all"
+}

@@ -105,4 +105,6 @@
 }
 
 /* ---------- ReferralsAdmin: thay inline styles ---------- */
-.referral-skel-spacer { height: 16px; }
+.referral-skel-spacer {
+  height: 16px;
+}

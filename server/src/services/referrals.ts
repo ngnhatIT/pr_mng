@@ -1,4 +1,5 @@
 import { db, getCenterSetting, recalcInvoiceStatus } from '../db';
+import { AppError } from '../shared/errors';
 import { logger } from '../shared/logger';
 
 const log = logger.scope('referrals');
@@ -93,16 +94,18 @@ export async function afterInvoicePaid(invoiceId: number): Promise<void> {
       .prepare('SELECT parent_id FROM parent_students WHERE student_id = ? ORDER BY parent_id ASC LIMIT 1')
       .get(student.id)) as { parent_id: number } | undefined;
 
+    const refId = ref.id;
+    const referrerParentId = ref.referrer_parent_id;
     const rewarded = await db.transaction(async (tx) => {
       // Chống double-reward đồng thời: chỉ 1 bên giành được chuyển trạng thái
       const claimed = await tx
         .prepare("UPDATE referrals SET status = 'rewarded' WHERE id = ? AND status = 'pending'")
-        .run(ref!.id);
+        .run(refId);
       if ((claimed.changes ?? 0) !== 1) return false; // đã có luồng khác thưởng rồi
       const addCredit = await tx.prepare('INSERT INTO credits (parent_id, amount, reason) VALUES (?, ?, ?)');
       if (amtReferrer > 0) {
         await addCredit.run(
-          ref!.referrer_parent_id,
+          referrerParentId,
           Math.round(amtReferrer),
           `Thưởng giới thiệu học viên mới (HD${invoiceId})`
         );
@@ -133,17 +136,17 @@ export async function applyCreditToInvoice(
   const inv = (await db
     .prepare('SELECT id, student_id, amount FROM invoices WHERE id = ?')
     .get(invoiceId)) as { id: number; student_id: number; amount: number } | undefined;
-  if (!inv) throw new Error('Không tìm thấy hóa đơn');
+  if (!inv) throw AppError.notFound('Không tìm thấy hóa đơn');
 
   const credit = (await db.prepare('SELECT * FROM credits WHERE id = ?').get(creditId)) as
     { id: number; parent_id: number; amount: number; used_amount: number } | undefined;
-  if (!credit) throw new Error('Không tìm thấy credits');
+  if (!credit) throw AppError.notFound('Không tìm thấy credits');
 
   // Credits phải thuộc về phụ huynh đã liên kết với học viên của hóa đơn
   const owner = await db
     .prepare('SELECT 1 FROM parent_students WHERE parent_id = ? AND student_id = ?')
     .get(credit.parent_id, inv.student_id);
-  if (!owner) throw new Error('Credits này không thuộc phụ huynh của học viên');
+  if (!owner) throw AppError.badRequest('Credits này không thuộc phụ huynh của học viên');
 
   // Toàn bộ tính toán + ghi nhận trong 1 transaction, lock cả hóa đơn và credit
   // (chống 2 request đồng thời cùng áp vượt số nợ).
@@ -151,14 +154,14 @@ export async function applyCreditToInvoice(
     const lockedInv = (await tx
       .prepare('SELECT amount FROM invoices WHERE id = ? FOR UPDATE')
       .get(invoiceId)) as { amount: number } | undefined;
-    if (!lockedInv) throw new Error('Không tìm thấy hóa đơn');
+    if (!lockedInv) throw AppError.notFound('Không tìm thấy hóa đơn');
     const lockedCredit = (await tx
       .prepare('SELECT amount, used_amount FROM credits WHERE id = ? FOR UPDATE')
       .get(creditId)) as { amount: number; used_amount: number } | undefined;
-    if (!lockedCredit) throw new Error('Không tìm thấy credits');
+    if (!lockedCredit) throw AppError.notFound('Không tìm thấy credits');
 
     const available = lockedCredit.amount - lockedCredit.used_amount;
-    if (available <= 0) throw new Error('Credits đã dùng hết');
+    if (available <= 0) throw AppError.badRequest('Credits đã dùng hết');
 
     const paidRow = (await tx
       .prepare(
@@ -166,7 +169,7 @@ export async function applyCreditToInvoice(
       )
       .get(invoiceId)) as { paid: number };
     const remaining = lockedInv.amount - Number(paidRow.paid);
-    if (remaining <= 0.01) throw new Error('Hóa đơn đã thanh toán đủ');
+    if (remaining <= 0.01) throw AppError.badRequest('Hóa đơn đã thanh toán đủ');
 
     const applied = Math.round(Math.min(available, remaining));
     await tx
@@ -180,7 +183,7 @@ export async function applyCreditToInvoice(
     return { applied };
   });
 
-  if (applied <= 0) throw new Error('Không áp dụng được credits');
+  if (applied <= 0) throw AppError.badRequest('Không áp dụng được credits');
   const status = await recalcInvoiceStatus(invoiceId);
   if (status === 'paid') await afterInvoicePaid(invoiceId);
   return { applied, status };

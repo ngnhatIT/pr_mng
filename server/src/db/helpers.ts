@@ -102,6 +102,30 @@ export async function setCenterSetting(centerId: number, key: string, value: str
     .run(centerId, key, value);
 }
 
+/**
+ * Đọc NHIỀU setting của 1 center trong 1 query (thay vì N lần getCenterSetting).
+ * Trả về Map đủ các key yêu cầu (thiếu -> fallback từng key về settings toàn cục).
+ */
+export async function getCenterSettings(
+  centerId: number,
+  keys: string[],
+  fallback = ''
+): Promise<Map<string, string>> {
+  const out = new Map<string, string>();
+  if (keys.length === 0) return out;
+  const placeholders = keys.map(() => '?').join(',');
+  const rows = (await db
+    .prepare(`SELECT key, value FROM center_settings WHERE center_id = ? AND key IN (${placeholders})`)
+    .all(centerId, ...keys)) as { key: string; value: string | null }[];
+  for (const r of rows) {
+    if (r.value !== null && r.value !== undefined) out.set(r.key, r.value);
+  }
+  for (const k of keys) {
+    if (!out.has(k)) out.set(k, await getSetting(k, fallback));
+  }
+  return out;
+}
+
 /* --------------------- Sinh buổi học từ lịch của lớp --------------------- */
 
 export async function generateSessionsForClass(classId: number): Promise<void> {

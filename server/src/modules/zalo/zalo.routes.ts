@@ -129,7 +129,9 @@ router.post(
     if (r.ok) {
       res.json({ demo: false, status: 'sent', message: `Đã gửi tin nhắn thử tới ${phone}` });
     } else {
-      res.status(502).json({ demo: false, status: 'failed', message: `Gửi thất bại: ${r.error}` });
+      res
+        .status(502)
+        .json({ error: `Gửi thất bại: ${r.error}`, code: 'ZALO_SEND_FAILED', demo: false, status: 'failed' });
     }
   })
 );
