@@ -111,6 +111,7 @@ function LeaveFormModal({ onClose, onDone }: { onClose: () => void; onDone: () =
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (busy) return;
     if (!studentId) {
       toast(t('leaves.childRequired'), 'error');
       return;
