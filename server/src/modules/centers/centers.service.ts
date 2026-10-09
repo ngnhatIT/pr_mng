@@ -84,7 +84,7 @@ export async function createCenterWithAdmin(
       .run(adminUsername, hash, `Quản trị ${name}`, centerId);
     return centerId;
   });
-  void audit({
+  await audit({
     centerId,
     actor,
     action: 'create',
