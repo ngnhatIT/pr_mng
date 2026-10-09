@@ -1471,6 +1471,10 @@ CREATE INDEX IF NOT EXISTS idx_quiz_attempts_homework ON quiz_attempts(homework_
 CREATE INDEX IF NOT EXISTS idx_submissions_homework_student ON homework_submissions(homework_id, student_id);
 CREATE INDEX IF NOT EXISTS idx_leave_requests_student ON leave_requests(student_id);
 CREATE INDEX IF NOT EXISTS idx_sessions_date ON sessions(date);
+CREATE INDEX IF NOT EXISTS idx_attendance_session ON attendance(session_id);
+CREATE INDEX IF NOT EXISTS idx_attendance_student ON attendance(student_id);
+CREATE INDEX IF NOT EXISTS idx_refresh_token_hash ON refresh_tokens(token_hash);
+CREATE INDEX IF NOT EXISTS idx_sessions_class ON sessions(class_id);
 CREATE INDEX IF NOT EXISTS idx_enrollments_class ON enrollments(class_id);
 CREATE INDEX IF NOT EXISTS idx_parent_students_parent ON parent_students(parent_id);
 CREATE INDEX IF NOT EXISTS idx_parent_students_student ON parent_students(student_id);

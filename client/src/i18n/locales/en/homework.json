@@ -71,7 +71,8 @@
       "deleteFail": "Delete failed",
       "loadFail": "Could not load the bank",
       "staleSelection_one": "{{count}} selected question is no longer in the list",
-      "staleSelection_other": "{{count}} selected questions are no longer in the list"
+      "staleSelection_other": "{{count}} selected questions are no longer in the list",
+      "staleSelection": "{{count}} selected questions are no longer in the list"
     },
     "import": "Add {{count}} questions to quiz",
     "selected": "{{count}} selected"
@@ -85,7 +86,9 @@
     "daysLeft_other": "{{count}} days left",
     "overdueDays_one": "Overdue by {{count}} day",
     "overdueDays_other": "Overdue by {{count}} days",
-    "today": "Due today"
+    "today": "Due today",
+    "daysLeft": "{{count}} days left",
+    "overdueDays": "{{count}} days overdue"
   },
   "editor": {
     "bold": "Bold",
@@ -211,9 +214,16 @@
       "savedDraft": "Draft saved",
       "scheduled_one": "Scheduled for {{count}} class",
       "scheduled_other": "Scheduled for {{count}} classes",
-      "updated": "Updated"
+      "updated": "Updated",
+      "assigned": "Assigned to {{count}} classes",
+      "bankImported": "Added {{count}} questions from bank",
+      "scheduled": "Scheduled for {{count}} classes"
     },
-    "wholeClass": "Whole class"
+    "wholeClass": "Whole class",
+    "publishFor": "Publish to {{count}} classes",
+    "quizQuestions": "Quiz questions ({{count}} questions, {{total}} pts total)",
+    "scheduleFor": "Schedule ({{count}} classes)",
+    "selectedCount": "{{count}} selected"
   },
   "grade": {
     "empty": "No students yet",
@@ -265,7 +275,8 @@
     "imageAlt": "Submission photo",
     "submittedAt": "Submitted {{time}}",
     "title": "Submissions - {{title}}",
-    "viewLarge": "View full image"
+    "viewLarge": "View full image",
+    "count": "{{count}} submissions"
   },
   "table": {
     "actions": "Actions",

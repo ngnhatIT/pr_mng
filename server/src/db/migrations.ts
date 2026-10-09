@@ -195,6 +195,20 @@ const MIGRATIONS: Migration[] = [
       await tx.exec('CREATE INDEX IF NOT EXISTS idx_idempotency_created ON idempotency_keys(created_at)');
     },
   },
+  {
+    version: 9,
+    name: 'hot_table_indexes_2',
+    up: async (tx) => {
+      // 4 index còn thiếu trên bảng nóng (audit API perf 2026-10-09)
+      const idx = [
+        'CREATE INDEX IF NOT EXISTS idx_attendance_session ON attendance(session_id)',
+        'CREATE INDEX IF NOT EXISTS idx_attendance_student ON attendance(student_id)',
+        'CREATE INDEX IF NOT EXISTS idx_refresh_token_hash ON refresh_tokens(token_hash)',
+        'CREATE INDEX IF NOT EXISTS idx_sessions_class ON sessions(class_id)',
+      ];
+      for (const sql of idx) await tx.exec(sql);
+    },
+  },
 ];
 
 /** Version migration cao nhất mà code hiện tại biết (để test đối chiếu). */
