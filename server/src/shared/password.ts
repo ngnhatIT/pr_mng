@@ -29,14 +29,19 @@ const COMMON_PASSWORDS = new Set([
 ]);
 
 const MIN_PASSWORD_LENGTH = 8;
+/** bcrypt truncate lặng lẽ ở 72 bytes — giới hạn để user không tưởng password dài hơn an toàn hơn */
+const MAX_PASSWORD_LENGTH = 72;
 
 /**
- * Validate mật khẩu mới: tối thiểu 8 ký tự, không nằm trong danh sách phổ biến.
+ * Validate mật khẩu mới: 8-72 ký tự, không nằm trong danh sách phổ biến.
  * Ném AppError 400 nếu không đạt.
  */
 export function assertStrongPassword(password: string, label = 'Mật khẩu'): void {
   if (!password || password.length < MIN_PASSWORD_LENGTH) {
     throw AppError.badRequest(`${label} phải từ ${MIN_PASSWORD_LENGTH} ký tự trở lên`, 'WEAK_PASSWORD');
+  }
+  if (password.length > MAX_PASSWORD_LENGTH) {
+    throw AppError.badRequest(`${label} tối đa ${MAX_PASSWORD_LENGTH} ký tự`, 'WEAK_PASSWORD');
   }
   if (COMMON_PASSWORDS.has(password.toLowerCase())) {
     throw AppError.badRequest(`${label} quá đơn giản, vui lòng chọn mật khẩu khác`, 'WEAK_PASSWORD');

@@ -116,8 +116,7 @@ export async function registerParent(input: {
 }): Promise<TokenPair & { parent: ParentPublic }> {
   const normalized = normalizePhone(input.phone);
   if (!normalized) throw AppError.badRequest('Số điện thoại không hợp lệ');
-  if (!input.password || input.password.length < 4)
-    throw AppError.badRequest('Mật khẩu phải có ít nhất 4 ký tự');
+  assertStrongPassword(input.password || '');
   const name = (input.name || '').trim();
   if (!name) throw AppError.badRequest('Vui lòng nhập họ tên');
 
