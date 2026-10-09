@@ -1,0 +1,100 @@
+import { Router, Response } from 'express';
+import { db } from '../../db';
+import { AuthRequest, reqCenterId } from '../../middleware/auth';
+import { getDefaultCenter } from '../../utils/plans';
+import { asyncHandler } from '../../shared/http';
+import { listRooms } from './rooms.service';
+
+const router = Router();
+
+/** center_id hiệu lực: superadmin (null) dùng trung tâm mặc định */
+function effCid(req: AuthRequest): number | null {
+  const cid = reqCenterId(req);
+  if (cid !== null) return cid;
+  return getDefaultCenter()?.id ?? null;
+}
+
+/** Danh sách phòng học kèm số lớp đang dùng */
+router.get(
+  '/',
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const isSuper = req.user?.role === 'superadmin';
+    const cid = isSuper ? null : effCid(req);
+    const { page, limit } = req.query as { page?: string; limit?: string };
+    res.json(listRooms(cid, { page, limit }));
+  })
+);
+
+/** Thêm phòng học */
+router.post(
+  '/',
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const cid = effCid(req);
+    const { name, capacity } = req.body as { name?: string; capacity?: number };
+    if (!name || !String(name).trim()) {
+      res.status(400).json({ error: 'Tên phòng là bắt buộc' });
+      return;
+    }
+    const cap = Number(capacity);
+    const r = db
+      .prepare('INSERT INTO rooms (center_id, name, capacity) VALUES (?, ?, ?)')
+      .run(cid, String(name).trim(), Number.isFinite(cap) && cap > 0 ? Math.floor(cap) : 30);
+    res.status(201).json(db.prepare('SELECT * FROM rooms WHERE id = ?').get(Number(r.lastInsertRowid)));
+  })
+);
+
+function getScopedRoom(req: AuthRequest, id: number) {
+  const cid = effCid(req);
+  const row = db.prepare('SELECT * FROM rooms WHERE id = ?').get(id) as
+    { id: number; center_id: number | null } | undefined;
+  if (!row) return null;
+  // superadmin (effCid = default center) vẫn được sửa phòng của mọi trung tâm? Không — chỉ phòng thuộc center hiệu lực
+  if (req.user?.role !== 'superadmin' && cid !== null && row.center_id !== cid) return null;
+  return row;
+}
+
+/** Sửa phòng học */
+router.put(
+  '/:id',
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const id = Number(req.params.id);
+    const room = getScopedRoom(req, id);
+    if (!room) {
+      res.status(404).json({ error: 'Không tìm thấy phòng học' });
+      return;
+    }
+    const { name, capacity } = req.body as { name?: string; capacity?: number };
+    if (!name || !String(name).trim()) {
+      res.status(400).json({ error: 'Tên phòng là bắt buộc' });
+      return;
+    }
+    const cap = Number(capacity);
+    db.prepare('UPDATE rooms SET name = ?, capacity = ? WHERE id = ?').run(
+      String(name).trim(),
+      Number.isFinite(cap) && cap > 0 ? Math.floor(cap) : 30,
+      id
+    );
+    res.json(db.prepare('SELECT * FROM rooms WHERE id = ?').get(id));
+  })
+);
+
+/** Xóa phòng học */
+router.delete(
+  '/:id',
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const id = Number(req.params.id);
+    const room = getScopedRoom(req, id);
+    if (!room) {
+      res.status(404).json({ error: 'Không tìm thấy phòng học' });
+      return;
+    }
+    const tx = db.transaction(() => {
+      db.prepare('UPDATE classes SET room_id = NULL WHERE room_id = ?').run(id);
+      db.prepare('DELETE FROM rooms WHERE id = ?').run(id);
+    });
+    tx();
+    res.json({ ok: true });
+  })
+);
+
+export default router;

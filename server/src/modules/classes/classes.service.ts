@@ -1,0 +1,360 @@
+import { db, ScheduleEntry, DAY_NAMES } from '../../db';
+import { getDefaultCenter } from '../../utils/plans';
+import { AppError } from '../../shared/errors';
+import { homeworkRepo } from '../homework/homework.repo';
+import { parsePagination, paginate, type PageOptions, type Paginated } from '../../shared/pagination';
+import { audit, type AuditActor } from '../../shared/audit';
+
+/* ---------------------------------- Types ---------------------------------- */
+
+/** Context phân quyền tối thiểu mà service cần (tách khỏi AuthRequest). */
+export interface ScopeCtx {
+  centerId: number | null; // null = superadmin (thấy mọi trung tâm)
+  role: string;
+  teacherId: number | null;
+}
+
+export interface ClassInput {
+  name?: string;
+  teacher_id?: number | null;
+  schedule?: unknown;
+  start_date?: string | null;
+  end_date?: string | null;
+  tuition_fee?: number;
+  max_students?: number;
+  status?: string;
+  room_id?: number | null;
+}
+
+export interface ClassRow {
+  id: number;
+  name: string;
+  center_id: number | null;
+  teacher_id: number | null;
+  max_students: number;
+  [key: string]: unknown;
+}
+
+/* ------------------------------ Scope & validate ------------------------------ */
+
+/**
+ * Điều kiện scope cho bảng classes (alias c):
+ * - center: superadmin bypass, còn lại lọc c.center_id
+ * - role teacher: chỉ lớp do mình dạy
+ */
+export function classScopeWhere(ctx: ScopeCtx): { clause: string; params: unknown[] } {
+  const conds: string[] = [];
+  const params: unknown[] = [];
+  if (ctx.centerId !== null) {
+    conds.push('c.center_id = ?');
+    params.push(ctx.centerId);
+  }
+  if (ctx.role === 'teacher' && ctx.teacherId) {
+    conds.push('c.teacher_id = ?');
+    params.push(ctx.teacherId);
+  } else if (ctx.role === 'teacher') {
+    conds.push('1 = 0'); // giáo viên chưa gắn teacher_id thì không thấy lớp nào
+  }
+  return { clause: conds.length ? ' AND ' + conds.join(' AND ') : '', params };
+}
+
+/** Parse & validate lịch học — ném 400 nếu sai định dạng. */
+export function parseSchedule(raw: unknown): ScheduleEntry[] {
+  if (!Array.isArray(raw)) throw AppError.badRequest('Lịch học không hợp lệ');
+  const value: ScheduleEntry[] = [];
+  for (const e of raw) {
+    const day = Number((e as ScheduleEntry).day);
+    const start = String((e as ScheduleEntry).start || '');
+    const end = String((e as ScheduleEntry).end || '');
+    if (!Number.isInteger(day) || day < 2 || day > 8) {
+      throw AppError.badRequest('Thứ trong lịch học phải từ 2 (Thứ Hai) đến 8 (Chủ Nhật)');
+    }
+    if (!/^\d{2}:\d{2}$/.test(start) || !/^\d{2}:\d{2}$/.test(end)) {
+      throw AppError.badRequest('Giờ học phải có dạng HH:MM');
+    }
+    value.push({ day, start, end });
+  }
+  return value;
+}
+
+/** center_id khi tạo lớp: superadmin dùng trung tâm mặc định. */
+function resolveCenterId(ctx: ScopeCtx): number | null {
+  if (ctx.centerId !== null) return ctx.centerId;
+  return getDefaultCenter()?.id ?? null;
+}
+
+/** Kiểm tra room_id hợp lệ trong scope — trả về id đã chuẩn hóa (hoặc null). */
+function resolveRoomId(ctx: ScopeCtx, roomId: unknown, centerId: number | null): number | null {
+  if (roomId === undefined || roomId === null || roomId === '') return null;
+  const id = Number(roomId);
+  if (!Number.isFinite(id) || id <= 0) throw AppError.badRequest('Phòng học không hợp lệ');
+  const room = db.prepare('SELECT id, center_id FROM rooms WHERE id = ?').get(id) as
+    { id: number; center_id: number | null } | undefined;
+  if (!room) throw AppError.notFound('Không tìm thấy phòng học');
+  if (ctx.role !== 'superadmin' && centerId !== null && room.center_id !== centerId) {
+    throw AppError.badRequest('Phòng học không thuộc trung tâm này');
+  }
+  return room.id;
+}
+
+interface RoomConflict {
+  className: string;
+  day: number;
+  start: string;
+  end: string;
+  roomName: string;
+}
+
+/** Kiểm tra trùng lịch phòng: cùng room, cùng day, khung giờ giao nhau. */
+function findRoomConflict(
+  roomId: number,
+  schedule: ScheduleEntry[],
+  excludeId: number | null,
+  centerId: number | null
+): RoomConflict | null {
+  if (!roomId || schedule.length === 0) return null;
+  const room = db.prepare('SELECT name FROM rooms WHERE id = ?').get(roomId) as { name: string } | undefined;
+  const roomName = room?.name || '';
+  let sql = 'SELECT id, name, schedule FROM classes WHERE room_id = ? AND status = ?';
+  const params: unknown[] = [roomId, 'active'];
+  if (centerId !== null) {
+    sql += ' AND center_id = ?';
+    params.push(centerId);
+  }
+  if (excludeId) {
+    sql += ' AND id != ?';
+    params.push(excludeId);
+  }
+  const rows = db.prepare(sql).all(...params) as { id: number; name: string; schedule: string }[];
+  for (const row of rows) {
+    let other: ScheduleEntry[];
+    try {
+      other = JSON.parse(row.schedule || '[]');
+    } catch {
+      other = [];
+    }
+    for (const a of schedule) {
+      for (const b of other) {
+        if (a.day === b.day && a.start < b.end && b.start < a.end) {
+          return { className: row.name, day: a.day, start: a.start, end: a.end, roomName };
+        }
+      }
+    }
+  }
+  return null;
+}
+
+function assertNoRoomConflict(
+  roomId: number | null,
+  schedule: ScheduleEntry[],
+  excludeId: number | null,
+  centerId: number | null
+): void {
+  const conflict = findRoomConflict(roomId || 0, schedule, excludeId, centerId);
+  if (conflict) {
+    throw AppError.badRequest(
+      `Phòng "${conflict.roomName}" bị trùng lịch với lớp "${conflict.className}" (${DAY_NAMES[conflict.day]} ${conflict.start}-${conflict.end})`
+    );
+  }
+}
+
+/** Lấy lớp trong scope — ném 404 nếu không thấy (tránh lộ dữ liệu center khác). */
+function getScopedClass(ctx: ScopeCtx, id: number): ClassRow {
+  const scope = classScopeWhere(ctx);
+  const cls = db
+    .prepare(`SELECT c.* FROM classes c WHERE c.id = ?${scope.clause}`)
+    .get(id, ...scope.params) as ClassRow | undefined;
+  if (!cls) throw AppError.notFound('Không tìm thấy lớp học');
+  return cls;
+}
+
+/** Chuẩn hóa input tạo/sửa lớp — ném 400 nếu thiếu/sai. */
+function normalizeInput(input: ClassInput): {
+  name: string;
+  teacherId: number | null;
+  schedule: ScheduleEntry[];
+  startDate: string | null;
+  endDate: string | null;
+  fee: number;
+  maxStudents: number;
+  status: string;
+} {
+  const name = (input.name || '').trim();
+  if (!name) throw AppError.badRequest('Tên lớp học là bắt buộc');
+  const fee = Number(input.tuition_fee);
+  if (!Number.isFinite(fee) || fee < 0) throw AppError.badRequest('Học phí không hợp lệ');
+  return {
+    name,
+    teacherId: input.teacher_id ? Number(input.teacher_id) : null,
+    schedule: parseSchedule(input.schedule ?? []),
+    startDate: input.start_date || null,
+    endDate: input.end_date || null,
+    fee,
+    maxStudents: Number(input.max_students) > 0 ? Number(input.max_students) : 30,
+    status: input.status === 'inactive' ? 'inactive' : 'active',
+  };
+}
+
+/* --------------------------------- CRUD lớp --------------------------------- */
+
+export function listClasses(ctx: ScopeCtx, pageOpts: PageOptions = {}): Paginated<unknown> {
+  const scope = classScopeWhere(ctx);
+  const { page, limit, offset } = parsePagination(pageOpts);
+  const total = (
+    db.prepare(`SELECT COUNT(*) as c FROM classes c WHERE 1=1${scope.clause}`).get(...scope.params) as {
+      c: number;
+    }
+  ).c;
+  const rows = db
+    .prepare(
+      `SELECT c.*, t.name as teacher_name, r.name as room_name,
+         (SELECT COUNT(*) FROM enrollments e WHERE e.class_id = c.id AND e.status = 'active') as student_count
+       FROM classes c LEFT JOIN teachers t ON t.id = c.teacher_id
+       LEFT JOIN rooms r ON r.id = c.room_id
+       WHERE 1=1${scope.clause}
+       ORDER BY c.id DESC LIMIT ? OFFSET ?`
+    )
+    .all(...scope.params, limit, offset) as unknown[];
+  return paginate(rows, total, page, limit);
+}
+
+export function getClassDetail(ctx: ScopeCtx, id: number): Record<string, unknown> {
+  const scope = classScopeWhere(ctx);
+  const cls = db
+    .prepare(
+      `SELECT c.*, t.name as teacher_name, r.name as room_name FROM classes c
+       LEFT JOIN teachers t ON t.id = c.teacher_id
+       LEFT JOIN rooms r ON r.id = c.room_id
+       WHERE c.id = ?${scope.clause}`
+    )
+    .get(id, ...scope.params);
+  if (!cls) throw AppError.notFound('Không tìm thấy lớp học');
+  const students = db
+    .prepare(
+      `SELECT s.id, s.code, s.name, s.phone, s.status as student_status, e.id as enrollment_id, e.enrolled_at
+       FROM enrollments e JOIN students s ON s.id = e.student_id
+       WHERE e.class_id = ? AND e.status = 'active' ORDER BY s.name`
+    )
+    .all(id);
+  const sessionCount = (
+    db.prepare('SELECT COUNT(*) as c FROM sessions WHERE class_id = ?').get(id) as { c: number }
+  ).c;
+  return { class: cls, students, sessionCount };
+}
+
+export function createClass(ctx: ScopeCtx, input: ClassInput): unknown {
+  const n = normalizeInput(input);
+  const centerId = resolveCenterId(ctx);
+  const roomId = resolveRoomId(ctx, input.room_id, centerId);
+  assertNoRoomConflict(roomId, n.schedule, null, centerId);
+  const r = db
+    .prepare(
+      'INSERT INTO classes (name, teacher_id, schedule, start_date, end_date, tuition_fee, max_students, status, center_id, room_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+    )
+    .run(
+      n.name,
+      n.teacherId,
+      JSON.stringify(n.schedule),
+      n.startDate,
+      n.endDate,
+      n.fee,
+      n.maxStudents,
+      n.status,
+      centerId,
+      roomId
+    );
+  return db.prepare('SELECT * FROM classes WHERE id = ?').get(Number(r.lastInsertRowid));
+}
+
+export function updateClass(ctx: ScopeCtx, id: number, input: ClassInput): unknown {
+  const existing = getScopedClass(ctx, id);
+  const n = normalizeInput(input);
+  const centerId = (existing.center_id as number | null) ?? resolveCenterId(ctx);
+  const roomId = resolveRoomId(ctx, input.room_id, centerId);
+  assertNoRoomConflict(roomId, n.schedule, id, centerId);
+  db.prepare(
+    'UPDATE classes SET name=?, teacher_id=?, schedule=?, start_date=?, end_date=?, tuition_fee=?, max_students=?, status=?, room_id=? WHERE id=?'
+  ).run(
+    n.name,
+    n.teacherId,
+    JSON.stringify(n.schedule),
+    n.startDate,
+    n.endDate,
+    n.fee,
+    n.maxStudents,
+    n.status,
+    roomId,
+    id
+  );
+  return db.prepare('SELECT * FROM classes WHERE id = ?').get(id);
+}
+
+export function deleteClass(ctx: ScopeCtx, id: number, actor?: AuditActor): void {
+  const cls = getScopedClass(ctx, id);
+  // Chặn xóa lớp còn bài tập (tránh mất lịch sử chấm điểm thầm lặng)
+  const hwCount = homeworkRepo.countByClass(id);
+  if (hwCount > 0) {
+    throw AppError.badRequest(`Lớp còn ${hwCount} bài tập. Hãy xóa bài tập trước khi xóa lớp.`);
+  }
+  const tx = db.transaction(() => {
+    const sessIds = db.prepare('SELECT id FROM sessions WHERE class_id = ?').all(id) as { id: number }[];
+    for (const s of sessIds) db.prepare('DELETE FROM attendance WHERE session_id = ?').run(s.id);
+    db.prepare('DELETE FROM sessions WHERE class_id = ?').run(id);
+    db.prepare('DELETE FROM enrollments WHERE class_id = ?').run(id);
+    db.prepare('DELETE FROM classes WHERE id = ?').run(id);
+  });
+  tx();
+  audit({
+    centerId: ctx.centerId,
+    actor,
+    action: 'delete',
+    entity: 'classes',
+    entityId: id,
+    summary: `Xóa lớp học ${cls.name} (kèm buổi học + ghi danh)`,
+  });
+}
+
+/* --------------------------------- Ghi danh --------------------------------- */
+
+export function enrollStudent(ctx: ScopeCtx, classId: number, studentId: number): void {
+  if (!studentId) throw AppError.badRequest('Thiếu student_id');
+  const cls = getScopedClass(ctx, classId);
+  const student = db.prepare('SELECT id, center_id FROM students WHERE id = ?').get(Number(studentId)) as
+    { id: number; center_id: number | null } | undefined;
+  if (!student || (ctx.centerId !== null && student.center_id !== ctx.centerId)) {
+    throw AppError.notFound('Không tìm thấy học viên');
+  }
+  const count = (
+    db
+      .prepare("SELECT COUNT(*) as c FROM enrollments WHERE class_id = ? AND status = 'active'")
+      .get(classId) as { c: number }
+  ).c;
+  if (count >= (cls.max_students as number)) throw AppError.badRequest('Lớp học đã đủ sĩ số tối đa');
+  const exists = db
+    .prepare('SELECT 1 FROM enrollments WHERE student_id = ? AND class_id = ? AND status = ?')
+    .get(studentId, classId, 'active');
+  if (exists) throw AppError.badRequest('Học viên đã có trong lớp này');
+  // Nếu từng ghi danh rồi nghỉ thì kích hoạt lại, ngược lại thêm mới
+  const old = db
+    .prepare('SELECT id FROM enrollments WHERE student_id = ? AND class_id = ?')
+    .get(studentId, classId);
+  if (old) {
+    db.prepare("UPDATE enrollments SET status = 'active' WHERE student_id = ? AND class_id = ?").run(
+      studentId,
+      classId
+    );
+  } else {
+    db.prepare('INSERT INTO enrollments (student_id, class_id) VALUES (?, ?)').run(studentId, classId);
+  }
+}
+
+export function unenroll(ctx: ScopeCtx, enrollmentId: number): void {
+  const scope = classScopeWhere(ctx);
+  const cls = db
+    .prepare(
+      `SELECT c.id FROM enrollments e JOIN classes c ON c.id = e.class_id WHERE e.id = ?${scope.clause}`
+    )
+    .get(enrollmentId, ...scope.params);
+  if (!cls) throw AppError.notFound('Không tìm thấy ghi danh');
+  db.prepare("UPDATE enrollments SET status = 'inactive' WHERE id = ?").run(enrollmentId);
+}

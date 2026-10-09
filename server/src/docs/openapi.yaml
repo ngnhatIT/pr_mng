@@ -1,0 +1,3080 @@
+openapi: 3.0.3
+info:
+  title: EduCenterPro API
+  description: 'Tài liệu API đầy đủ cho EduCenterPro — nền tảng quản lý trung tâm ngoại ngữ.
+
+
+    Gồm: Auth, Học viên, Giáo viên, Lớp học, Buổi học & Điểm danh, Học phí & Công nợ, Bài tập & Quiz, Sổ điểm, Phòng học,
+    Lương, Học thử, Leads CRM, Referral, Reviews, Zalo OA, Cổng phụ huynh, Cổng giáo viên, Public landing.
+
+
+    Tất cả endpoint staff đều yêu cầu JWT (đăng nhập admin/staff/teacher).
+
+    Base path chính: /api/v1 (alias legacy /api vẫn hoạt động nhưng deprecated).'
+  version: 1.0.0
+servers:
+- url: http://localhost:4000
+  description: Dev server
+- url: /
+  description: Production (cùng origin)
+security:
+- bearerAuth: []
+tags:
+- name: Homework
+  description: CRUD bài tập, đăng/gỡ đăng, tái sử dụng
+- name: Quiz
+  description: Quiz builder, đề thi, lịch sử làm bài
+- name: Scores
+  description: Chấm điểm, bảng điểm
+- name: Bank
+  description: Ngân hàng câu hỏi dùng chung
+- name: Rubrics
+  description: Rubric chấm điểm tái sử dụng
+- name: Submissions
+  description: Bài nộp của học viên
+- name: Auth
+  description: Đăng nhập, JWT
+- name: Students
+  description: Quản lý học viên
+- name: Teachers
+  description: Quản lý giáo viên
+- name: Classes
+  description: Quản lý lớp học, xếp lớp
+- name: Sessions
+  description: Buổi học, điểm danh, check-in
+- name: Invoices
+  description: Hóa đơn học phí, công nợ
+- name: Payments
+  description: Duyệt thanh toán, cấu hình VietQR/VNPay
+- name: Dashboard
+  description: Số liệu tổng quan
+- name: Zalo
+  description: Zalo OA, nhắc học phí
+- name: Leaves
+  description: Đơn xin nghỉ
+- name: Grades
+  description: Sổ điểm điện tử
+- name: Rooms
+  description: Phòng học
+- name: Payroll
+  description: Lương giáo viên
+- name: Trials
+  description: Học thử
+- name: TeacherPortal
+  description: Cổng giáo viên
+- name: Leads
+  description: Mini-CRM khách hàng tiềm năng
+- name: Referrals
+  description: Giới thiệu, credit
+- name: Reviews
+  description: Đánh giá phụ huynh
+- name: Centers
+  description: Quản trị đa trung tâm (superadmin)
+- name: AuditLogs
+  description: Nhật ký hoạt động
+- name: ParentPortal
+  description: Cổng phụ huynh (SĐT + mật khẩu)
+- name: Public
+  description: API công khai cho landing page
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Đăng nhập POST /api/auth/login để lấy token
+  schemas:
+    Error:
+      type: object
+      required:
+      - error
+      properties:
+        error:
+          type: string
+          example: Không tìm thấy bài tập
+        code:
+          type: string
+          example: NOT_FOUND
+    Homework:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 12
+        class_id:
+          type: integer
+          example: 3
+        class_name:
+          type: string
+          example: IELTS 6.5 - Tối 2/4/6
+        center_id:
+          type: integer
+          nullable: true
+          example: 1
+        title:
+          type: string
+          example: 'Bài tập Unit 5: Thì hiện tại hoàn thành'
+        content:
+          type: string
+          nullable: true
+        due_date:
+          type: string
+          nullable: true
+          example: '2026-10-15'
+        created_at:
+          type: string
+          example: '2026-10-09 08:00:00'
+        status:
+          type: string
+          enum:
+          - draft
+          - scheduled
+          - published
+          example: published
+        publish_at:
+          type: string
+          nullable: true
+          description: Giờ VN YYYY-MM-DDTHH:mm
+          example: 2026-10-10T08:00
+        max_score:
+          type: number
+          nullable: true
+          example: 10
+        close_date:
+          type: string
+          nullable: true
+          example: '2026-10-20'
+        kind:
+          type: string
+          enum:
+          - homework
+          - quiz
+          example: homework
+        rubric_id:
+          type: integer
+          nullable: true
+        completed_count:
+          type: integer
+          example: 18
+        student_count:
+          type: integer
+          example: 25
+        question_count:
+          type: integer
+          example: 0
+        attachments:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: integer
+              name:
+                type: string
+              url:
+                type: string
+              kind:
+                type: string
+                enum:
+                - link
+                - file
+    HomeworkCreate:
+      type: object
+      required:
+      - class_ids
+      - title
+      properties:
+        class_ids:
+          type: array
+          items:
+            type: integer
+          example:
+          - 3
+          - 5
+          description: Giao 1 lần cho nhiều lớp
+        title:
+          type: string
+          maxLength: 200
+          example: Bài tập Unit 5
+        content:
+          type: string
+          maxLength: 5000
+        due_date:
+          type: string
+          example: '2026-10-15'
+          description: YYYY-MM-DD
+        status:
+          type: string
+          enum:
+          - draft
+          - scheduled
+          - published
+          default: published
+        publish_at:
+          type: string
+          example: 2026-10-10T08:00
+          description: Bắt buộc khi status=scheduled (giờ VN)
+        max_score:
+          type: number
+          example: 10
+          description: Bỏ qua với quiz (tự tính từ câu hỏi)
+        close_date:
+          type: string
+          example: '2026-10-20'
+          description: Phải sau due_date
+        kind:
+          type: string
+          enum:
+          - homework
+          - quiz
+          default: homework
+        rubric_id:
+          type: integer
+          nullable: true
+        attachments:
+          type: array
+          items:
+            type: object
+            properties:
+              name:
+                type: string
+              url:
+                type: string
+              kind:
+                type: string
+                enum:
+                - link
+                - file
+        target_student_ids:
+          type: array
+          items:
+            type: integer
+          description: Giao riêng từng em (rỗng = cả lớp)
+        questions:
+          $ref: '#/components/schemas/QuizQuestionInput'
+          description: Bắt buộc ≥1 câu khi kind=quiz
+    QuizQuestionInput:
+      type: array
+      items:
+        type: object
+        required:
+        - question
+        - options
+        properties:
+          question:
+            type: string
+            example: She ___ in Hanoi since 2020.
+          points:
+            type: number
+            default: 1
+            example: 2
+          options:
+            type: array
+            minItems: 2
+            items:
+              type: object
+              required:
+              - text
+              properties:
+                text:
+                  type: string
+                  example: has lived
+                is_correct:
+                  type: boolean
+                  example: true
+    QuizQuestionStaff:
+      type: object
+      properties:
+        id:
+          type: integer
+        question:
+          type: string
+        points:
+          type: number
+        options:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: integer
+              text:
+                type: string
+              is_correct:
+                type: boolean
+    QuizAttemptRow:
+      type: object
+      properties:
+        id:
+          type: integer
+        student_id:
+          type: integer
+        student_name:
+          type: string
+        score:
+          type: number
+        max_score:
+          type: number
+        submitted_at:
+          type: string
+    ScoreRow:
+      type: object
+      properties:
+        student_id:
+          type: integer
+        student_name:
+          type: string
+        score:
+          type: number
+          nullable: true
+        feedback:
+          type: string
+          nullable: true
+        graded_at:
+          type: string
+          nullable: true
+        completed:
+          type: integer
+          enum:
+          - 0
+          - 1
+        quiz_score:
+          type: number
+          nullable: true
+          description: Điểm quiz tự chấm cao nhất
+    BankQuestion:
+      type: object
+      properties:
+        id:
+          type: integer
+        tag:
+          type: string
+          nullable: true
+          example: Grammar - Tenses
+        question:
+          type: string
+        points:
+          type: number
+        options:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: integer
+              text:
+                type: string
+              is_correct:
+                type: boolean
+    Submission:
+      type: object
+      properties:
+        id:
+          type: integer
+        homework_id:
+          type: integer
+        student_id:
+          type: integer
+        student_name:
+          type: string
+        file_url:
+          type: string
+          nullable: true
+          example: /uploads/hw_1728_ab12cd.jpg
+        file_name:
+          type: string
+          nullable: true
+        note:
+          type: string
+          nullable: true
+        submitted_at:
+          type: string
+    PaginatedHomework:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Homework'
+        pagination:
+          type: object
+          properties:
+            page:
+              type: integer
+              example: 1
+            limit:
+              type: integer
+              example: 20
+            total:
+              type: integer
+              example: 45
+            totalPages:
+              type: integer
+              example: 3
+    Pagination:
+      type: object
+      properties:
+        page:
+          type: integer
+          example: 1
+        limit:
+          type: integer
+          example: 20
+        total:
+          type: integer
+          example: 125
+        totalPages:
+          type: integer
+          example: 7
+    PaginatedStudents:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            type: object
+        pagination:
+          $ref: '#/components/schemas/Pagination'
+    ParentAuth:
+      type: object
+      properties:
+        token:
+          type: string
+          description: JWT phụ huynh
+        parent:
+          type: object
+          properties:
+            id:
+              type: integer
+            phone:
+              type: string
+            name:
+              type: string
+            referral_code:
+              type: string
+              nullable: true
+            center_id:
+              type: integer
+              nullable: true
+paths:
+  /api/homework:
+    get:
+      tags:
+      - Homework
+      summary: Danh sách bài tập (có filter + phân trang)
+      parameters:
+      - in: query
+        name: class_id
+        schema:
+          type: string
+        description: Lọc theo lớp
+      - in: query
+        name: search
+        schema:
+          type: string
+        description: Tìm theo tiêu đề/nội dung
+      - in: query
+        name: due
+        schema:
+          type: string
+          enum:
+          - upcoming
+          - overdue
+          - nodate
+      - in: query
+        name: status
+        schema:
+          type: string
+          enum:
+          - draft
+          - scheduled
+          - published
+      - in: query
+        name: kind
+        schema:
+          type: string
+          enum:
+          - homework
+          - quiz
+      - in: query
+        name: page
+        schema:
+          type: integer
+          default: 1
+      - in: query
+        name: limit
+        schema:
+          type: integer
+          default: 20
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedHomework'
+        '401':
+          description: Chưa đăng nhập
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    post:
+      tags:
+      - Homework
+      summary: Tạo bài tập (1 lần cho nhiều lớp, hỗ trợ nháp/hẹn giờ/quiz)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/HomeworkCreate'
+      responses:
+        '201':
+          description: Đã tạo
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  created:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Homework'
+                  count:
+                    type: integer
+                    example: 2
+        '400':
+          description: Dữ liệu không hợp lệ
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/homework/stats:
+    get:
+      tags:
+      - Homework
+      summary: Thống kê nhanh (đã đăng / sắp hết hạn / quá hạn / nháp)
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  total:
+                    type: integer
+                    example: 12
+                  dueSoon:
+                    type: integer
+                    example: 3
+                  overdue:
+                    type: integer
+                    example: 1
+                  drafts:
+                    type: integer
+                    example: 2
+  /api/homework/analytics:
+    get:
+      tags:
+      - Homework
+      summary: Phân tích hoàn thành & điểm TB theo lớp
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  byClass:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        class_id:
+                          type: integer
+                        class_name:
+                          type: string
+                        total:
+                          type: integer
+                        avg_completion:
+                          type: number
+                          example: 0.72
+                        avg_score:
+                          type: number
+                          nullable: true
+                          example: 7.5
+                  recent:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: integer
+                        title:
+                          type: string
+                        class_name:
+                          type: string
+                        completion_rate:
+                          type: number
+                          example: 80
+  /api/homework/{id}:
+    parameters:
+    - in: path
+      name: id
+      required: true
+      schema:
+        type: integer
+    get:
+      tags:
+      - Homework
+      summary: Chi tiết bài tập (kèm đính kèm)
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Homework'
+        '404':
+          description: Không tìm thấy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    put:
+      tags:
+      - Homework
+      summary: Cập nhật bài tập (title, nội dung, hạn, điểm, trạng thái...)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                  maxLength: 200
+                content:
+                  type: string
+                  maxLength: 5000
+                due_date:
+                  type: string
+                  nullable: true
+                  example: '2026-10-15'
+                max_score:
+                  type: number
+                  nullable: true
+                close_date:
+                  type: string
+                  nullable: true
+                status:
+                  type: string
+                  enum:
+                  - draft
+                  - scheduled
+                  - published
+                publish_at:
+                  type: string
+                  nullable: true
+                rubric_id:
+                  type: integer
+                  nullable: true
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Homework'
+        '400':
+          description: Dữ liệu không hợp lệ
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Không tìm thấy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    delete:
+      tags:
+      - Homework
+      summary: Xóa bài tập (cascade quiz/điểm/bài nộp/đính kèm)
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                    example: true
+        '404':
+          description: Không tìm thấy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/homework/{id}/reuse:
+    post:
+      tags:
+      - Homework
+      summary: Tái sử dụng — copy thành bài nháp mới (giữ nguyên targets giao riêng)
+      parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: integer
+      responses:
+        '201':
+          description: Đã tạo bản copy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  created:
+                    $ref: '#/components/schemas/Homework'
+                  count:
+                    type: integer
+                    example: 1
+  /api/homework/{id}/publish:
+    post:
+      tags:
+      - Homework
+      summary: Đăng ngay (từ nháp/hẹn giờ) + gửi Zalo cho phụ huynh
+      parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: integer
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                    example: true
+  /api/homework/{id}/unpublish:
+    post:
+      tags:
+      - Homework
+      summary: Gỡ đăng về nháp (thu hồi khi đăng nhầm)
+      parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: integer
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                    example: true
+  /api/homework/{id}/scores:
+    parameters:
+    - in: path
+      name: id
+      required: true
+      schema:
+        type: integer
+    get:
+      tags:
+      - Scores
+      summary: Bảng điểm của bài tập (từng học viên + điểm quiz)
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ScoreRow'
+    post:
+      tags:
+      - Scores
+      summary: Chấm điểm 1 học viên (chặn điểm > max_score)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - student_id
+              properties:
+                student_id:
+                  type: integer
+                  example: 42
+                score:
+                  type: number
+                  nullable: true
+                  example: 8.5
+                feedback:
+                  type: string
+                  maxLength: 2000
+                  example: Làm tốt, chú ý câu 3
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                    example: true
+        '400':
+          description: Điểm không hợp lệ / vượt max
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/homework/{id}/quiz/edit:
+    get:
+      tags:
+      - Quiz
+      summary: Lấy đề quiz đầy đủ kèm đáp án đúng (staff sửa đề)
+      parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: integer
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/QuizQuestionStaff'
+  /api/homework/{id}/quiz:
+    parameters:
+    - in: path
+      name: id
+      required: true
+      schema:
+        type: integer
+    put:
+      tags:
+      - Quiz
+      summary: Lưu bộ câu hỏi quiz (chặn nếu đã có học viên làm bài)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - questions
+              properties:
+                questions:
+                  $ref: '#/components/schemas/QuizQuestionInput'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                    example: true
+                  count:
+                    type: integer
+                    example: 10
+        '400':
+          description: Đã có lượt làm / dữ liệu sai
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/homework/{id}/quiz/attempts:
+    get:
+      tags:
+      - Quiz
+      summary: Lịch sử làm quiz của cả lớp
+      parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: integer
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/QuizAttemptRow'
+  /api/homework/{id}/quiz/import:
+    post:
+      tags:
+      - Quiz
+      summary: Import câu hỏi từ ngân hàng vào quiz
+      parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - bank_ids
+              properties:
+                bank_ids:
+                  type: array
+                  items:
+                    type: integer
+                  example:
+                  - 7
+                  - 12
+                  - 15
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                    example: true
+                  count:
+                    type: integer
+                    example: 3
+  /api/homework/{id}/submissions:
+    get:
+      tags:
+      - Submissions
+      summary: Staff xem bài nộp của 1 bài tập
+      parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: integer
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Submission'
+  /api/homework/bank/questions:
+    get:
+      tags:
+      - Bank
+      summary: Ngân hàng câu hỏi (tìm kiếm + lọc tag)
+      parameters:
+      - in: query
+        name: search
+        schema:
+          type: string
+      - in: query
+        name: tag
+        schema:
+          type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  questions:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/BankQuestion'
+                  tags:
+                    type: array
+                    items:
+                      type: string
+    post:
+      tags:
+      - Bank
+      summary: Thêm câu hỏi vào ngân hàng
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - question
+              - options
+              properties:
+                tag:
+                  type: string
+                  nullable: true
+                  example: Grammar - Tenses
+                question:
+                  type: string
+                  example: She ___ in Hanoi since 2020.
+                points:
+                  type: number
+                  default: 1
+                options:
+                  type: array
+                  minItems: 2
+                  items:
+                    type: object
+                    required:
+                    - text
+                    properties:
+                      text:
+                        type: string
+                      is_correct:
+                        type: boolean
+      responses:
+        '201':
+          description: Đã thêm
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BankQuestion'
+        '400':
+          description: Thiếu đáp án / chưa chọn đáp án đúng
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/homework/bank/questions/{bid}:
+    delete:
+      tags:
+      - Bank
+      summary: Xóa câu hỏi khỏi ngân hàng
+      parameters:
+      - in: path
+        name: bid
+        required: true
+        schema:
+          type: integer
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                    example: true
+  /api/homework/rubrics/list:
+    get:
+      tags:
+      - Rubrics
+      summary: Danh sách rubric tái sử dụng
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: integer
+                    name:
+                      type: string
+                    criteria:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          id:
+                            type: integer
+                          name:
+                            type: string
+                          max_score:
+                            type: number
+    post:
+      tags:
+      - Rubrics
+      summary: Tạo rubric mới
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - name
+              - criteria
+              properties:
+                name:
+                  type: string
+                  example: Chấm bài viết IELTS
+                criteria:
+                  type: array
+                  items:
+                    type: object
+                    required:
+                    - name
+                    properties:
+                      name:
+                        type: string
+                        example: Task Response
+                      max_score:
+                        type: number
+                        example: 9
+      responses:
+        '201':
+          description: Đã tạo
+  /api/homework/rubrics/{rid}:
+    delete:
+      tags:
+      - Rubrics
+      summary: Xóa rubric
+      parameters:
+      - in: path
+        name: rid
+        required: true
+        schema:
+          type: integer
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                    example: true
+        '404':
+          description: Không tìm thấy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/v1/auth/login:
+    post:
+      tags:
+      - Auth
+      summary: Đăng nhập (staff/admin/teacher/root)
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - username
+              - password
+              properties:
+                username:
+                  type: string
+                  example: admin
+                password:
+                  type: string
+                  example: '123456'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+                    description: 'JWT, dùng cho header Authorization: Bearer <token>'
+                  user:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                      username:
+                        type: string
+                      role:
+                        type: string
+                        enum:
+                        - superadmin
+                        - admin
+                        - staff
+                        - teacher
+                        - parent
+                      name:
+                        type: string
+                      center_id:
+                        type: integer
+                        nullable: true
+        '401':
+          description: Sai tài khoản/mật khẩu
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Quá nhiều lần thử (rate limit)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/v1/students:
+    get:
+      tags:
+      - Students
+      summary: Danh sách học viên (filter + phân trang)
+      parameters:
+      - in: query
+        name: search
+        schema:
+          type: string
+        description: Tìm theo tên/mã/SĐT
+      - in: query
+        name: status
+        schema:
+          type: string
+          enum:
+          - studying
+          - paused
+          - graduated
+      - in: query
+        name: class_id
+        schema:
+          type: integer
+      - in: query
+        name: page
+        schema:
+          type: integer
+          default: 1
+      - in: query
+        name: limit
+        schema:
+          type: integer
+          default: 20
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedStudents'
+    post:
+      tags:
+      - Students
+      summary: Thêm học viên mới
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - name
+              properties:
+                name:
+                  type: string
+                  example: Nguyễn Văn A
+                phone:
+                  type: string
+                  example: 0901234567
+                dob:
+                  type: string
+                  example: '2015-03-10'
+                  description: YYYY-MM-DD
+                class_ids:
+                  type: array
+                  items:
+                    type: integer
+                  description: Xếp lớp ngay
+      responses:
+        '201':
+          description: Đã tạo
+  /api/v1/students/{id}:
+    get:
+      tags:
+      - Students
+      summary: Chi tiết học viên
+      parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: integer
+      responses:
+        '200':
+          description: OK
+        '404':
+          description: Không tìm thấy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    put:
+      tags:
+      - Students
+      summary: Cập nhật học viên
+      parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                phone:
+                  type: string
+                status:
+                  type: string
+                  enum:
+                  - studying
+                  - paused
+                  - graduated
+      responses:
+        '200':
+          description: OK
+    delete:
+      tags:
+      - Students
+      summary: Xóa học viên
+      parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: integer
+      responses:
+        '200':
+          description: OK
+  /api/v1/teachers:
+    get:
+      tags:
+      - Teachers
+      summary: Danh sách giáo viên
+      parameters:
+      - in: query
+        name: search
+        schema:
+          type: string
+      - in: query
+        name: page
+        schema:
+          type: integer
+          default: 1
+      - in: query
+        name: limit
+        schema:
+          type: integer
+          default: 20
+      responses:
+        '200':
+          description: OK
+    post:
+      tags:
+      - Teachers
+      summary: Thêm giáo viên
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - name
+              properties:
+                name:
+                  type: string
+                  example: Trần Thị B
+                phone:
+                  type: string
+                subject:
+                  type: string
+                  example: IELTS
+      responses:
+        '201':
+          description: Đã tạo
+  /api/v1/teachers/{id}:
+    put:
+      tags:
+      - Teachers
+      summary: Cập nhật giáo viên
+      parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: integer
+      responses:
+        '200':
+          description: OK
+    delete:
+      tags:
+      - Teachers
+      summary: Xóa giáo viên
+      parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: integer
+      responses:
+        '200':
+          description: OK
+  /api/v1/teachers/{id}/account:
+    post:
+      tags:
+      - Teachers
+      summary: Tạo tài khoản đăng nhập cho giáo viên
+      parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - username
+              - password
+              properties:
+                username:
+                  type: string
+                  example: teacher1
+                password:
+                  type: string
+                  example: '123456'
+      responses:
+        '201':
+          description: Đã tạo tài khoản
+  /api/v1/classes:
+    get:
+      tags:
+      - Classes
+      summary: Danh sách lớp học
+      parameters:
+      - in: query
+        name: search
+        schema:
+          type: string
+      - in: query
+        name: page
+        schema:
+          type: integer
+          default: 1
+      - in: query
+        name: limit
+        schema:
+          type: integer
+          default: 20
+      responses:
+        '200':
+          description: OK
+    post:
+      tags:
+      - Classes
+      summary: Tạo lớp học mới
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - name
+              properties:
+                name:
+                  type: string
+                  example: IELTS 6.5 - Tối 2/4/6
+                teacher_id:
+                  type: integer
+                  nullable: true
+                room_id:
+                  type: integer
+                  nullable: true
+                schedule:
+                  type: string
+                  description: Lịch học (JSON)
+      responses:
+        '201':
+          description: Đã tạo
+  /api/v1/classes/{id}:
+    get:
+      tags:
+      - Classes
+      summary: Chi tiết lớp (kèm học viên, lịch học)
+      parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: integer
+      responses:
+        '200':
+          description: OK
+    put:
+      tags:
+      - Classes
+      summary: Cập nhật lớp
+      parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: integer
+      responses:
+        '200':
+          description: OK
+    delete:
+      tags:
+      - Classes
+      summary: Xóa lớp (chặn nếu còn bài tập)
+      parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: integer
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Lớp còn bài tập
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/v1/classes/{id}/enroll:
+    post:
+      tags:
+      - Classes
+      summary: Xếp học viên vào lớp
+      parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - student_ids
+              properties:
+                student_ids:
+                  type: array
+                  items:
+                    type: integer
+      responses:
+        '200':
+          description: OK
+  /api/v1/enrollments/{enrollmentId}:
+    delete:
+      tags:
+      - Classes
+      summary: Xóa học viên khỏi lớp
+      parameters:
+      - in: path
+        name: enrollmentId
+        required: true
+        schema:
+          type: integer
+      responses:
+        '200':
+          description: OK
+  /api/v1/classes/{classId}/sessions:
+    get:
+      tags:
+      - Sessions
+      summary: Lịch buổi học của lớp
+      parameters:
+      - in: path
+        name: classId
+        required: true
+        schema:
+          type: integer
+      - in: query
+        name: from
+        schema:
+          type: string
+        description: YYYY-MM-DD
+      - in: query
+        name: to
+        schema:
+          type: string
+        description: YYYY-MM-DD
+      responses:
+        '200':
+          description: OK
+  /api/v1/sessions:
+    post:
+      tags:
+      - Sessions
+      summary: Tạo buổi học
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - class_id
+              - date
+              properties:
+                class_id:
+                  type: integer
+                date:
+                  type: string
+                  example: '2026-10-15'
+                topic:
+                  type: string
+      responses:
+        '201':
+          description: Đã tạo
+  /api/v1/sessions/{id}:
+    put:
+      tags:
+      - Sessions
+      summary: Cập nhật buổi học
+      parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: integer
+      responses:
+        '200':
+          description: OK
+    delete:
+      tags:
+      - Sessions
+      summary: Xóa buổi học
+      parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: integer
+      responses:
+        '200':
+          description: OK
+  /api/v1/sessions/{id}/attendance:
+    get:
+      tags:
+      - Sessions
+      summary: Điểm danh buổi học
+      parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: integer
+      responses:
+        '200':
+          description: OK
+    post:
+      tags:
+      - Sessions
+      summary: Lưu điểm danh
+      parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                records:
+                  type: array
+                  items:
+                    type: object
+                    required:
+                    - student_id
+                    - status
+                    properties:
+                      student_id:
+                        type: integer
+                      status:
+                        type: string
+                        enum:
+                        - present
+                        - absent
+                        - late
+      responses:
+        '200':
+          description: OK
+  /api/v1/sessions/{id}/checkin-code:
+    post:
+      tags:
+      - Sessions
+      summary: Tạo mã check-in 6 số cho giáo viên
+      parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: integer
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: string
+                    example: '482913'
+  /api/v1/invoices:
+    get:
+      tags:
+      - Invoices
+      summary: Danh sách hóa đơn học phí
+      parameters:
+      - in: query
+        name: status
+        schema:
+          type: string
+          enum:
+          - unpaid
+          - partial
+          - paid
+          - overdue
+      - in: query
+        name: student_id
+        schema:
+          type: integer
+      - in: query
+        name: page
+        schema:
+          type: integer
+          default: 1
+      - in: query
+        name: limit
+        schema:
+          type: integer
+          default: 20
+      responses:
+        '200':
+          description: OK
+    post:
+      tags:
+      - Invoices
+      summary: Tạo hóa đơn học phí
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - student_id
+              - amount
+              properties:
+                student_id:
+                  type: integer
+                amount:
+                  type: number
+                  example: 2500000
+                due_date:
+                  type: string
+                  example: '2026-10-31'
+                class_id:
+                  type: integer
+                  nullable: true
+                note:
+                  type: string
+      responses:
+        '201':
+          description: Đã tạo
+  /api/v1/invoices/debt:
+    get:
+      tags:
+      - Invoices
+      summary: Danh sách công nợ
+      responses:
+        '200':
+          description: OK
+  /api/v1/invoices/debt-summary:
+    get:
+      tags:
+      - Invoices
+      summary: Tổng hợp công nợ toàn trung tâm
+      responses:
+        '200':
+          description: OK
+  /api/v1/invoices/{id}:
+    get:
+      tags:
+      - Invoices
+      summary: Chi tiết hóa đơn
+      parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: integer
+      responses:
+        '200':
+          description: OK
+    put:
+      tags:
+      - Invoices
+      summary: Cập nhật hóa đơn
+      parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: integer
+      responses:
+        '200':
+          description: OK
+    delete:
+      tags:
+      - Invoices
+      summary: Xóa hóa đơn
+      parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: integer
+      responses:
+        '200':
+          description: OK
+  /api/v1/invoices/{id}/payments:
+    post:
+      tags:
+      - Invoices
+      summary: Ghi nhận thanh toán
+      parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - amount
+              properties:
+                amount:
+                  type: number
+                  example: 2500000
+                method:
+                  type: string
+                  enum:
+                  - cash
+                  - bank_transfer
+                  - vnpay
+                  example: cash
+                note:
+                  type: string
+      responses:
+        '201':
+          description: Đã ghi nhận
+  /api/v1/invoices/{id}/apply-credit:
+    post:
+      tags:
+      - Invoices
+      summary: Trừ credit giới thiệu vào hóa đơn
+      parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: integer
+      responses:
+        '200':
+          description: OK
+  /api/v1/payments/pending:
+    get:
+      tags:
+      - Payments
+      summary: Hàng đợi duyệt thanh toán (phụ huynh báo đã chuyển khoản)
+      responses:
+        '200':
+          description: OK
+  /api/v1/payments/pending/{id}/approve:
+    post:
+      tags:
+      - Payments
+      summary: Duyệt thanh toán
+      parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: integer
+      responses:
+        '200':
+          description: OK
+  /api/v1/payments/pending/{id}/reject:
+    post:
+      tags:
+      - Payments
+      summary: Từ chối thanh toán
+      parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: integer
+      responses:
+        '200':
+          description: OK
+  /api/v1/payments/config:
+    get:
+      tags:
+      - Payments
+      summary: Cấu hình thanh toán (VietQR, VNPay)
+      responses:
+        '200':
+          description: OK
+    put:
+      tags:
+      - Payments
+      summary: Cập nhật cấu hình thanh toán
+      responses:
+        '200':
+          description: OK
+  /api/v1/dashboard:
+    get:
+      tags:
+      - Dashboard
+      summary: Số liệu tổng quan (doanh thu, học viên, lớp, công nợ)
+      responses:
+        '200':
+          description: OK
+  /api/v1/zalo/config:
+    get:
+      tags:
+      - Zalo
+      summary: Cấu hình Zalo OA
+      responses:
+        '200':
+          description: OK
+    put:
+      tags:
+      - Zalo
+      summary: Cập nhật cấu hình Zalo OA
+      responses:
+        '200':
+          description: OK
+  /api/v1/zalo/test:
+    post:
+      tags:
+      - Zalo
+      summary: Gửi tin nhắn test
+      responses:
+        '200':
+          description: OK
+  /api/v1/zalo/run-once:
+    post:
+      tags:
+      - Zalo
+      summary: Chạy nhắc học phí 1 lần (thủ công)
+      responses:
+        '200':
+          description: OK
+  /api/v1/reminders:
+    get:
+      tags:
+      - Zalo
+      summary: Lịch sử nhắc (Zalo/SMS)
+      parameters:
+      - in: query
+        name: kind
+        schema:
+          type: string
+          enum:
+          - overdue
+          - homework
+      - in: query
+        name: page
+        schema:
+          type: integer
+          default: 1
+      responses:
+        '200':
+          description: OK
+  /api/v1/invoices/{id}/remind:
+    post:
+      tags:
+      - Zalo
+      summary: Nhắc học phí 1 hóa đơn qua Zalo
+      parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: integer
+      responses:
+        '200':
+          description: OK
+  /api/v1/leaves:
+    get:
+      tags:
+      - Leaves
+      summary: Danh sách đơn xin nghỉ
+      parameters:
+      - in: query
+        name: status
+        schema:
+          type: string
+          enum:
+          - pending
+          - approved
+          - rejected
+      responses:
+        '200':
+          description: OK
+  /api/v1/leaves/{id}/approve:
+    post:
+      tags:
+      - Leaves
+      summary: Duyệt đơn nghỉ
+      parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: integer
+      responses:
+        '200':
+          description: OK
+  /api/v1/leaves/{id}/reject:
+    post:
+      tags:
+      - Leaves
+      summary: Từ chối đơn nghỉ
+      parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: integer
+      responses:
+        '200':
+          description: OK
+  /api/v1/grades:
+    get:
+      tags:
+      - Grades
+      summary: Sổ điểm điện tử
+      parameters:
+      - in: query
+        name: student_id
+        schema:
+          type: integer
+      - in: query
+        name: class_id
+        schema:
+          type: integer
+      responses:
+        '200':
+          description: OK
+    post:
+      tags:
+      - Grades
+      summary: Nhập điểm
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - student_id
+              - title
+              - score
+              properties:
+                student_id:
+                  type: integer
+                title:
+                  type: string
+                  example: Kiểm tra giữa kỳ
+                score:
+                  type: number
+                  example: 8.5
+                max_score:
+                  type: number
+                  example: 10
+                class_id:
+                  type: integer
+                  nullable: true
+                comment:
+                  type: string
+      responses:
+        '201':
+          description: Đã nhập
+  /api/v1/grades/{id}:
+    delete:
+      tags:
+      - Grades
+      summary: Xóa điểm
+      parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: integer
+      responses:
+        '200':
+          description: OK
+  /api/v1/rooms:
+    get:
+      tags:
+      - Rooms
+      summary: Danh sách phòng học
+      responses:
+        '200':
+          description: OK
+    post:
+      tags:
+      - Rooms
+      summary: Thêm phòng học
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - name
+              properties:
+                name:
+                  type: string
+                  example: P.301
+                capacity:
+                  type: integer
+                  example: 20
+      responses:
+        '201':
+          description: Đã tạo
+  /api/v1/rooms/{id}:
+    put:
+      tags:
+      - Rooms
+      summary: Cập nhật phòng
+      parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: integer
+      responses:
+        '200':
+          description: OK
+    delete:
+      tags:
+      - Rooms
+      summary: Xóa phòng (chặn nếu trùng lịch)
+      parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: integer
+      responses:
+        '200':
+          description: OK
+  /api/v1/payroll:
+    get:
+      tags:
+      - Payroll
+      summary: Bảng lương giáo viên (tự tính từ điểm danh)
+      parameters:
+      - in: query
+        name: month
+        schema:
+          type: string
+        description: YYYY-MM, mặc định tháng hiện tại
+      responses:
+        '200':
+          description: OK
+  /api/v1/payroll/rules:
+    put:
+      tags:
+      - Payroll
+      summary: Cập nhật quy tắc tính lương
+      responses:
+        '200':
+          description: OK
+  /api/v1/trials:
+    get:
+      tags:
+      - Trials
+      summary: Danh sách học thử
+      parameters:
+      - in: query
+        name: status
+        schema:
+          type: string
+          enum:
+          - new
+          - contacted
+          - converted
+          - dropped
+      responses:
+        '200':
+          description: OK
+  /api/v1/trials/{id}:
+    put:
+      tags:
+      - Trials
+      summary: Cập nhật học thử
+      parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: integer
+      responses:
+        '200':
+          description: OK
+  /api/v1/trials/{id}/convert:
+    post:
+      tags:
+      - Trials
+      summary: Chuyển học thử thành học viên chính thức
+      parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: integer
+      responses:
+        '200':
+          description: OK
+  /api/v1/teacher/today:
+    get:
+      tags:
+      - TeacherPortal
+      summary: Lịch dạy hôm nay của giáo viên (đăng nhập bằng tài khoản giáo viên)
+      responses:
+        '200':
+          description: OK
+  /api/v1/teacher/checkin:
+    post:
+      tags:
+      - TeacherPortal
+      summary: Giáo viên check-in bằng mã 6 số
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - code
+              properties:
+                code:
+                  type: string
+                  example: '482913'
+      responses:
+        '200':
+          description: OK
+  /api/v1/teacher/payroll:
+    get:
+      tags:
+      - TeacherPortal
+      summary: Lương của giáo viên đang đăng nhập
+      responses:
+        '200':
+          description: OK
+  /api/v1/leads:
+    get:
+      tags:
+      - Leads
+      summary: Pipeline khách hàng tiềm năng (mini-CRM)
+      parameters:
+      - in: query
+        name: stage
+        schema:
+          type: string
+          enum:
+          - new
+          - contacted
+          - trial
+          - converted
+          - dropped
+      responses:
+        '200':
+          description: OK
+    post:
+      tags:
+      - Leads
+      summary: Thêm lead
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - name
+              - phone
+              properties:
+                name:
+                  type: string
+                phone:
+                  type: string
+                source:
+                  type: string
+                  example: landing
+      responses:
+        '201':
+          description: Đã tạo
+  /api/v1/leads/{id}:
+    put:
+      tags:
+      - Leads
+      summary: Cập nhật lead / chuyển stage
+      parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: integer
+      responses:
+        '200':
+          description: OK
+    delete:
+      tags:
+      - Leads
+      summary: Xóa lead
+      parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: integer
+      responses:
+        '200':
+          description: OK
+  /api/v1/leads/{id}/convert:
+    post:
+      tags:
+      - Leads
+      summary: Chuyển lead thành học viên
+      parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: integer
+      responses:
+        '200':
+          description: OK
+  /api/v1/referrals:
+    get:
+      tags:
+      - Referrals
+      summary: Danh sách giới thiệu
+      responses:
+        '200':
+          description: OK
+  /api/v1/referrals/stats:
+    get:
+      tags:
+      - Referrals
+      summary: Thống kê giới thiệu toàn trung tâm
+      responses:
+        '200':
+          description: OK
+  /api/v1/reviews:
+    get:
+      tags:
+      - Reviews
+      summary: Đánh giá của phụ huynh (chờ duyệt)
+      parameters:
+      - in: query
+        name: status
+        schema:
+          type: string
+          enum:
+          - pending
+          - approved
+          - rejected
+      responses:
+        '200':
+          description: OK
+  /api/v1/reviews/{id}/approve:
+    post:
+      tags:
+      - Reviews
+      summary: Duyệt đánh giá (hiển thị công khai)
+      parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: integer
+      responses:
+        '200':
+          description: OK
+  /api/v1/reviews/{id}/reject:
+    post:
+      tags:
+      - Reviews
+      summary: Từ chối đánh giá
+      parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: integer
+      responses:
+        '200':
+          description: OK
+  /api/v1/reviews/{id}:
+    delete:
+      tags:
+      - Reviews
+      summary: Xóa đánh giá
+      parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: integer
+      responses:
+        '200':
+          description: OK
+  /api/v1/centers:
+    get:
+      tags:
+      - Centers
+      summary: Danh sách trung tâm (superadmin)
+      responses:
+        '200':
+          description: OK
+    post:
+      tags:
+      - Centers
+      summary: Tạo trung tâm mới (superadmin)
+      responses:
+        '201':
+          description: Đã tạo
+  /api/v1/centers/{id}:
+    put:
+      tags:
+      - Centers
+      summary: Cập nhật trung tâm / gói dịch vụ
+      parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: integer
+      responses:
+        '200':
+          description: OK
+  /api/v1/audit-logs:
+    get:
+      tags:
+      - AuditLogs
+      summary: Nhật ký hoạt động (chống sửa xóa)
+      parameters:
+      - in: query
+        name: entity
+        schema:
+          type: string
+      - in: query
+        name: page
+        schema:
+          type: integer
+          default: 1
+      responses:
+        '200':
+          description: OK
+  /api/v1/parent/register:
+    post:
+      tags:
+      - ParentPortal
+      summary: Đăng ký tài khoản phụ huynh
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - phone
+              - password
+              - name
+              properties:
+                phone:
+                  type: string
+                  example: 0900000001
+                password:
+                  type: string
+                  example: '123456'
+                name:
+                  type: string
+                  example: Phụ huynh A
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ParentAuth'
+  /api/v1/parent/login:
+    post:
+      tags:
+      - ParentPortal
+      summary: Đăng nhập phụ huynh
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - phone
+              - password
+              properties:
+                phone:
+                  type: string
+                  example: 0900000001
+                password:
+                  type: string
+                  example: '123456'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ParentAuth'
+        '401':
+          description: Sai SĐT/mật khẩu
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/v1/parent/link:
+    post:
+      tags:
+      - ParentPortal
+      summary: Liên kết con bằng mã học viên
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - student_code
+              properties:
+                student_code:
+                  type: string
+                  example: HV0001
+      responses:
+        '200':
+          description: OK
+  /api/v1/parent/children:
+    get:
+      tags:
+      - ParentPortal
+      summary: Danh sách con đã liên kết
+      responses:
+        '200':
+          description: OK
+  /api/v1/parent/children/{id}/overview:
+    get:
+      tags:
+      - ParentPortal
+      summary: Tổng quan 1 con (lớp, điểm danh, học phí, điểm, bài tập)
+      parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: integer
+      responses:
+        '200':
+          description: OK
+  /api/v1/parent/children/{id}/grades:
+    get:
+      tags:
+      - ParentPortal
+      summary: Sổ điểm của con
+      parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: integer
+      responses:
+        '200':
+          description: OK
+  /api/v1/parent/invoices/{id}/vietqr:
+    get:
+      tags:
+      - ParentPortal
+      summary: Mã VietQR thanh toán học phí
+      parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: integer
+      responses:
+        '200':
+          description: OK
+  /api/v1/parent/invoices/{id}/claim-paid:
+    post:
+      tags:
+      - ParentPortal
+      summary: Báo đã chuyển khoản (chờ admin duyệt)
+      parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: integer
+      responses:
+        '200':
+          description: OK
+  /api/v1/parent/invoices/{id}/vnpay:
+    post:
+      tags:
+      - ParentPortal
+      summary: Tạo link thanh toán VNPay
+      parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: integer
+      responses:
+        '200':
+          description: OK
+  /api/v1/parent/leaves:
+    get:
+      tags:
+      - ParentPortal
+      summary: Đơn xin nghỉ của con
+      responses:
+        '200':
+          description: OK
+    post:
+      tags:
+      - ParentPortal
+      summary: Gửi đơn xin nghỉ
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - student_id
+              - from_date
+              - to_date
+              properties:
+                student_id:
+                  type: integer
+                class_id:
+                  type: integer
+                  nullable: true
+                from_date:
+                  type: string
+                  example: '2026-10-20'
+                to_date:
+                  type: string
+                  example: '2026-10-22'
+                reason:
+                  type: string
+      responses:
+        '201':
+          description: Đã gửi
+  /api/v1/parent/referral:
+    get:
+      tags:
+      - ParentPortal
+      summary: Mã giới thiệu + credit của phụ huynh
+      responses:
+        '200':
+          description: OK
+  /api/v1/parent/reviews:
+    get:
+      tags:
+      - ParentPortal
+      summary: Đánh giá của tôi
+      responses:
+        '200':
+          description: OK
+    post:
+      tags:
+      - ParentPortal
+      summary: Gửi đánh giá (1-5 sao)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - rating
+              properties:
+                rating:
+                  type: integer
+                  minimum: 1
+                  maximum: 5
+                  example: 5
+                comment:
+                  type: string
+      responses:
+        '201':
+          description: Đã gửi (chờ duyệt)
+  /api/v1/parent/homework/{homeworkId}/complete:
+    post:
+      tags:
+      - ParentPortal
+      summary: Đánh dấu con đã làm xong bài
+      parameters:
+      - in: path
+        name: homeworkId
+        required: true
+        schema:
+          type: integer
+      - in: query
+        name: student_id
+        required: true
+        schema:
+          type: integer
+      responses:
+        '200':
+          description: OK
+    delete:
+      tags:
+      - ParentPortal
+      summary: Bỏ đánh dấu hoàn thành
+      parameters:
+      - in: path
+        name: homeworkId
+        required: true
+        schema:
+          type: integer
+      - in: query
+        name: student_id
+        required: true
+        schema:
+          type: integer
+      responses:
+        '200':
+          description: OK
+  /api/v1/parent/homework/{homeworkId}/quiz:
+    get:
+      tags:
+      - ParentPortal
+      summary: Lấy đề quiz cho con (ẩn đáp án)
+      parameters:
+      - in: path
+        name: homeworkId
+        required: true
+        schema:
+          type: integer
+      - in: query
+        name: student_id
+        required: true
+        schema:
+          type: integer
+      responses:
+        '200':
+          description: OK
+  /api/v1/parent/homework/{homeworkId}/quiz/submit:
+    post:
+      tags:
+      - ParentPortal
+      summary: Nộp bài quiz → tự chấm
+      parameters:
+      - in: path
+        name: homeworkId
+        required: true
+        schema:
+          type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - student_id
+              - answers
+              properties:
+                student_id:
+                  type: integer
+                answers:
+                  type: array
+                  items:
+                    type: object
+                    required:
+                    - question_id
+                    - option_id
+                    properties:
+                      question_id:
+                        type: integer
+                      option_id:
+                        type: integer
+      responses:
+        '200':
+          description: Kết quả chấm
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  score:
+                    type: number
+                    example: 8
+                  max_score:
+                    type: number
+                    example: 10
+                  attempt_id:
+                    type: integer
+                  attempt_no:
+                    type: integer
+                    example: 1
+  /api/v1/parent/homework/{homeworkId}/quiz/attempts:
+    get:
+      tags:
+      - ParentPortal
+      summary: Lịch sử làm bài của con
+      parameters:
+      - in: path
+        name: homeworkId
+        required: true
+        schema:
+          type: integer
+      - in: query
+        name: student_id
+        required: true
+        schema:
+          type: integer
+      responses:
+        '200':
+          description: OK
+  /api/v1/parent/quiz/attempts/{attemptId}/review:
+    get:
+      tags:
+      - ParentPortal
+      summary: Xem lại chi tiết 1 lượt làm (đúng/sai từng câu)
+      parameters:
+      - in: path
+        name: attemptId
+        required: true
+        schema:
+          type: integer
+      - in: query
+        name: student_id
+        required: true
+        schema:
+          type: integer
+      responses:
+        '200':
+          description: OK
+  /api/v1/parent/homework/{homeworkId}/submit:
+    post:
+      tags:
+      - ParentPortal
+      summary: Nộp bài tập (ảnh/file + ghi chú)
+      parameters:
+      - in: path
+        name: homeworkId
+        required: true
+        schema:
+          type: integer
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                student_id:
+                  type: integer
+                note:
+                  type: string
+                  maxLength: 1000
+                file:
+                  type: string
+                  format: binary
+                  description: 'Tối đa 10MB: ảnh/PDF/Word/MP3/MP4'
+      responses:
+        '200':
+          description: OK
+        '413':
+          description: File vượt quá 10MB
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/v1/parent/homework/{homeworkId}/submissions:
+    get:
+      tags:
+      - ParentPortal
+      summary: Bài đã nộp của con
+      parameters:
+      - in: path
+        name: homeworkId
+        required: true
+        schema:
+          type: integer
+      - in: query
+        name: student_id
+        required: true
+        schema:
+          type: integer
+      responses:
+        '200':
+          description: OK
+  /api/v1/public/center:
+    get:
+      tags:
+      - Public
+      summary: Thông tin trung tâm (landing page)
+      security: []
+      responses:
+        '200':
+          description: OK
+  /api/v1/public/classes:
+    get:
+      tags:
+      - Public
+      summary: Danh sách lớp công khai
+      security: []
+      responses:
+        '200':
+          description: OK
+  /api/v1/public/teachers:
+    get:
+      tags:
+      - Public
+      summary: Đội ngũ giáo viên công khai
+      security: []
+      responses:
+        '200':
+          description: OK
+  /api/v1/public/reviews:
+    get:
+      tags:
+      - Public
+      summary: Đánh giá đã duyệt (hiển thị landing)
+      security: []
+      responses:
+        '200':
+          description: OK
+  /api/v1/public/leads:
+    post:
+      tags:
+      - Public
+      summary: Đăng ký tư vấn (landing form)
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - name
+              - phone
+              properties:
+                name:
+                  type: string
+                phone:
+                  type: string
+      responses:
+        '201':
+          description: Đã nhận
+  /api/v1/public/trials:
+    post:
+      tags:
+      - Public
+      summary: Đăng ký học thử
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - name
+              - phone
+              properties:
+                name:
+                  type: string
+                phone:
+                  type: string
+                class_id:
+                  type: integer
+                  nullable: true
+      responses:
+        '201':
+          description: Đã nhận

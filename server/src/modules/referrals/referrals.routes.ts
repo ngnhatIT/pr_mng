@@ -1,0 +1,78 @@
+import { Router, Response } from 'express';
+import { db } from '../../db';
+import { AuthRequest, reqCenterId, staffOnly } from '../../middleware/auth';
+import { asyncHandler } from '../../shared/http';
+import { listReferrals } from './referrals.service';
+
+const router = Router();
+router.use(staffOnly);
+
+/* ------------------------- Danh sách giới thiệu ------------------------- */
+
+// GET /api/referrals?status=&page=&limit=
+router.get(
+  '/',
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const {
+      status = '',
+      page,
+      limit,
+    } = req.query as {
+      status?: string;
+      page?: string;
+      limit?: string;
+    };
+    res.json(listReferrals(reqCenterId(req), { status }, { page, limit }));
+  })
+);
+
+/* ------------------------- Thống kê giới thiệu ------------------------- */
+
+// GET /api/referrals/stats
+router.get(
+  '/stats',
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const cid = reqCenterId(req);
+    const centerFilter = cid !== null ? 'AND p.center_id = ?' : '';
+    const params: unknown[] = cid !== null ? [cid] : [];
+    const total = (
+      db
+        .prepare(
+          `SELECT COUNT(*) as c FROM referrals rf
+         JOIN parents p ON p.id = rf.referrer_parent_id
+         WHERE 1 = 1 ${centerFilter}`
+        )
+        .get(...params) as { c: number }
+    ).c;
+    const pending = (
+      db
+        .prepare(
+          `SELECT COUNT(*) as c FROM referrals rf
+         JOIN parents p ON p.id = rf.referrer_parent_id
+         WHERE rf.status = 'pending' ${centerFilter}`
+        )
+        .get(...params) as { c: number }
+    ).c;
+    const rewarded = (
+      db
+        .prepare(
+          `SELECT COUNT(*) as c FROM referrals rf
+         JOIN parents p ON p.id = rf.referrer_parent_id
+         WHERE rf.status = 'rewarded' ${centerFilter}`
+        )
+        .get(...params) as { c: number }
+    ).c;
+    const totalReward = (
+      db
+        .prepare(
+          `SELECT COALESCE(SUM(c.amount), 0) as total FROM credits c
+         JOIN parents p ON p.id = c.parent_id
+         WHERE c.reason LIKE 'Thưởng giới thiệu%' ${centerFilter}`
+        )
+        .get(...params) as { total: number }
+    ).total;
+    res.json({ total, pending, rewarded, total_reward: totalReward });
+  })
+);
+
+export default router;

@@ -1,0 +1,103 @@
+import { Request, Response, NextFunction } from 'express';
+import jwt from 'jsonwebtoken';
+import { env } from '../config/env';
+
+/**
+ * Secret ký JWT — NGUỒN DUY NHẤT là config/env (đọc từ biến môi trường JWT_SECRET).
+ * Không bao giờ hardcode secret trong source code.
+ */
+export const JWT_SECRET = env.JWT_SECRET;
+
+export interface AuthUser {
+  id: number;
+  username: string;
+  role: string; // superadmin | admin | staff | teacher | parent
+  name: string;
+  /** null = superadmin (thấy mọi trung tâm) */
+  center_id?: number | null;
+  parent_id?: number;
+  teacher_id?: number | null;
+}
+
+export interface AuthRequest extends Request {
+  user?: AuthUser;
+  /** File upload từ multer (uploadSingle). */
+  file?: Express.Multer.File;
+}
+
+export function signToken(user: AuthUser): string {
+  return jwt.sign(user, JWT_SECRET, { expiresIn: '7d' });
+}
+
+export function requireAuth(req: AuthRequest, res: Response, next: NextFunction): void {
+  const header = req.headers.authorization;
+  if (!header || !header.startsWith('Bearer ')) {
+    res.status(401).json({ error: 'Thiếu token đăng nhập' });
+    return;
+  }
+  try {
+    const payload = jwt.verify(header.slice(7), JWT_SECRET) as AuthUser;
+    req.user = payload;
+    next();
+  } catch {
+    res.status(401).json({ error: 'Token không hợp lệ hoặc đã hết hạn' });
+  }
+}
+
+/** Chỉ cho phụ huynh (portal /api/parent) */
+export function parentAuth(req: AuthRequest, res: Response, next: NextFunction): void {
+  const header = req.headers.authorization;
+  if (!header || !header.startsWith('Bearer ')) {
+    res.status(401).json({ error: 'Vui lòng đăng nhập tài khoản phụ huynh' });
+    return;
+  }
+  try {
+    const payload = jwt.verify(header.slice(7), JWT_SECRET) as AuthUser;
+    if (payload.role !== 'parent' || !payload.parent_id) {
+      res.status(403).json({ error: 'Tài khoản này không phải phụ huynh' });
+      return;
+    }
+    req.user = payload;
+    next();
+  } catch {
+    res.status(401).json({ error: 'Token không hợp lệ hoặc đã hết hạn' });
+  }
+}
+
+export function requireRole(...roles: string[]) {
+  return (req: AuthRequest, res: Response, next: NextFunction): void => {
+    if (!req.user || !roles.includes(req.user.role)) {
+      res.status(403).json({ error: 'Không có quyền thực hiện' });
+      return;
+    }
+    next();
+  };
+}
+
+/** Chặn tài khoản phụ huynh truy cập API nhân sự (dùng sau requireAuth ở mount) */
+export function denyParents(req: AuthRequest, res: Response, next: NextFunction): void {
+  if (req.user?.role === 'parent') {
+    res.status(403).json({ error: 'Tài khoản phụ huynh không có quyền truy cập' });
+    return;
+  }
+  next();
+}
+
+/** Vai trò nhân sự (được dùng chung app quản trị /app) */
+export const STAFF_ROLES = ['superadmin', 'admin', 'staff'];
+export const staffOnly = requireRole(...STAFF_ROLES);
+/** Giáo viên: bản thân giáo viên + admin/superadmin được xem */
+export const teacherOnly = requireRole('teacher', 'admin', 'superadmin');
+export const adminOnly = requireRole('admin', 'superadmin');
+export const superadminOnly = requireRole('superadmin');
+
+/**
+ * Lấy center_id hiệu lực của request.
+ * Trả về null cho superadmin (không giới hạn trung tâm).
+ */
+export function reqCenterId(req: AuthRequest): number | null {
+  if (!req.user) return null;
+  if (req.user.role === 'superadmin') return null;
+  const cid = req.user.center_id;
+  return typeof cid === 'number' ? cid : null;
+}

@@ -1,0 +1,29 @@
+{
+  "description": "EduCenter Pro - Phan mem quan ly trung tam ngoai ngu / lop hoc / gym (MVP)",
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@typescript-eslint/eslint-plugin": "^8.71.1",
+    "@typescript-eslint/parser": "^8.71.1",
+    "concurrently": "^9.0.1",
+    "eslint": "^10.12.0",
+    "eslint-config-prettier": "^10.1.8",
+    "prettier": "^3.9.9",
+    "typescript-eslint": "^8.71.1"
+  },
+  "name": "educenter-pro",
+  "private": true,
+  "scripts": {
+    "build": "npm run build -w server && npm run build -w client",
+    "dev": "concurrently \"npm run dev -w server\" \"npm run dev -w client\"",
+    "start": "npm run start -w server",
+    "lint": "eslint server/src client/src",
+    "lint:fix": "eslint server/src client/src --fix",
+    "format": "prettier --write \"server/src/**/*.{ts,js}\" \"client/src/**/*.{ts,tsx,js}\"",
+    "format:check": "prettier --check \"server/src/**/*.{ts,js}\" \"client/src/**/*.{ts,tsx,js}\""
+  },
+  "version": "1.0.0",
+  "workspaces": [
+    "server",
+    "client"
+  ]
+}

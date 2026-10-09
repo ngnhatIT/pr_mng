@@ -1,0 +1,99 @@
+import { Router, Response } from 'express';
+import { AuthRequest, reqCenterId } from '../../middleware/auth';
+import { asyncHandler } from '../../shared/http';
+import { validate, v, paramId } from '../../shared/validate';
+import * as classService from './classes.service';
+import { actorFromReq } from '../../shared/audit';
+import type { ScopeCtx } from './classes.service';
+
+const router = Router();
+
+/** Dựng context phân quyền cho service từ request. */
+function scopeOf(req: AuthRequest): ScopeCtx {
+  return {
+    centerId: reqCenterId(req),
+    role: req.user?.role || '',
+    teacherId: req.user?.teacher_id ?? null,
+  };
+}
+
+router.get(
+  '/',
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const { page, limit } = req.query as { page?: string; limit?: string };
+    res.json(classService.listClasses(scopeOf(req), { page, limit }));
+  })
+);
+
+router.get(
+  '/:id',
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    res.json(classService.getClassDetail(scopeOf(req), paramId(req.params)));
+  })
+);
+
+router.post(
+  '/',
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const input = validate(req.body, {
+      name: v.string({ required: true, max: 150, label: 'Tên lớp học' }),
+      teacher_id: v.number({ integer: true, label: 'Giáo viên' }),
+      schedule: v.any({ label: 'Lịch học' }),
+      start_date: v.string({ label: 'Ngày bắt đầu' }),
+      end_date: v.string({ label: 'Ngày kết thúc' }),
+      tuition_fee: v.number({ min: 0, label: 'Học phí' }),
+      max_students: v.number({ integer: true, min: 1, label: 'Sĩ số tối đa' }),
+      status: v.string({ label: 'Trạng thái' }),
+      room_id: v.number({ integer: true, label: 'Phòng học' }),
+    });
+    const created = classService.createClass(scopeOf(req), input);
+    res.status(201).json(created);
+  })
+);
+
+router.put(
+  '/:id',
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const input = validate(req.body, {
+      name: v.string({ required: true, max: 150, label: 'Tên lớp học' }),
+      teacher_id: v.number({ integer: true, label: 'Giáo viên' }),
+      schedule: v.any({ label: 'Lịch học' }),
+      start_date: v.string({ label: 'Ngày bắt đầu' }),
+      end_date: v.string({ label: 'Ngày kết thúc' }),
+      tuition_fee: v.number({ min: 0, label: 'Học phí' }),
+      max_students: v.number({ integer: true, min: 1, label: 'Sĩ số tối đa' }),
+      status: v.string({ label: 'Trạng thái' }),
+      room_id: v.number({ integer: true, label: 'Phòng học' }),
+    });
+    res.json(classService.updateClass(scopeOf(req), paramId(req.params), input));
+  })
+);
+
+router.delete(
+  '/:id',
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    classService.deleteClass(scopeOf(req), paramId(req.params), actorFromReq(req));
+    res.json({ ok: true });
+  })
+);
+
+router.post(
+  '/:id/enroll',
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const { student_id } = validate(req.body, {
+      student_id: v.number({ required: true, integer: true, label: 'Học viên' }),
+    });
+    classService.enrollStudent(scopeOf(req), paramId(req.params), student_id as number);
+    res.status(201).json({ ok: true });
+  })
+);
+
+router.delete(
+  '/enrollments/:enrollmentId',
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    classService.unenroll(scopeOf(req), paramId(req.params, 'enrollmentId'));
+    res.json({ ok: true });
+  })
+);
+
+export default router;
