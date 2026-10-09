@@ -10,7 +10,14 @@ export async function withAdvisoryLock<T>(
   key: string,
   fn: () => Promise<T>
 ): Promise<{ status: 'done' | 'locked' | 'error'; result?: T; error?: unknown }> {
-  const client = await db.connect();
+  let client;
+  try {
+    client = await db.connect();
+  } catch (error) {
+    // Pool cạn/DB chết: trả error để caller log + alert, không throw ra cron
+    logger.error('Không lấy được DB client cho advisory lock', { key, error: String(error) });
+    return { status: 'error', error };
+  }
   try {
     const r = await client.query('SELECT pg_try_advisory_lock(hashtext($1)) as locked', [key]);
     const locked = (r.rows[0] as { locked: boolean } | undefined)?.locked === true;
