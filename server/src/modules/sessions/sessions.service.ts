@@ -220,7 +220,7 @@ export async function saveAttendance(
 
 /** Sinh mã điểm danh 6 số cho buổi học (staff) — dùng crypto CSPRNG. */
 export async function generateCheckinCode(ctx: ScopeCtx, id: number): Promise<{ code: string }> {
-  const session = await getSessionOr404(ctx, id);
+  await getSessionOr404(ctx, id);
   const today = toISODate(new Date());
   // Thử tối đa 10 lần để tránh trùng mã với buổi khác cùng ngày
   for (let attempt = 0; attempt < 10; attempt++) {

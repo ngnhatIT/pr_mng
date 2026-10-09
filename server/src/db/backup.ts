@@ -70,7 +70,7 @@ export async function backupDatabase(backupDir: string, keep = 7): Promise<Backu
     });
   } catch (err) {
     fs.unlinkSync(filePath);
-    throw new Error(`Backup thất bại: file dump không đọc được (${String(err)})`);
+    throw new Error(`Backup thất bại: file dump không đọc được (${String(err)})`, { cause: err });
   }
 
   // Xoay vòng: giữ N bản mới nhất

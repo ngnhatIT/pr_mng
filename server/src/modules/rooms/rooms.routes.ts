@@ -4,7 +4,7 @@ import { AuthRequest, reqCenterId } from '../../middleware/auth';
 import { requirePermission } from '../authorization/authorization.middleware';
 import { getDefaultCenter } from '../../utils/plans';
 import { asyncHandler } from '../../shared/http';
-import { validate, v, paramId } from '../../shared/validate';
+import { validate, v } from '../../shared/validate';
 import { audit, actorFromReq } from '../../shared/audit';
 import { listRooms } from './rooms.service';
 

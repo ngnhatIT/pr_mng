@@ -540,7 +540,7 @@ export async function createReview(
   const r = Number(input.rating);
   if (!Number.isInteger(r) || r < 1 || r > 5) throw AppError.badRequest('Đánh giá phải từ 1 đến 5 sao');
   // 1 review / parent / center: dùng ON CONFLICT để chống race (2 POST đồng thời)
-  const ins = await db
+  await db
     .prepare(
       `INSERT INTO reviews (center_id, parent_id, rating, comment, status)
        VALUES (?, ?, ?, ?, 'pending')

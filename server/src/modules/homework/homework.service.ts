@@ -1,6 +1,5 @@
 import { db } from '../../db';
 import { parsePagination, paginate, type PageOptions, type Paginated } from '../../shared/pagination';
-import { escapeLike } from '../../shared/like';
 import { DAY_MS } from '../../shared/time';
 import { AppError } from '../../shared/errors';
 import { nowVNMinute, assignedCountExpr, assertValidDates } from './homework.helpers';

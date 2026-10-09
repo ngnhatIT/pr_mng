@@ -1,8 +1,5 @@
 import { db } from '../../db';
 import type { HomeworkRow, HomeworkStatus } from './homework.service';
-import { promises as fs } from 'fs';
-import path from 'path';
-import { getUploadDir } from '../../shared/upload';
 
 /**
  * Repository: lớp truy cập dữ liệu thuần cho homework.

@@ -106,62 +106,23 @@ function startBackupScheduler(): void {
 function startConsistencyScheduler(): void {
   consistencyTask = cron.schedule(
     '0 * * * *',
-    async () => {
-      // Advisory lock: chỉ 1 instance chạy (chống 2 instance cùng DELETE/consistency)
-      let locked = false;
-      try {
-        const r = (await db.query('SELECT pg_try_advisory_lock(hashtext($1)) AS locked', [
-          'educenter-consistency',
-        ])) as { rows: { locked: boolean }[] };
-        locked = r.rows[0]?.locked ?? false;
-      } catch {
-        locked = true; // fail-open
-      }
-      if (!locked) {
-        logger.info('Bỏ qua consistency: instance khác đang chạy');
-        return;
-      }
-      try {
-        const { checkFinancialConsistency } = await import('./db/consistency.js');
-        const issues = await checkFinancialConsistency(db);
-        if (issues.length > 0) {
-          logger.error('Phát hiện lệch dữ liệu tài chính', { count: issues.length, issues });
-        }
-        // Dọn refresh token hết hạn (chống phình bảng)
-        const r = await db
-          .prepare("DELETE FROM refresh_tokens WHERE expires_at < NOW() - INTERVAL '7 days'")
-          .run();
-        if ((r.changes ?? 0) > 0) logger.info('Đã dọn refresh token hết hạn', { count: r.changes });
-      } catch (err: unknown) {
-        logger.error('Kiểm tra nhất quán tài chính thất bại', { error: String(err) });
-      } finally {
+    () => {
+      void withAdvisoryLock('educenter-consistency', async () => {
         try {
-          await db.query('SELECT pg_advisory_unlock(hashtext($1))', ['educenter-consistency']);
-        } catch {
-          /* bỏ qua */
+          const { checkFinancialConsistency } = await import('./db/consistency.js');
+          const issues = await checkFinancialConsistency(db);
+          if (issues.length > 0) {
+            logger.error('Phát hiện lệch dữ liệu tài chính', { count: issues.length, issues });
+          }
+          // Dọn refresh token hết hạn (chống phình bảng)
+          const r = await db
+            .prepare("DELETE FROM refresh_tokens WHERE expires_at < NOW() - INTERVAL '7 days'")
+            .run();
+          if ((r.changes ?? 0) > 0) logger.info('Đã dọn refresh token hết hạn', { count: r.changes });
+        } catch (err: unknown) {
+          logger.error('Kiểm tra nhất quán tài chính thất bại', { error: String(err) });
         }
-      }
-      // Dọn idempotency keys hết hạn (TTL 24h) — cron độc lập, không phụ thuộc traffic
-      try {
-        await db
-          .prepare(
-            "DELETE FROM idempotency_keys WHERE created_at < to_char(NOW() - INTERVAL '24 hours', 'YYYY-MM-DD HH24:MI:SS')"
-          )
-          .run();
-      } catch {
-        /* bỏ qua */
-      }
-      // Dọn audit_logs cũ hơn 1 năm (chống phình bảng — log forensic giữ 12 tháng)
-      try {
-        const r = await db
-          .prepare(
-            "DELETE FROM audit_logs WHERE created_at < to_char(NOW() - INTERVAL '1 year', 'YYYY-MM-DD HH24:MI:SS')"
-          )
-          .run();
-        if ((r.changes ?? 0) > 0) logger.info('Đã dọn audit_logs cũ', { count: r.changes });
-      } catch {
-        /* bỏ qua */
-      }
+      });
     },
     { timezone: 'Asia/Ho_Chi_Minh' }
   );

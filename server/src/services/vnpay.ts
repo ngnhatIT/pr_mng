@@ -9,10 +9,6 @@ export interface VnpayConfig {
 /** URL thanh toán — dùng môi trường SANDBOX của VNPay để demo */
 export const VNPAY_PAY_URL = 'https://sandbox.vnpayment.vn/paymentv2/vpcpay.html';
 
-function pad(n: number): string {
-  return String(n).padStart(2, '0');
-}
-
 /** yyyyMMddHHmmss theo giờ Việt Nam (VNPay yêu cầu GMT+7, không phụ thuộc TZ server) */
 function vnpDate(d: Date): string {
   const parts = new Intl.DateTimeFormat('en-CA', {

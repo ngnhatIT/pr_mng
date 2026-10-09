@@ -15,7 +15,7 @@
  */
 import { Response, NextFunction } from 'express';
 import { AuthRequest } from '../../middleware/auth';
-import { hasPermission, getPermissionScope, Scope, invalidateUserPermissions } from './authorization.service';
+import { hasPermission, Scope, invalidateUserPermissions } from './authorization.service';
 
 export function requirePermission(permissionCode: string, minScope: Scope = 'own') {
   return async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
