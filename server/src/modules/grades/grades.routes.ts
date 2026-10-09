@@ -2,6 +2,7 @@ import { Router, Response } from 'express';
 import { AuthRequest, reqCenterId } from '../../middleware/auth';
 import { requirePermission } from '../authorization/authorization.middleware';
 import { asyncHandler } from '../../shared/http';
+import { AppError } from '../../shared/errors';
 import { actorFromReq } from '../../shared/audit';
 import { paramId } from '../../shared/validate';
 import { listGrades, createGrade, deleteGrade, type ScopeCtx } from './grades.service';
@@ -41,12 +42,10 @@ router.post(
     const cid = reqCenterId(req);
     const { student_id, class_id, title, score, max_score, comment } = req.body as Record<string, unknown>;
     if (!student_id) {
-      res.status(400).json({ error: 'Vui lòng chọn học viên', code: 'BAD_REQUEST' });
-      return;
+      throw AppError.badRequest('Vui lòng chọn học viên');
     }
     if (!title || !String(title).trim()) {
-      res.status(400).json({ error: 'Vui lòng nhập tiêu đề bài kiểm tra', code: 'BAD_REQUEST' });
-      return;
+      throw AppError.badRequest('Vui lòng nhập tiêu đề bài kiểm tra');
     }
     const row = await createGrade({
       centerId: cid,
