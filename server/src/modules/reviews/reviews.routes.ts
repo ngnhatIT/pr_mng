@@ -48,7 +48,7 @@ router.post(
   requirePermission('reviews.manage'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const cid = reqCenterId(req);
-    const id = Number(req.params.id);
+    const id = paramId(req.params);
     const review = await getReview(id, cid);
     if (!review) {
       res.status(404).json({ error: 'Không tìm thấy đánh giá', code: 'NOT_FOUND' });
@@ -66,7 +66,7 @@ router.post(
   requirePermission('reviews.manage'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const cid = reqCenterId(req);
-    const id = Number(req.params.id);
+    const id = paramId(req.params);
     const review = await getReview(id, cid);
     if (!review) {
       res.status(404).json({ error: 'Không tìm thấy đánh giá', code: 'NOT_FOUND' });
@@ -86,7 +86,7 @@ router.delete(
   requirePermission('reviews.manage'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const cid = reqCenterId(req);
-    const id = Number(req.params.id);
+    const id = paramId(req.params);
     const review = await getReview(id, cid);
     if (!review) {
       res.status(404).json({ error: 'Không tìm thấy đánh giá', code: 'NOT_FOUND' });

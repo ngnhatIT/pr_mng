@@ -202,7 +202,7 @@ router.post(
   requirePermission('notifications.send'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const cid = reqCenterId(req);
-    const id = Number(req.params.id);
+    const id = paramId(req.params);
     if (cid !== null) {
       const inv = await db
         .prepare(

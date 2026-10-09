@@ -182,7 +182,7 @@ router.get(
   '/:id',
   requirePermission('homework.view'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
-    const id = Number(req.params.id);
+    const id = paramId(req.params);
     await requireHomework(req, id);
     res.json(await getHomeworkDetail(id));
   })
@@ -193,7 +193,7 @@ router.post(
   '/:id/reuse',
   requirePermission('homework.create'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
-    const id = Number(req.params.id);
+    const id = paramId(req.params);
     await requireHomework(req, id);
     const created = await reuseHomework(id, req.user!.id, reqCenterId(req));
     res.status(201).json({ created: created[0], count: 1 });
@@ -205,7 +205,7 @@ router.post(
   '/:id/publish',
   requirePermission('homework.create'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
-    const id = Number(req.params.id);
+    const id = paramId(req.params);
     await requireHomework(req, id);
     await setHomeworkStatus(id, 'published', reqCenterId(req));
     res.json({ ok: true });
@@ -217,7 +217,7 @@ router.post(
   '/:id/unpublish',
   requirePermission('homework.create'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
-    const id = Number(req.params.id);
+    const id = paramId(req.params);
     const hw = await requireHomework(req, id);
     await setHomeworkStatus(id, 'draft', reqCenterId(req));
     void audit({
@@ -238,7 +238,7 @@ router.get(
   '/:id/scores',
   requirePermission('homework.grade'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
-    const id = Number(req.params.id);
+    const id = paramId(req.params);
     await requireHomework(req, id);
     res.json(await getHomeworkScores(id));
   })
@@ -249,7 +249,7 @@ router.post(
   '/:id/scores',
   requirePermission('homework.grade'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
-    const id = Number(req.params.id);
+    const id = paramId(req.params);
     await requireHomework(req, id);
     const body = validate(req.body, {
       student_id: v.number({ integer: true, min: 1, label: 'Học viên' }),
@@ -376,7 +376,7 @@ router.get(
   '/:id/submissions',
   requirePermission('homework.grade'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
-    const id = Number(req.params.id);
+    const id = paramId(req.params);
     await requireHomework(req, id);
     const { page, limit } = req.query as Record<string, string>;
     res.json(
@@ -428,7 +428,7 @@ router.put(
   '/:id',
   requirePermission('homework.create'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
-    const id = Number(req.params.id);
+    const id = paramId(req.params);
     await requireHomework(req, id);
     const body = validate(req.body, {
       title: v.string({ min: 1, max: 200, label: 'Tiêu đề' }),
@@ -463,7 +463,7 @@ router.delete(
   '/:id',
   requirePermission('homework.delete'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
-    const id = Number(req.params.id);
+    const id = paramId(req.params);
     const hw = await requireHomework(req, id);
     await deleteHomework(id, reqCenterId(req));
     void audit({

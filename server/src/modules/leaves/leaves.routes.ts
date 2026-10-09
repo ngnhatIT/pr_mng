@@ -57,7 +57,7 @@ router.post(
   requirePermission('leaves.manage'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const cid = reqCenterId(req);
-    const id = Number(req.params.id);
+    const id = paramId(req.params);
     const leave = await getLeave(id);
     if (!leave || (cid !== null && leave.center_id !== cid)) {
       res.status(404).json({ error: 'Không tìm thấy đơn xin nghỉ', code: 'NOT_FOUND' });
@@ -104,7 +104,7 @@ router.post(
   requirePermission('leaves.manage'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const cid = reqCenterId(req);
-    const id = Number(req.params.id);
+    const id = paramId(req.params);
     const leave = await getLeave(id);
     if (!leave || (cid !== null && leave.center_id !== cid)) {
       res.status(404).json({ error: 'Không tìm thấy đơn xin nghỉ', code: 'NOT_FOUND' });

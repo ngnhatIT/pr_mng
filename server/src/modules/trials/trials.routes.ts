@@ -31,7 +31,7 @@ router.put(
   requirePermission('trials.manage'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const cid = reqCenterId(req);
-    const id = Number(req.params.id);
+    const id = paramId(req.params);
     const { status } = req.body as { status?: string };
     if (!status || !(TRIAL_STATUS as readonly string[]).includes(status)) {
       res.status(400).json({ error: 'Trạng thái không hợp lệ', code: 'VALIDATION_INVALID' });
@@ -54,7 +54,7 @@ router.post(
   requirePermission('trials.manage'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const cid = reqCenterId(req);
-    const id = Number(req.params.id);
+    const id = paramId(req.params);
     const { class_id } = req.body as { class_id?: number };
     // convertTrial ném 404 (không tồn tại/khác center) hoặc 409 (đã convert)
     res.status(201).json({ ok: true, ...(await convertTrial(cid, id, class_id ?? null)) });

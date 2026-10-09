@@ -2,7 +2,7 @@ import { Router, Response, NextFunction } from 'express';
 import { AuthRequest } from '../../middleware/auth';
 import { requirePermission } from '../authorization/authorization.middleware';
 import { asyncHandler } from '../../shared/http';
-import { validate, v } from '../../shared/validate';
+import { validate, v, paramId } from '../../shared/validate';
 import { actorFromReq } from '../../shared/audit';
 import { listCentersWithCounts, createCenterWithAdmin, getCenter } from './centers.service';
 import { db } from '../../db';
@@ -76,7 +76,7 @@ router.put(
   '/:id',
   superadminOnly,
   asyncHandler(async (req: AuthRequest, res: Response) => {
-    const id = Number(req.params.id);
+    const id = paramId(req.params);
     const center = await getCenter(id);
     if (!center) {
       res.status(404).json({ error: 'Không tìm thấy trung tâm', code: 'NOT_FOUND' });

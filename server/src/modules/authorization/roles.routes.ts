@@ -5,7 +5,7 @@
 import { Router, Response } from 'express';
 import { AuthRequest, requireAuth, reqCenterId } from '../../middleware/auth';
 import { asyncHandler } from '../../shared/http';
-import { validate, v } from '../../shared/validate';
+import { validate, v, paramId } from '../../shared/validate';
 import { AppError } from '../../shared/errors';
 import { db } from '../../db/pg-compat';
 import { audit } from '../../shared/audit';
@@ -59,7 +59,7 @@ router.get(
   '/:id',
   requirePermission('roles.view'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
-    const id = Number(req.params.id);
+    const id = paramId(req.params);
     const role = (await db.prepare('SELECT * FROM roles WHERE id = ?').get(id)) as
       Record<string, unknown> | undefined;
     if (!role) throw AppError.notFound('Không tìm thấy vai trò');
@@ -107,7 +107,7 @@ router.put(
   '/:id',
   requirePermission('roles.manage'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
-    const id = Number(req.params.id);
+    const id = paramId(req.params);
     const role = (await db.prepare('SELECT is_system, center_id FROM roles WHERE id = ?').get(id)) as
       | { is_system: boolean; center_id: number | null }
       | undefined;
@@ -134,7 +134,7 @@ router.delete(
   '/:id',
   requirePermission('roles.manage'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
-    const id = Number(req.params.id);
+    const id = paramId(req.params);
     const role = (await db.prepare('SELECT is_system, center_id FROM roles WHERE id = ?').get(id)) as
       | { is_system: boolean; center_id: number | null }
       | undefined;
@@ -163,7 +163,7 @@ router.put(
   '/:id/permissions',
   requirePermission('roles.manage'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
-    const id = Number(req.params.id);
+    const id = paramId(req.params);
     // Admin chỉ sửa permissions của role thuộc trung tâm mình
     const role = (await db
       .prepare('SELECT is_system, center_id FROM roles WHERE id = ?')

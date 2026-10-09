@@ -92,7 +92,7 @@ router.put(
   requirePermission('leads.manage'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const cid = reqCenterId(req);
-    const id = Number(req.params.id);
+    const id = paramId(req.params);
     const lead = await getLead(id, cid);
     if (!lead) {
       res.status(404).json({ error: 'Không tìm thấy lead', code: 'NOT_FOUND' });
@@ -152,7 +152,7 @@ router.delete(
   requirePermission('leads.manage'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const cid = reqCenterId(req);
-    const id = Number(req.params.id);
+    const id = paramId(req.params);
     const lead = await getLead(id, cid);
     if (!lead) {
       res.status(404).json({ error: 'Không tìm thấy lead', code: 'NOT_FOUND' });

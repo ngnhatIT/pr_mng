@@ -69,7 +69,7 @@ router.delete(
   requirePermission('grades.manage'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const cid = reqCenterId(req);
-    const id = Number(req.params.id);
+    const id = paramId(req.params);
     await deleteGrade(cid, id, req.user?.role || '', req.user?.teacher_id ?? null, actorFromReq(req));
     res.json({ ok: true });
   })

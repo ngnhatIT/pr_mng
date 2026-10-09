@@ -4,7 +4,7 @@ import { AuthRequest, reqCenterId } from '../../middleware/auth';
 import { requirePermission } from '../authorization/authorization.middleware';
 import { getDefaultCenter } from '../../utils/plans';
 import { asyncHandler } from '../../shared/http';
-import { validate, v } from '../../shared/validate';
+import { validate, v, paramId } from '../../shared/validate';
 import { audit, actorFromReq } from '../../shared/audit';
 import { listRooms } from './rooms.service';
 
@@ -79,7 +79,7 @@ router.put(
   '/:id',
   requirePermission('rooms.manage'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
-    const id = Number(req.params.id);
+    const id = paramId(req.params);
     const room = await getScopedRoom(req, id);
     if (!room) {
       res.status(404).json({ error: 'Không tìm thấy phòng học', code: 'NOT_FOUND' });
@@ -103,7 +103,7 @@ router.delete(
   '/:id',
   requirePermission('rooms.manage'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
-    const id = Number(req.params.id);
+    const id = paramId(req.params);
     const room = await getScopedRoom(req, id);
     if (!room) {
       res.status(404).json({ error: 'Không tìm thấy phòng học', code: 'NOT_FOUND' });
