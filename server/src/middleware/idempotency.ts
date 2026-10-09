@@ -1,4 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
+import { formatError } from '../shared/errorFormat';
 import { db } from '../db';
 import { logger } from '../shared/logger';
 
@@ -56,14 +57,14 @@ export async function idempotency(req: Request, res: Response, next: NextFunctio
           'INSERT INTO idempotency_keys (key, user_id, method, path, status_code, response_body) VALUES (?, ?, ?, ?, ?, ?) ON CONFLICT (key) DO NOTHING'
         )
           .run(key, userId, req.method, req.path, res.statusCode, JSON.stringify(body))
-          .catch((err: unknown) => log.warn('Lưu idempotency key thất bại', { error: String(err) }));
+          .catch((err: unknown) => log.warn('Lưu idempotency key thất bại', { error: formatError(err) }));
       }
       return originalJson(body);
     }) as typeof res.json;
 
     next();
   } catch (err) {
-    log.warn('Idempotency check thất bại, cho qua', { error: String(err) });
+    log.warn('Idempotency check thất bại, cho qua', { error: formatError(err) });
     next();
   }
 }

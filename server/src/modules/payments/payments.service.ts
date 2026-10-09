@@ -107,6 +107,12 @@ async function confirmVnpayTxn(
     await tx
       .prepare("UPDATE payment_txns SET status = 'confirmed' WHERE ref = ? AND status = 'pending'")
       .run(txnRef);
+    logger.info('VNPay payment confirmed', {
+      txnRef,
+      invoiceId: txn.invoice_id,
+      amount: txn.amount,
+      centerId,
+    });
     // Guard chống overpay: nếu thanh toán này làm vượt tổng hóa đơn → từ chối
     const paidSoFar = (await tx
       .prepare(

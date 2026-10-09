@@ -1,4 +1,5 @@
 import { db } from '../db';
+import { formatError } from '../shared/errorFormat';
 import { logger } from '../shared/logger';
 import { normalizePhone } from './zalo';
 
@@ -58,7 +59,7 @@ export async function logParentNotice(opts: {
       kind: opts.kind,
       studentId: opts.studentId ?? null,
       invoiceId: opts.invoiceId ?? null,
-      error: String(err),
+      error: formatError(err),
     });
   }
 }
