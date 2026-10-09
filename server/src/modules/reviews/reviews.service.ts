@@ -1,5 +1,6 @@
 import { db } from '../../db';
 import { parsePagination, paginate, type PageOptions, type Paginated } from '../../shared/pagination';
+import { AppError } from '../../shared/errors';
 
 /* ---------------------------------- Types ---------------------------------- */
 
@@ -27,6 +28,11 @@ export async function listReviews(
   pageOpts: PageOptions = {}
 ): Promise<Paginated<ReviewRow>> {
   const { status = '' } = query;
+  // Validate status (tránh typo trả rỗng lặng lẽ)
+  const VALID_STATUS = ['pending', 'approved', 'rejected'];
+  if (status && !VALID_STATUS.includes(status)) {
+    throw AppError.badRequest('Trạng thái không hợp lệ');
+  }
   const conds: string[] = [];
   const params: unknown[] = [];
   if (centerId !== null) {
