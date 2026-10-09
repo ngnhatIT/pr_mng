@@ -1,0 +1,283 @@
+{
+  "actions": {
+    "analytics": "Phân tích",
+    "create": "Tạo bài tập",
+    "grade": "Chấm điểm",
+    "publish": "Đăng",
+    "publishNow": "Đăng ngay",
+    "questionBank": "Ngân hàng câu hỏi",
+    "reuse": "Tái sử dụng",
+    "reuseTitle": "Tạo bản mới từ bài này",
+    "unpublish": "Gỡ đăng",
+    "unpublishTitle": "Gỡ về nháp",
+    "viewResults": "Kết quả",
+    "viewSubmissions": "Bài nộp"
+  },
+  "analytics": {
+    "byClass": "Theo lớp",
+    "col": {
+      "avgCompletion": "Hoàn thành TB",
+      "avgScore": "Điểm TB",
+      "class": "Lớp",
+      "published": "Bài đã đăng"
+    },
+    "noData": "Chưa có dữ liệu.",
+    "noRecent": "Chưa có bài nào.",
+    "recent": "Bài mới nhất",
+    "title": "Phân tích bài tập"
+  },
+  "attempts": {
+    "attempts": "lượt làm bài",
+    "avgScore": "Điểm trung bình {{avg}}%",
+    "col": {
+      "rate": "Tỷ lệ",
+      "score": "Điểm",
+      "student": "Học viên",
+      "submittedAt": "Nộp lúc"
+    },
+    "empty": "Chưa có ai làm bài",
+    "title": "Kết quả quiz: {{title}}"
+  },
+  "bank": {
+    "add": "Thêm câu hỏi",
+    "allTags": "Mọi chủ đề",
+    "clearSearch": "Xóa tìm kiếm",
+    "deleteConfirm": "Xóa câu hỏi này khỏi ngân hàng?",
+    "empty": "Ngân hàng trống",
+    "emptyDesc": "Thêm câu hỏi để tái dùng cho nhiều quiz.",
+    "form": {
+      "added": "Đã thêm vào ngân hàng",
+      "answers": "Đáp án (tick vào đáp án đúng)",
+      "answersRequired": "Cần ít nhất 2 đáp án và 1 đáp án đúng",
+      "chooseTag": "- Chọn -",
+      "newTagPh": "Hoặc tạo mới",
+      "points": "Điểm",
+      "question": "Câu hỏi *",
+      "questionPh": "VD: 'Apple' nghĩa là gì?",
+      "questionRequired": "Nhập câu hỏi",
+      "save": "Lưu vào ngân hàng",
+      "tag": "Chủ đề"
+    },
+    "import": "Thêm {{count}} câu vào đề",
+    "meta": "{{points}}đ · {{count}} đáp án",
+    "searchPh": "Tìm câu hỏi...",
+    "selected": "Đã chọn {{count}} câu",
+    "title": "Ngân hàng câu hỏi",
+    "toast": {
+      "deleteFail": "Xóa thất bại",
+      "loadFail": "Không tải được ngân hàng",
+      "staleSelection": "Có {{count}} câu đã chọn không còn trong danh sách"
+    }
+  },
+  "delete": {
+    "message": "Xóa bài tập \"{{title}}\"?",
+    "title": "Xóa bài tập"
+  },
+  "due": {
+    "daysLeft": "Còn {{count}} ngày",
+    "overdueDays": "Quá hạn {{count}} ngày",
+    "today": "Hết hạn hôm nay"
+  },
+  "editor": {
+    "bold": "In đậm",
+    "bullets": "Danh sách",
+    "heading": "Tiêu đề",
+    "italic": "In nghiêng",
+    "markdownHint": "Hỗ trợ markdown",
+    "numbered": "Danh sách số",
+    "quote": "Trích dẫn",
+    "selFallback": "nội dung"
+  },
+  "empty": {
+    "desc": "Tạo bài tập mới, lưu nháp hoặc hẹn giờ đăng.",
+    "title": "Chưa có bài tập nào"
+  },
+  "filters": {
+    "allClasses": "Tất cả lớp",
+    "allDues": "Mọi hạn nộp",
+    "allKinds": "Mọi loại",
+    "kindHomework": "Bài tập",
+    "kindQuiz": "Quiz trắc nghiệm",
+    "noDate": "Chưa đặt hạn",
+    "overdue": "Quá hạn",
+    "searchPlaceholder": "Tìm theo tiêu đề, nội dung...",
+    "upcoming": "Sắp tới"
+  },
+  "form": {
+    "addAttachment": "+ Thêm",
+    "addCriterion": "+ Thêm tiêu chí",
+    "addOption": "+ Thêm đáp án",
+    "addQuestion": "+ Thêm câu hỏi",
+    "assignTo": "Giao cho",
+    "attNamePh": "Tên (VD: Audio bài nghe)",
+    "attUrlPh": "Link https://...",
+    "attachments": "Đính kèm (link tài liệu, audio, video)",
+    "content": "Nội dung ({{count}}/5000)",
+    "contentPh": "Chi tiết bài tập...\n1. ...\n2. ...",
+    "correctAnswer": "Đáp án đúng",
+    "criterion": "Tiêu chí",
+    "criterionScore": "{{score}}đ",
+    "defaultCriteria": [
+      "Phát âm",
+      "Từ vựng"
+    ],
+    "deselectAll": "Bỏ chọn",
+    "dueDate": "Hạn nộp",
+    "dueNextWeek": "Tuần sau",
+    "dueToday": "Hôm nay",
+    "dueTomorrow": "Ngày mai",
+    "dueWeekend": "Cuối tuần",
+    "dueWithDate": "Hạn: {{date}}",
+    "fromBank": "Lấy từ ngân hàng",
+    "hardDeadline": "Hạn chót cứng",
+    "hardDeadlineHint": "Qua ngày này khóa nộp bài",
+    "hidePreview": "Ẩn xem trước",
+    "kindHomework": "Bài tập thường",
+    "kindQuiz": "Quiz trắc nghiệm",
+    "maxScore": "Điểm tối đa",
+    "maxScorePh": "VD: 10 (trống = không chấm)",
+    "newRubric": "+ Tạo mới",
+    "noResults": "Không tìm thấy",
+    "noRubric": "Không dùng rubric",
+    "noTitle": "(Chưa có tiêu đề)",
+    "optionPh": "Đáp án {{letter}}",
+    "pickStudents": "Chọn riêng từng em",
+    "points": "Điểm",
+    "preview": "Xem trước",
+    "publishDraftOpt": "Lưu nháp",
+    "publishFor": "Đăng cho {{count}} lớp",
+    "publishNowOpt": "Đăng ngay",
+    "publishScheduleOpt": "Hẹn giờ đăng",
+    "publishSection": "Đăng bài",
+    "questionPh": "Câu hỏi {{n}}",
+    "quickDue": "Hạn nhanh",
+    "quickTemplates": "Mẫu nhanh",
+    "quizLocked": "Đã có học viên làm bài - không thể sửa đề. Hãy tạo quiz mới nếu cần thay đổi.",
+    "quizQuestions": "Câu hỏi trắc nghiệm ({{count}} câu, tổng {{total}}đ)",
+    "rubric": "Rubric chấm điểm",
+    "rubricNamePh": "Tên rubric (VD: Chấm bài nói)",
+    "rubricOption": "{{name}} ({{score}}đ)",
+    "saveChanges": "Lưu thay đổi",
+    "saveDraft": "Lưu nháp",
+    "saveRubric": "Lưu rubric",
+    "scheduleFor": "Hẹn đăng ({{count}} lớp)",
+    "searchClass": "Tìm lớp...",
+    "searchStudent": "Tìm học viên...",
+    "selectAll": "Chọn tất cả",
+    "selectClass": "Chọn lớp ({{count}} đã chọn) *",
+    "selectedCount": "Đã chọn {{count}} em",
+    "submitting": "Đang xử lý...",
+    "templates": [
+      {
+        "content": "1. Học thuộc 20 từ vựng mới trong bài\n2. Viết mỗi từ 3 lần vào vở\n3. Đặt câu với 5 từ bất kỳ",
+        "name": "Ôn từ vựng",
+        "title": "Ôn tập từ vựng bài {n}"
+      },
+      {
+        "content": "Hoàn thành các bài tập trang {n} sách giáo khoa.\nChụp ảnh bài làm gửi cho giáo viên.",
+        "name": "Làm bài tập SGK",
+        "title": "Bài tập SGK trang {n}"
+      },
+      {
+        "content": "1. Nghe audio 3 lần\n2. Điền từ còn thiếu\n3. Ghi âm lại đoạn hội thoại",
+        "name": "Luyện nghe",
+        "title": "Luyện nghe bài {n}"
+      }
+    ],
+    "title": "Tiêu đề *",
+    "titleEdit": "Sửa bài tập",
+    "titleNew": "Tạo bài tập mới",
+    "titlePhHw": "VD: Ôn tập từ vựng Unit 5",
+    "titlePhQuiz": "VD: Quiz từ vựng Unit 5",
+    "toast": {
+      "assigned": "Đã giao cho {{count}} lớp",
+      "attRequired": "Nhập tên và link đính kèm",
+      "bankImported": "Đã thêm {{count}} câu từ ngân hàng",
+      "rubricCreated": "Đã tạo rubric",
+      "rubricFail": "Tạo rubric thất bại",
+      "saveFail": "Lưu thất bại",
+      "savedDraft": "Đã lưu nháp",
+      "scheduled": "Đã hẹn đăng {{count}} lớp",
+      "updated": "Đã cập nhật"
+    },
+    "wholeClass": "Cả lớp"
+  },
+  "grade": {
+    "empty": "Chưa có học viên",
+    "feedback": "Nhận xét",
+    "feedbackPh": "Nhận xét cho học viên...",
+    "pickStudent": "Chọn học viên để chấm",
+    "pickStudentDesc": "Bấm vào tên trong danh sách bên trái.",
+    "progressDone": "Đã chấm",
+    "rubric": "Rubric: {{name}}",
+    "saveScore": "Lưu điểm",
+    "scale": "Thang điểm {{max}}",
+    "score": "Điểm",
+    "status": {
+      "graded": "Đã chấm",
+      "pending": "Chưa nộp",
+      "submitted": "Đã nộp"
+    },
+    "studentList": "Danh sách học viên",
+    "title": "Chấm điểm: {{title}}",
+    "toast": {
+      "invalidScore": "Điểm không hợp lệ",
+      "loadFail": "Không tải được bảng điểm",
+      "overMax": "Điểm không vượt quá {{max}}",
+      "saveFail": "Lưu điểm thất bại",
+      "saved": "Đã lưu điểm"
+    }
+  },
+  "page": {
+    "desc": "Giao bài tập và quiz cho các lớp, chấm điểm và theo dõi bài nộp",
+    "title": "Bài tập về nhà"
+  },
+  "stats": {
+    "drafts": "Nháp / Hẹn giờ",
+    "dueSoon": "Sắp hết hạn (≤ 3 ngày)",
+    "overdue": "Đã quá hạn",
+    "published": "Đã đăng"
+  },
+  "status": {
+    "draft": "Nháp",
+    "published": "Đã đăng",
+    "scheduled": "Hẹn giờ"
+  },
+  "submissions": {
+    "count": "{{count}} bài đã nộp",
+    "downloadFile": "Tải file",
+    "empty": "Chưa có bài nộp",
+    "emptyDesc": "Phụ huynh nộp bài qua cổng phụ huynh.",
+    "imageAlt": "Ảnh bài nộp",
+    "submittedAt": "Nộp lúc {{time}}",
+    "title": "Bài nộp - {{title}}",
+    "viewLarge": "Xem ảnh lớn"
+  },
+  "table": {
+    "actions": "Thao tác",
+    "class": "Lớp",
+    "due": "Hạn nộp",
+    "maxScore": "Điểm tối đa: {{max}}",
+    "progress": "Hoàn thành",
+    "status": "Trạng thái",
+    "title": "Bài tập"
+  },
+  "tabs": {
+    "all": "Tất cả",
+    "draft": "Nháp",
+    "published": "Đã đăng",
+    "scheduled": "Hẹn giờ"
+  },
+  "toast": {
+    "deleteFail": "Xóa thất bại",
+    "deleted": "Đã xóa bài tập",
+    "loadFail": "Không tải được bài tập",
+    "publishFail": "Đăng thất bại",
+    "published": "Đã đăng bài tập",
+    "reuseFail": "Tái sử dụng thất bại",
+    "reused": "Đã tạo bản nháp từ bài tập cũ - chỉnh sửa rồi đăng",
+    "unpublishConfirm": "Gỡ đăng \"{{title}}\" về nháp? Phụ huynh sẽ không thấy bài này nữa.",
+    "unpublishFail": "Gỡ đăng thất bại",
+    "unpublished": "Đã gỡ về nháp"
+  }
+}

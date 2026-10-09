@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { setAuth } from '../../shared/api/client';
 import { parentApi } from './parent.api';
 import { useToast } from '../../shared/ui/toast';
@@ -7,6 +8,7 @@ import { Icon } from '../../shared/components/icons';
 import './parent.css';
 
 export function ParentLogin() {
+  const { t } = useTranslation(['parent', 'common']);
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
@@ -22,10 +24,10 @@ export function ParentLogin() {
     try {
       const data = await parentApi.login(phone, password);
       setAuth(data.token, { ...data.parent, role: 'parent', username: data.parent.phone });
-      toast(`Xin chào, ${data.parent.name}!`, 'success');
+      toast(t('auth.welcome', { name: data.parent.name }), 'success');
       navigate('/parent');
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Đăng nhập thất bại';
+      const msg = err instanceof Error ? err.message : t('auth.loginError');
       setError(msg);
       toast(msg, 'error');
     } finally {
@@ -37,8 +39,8 @@ export function ParentLogin() {
     <div className="login-page parent-auth">
       <form className="login-card" onSubmit={submit} noValidate>
         <div className="login-logo">E</div>
-        <h1 className="login-title">Cổng phụ huynh</h1>
-        <p className="login-sub">Theo dõi việc học của con bạn mọi lúc, mọi nơi</p>
+        <h1 className="login-title">{t('auth.loginTitle')}</h1>
+        <p className="login-sub">{t('auth.loginSub')}</p>
         {error && (
           <div className="auth-error" role="alert">
             <Icon name="alert" size={16} />
@@ -46,36 +48,36 @@ export function ParentLogin() {
           </div>
         )}
         <label className="field">
-          <span className="field-label">Số điện thoại</span>
+          <span className="field-label">{t('auth.phone')}</span>
           <input
             className="text-input"
             value={phone}
             onChange={(e) => setPhone(e.target.value)}
             autoComplete="tel"
             inputMode="tel"
-            placeholder="VD: 0912345678"
+            placeholder={t('auth.phonePlaceholder')}
             required
           />
         </label>
         <label className="field">
-          <span className="field-label">Mật khẩu</span>
+          <span className="field-label">{t('auth.password')}</span>
           <input
             className="text-input"
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             autoComplete="current-password"
-            placeholder="Nhập mật khẩu"
+            placeholder={t('auth.passwordPlaceholder')}
             required
           />
         </label>
         <button className="btn btn-primary btn-block btn-lg" type="submit" disabled={busy}>
-          {busy ? 'Đang đăng nhập...' : 'Đăng nhập'}
+          {busy ? t('auth.loggingIn') : t('auth.loginAction')}
         </button>
         <p className="login-hint">
-          Chưa có tài khoản?{' '}
+          {t('auth.noAccount')}{' '}
           <Link className="link" to="/parent/register">
-            Đăng ký ngay
+            {t('auth.registerNow')}
           </Link>
         </p>
       </form>

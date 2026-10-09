@@ -2,6 +2,36 @@
 
 .login-page {
   background: #101a30;
+  position: relative;
+}
+
+.login-topbar {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  z-index: 5;
+}
+
+/* Switch ngôn ngữ/theme trên nền navy: dùng tông sáng mờ để nhìn rõ ở cả 2 mode */
+.login-topbar .lang-seg {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.22);
+}
+.login-topbar .lang-seg-btn {
+  color: rgba(255, 255, 255, 0.72);
+}
+.login-topbar .lang-seg-btn.active {
+  background: var(--primary);
+  color: #fff;
+}
+.login-topbar .btn-ghost {
+  color: rgba(255, 255, 255, 0.8);
+}
+.login-topbar .btn-ghost:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: transparent;
+  color: #fff;
+  box-shadow: none;
 }
 
 .login-card {
@@ -9,6 +39,15 @@
   padding: 32px 28px;
   border-radius: 16px;
   box-shadow: 0 16px 44px rgba(2, 6, 23, 0.45);
+}
+
+/* Dark mode: nền tối hơn, card theo surface của theme */
+[data-theme='dark'] .login-page {
+  background: #0a0f1e;
+}
+
+[data-theme='dark'] .login-card {
+  background: var(--bg-soft);
 }
 
 .login-title {
@@ -21,9 +60,9 @@
   display: flex;
   align-items: flex-start;
   gap: 8px;
-  background: #fef2f2;
-  border: 1px solid #fecaca;
-  color: #b91c1c;
+  background: var(--danger-soft);
+  border: 1px solid var(--danger);
+  color: var(--danger);
   font-size: 13px;
   line-height: 1.5;
   border-radius: 10px;

@@ -1,0 +1,380 @@
+{
+  "audit": {
+    "action": {
+      "apply_credit": "Trừ credit",
+      "approve": "Duyệt",
+      "create": "Tạo mới",
+      "delete": "Xóa",
+      "login": "Đăng nhập",
+      "payment": "Thu tiền",
+      "reject": "Từ chối",
+      "update": "Cập nhật"
+    },
+    "allActions": "Tất cả hành động",
+    "allEntities": "Tất cả đối tượng",
+    "col": {
+      "action": "Hành động",
+      "actor": "Người thực hiện",
+      "detail": "Chi tiết",
+      "time": "Thời gian"
+    },
+    "desc": "Ai đã làm gì - đặc biệt các thao tác tiền bạc và xóa dữ liệu",
+    "empty": {
+      "desc": "Các thao tác quan trọng (thu tiền, duyệt thanh toán, xóa dữ liệu) sẽ được ghi lại ở đây.",
+      "title": "Chưa có nhật ký nào"
+    },
+    "entity": {
+      "classes": "Lớp học",
+      "invoices": "Phiếu thu",
+      "payments": "Thanh toán",
+      "students": "Học viên",
+      "teachers": "Giáo viên"
+    },
+    "filterAction": "Lọc theo hành động",
+    "filterEntity": "Lọc theo đối tượng",
+    "title": "Nhật ký hoạt động",
+    "toast": {
+      "loadFail": "Không tải được nhật ký"
+    },
+    "totalCount": "Tổng {{total}} dòng nhật ký"
+  },
+  "leads": {
+    "add": "Thêm lead",
+    "convert": "Thành HV",
+    "convertTitle": "Chuyển thành học viên",
+    "countTitle": "{{count}} lead",
+    "delete": {
+      "message": "Xóa lead \"{{name}}\"?",
+      "title": "Xóa lead"
+    },
+    "deleteTitle": "Xóa lead",
+    "desc": "Theo dõi khách hàng tiềm năng từ lúc liên hệ đến khi đăng ký",
+    "editTitle": "Sửa lead",
+    "empty": {
+      "desc": "Lead từ form đăng ký trên landing page sẽ tự động chảy vào đây.",
+      "title": "Chưa có lead nào"
+    },
+    "emptyCol": "Chưa có lead",
+    "form": {
+      "name": "Họ tên *",
+      "note": "Ghi chú",
+      "phone": "Số điện thoại *",
+      "titleEdit": "Sửa lead",
+      "titleNew": "Thêm lead"
+    },
+    "moveNext": "Chuyển sang {{label}}",
+    "moveNextAria": "Chuyển {{name}} sang {{label}}",
+    "pipelineLabel": "Pipeline tuyển sinh",
+    "reopen": "Mở lại lead",
+    "reopenAria": "Mở lại lead {{name}}",
+    "status": {
+      "contacted": "Đã liên hệ",
+      "enrolled": "Đăng ký",
+      "lost": "Mất",
+      "new": "Mới",
+      "trial": "Học thử"
+    },
+    "title": "Tuyển sinh (Lead)",
+    "toast": {
+      "convertFail": "Chuyển đổi thất bại",
+      "converted": "Đã tạo học viên mới (ID {{id}})",
+      "deleteFail": "Xóa thất bại",
+      "deleted": "Đã xóa lead",
+      "loadFail": "Không tải được leads",
+      "moved": "Đã chuyển \"{{name}}\" sang {{label}}",
+      "saveFail": "Lưu thất bại",
+      "saved": "Đã lưu lead",
+      "updateFail": "Cập nhật thất bại"
+    }
+  },
+  "leaves": {
+    "allStatuses": "Tất cả trạng thái",
+    "approve": "Duyệt",
+    "approvedTitle": "Đã duyệt đơn - {{name}}",
+    "col": {
+      "actions": "Thao tác",
+      "fromDate": "Từ ngày",
+      "reason": "Lý do",
+      "status": "Trạng thái",
+      "student": "Học viên",
+      "toDate": "Đến ngày"
+    },
+    "desc": "Duyệt đơn xin nghỉ phép của học viên",
+    "empty": {
+      "desc": "Chưa có đơn xin nghỉ phép nào cần xử lý.",
+      "title": "Không có đơn nghỉ phép nào"
+    },
+    "filterLabel": "Lọc theo trạng thái đơn",
+    "makeupHint": "Gợi ý các buổi học bù phù hợp:",
+    "noMakeup": "Không có buổi học bù nào phù hợp.",
+    "reject": "Từ chối",
+    "rejectDialog": {
+      "message": "Từ chối đơn nghỉ phép của \"{{name}}\" ({{from}} đến {{to}})?",
+      "title": "Từ chối đơn nghỉ phép"
+    },
+    "status": {
+      "approved": "Đã duyệt",
+      "pending": "Chờ duyệt",
+      "rejected": "Từ chối"
+    },
+    "title": "Quản lý đơn nghỉ phép",
+    "toast": {
+      "approveFail": "Duyệt thất bại",
+      "loadFail": "Không tải được đơn nghỉ phép",
+      "rejectFail": "Thất bại",
+      "rejected": "Đã từ chối đơn nghỉ phép"
+    },
+    "totalCount": "Tổng {{total}} đơn"
+  },
+  "referrals": {
+    "allStatuses": "Tất cả trạng thái",
+    "col": {
+      "createdAt": "Ngày tạo",
+      "referred": "Người được giới thiệu",
+      "reward": "Thưởng",
+      "status": "Trạng thái"
+    },
+    "desc": "Theo dõi lượt giới thiệu và thưởng credits",
+    "empty": {
+      "desc": "Chưa có phụ huynh nào giới thiệu bạn bè.",
+      "title": "Không có lượt giới thiệu nào"
+    },
+    "filterLabel": "Lọc theo trạng thái",
+    "noName": "Chưa có tên",
+    "stats": {
+      "pending": "Đang chờ thưởng",
+      "rewarded": "Đã thưởng",
+      "total": "Tổng lượt giới thiệu"
+    },
+    "status": {
+      "pending": "Đang chờ",
+      "rewarded": "Đã thưởng"
+    },
+    "title": "Giới thiệu",
+    "toast": {
+      "loadFail": "Không tải được dữ liệu giới thiệu"
+    }
+  },
+  "reviews": {
+    "anonymousParent": "Phụ huynh",
+    "approve": "Duyệt",
+    "delete": {
+      "message": "Xóa đánh giá này khỏi trang public?",
+      "title": "Xóa đánh giá"
+    },
+    "desc": "Duyệt đánh giá để hiển thị công khai trên landing page",
+    "empty": {
+      "approvedDesc": "Chưa có đánh giá nào được duyệt.",
+      "pendingDesc": "Chưa có đánh giá nào đang chờ duyệt.",
+      "title": "Chưa có đánh giá nào"
+    },
+    "reject": "Từ chối",
+    "starsAria": "Đánh giá {{rating}} trên 5 sao",
+    "status": {
+      "approved": "Đã duyệt",
+      "pending": "Chờ duyệt",
+      "rejected": "Từ chối"
+    },
+    "tabs": {
+      "approved": "Đã duyệt",
+      "pending": "Chờ duyệt"
+    },
+    "title": "Đánh giá của phụ huynh",
+    "toast": {
+      "approved": "Đã duyệt đánh giá",
+      "deleteFail": "Xóa thất bại",
+      "deleted": "Đã xóa đánh giá",
+      "loadFail": "Không tải được đánh giá",
+      "moderateFail": "Thất bại",
+      "rejected": "Đã từ chối đánh giá"
+    }
+  },
+  "system": {
+    "col": {
+      "actions": "Thao tác",
+      "center": "Trung tâm",
+      "counts": "HV / Lớp / TK",
+      "phone": "Điện thoại",
+      "plan": "Gói",
+      "planExpiry": "Hạn gói"
+    },
+    "create": "Tạo trung tâm mới",
+    "createForm": {
+      "address": "Địa chỉ",
+      "adminPassword": "Mật khẩu admin *",
+      "adminUsername": "Tài khoản admin *",
+      "creating": "Đang tạo...",
+      "expires": "Hạn gói",
+      "name": "Tên trung tâm *",
+      "phone": "Điện thoại",
+      "plan": "Gói",
+      "sectionAdmin": "Tài khoản quản trị",
+      "sectionInfo": "Thông tin trung tâm",
+      "sectionPlan": "Gói cước",
+      "subdomain": "Subdomain *",
+      "submit": "Tạo trung tâm",
+      "title": "Tạo trung tâm mới"
+    },
+    "desc": "Tạo trung tâm mới và quản lý gói cước",
+    "editPlan": "Sửa gói / hạn",
+    "editPlanTitle": "Sửa gói - {{name}}",
+    "empty": {
+      "desc": "Nhấn nút \"Tạo trung tâm mới\" để thêm trung tâm đầu tiên.",
+      "title": "Chưa có trung tâm nào"
+    },
+    "plan": {
+      "basic": "Cơ bản",
+      "premium": "Cao cấp",
+      "standard": "Tiêu chuẩn"
+    },
+    "title": "Hệ thống - Quản lý trung tâm",
+    "toast": {
+      "createFail": "Tạo thất bại",
+      "created": "Đã tạo trung tâm mới",
+      "loadFail": "Không tải được danh sách trung tâm",
+      "planUpdated": "Đã cập nhật gói",
+      "updateFail": "Cập nhật thất bại"
+    }
+  },
+  "trials": {
+    "allStatuses": "Tất cả trạng thái",
+    "changeStatusAria": "Đổi trạng thái của {{name}}",
+    "col": {
+      "actions": "Thao tác",
+      "desiredClass": "Lớp mong muốn",
+      "desiredDate": "Ngày mong muốn",
+      "name": "Họ tên",
+      "phone": "Điện thoại",
+      "referral": "Mã giới thiệu",
+      "status": "Trạng thái"
+    },
+    "convert": "Thành học viên",
+    "convertForm": {
+      "classLabel": "Ghi danh vào lớp (tùy chọn)",
+      "confirm": "Xác nhận",
+      "converting": "Đang chuyển...",
+      "noEnroll": "- Không ghi danh ngay -"
+    },
+    "convertTitle": "Chuyển \"{{name}}\" thành học viên",
+    "desc": "Đăng ký học thử từ landing page - duyệt và chuyển thành học viên",
+    "empty": {
+      "desc": "Khi phụ huynh đăng ký học thử trên landing page, thông tin sẽ hiện ở đây.",
+      "title": "Không có đăng ký học thử nào"
+    },
+    "filterLabel": "Lọc theo trạng thái",
+    "quickStatus": "Chuyển trạng thái nhanh",
+    "status": {
+      "contacted": "Đã liên hệ",
+      "enrolled": "Đã đăng ký",
+      "lost": "Mất",
+      "new": "Mới",
+      "trialed": "Đã học thử"
+    },
+    "title": "Học thử",
+    "toast": {
+      "convertFail": "Chuyển đổi thất bại",
+      "converted": "Đã tạo học viên mới (ID {{id}})",
+      "loadFail": "Không tải được danh sách học thử",
+      "statusUpdated": "Đã cập nhật trạng thái",
+      "updateFail": "Cập nhật thất bại"
+    },
+    "totalCount": "Tổng {{total}} đăng ký"
+  },
+  "zalo": {
+    "col": {
+      "actions": "Thao tác",
+      "amount": "Số tiền",
+      "kind": "Loại",
+      "phone": "SĐT",
+      "status": "Trạng thái",
+      "student": "Học viên",
+      "time": "Thời gian"
+    },
+    "config": {
+      "desc": "Lấy Access Token tại trang quản trị Zalo OA (mục Ứng dụng / API). Template ID lấy từ các mẫu tin ZNS đã được Zalo duyệt. Tên tham số mẫu ZNS cần đặt: ten_trung_tam, ten_hoc_vien, so_tien, han_nop, ma_hoa_don.",
+      "title": "Cấu hình Zalo OA"
+    },
+    "desc": "Gửi tin nhắn nhắc học phí tự động tới phụ huynh/học viên qua Zalo ZNS. Khi chưa cấu hình Access Token, hệ thống chạy ở chế độ demo - chỉ ghi log, không gửi tin thật.",
+    "empty": {
+      "desc": "Các tin nhắn nhắc học phí sẽ được ghi lại tại đây.",
+      "title": "Chưa có lịch sử nhắc nào"
+    },
+    "enableDaily": "Bật nhắc học phí tự động mỗi ngày",
+    "fields": {
+      "accessToken": "Access Token",
+      "centerName": "Tên trung tâm",
+      "hour": "Giờ gửi mỗi ngày",
+      "oaId": "OA ID",
+      "overdueDays": "Nhắc khi quá hạn sau (ngày)",
+      "templateOverdue": "Template ID - tin quá hạn",
+      "templateUpcoming": "Template ID - tin sắp đến hạn",
+      "upcomingDays": "Nhắc trước hạn (ngày)"
+    },
+    "groups": {
+      "oaInfo": "Thông tin Zalo OA",
+      "templates": "Mẫu tin ZNS"
+    },
+    "history": {
+      "desc": "100 lần nhắc gần nhất.",
+      "title": "Lịch sử nhắc"
+    },
+    "kind": {
+      "overdue": "Quá hạn",
+      "test": "Tin nhắn thử",
+      "upcoming": "Sắp đến hạn"
+    },
+    "notAdmin": "Mục cấu hình chỉ dành cho Quản trị viên. Bạn vẫn có thể xem lịch sử nhắc bên dưới.",
+    "ph": {
+      "centerName": "Trung tâm Anh ngữ ABC",
+      "oaId": "VD: 1234567890",
+      "templateOverdue": "ID mẫu ZNS quá hạn",
+      "templateUpcoming": "ID mẫu ZNS sắp đến hạn",
+      "testPhone": "VD: 0912345678",
+      "tokenNew": "Dán access token của OA",
+      "tokenSaved": "•••••••• (đã lưu - nhập mới để thay đổi)"
+    },
+    "reminderStatus": {
+      "demo": "Demo",
+      "failed": "Thất bại",
+      "sent": "Đã gửi"
+    },
+    "runNow": "Chạy ngay một lần",
+    "running": "Đang chạy...",
+    "saveConfig": "Lưu cấu hình",
+    "saveSchedule": "Lưu lịch",
+    "schedule": {
+      "desc": "Hệ thống tự quét mỗi ngày vào giờ đã đặt. Chống spam: mỗi hóa đơn chỉ được nhắc 1 lần mỗi 3 ngày cho cùng một loại.",
+      "title": "Lịch nhắc tự động"
+    },
+    "status": {
+      "descConfigured": "Đã cấu hình Access Token - tin nhắn gửi thật qua Zalo ZNS.",
+      "descDemo": "Chưa có Access Token - hệ thống đang chạy chế độ demo, chỉ ghi log.",
+      "off": "Đang tắt",
+      "on": "Đang bật",
+      "title": "Trạng thái nhắc tự động"
+    },
+    "test": {
+      "desc": "Gửi một tin nhắn mẫu tới số điện thoại bất kỳ để kiểm tra cấu hình.",
+      "phone": "Số điện thoại",
+      "send": "Gửi tin nhắn thử",
+      "title": "Gửi tin nhắn thử"
+    },
+    "title": "Nhắc học phí qua Zalo",
+    "toast": {
+      "loadConfigFail": "Không tải được cấu hình",
+      "loadHistoryFail": "Không tải được lịch sử",
+      "needPhone": "Vui lòng nhập số điện thoại",
+      "runFail": "Chạy thất bại",
+      "saveFail": "Lưu thất bại",
+      "savedConfig": "Đã lưu cấu hình Zalo",
+      "sendFail": "Gửi thử thất bại"
+    },
+    "view": {
+      "dueDate": "Hạn nộp",
+      "noContent": "(không có nội dung)",
+      "responseLabel": "Phản hồi từ Zalo API:",
+      "title": "Nội dung tin nhắn"
+    },
+    "viewContent": "Xem nội dung"
+  }
+}

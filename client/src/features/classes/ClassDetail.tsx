@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { classesApi, sessionsApi, SessionItem, EnrolledStudent } from './classes.api';
 import type { ClassDetail as ClassDetailData } from './classes.api';
 import { studentsApi, Student } from '../students/students.api';
@@ -8,11 +9,13 @@ import { Modal, ConfirmDialog } from '../../shared/components/Modal';
 import { Field } from '../../shared/components/Form';
 import { EmptyState } from '../../shared/components/EmptyState';
 import { Skeleton } from '../../shared/components/Skeleton';
-import { formatVND, formatDate, formatScheduleText } from '../../shared/types';
+import { formatVND, formatDate } from '../../shared/types';
+import type { ScheduleEntry } from '../../shared/types';
 import { Icon } from '../../shared/components/icons';
 import './ClassDetail.css';
 
 export function ClassDetail() {
+  const { t } = useTranslation(['classes', 'common']);
   const { id } = useParams<{ id: string }>();
   const [data, setData] = useState<ClassDetailData | null>(null);
   const [sessions, setSessions] = useState<SessionItem[]>([]);
@@ -28,11 +31,11 @@ export function ClassDetail() {
       setData(d);
       setSessions(sess);
     } catch (err) {
-      toast(err instanceof Error ? err.message : 'Không tải được chi tiết lớp', 'error');
+      toast(err instanceof Error ? err.message : t('detail.loadError'), 'error');
     } finally {
       setLoading(false);
     }
-  }, [id, toast]);
+  }, [id, toast, t]);
 
   useEffect(() => {
     void load();
@@ -42,11 +45,21 @@ export function ClassDetail() {
     if (!kicking) return;
     try {
       await classesApi.unenroll(kicking.enrollment_id);
-      toast('Đã xóa học viên khỏi lớp', 'success');
+      toast(t('detail.kick.removed'), 'success');
       setKicking(null);
       void load();
     } catch (err) {
-      toast(err instanceof Error ? err.message : 'Xóa thất bại', 'error');
+      toast(err instanceof Error ? err.message : t('states.deleteError', { ns: 'common' }), 'error');
+    }
+  };
+
+  /** Localized schedule text (shared formatScheduleText is Vietnamese-only) */
+  const formatSchedule = (scheduleJson: string) => {
+    try {
+      const s: ScheduleEntry[] = JSON.parse(scheduleJson || '[]');
+      return s.map((e) => `${t('days.' + e.day)} ${e.start}-${e.end}`).join(', ');
+    } catch {
+      return '';
     }
   };
 
@@ -82,7 +95,7 @@ export function ClassDetail() {
   if (!data)
     return (
       <div className="page">
-        <EmptyState icon="book" title="Không tìm thấy lớp học" desc="Lớp học không tồn tại hoặc đã bị xóa." />
+        <EmptyState icon="book" title={t('detail.notFoundTitle')} desc={t('detail.notFoundDesc')} />
       </div>
     );
   const { class: cls } = data;
@@ -91,7 +104,7 @@ export function ClassDetail() {
     <div className="page">
       <Link className="link back-link" to="/app/classes">
         <Icon name="arrow-right" size={14} className="flip-x" />
-        Danh sách lớp học
+        {t('detail.back')}
       </Link>
       <div className="profile-head">
         <div className="profile-avatar">{cls.name.charAt(0).toUpperCase()}</div>
@@ -99,10 +112,10 @@ export function ClassDetail() {
           <h1 className="page-title">{cls.name}</h1>
           <div className="profile-badges">
             <span className={`badge badge-${cls.status}`}>
-              {cls.status === 'active' ? 'Đang mở' : 'Đã đóng'}
+              {t('classStatus.' + cls.status)}
             </span>
             <span className="badge badge-general">
-              {data.students.length}/{cls.max_students} học viên
+              {t('detail.sizeBadge', { count: data.students.length, max: cls.max_students })}
             </span>
           </div>
         </div>
@@ -110,23 +123,23 @@ export function ClassDetail() {
 
       <section className="card">
         <dl className="dl dl-inline">
-          <dt>Giáo viên</dt>
-          <dd>{cls.teacher_name || 'Chưa phân công'}</dd>
-          <dt>Phòng học</dt>
-          <dd>{cls.room_name || 'Chưa gán phòng'}</dd>
-          <dt>Lịch học</dt>
-          <dd>{formatScheduleText(cls.schedule || '') || '-'}</dd>
-          <dt>Thời gian</dt>
+          <dt>{t('detail.teacher')}</dt>
+          <dd>{cls.teacher_name || t('detail.noTeacher')}</dd>
+          <dt>{t('detail.room')}</dt>
+          <dd>{cls.room_name || t('detail.noRoom')}</dd>
+          <dt>{t('detail.schedule')}</dt>
+          <dd>{formatSchedule(cls.schedule || '') || '-'}</dd>
+          <dt>{t('detail.dateRange')}</dt>
           <dd className="num">
             {formatDate(cls.start_date)} - {formatDate(cls.end_date)}
           </dd>
-          <dt>Học phí</dt>
+          <dt>{t('detail.tuition')}</dt>
           <dd className="num">{formatVND(cls.tuition_fee)}</dd>
-          <dt>Sĩ số</dt>
+          <dt>{t('detail.size')}</dt>
           <dd>
             {data.students.length}/{cls.max_students}
           </dd>
-          <dt>Số buổi học</dt>
+          <dt>{t('detail.sessionCount')}</dt>
           <dd>{data.sessionCount}</dd>
         </dl>
       </section>
@@ -134,17 +147,17 @@ export function ClassDetail() {
       <div className="two-col">
         <section className="card">
           <div className="card-head">
-            <h2>Học viên ({data.students.length})</h2>
-            <button className="btn btn-sm btn-primary" onClick={() => setShowEnroll(true)}>
+            <h2>{t('detail.studentsTitle', { count: data.students.length })}</h2>
+            <button className="btn btn-sm btn-primary btn-inline" onClick={() => setShowEnroll(true)}>
               <Icon name="plus" size={13} />
-              Thêm học viên
+              {t('detail.enroll.add')}
             </button>
           </div>
           {data.students.length === 0 ? (
             <EmptyState
               icon="users"
-              title="Chưa có học viên nào"
-              desc="Thêm học viên vào lớp để bắt đầu điểm danh."
+              title={t('detail.emptyStudentsTitle')}
+              desc={t('detail.emptyStudentsDesc')}
             />
           ) : (
             <ul className="list">
@@ -158,7 +171,7 @@ export function ClassDetail() {
                     <div className="list-sub">{s.phone || ''}</div>
                   </div>
                   <button className="btn btn-sm btn-danger-ghost" onClick={() => setKicking(s)}>
-                    Xóa khỏi lớp
+                    {t('detail.kick.removeFromClass')}
                   </button>
                 </li>
               ))}
@@ -168,17 +181,17 @@ export function ClassDetail() {
 
         <section className="card">
           <div className="card-head">
-            <h2>Buổi học gần đây</h2>
+            <h2>{t('detail.recentSessions')}</h2>
             <Link className="link link-arrow" to={`/app/attendance?class=${cls.id}`}>
-              Điểm danh
+              {t('attendance.title')}
               <Icon name="arrow-right" size={14} />
             </Link>
           </div>
           {sessions.length === 0 ? (
             <EmptyState
               icon="calendar"
-              title="Chưa có buổi học nào"
-              desc="Buổi học sẽ tự sinh từ lịch học của lớp."
+              title={t('detail.emptySessionsTitle')}
+              desc={t('detail.emptySessionsDesc')}
             />
           ) : (
             <ul className="list">
@@ -190,7 +203,11 @@ export function ClassDetail() {
                     <div>
                       <div className="list-title">{formatDate(s.date)}</div>
                       <div className="list-sub">
-                        {s.topic || 'Chưa có chủ đề'} · {s.attendance_count || 0} lượt điểm danh
+                        {s.topic || t('detail.noTopic')}
+                        <span className="muted">
+                          {' '}
+                          {t('detail.attendanceCount', { count: s.attendance_count || 0 })}
+                        </span>
                       </div>
                     </div>
                   </li>
@@ -212,8 +229,8 @@ export function ClassDetail() {
       )}
       {kicking && (
         <ConfirmDialog
-          title="Xóa khỏi lớp"
-          message={`Xóa học viên "${kicking.name}" khỏi lớp "${cls.name}"?`}
+          title={t('detail.kick.confirmTitle')}
+          message={t('detail.kick.confirmMessage', { student: kicking.name, class: cls.name })}
           onClose={() => setKicking(null)}
           onConfirm={kick}
           danger
@@ -232,6 +249,7 @@ function EnrollModal({
   onClose: () => void;
   onDone: () => void;
 }) {
+  const { t } = useTranslation(['classes', 'common']);
   const [students, setStudents] = useState<Student[]>([]);
   const [search, setSearch] = useState('');
   const [busyId, setBusyId] = useState<number | null>(null);
@@ -254,21 +272,21 @@ function EnrollModal({
     setBusyId(studentId);
     try {
       await classesApi.enroll(classId, studentId);
-      toast('Đã thêm học viên vào lớp', 'success');
+      toast(t('detail.enroll.added'), 'success');
       onDone();
     } catch (err) {
-      toast(err instanceof Error ? err.message : 'Thêm thất bại', 'error');
+      toast(err instanceof Error ? err.message : t('detail.enroll.addError'), 'error');
     } finally {
       setBusyId(null);
     }
   };
 
   return (
-    <Modal title="Thêm học viên vào lớp" onClose={onClose}>
-      <Field label="Tìm học viên">
+    <Modal title={t('detail.enroll.title')} onClose={onClose}>
+      <Field label={t('detail.enroll.searchLabel')}>
         <input
           className="text-input"
-          placeholder="Nhập tên hoặc mã..."
+          placeholder={t('detail.enroll.searchPlaceholder')}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
@@ -284,11 +302,11 @@ function EnrollModal({
               disabled={busyId === s.id}
               onClick={() => void enroll(s.id)}
             >
-              {busyId === s.id ? 'Đang thêm...' : 'Thêm'}
+              {busyId === s.id ? t('detail.enroll.adding') : t('detail.enroll.add')}
             </button>
           </li>
         ))}
-        {filtered.length === 0 && <li className="muted">Không tìm thấy học viên.</li>}
+        {filtered.length === 0 && <li className="muted">{t('detail.enroll.notFound')}</li>}
       </ul>
     </Modal>
   );

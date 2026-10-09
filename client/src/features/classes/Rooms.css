@@ -11,3 +11,11 @@
   color: var(--text-muted);
   border: 1px solid var(--border);
 }
+
+/* Nhóm nút thao tác trong ô bảng */
+.row-actions {
+  display: inline-flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}

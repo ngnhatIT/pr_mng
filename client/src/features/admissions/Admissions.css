@@ -22,7 +22,7 @@
   font-size: 12px;
   font-weight: 600;
   color: var(--text-muted);
-  background: #fff;
+  background: var(--bg-soft);
   border: 1px solid var(--border);
   border-radius: 999px;
   padding: 1px 9px;
@@ -113,3 +113,7 @@
     margin-left: 0;
   }
 }
+
+/* ---------- Leads: thay inline styles ---------- */
+.pipeline-skel { margin-top: 10px; }
+.pipeline-skel-2 { margin-top: 8px; }

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { teacherApi } from './teacher.api';
 import { useToast } from '../../shared/ui/toast';
 import { Field } from '../../shared/components/Form';
@@ -11,6 +12,7 @@ import { TeacherTodayItem, formatDate, formatDateTime } from '../../shared/types
 import './TeacherToday.css';
 
 export function TeacherToday() {
+  const { t } = useTranslation(['teacher', 'common']);
   const [sessions, setSessions] = useState<TeacherTodayItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [code, setCode] = useState('');
@@ -23,11 +25,11 @@ export function TeacherToday() {
       const data = await teacherApi.today();
       setSessions(data);
     } catch (err) {
-      toast(err instanceof Error ? err.message : 'Không tải được lịch dạy', 'error');
+      toast(err instanceof Error ? err.message : t('today.loadError'), 'error');
     } finally {
       setLoading(false);
     }
-  }, [toast]);
+  }, [toast, t]);
 
   useEffect(() => {
     void load();
@@ -36,17 +38,17 @@ export function TeacherToday() {
   const checkin = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!/^\d{6}$/.test(code.trim())) {
-      toast('Mã chấm công gồm 6 chữ số', 'error');
+      toast(t('checkin.invalidCode'), 'error');
       return;
     }
     setCheckingIn(true);
     try {
       const r = await teacherApi.checkin(code.trim());
-      toast(`Chấm công thành công: ${r.class_name} - ${formatDate(r.date)}`, 'success');
+      toast(t('checkin.success', { className: r.class_name, date: formatDate(r.date) }), 'success');
       setCode('');
       void load();
     } catch (err) {
-      toast(err instanceof Error ? err.message : 'Chấm công thất bại', 'error');
+      toast(err instanceof Error ? err.message : t('checkin.fail'), 'error');
     } finally {
       setCheckingIn(false);
     }
@@ -54,7 +56,7 @@ export function TeacherToday() {
 
   return (
     <div className="page">
-      <PageHeader title="Buổi dạy hôm nay" desc="Lịch dạy, điểm danh lớp và chấm công của bạn" />
+      <PageHeader title={t('today.title')} desc={t('today.desc')} />
 
       {loading ? (
         <div className="timeline" aria-hidden="true">
@@ -73,8 +75,8 @@ export function TeacherToday() {
       ) : sessions.length === 0 ? (
         <EmptyState
           icon="calendar"
-          title="Hôm nay không có buổi dạy"
-          desc="Lịch dạy của bạn sẽ hiện ở đây khi được phân công."
+          title={t('today.emptyTitle')}
+          desc={t('today.emptyDesc')}
         />
       ) : (
         <div className="timeline">
@@ -87,20 +89,18 @@ export function TeacherToday() {
                 <div className="timeline-card-head">
                   <strong>{s.class_name}</strong>
                   <span className={`badge ${s.checked_in ? 'badge-present' : 'badge-pending'}`}>
-                    {s.checked_in ? 'Đã chấm công' : 'Chưa chấm công'}
+                    {s.checked_in ? t('today.checkedIn') : t('today.notCheckedIn')}
                   </span>
                 </div>
                 <div className="today-time-chip">
                   <Icon name="clock" size={15} />
                   {s.date.slice(11, 16) || formatDate(s.date)}
                 </div>
-                <div className="muted today-topic">
-                  {formatDateTime(s.date)}
-                  {s.topic ? ` · ${s.topic}` : ''}
-                </div>
+                <div className="muted today-topic">{formatDateTime(s.date)}</div>
+                {s.topic && <div className="muted today-topic">{t('today.topic', { topic: s.topic })}</div>}
                 <div className="today-attendance">
                   <Icon name="users" size={14} />
-                  {s.attendance_count} học viên đã điểm danh
+                  {t('today.attendanceCount', { count: s.attendance_count })}
                 </div>
                 <div>
                   <Link
@@ -108,7 +108,7 @@ export function TeacherToday() {
                     to={`/teacher/diem-danh?class=${s.class_id}&session=${s.session_id}`}
                   >
                     <Icon name="clipboard" size={18} />
-                    Điểm danh lớp
+                    {t('today.takeAttendance')}
                     <Icon name="arrow-right" size={16} />
                   </Link>
                 </div>
@@ -119,10 +119,10 @@ export function TeacherToday() {
       )}
 
       <section className="card checkin-hero">
-        <h2 className="card-title">Chấm công</h2>
-        <p className="card-desc">Nhập mã 6 số do quản lý cấp cho buổi dạy để ghi nhận chấm công.</p>
+        <h2 className="card-title">{t('checkin.title')}</h2>
+        <p className="card-desc">{t('checkin.desc')}</p>
         <form onSubmit={checkin}>
-          <Field label="Mã chấm công (6 số)">
+          <Field label={t('checkin.codeLabel')}>
             <input
               className="text-input mono"
               value={code}
@@ -137,7 +137,7 @@ export function TeacherToday() {
             type="submit"
             disabled={checkingIn}
           >
-            {checkingIn ? 'Đang chấm công...' : 'Chấm công ngay'}
+            {checkingIn ? t('checkin.submitting') : t('checkin.submit')}
           </button>
         </form>
       </section>

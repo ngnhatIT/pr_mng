@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { peopleApi, TeacherForm } from './people.api';
 import { useToast } from '../../shared/ui/toast';
 import { Modal, ConfirmDialog } from '../../shared/components/Modal';
@@ -12,6 +13,7 @@ import { Teacher } from '../../shared/types';
 import './Teachers.css';
 
 export function Teachers() {
+  const { t } = useTranslation(['people', 'common']);
   const [teachers, setTeachers] = useState<Teacher[]>([]);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState<Teacher | null | 'new'>(null);
@@ -28,11 +30,11 @@ export function Teachers() {
       setTeachers(res.data);
       setPagination(res.pagination);
     } catch (err) {
-      toast(err instanceof Error ? err.message : 'Không tải được danh sách', 'error');
+      toast(err instanceof Error ? err.message : t('toast.loadError'), 'error');
     } finally {
       setLoading(false);
     }
-  }, [page, toast]);
+  }, [page, toast, t]);
 
   useEffect(() => {
     void load();
@@ -42,11 +44,11 @@ export function Teachers() {
     try {
       if (id) await peopleApi.updateTeacher(id, form);
       else await peopleApi.createTeacher(form);
-      toast('Đã lưu giáo viên', 'success');
+      toast(t('toast.saved'), 'success');
       setEditing(null);
       void load();
     } catch (err) {
-      toast(err instanceof Error ? err.message : 'Lưu thất bại', 'error');
+      toast(err instanceof Error ? err.message : t('states.saveError', { ns: 'common' }), 'error');
     }
   };
 
@@ -54,23 +56,23 @@ export function Teachers() {
     if (!deleting) return;
     try {
       await peopleApi.deleteTeacher(deleting.id);
-      toast('Đã xóa giáo viên', 'success');
+      toast(t('toast.deleted'), 'success');
       setDeleting(null);
       void load();
     } catch (err) {
-      toast(err instanceof Error ? err.message : 'Xóa thất bại', 'error');
+      toast(err instanceof Error ? err.message : t('states.deleteError', { ns: 'common' }), 'error');
     }
   };
 
   return (
     <div className="page">
       <PageHeader
-        title="Giáo viên"
-        desc="Quản lý giáo viên và tạo tài khoản đăng nhập cho họ"
+        title={t('teachers.title')}
+        desc={t('desc')}
         actions={
           <button className="btn btn-primary btn-inline" onClick={() => setEditing('new')}>
             <Icon name="plus" size={14} />
-            Thêm giáo viên
+            {t('add')}
           </button>
         }
       />
@@ -80,12 +82,12 @@ export function Teachers() {
       ) : teachers.length === 0 ? (
         <EmptyState
           icon="cap"
-          title="Chưa có giáo viên nào"
-          desc="Thêm giáo viên và tạo tài khoản để họ chấm công, điểm danh và giao bài tập."
+          title={t('empty.title')}
+          desc={t('empty.desc')}
           action={
             <button className="btn btn-primary btn-inline" onClick={() => setEditing('new')}>
               <Icon name="plus" size={14} />
-              Thêm giáo viên
+              {t('add')}
             </button>
           }
         />
@@ -94,45 +96,45 @@ export function Teachers() {
           <table className="table">
             <thead>
               <tr>
-                <th>Họ tên</th>
-                <th>Môn dạy</th>
-                <th>Điện thoại</th>
-                <th>Email</th>
-                <th>Lớp đang dạy</th>
-                <th className="th-right">Thao tác</th>
+                <th>{t('table.name')}</th>
+                <th>{t('table.subject')}</th>
+                <th>{t('table.phone')}</th>
+                <th>{t('table.email')}</th>
+                <th>{t('table.classes')}</th>
+                <th className="th-right">{t('table.actions')}</th>
               </tr>
             </thead>
             <tbody>
-              {teachers.map((t) => (
-                <tr key={t.id}>
+              {teachers.map((tch) => (
+                <tr key={tch.id}>
                   <td>
                     <span className="name-cell">
                       <span className="avatar avatar-sm" aria-hidden="true">
-                        {t.name.charAt(0).toUpperCase()}
+                        {tch.name.charAt(0).toUpperCase()}
                       </span>
-                      {t.name}
+                      {tch.name}
                     </span>
                   </td>
-                  <td>{t.subject || '-'}</td>
-                  <td>{t.phone || '-'}</td>
-                  <td>{t.email || '-'}</td>
-                  <td className="num">{t.class_count ?? 0}</td>
+                  <td>{tch.subject || '-'}</td>
+                  <td>{tch.phone || '-'}</td>
+                  <td>{tch.email || '-'}</td>
+                  <td className="num">{tch.class_count ?? 0}</td>
                   <td className="td-right">
                     <span className="row-actions">
-                      <button className="btn btn-sm btn-inline" onClick={() => setEditing(t)}>
+                      <button className="btn btn-sm btn-inline" onClick={() => setEditing(tch)}>
                         <Icon name="pencil" size={13} />
-                        Sửa
+                        {t('actions.edit', { ns: 'common' })}
                       </button>
-                      <button className="btn btn-sm btn-inline" onClick={() => setAccounting(t)}>
+                      <button className="btn btn-sm btn-inline" onClick={() => setAccounting(tch)}>
                         <Icon name="key" size={13} />
-                        Tạo tài khoản
+                        {t('teachers.createAccount')}
                       </button>
                       <button
                         className="btn btn-sm btn-inline btn-danger-ghost"
-                        onClick={() => setDeleting(t)}
+                        onClick={() => setDeleting(tch)}
                       >
                         <Icon name="trash" size={13} />
-                        Xóa
+                        {t('actions.delete', { ns: 'common' })}
                       </button>
                     </span>
                   </td>
@@ -154,8 +156,8 @@ export function Teachers() {
       )}
       {deleting && (
         <ConfirmDialog
-          title="Xóa giáo viên"
-          message={`Bạn có chắc muốn xóa giáo viên "${deleting.name}"? Các lớp đang phân công sẽ chuyển thành "Chưa phân công".`}
+          title={t('delete.title')}
+          message={t('delete.message', { name: deleting.name })}
           onClose={() => setDeleting(null)}
           onConfirm={remove}
           danger
@@ -167,6 +169,7 @@ export function Teachers() {
 }
 
 function AccountModal({ teacher, onClose }: { teacher: Teacher; onClose: () => void }) {
+  const { t } = useTranslation(['people', 'common']);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
@@ -178,24 +181,21 @@ function AccountModal({ teacher, onClose }: { teacher: Teacher; onClose: () => v
     setBusy(true);
     try {
       await peopleApi.createAccount(teacher.id, username, password);
-      toast(`Đã tạo tài khoản "${username}" cho giáo viên ${teacher.name}`, 'success');
+      toast(t('account.created', { username, name: teacher.name }), 'success');
       onClose();
     } catch (err) {
-      toast(err instanceof Error ? err.message : 'Tạo tài khoản thất bại', 'error');
+      toast(err instanceof Error ? err.message : t('account.createError'), 'error');
     } finally {
       setBusy(false);
     }
   };
 
   return (
-    <Modal title={`Tạo tài khoản đăng nhập - ${teacher.name}`} onClose={onClose}>
+    <Modal title={t('account.title', { name: teacher.name })} onClose={onClose}>
       <form onSubmit={submit}>
-        <p className="muted">
-          Giáo viên sẽ dùng tài khoản này để đăng nhập vào cổng giáo viên (xem buổi dạy, điểm danh, chấm
-          công...).
-        </p>
+        <p className="muted">{t('account.desc')}</p>
         <div className="form-grid">
-          <Field label="Tên đăng nhập *">
+          <Field label={t('account.username')}>
             <input
               className="text-input"
               value={username}
@@ -203,7 +203,7 @@ function AccountModal({ teacher, onClose }: { teacher: Teacher; onClose: () => v
               required
             />
           </Field>
-          <Field label="Mật khẩu *">
+          <Field label={t('account.password')}>
             <input
               className="text-input"
               type="password"
@@ -215,10 +215,10 @@ function AccountModal({ teacher, onClose }: { teacher: Teacher; onClose: () => v
         </div>
         <div className="modal-actions">
           <button type="button" className="btn" onClick={onClose}>
-            Hủy
+            {t('actions.cancel', { ns: 'common' })}
           </button>
           <button type="submit" className="btn btn-primary" disabled={busy}>
-            {busy ? 'Đang tạo...' : 'Tạo tài khoản'}
+            {busy ? t('account.creating') : t('account.create')}
           </button>
         </div>
       </form>
@@ -235,6 +235,7 @@ function TeacherFormModal({
   onClose: () => void;
   onSave: (form: TeacherForm, id?: number) => Promise<void>;
 }) {
+  const { t } = useTranslation(['people', 'common']);
   const [form, setForm] = useState<TeacherForm>({
     name: initial?.name || '',
     phone: initial?.phone || '',
@@ -257,28 +258,28 @@ function TeacherFormModal({
   };
 
   return (
-    <Modal title={initial ? 'Sửa giáo viên' : 'Thêm giáo viên'} onClose={onClose}>
+    <Modal title={initial ? t('form.editTitle') : t('form.addTitle')} onClose={onClose}>
       <form onSubmit={submit}>
         <div className="form-grid">
-          <Field label="Họ tên *" span>
+          <Field label={t('form.name')} span>
             <input className="text-input" value={form.name} onChange={set('name')} required />
           </Field>
-          <Field label="Môn dạy">
+          <Field label={t('form.subject')}>
             <input className="text-input" value={form.subject} onChange={set('subject')} />
           </Field>
-          <Field label="Điện thoại">
+          <Field label={t('form.phone')}>
             <input className="text-input" value={form.phone} onChange={set('phone')} />
           </Field>
-          <Field label="Email" span>
+          <Field label={t('form.email')} span>
             <input className="text-input" type="email" value={form.email} onChange={set('email')} />
           </Field>
         </div>
         <div className="modal-actions">
           <button type="button" className="btn" onClick={onClose}>
-            Hủy
+            {t('actions.cancel', { ns: 'common' })}
           </button>
           <button type="submit" className="btn btn-primary" disabled={busy}>
-            {busy ? 'Đang lưu...' : 'Lưu'}
+            {busy ? t('actions.saving', { ns: 'common' }) : t('actions.save', { ns: 'common' })}
           </button>
         </div>
       </form>

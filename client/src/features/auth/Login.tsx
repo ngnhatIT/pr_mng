@@ -1,12 +1,15 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { api, setAuth } from '../../shared/api/client';
 import { useToast } from '../../shared/ui/toast';
 import { Icon } from '../../shared/components/icons';
+import { ThemeLangSwitch } from '../../shared/ui/ThemeLangSwitch';
 import { User } from '../../shared/types';
 import './Login.css';
 
 export function Login() {
+  const { t } = useTranslation(['auth', 'common']);
   const [username, setUsername] = useState('admin');
   const [password, setPassword] = useState('123456');
   const [busy, setBusy] = useState(false);
@@ -25,13 +28,13 @@ export function Login() {
         body: JSON.stringify({ username, password }),
       });
       setAuth(data.token, data.user);
-      toast(`Xin chào, ${data.user.name}!`, 'success');
+      toast(t('welcome', { name: data.user.name }), 'success');
       const role = data.user.role;
       if (role === 'teacher') navigate('/teacher');
       else if (role === 'parent') navigate('/parent');
       else navigate('/app');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Đăng nhập thất bại');
+      setError(err instanceof Error ? err.message : t('fail'));
     } finally {
       setBusy(false);
     }
@@ -39,10 +42,13 @@ export function Login() {
 
   return (
     <div className="login-page">
+      <div className="login-topbar">
+        <ThemeLangSwitch />
+      </div>
       <form className="login-card" onSubmit={submit} noValidate={false}>
         <div className="login-logo">E</div>
-        <h1 className="login-title">EduCenter Pro</h1>
-        <p className="login-sub">Phần mềm quản lý trung tâm ngoại ngữ, lớp học</p>
+        <h1 className="login-title">{t('brand')}</h1>
+        <p className="login-sub">{t('sub')}</p>
         {error && (
           <p className="login-error" role="alert">
             <Icon name="alert" size={16} />
@@ -50,7 +56,7 @@ export function Login() {
           </p>
         )}
         <label className="field">
-          <span className="field-label">Tên đăng nhập</span>
+          <span className="field-label">{t('username')}</span>
           <input
             className="text-input"
             value={username}
@@ -59,7 +65,7 @@ export function Login() {
           />
         </label>
         <label className="field">
-          <span className="field-label">Mật khẩu</span>
+          <span className="field-label">{t('password')}</span>
           <input
             className="text-input"
             type="password"
@@ -69,9 +75,9 @@ export function Login() {
           />
         </label>
         <button className="btn btn-primary btn-block btn-lg" type="submit" disabled={busy}>
-          {busy ? 'Đang đăng nhập...' : 'Đăng nhập'}
+          {busy ? t('submitting') : t('submit')}
         </button>
-        <p className="login-hint">Tài khoản demo: admin / 123456</p>
+        <p className="login-hint">{t('demoHint')}</p>
       </form>
     </div>
   );

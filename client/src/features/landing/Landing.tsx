@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useToast } from '../../shared/ui/toast';
 import { Field } from '../../shared/components/Form';
 import { Icon } from '../../shared/components/icons';
+import { ThemeLangSwitch } from '../../shared/ui/ThemeLangSwitch';
 import { http } from '../../shared/api/client';
 import { PublicCenter, PublicClassItem, PublicTeacher, PublicReview, formatVND } from '../../shared/types';
 import './Landing.css';
@@ -11,14 +13,15 @@ async function getJSON<T>(path: string): Promise<T> {
   try {
     return await http.get<T>(path);
   } catch {
-    throw new Error('Không tải được dữ liệu');
+    throw new Error('loadError');
   }
 }
 
 function Stars({ rating }: { rating: number }) {
+  const { t } = useTranslation(['landing', 'common']);
   const full = Math.round(rating);
   return (
-    <span className="stars" aria-label={`${rating}/5 sao`}>
+    <span className="stars" aria-label={t('reviews.stars', { rating })}>
       {[1, 2, 3, 4, 5].map((i) => (
         <Icon key={i} name="star" size={16} filled className={i <= full ? 'star on' : 'star'} />
       ))}
@@ -27,6 +30,7 @@ function Stars({ rating }: { rating: number }) {
 }
 
 export function Landing() {
+  const { t } = useTranslation(['landing', 'common']);
   const [searchParams] = useSearchParams();
   const [center, setCenter] = useState<PublicCenter | null>(null);
   const [courses, setCourses] = useState<PublicClassItem[]>([]);
@@ -37,7 +41,7 @@ export function Landing() {
   useEffect(() => {
     (async () => {
       try {
-        const [c, cls, t, r] = await Promise.all([
+        const [c, cls, te, r] = await Promise.all([
           getJSON<PublicCenter>('/public/center'),
           getJSON<PublicClassItem[]>('/public/classes'),
           getJSON<PublicTeacher[]>('/public/teachers'),
@@ -45,7 +49,7 @@ export function Landing() {
         ]);
         setCenter(c);
         setCourses(cls);
-        setTeachers(t);
+        setTeachers(te);
         setReviews(r);
       } catch {
         /* trang public vẫn hiển thị phần tĩnh */
@@ -64,55 +68,53 @@ export function Landing() {
         </div>
         <div className="landing-nav-links">
           <a className="btn btn-sm btn-ghost landing-nav-anchor" href="#khoa-hoc">
-            Khóa học
+            {t('nav.courses')}
           </a>
           <a className="btn btn-sm btn-ghost landing-nav-anchor" href="#giao-vien">
-            Giáo viên
+            {t('nav.teachers')}
           </a>
           <a className="btn btn-sm btn-ghost landing-nav-anchor" href="#danh-gia">
-            Đánh giá
+            {t('nav.reviews')}
           </a>
           <Link className="btn btn-sm" to="/parent/login">
-            Cổng phụ huynh
+            {t('nav.parent')}
           </Link>
           <Link className="btn btn-sm btn-primary" to="/login">
-            Đăng nhập
+            {t('nav.login')}
           </Link>
+          <ThemeLangSwitch />
         </div>
       </header>
 
       <section className="landing-hero">
         <div className="landing-hero-inner">
           <div className="landing-hero-copy">
-            <div className="landing-badge">Đang tuyển sinh - đăng ký học thử miễn phí</div>
-            <h1>{center?.name || 'Trung tâm của bạn'}</h1>
-            <p className="landing-hero-sub">
-              Lớp học sĩ số nhỏ, giáo viên theo sát từng học viên, học phí minh bạch -
-              đồng hành cùng con bạn trên mỗi bước tiến.
-            </p>
+            <div className="landing-badge">{t('hero.badge')}</div>
+            <h1>{center?.name || t('hero.fallbackName')}</h1>
+            <p className="landing-hero-sub">{t('hero.sub')}</p>
             <div className="landing-hero-cta">
               <button className="btn btn-primary btn-lg" onClick={scrollToForm}>
-                Đăng ký tư vấn
+                {t('hero.ctaConsult')}
               </button>
               <button className="btn btn-lg" onClick={scrollToForm}>
-                Đăng ký học thử
+                {t('hero.ctaTrial')}
               </button>
             </div>
           </div>
           <div className="landing-hero-media">
-            <img src="/landing-hero.jpg" alt="Lớp học tại trung tâm" loading="eager" />
+            <img src="/landing-hero.jpg" alt={t('hero.imgAlt')} loading="eager" />
           </div>
         </div>
       </section>
 
       <section className="landing-section" id="khoa-hoc">
         <div className="landing-section-head">
-          <h2>Khóa học nổi bật</h2>
-          <p>Chọn khóa học phù hợp với trình độ và mục tiêu của con bạn</p>
+          <h2>{t('courses.title')}</h2>
+          <p>{t('courses.sub')}</p>
         </div>
         {courses.length === 0 ? (
           <p className="muted" style={{ textAlign: 'center' }}>
-            Đang cập nhật khóa học...
+            {t('courses.empty')}
           </p>
         ) : (
           <div className="course-grid">
@@ -120,19 +122,19 @@ export function Landing() {
               <div key={c.id} className="card course-card card-hover">
                 <h3>{c.name}</h3>
                 <dl className="dl dl-compact">
-                  <dt>Giáo viên</dt>
+                  <dt>{t('courses.teacher')}</dt>
                   <dd>{c.teacher_name || '-'}</dd>
-                  <dt>Lịch học</dt>
+                  <dt>{t('courses.schedule')}</dt>
                   <dd>{c.schedule_text || '-'}</dd>
-                  <dt>Học phí</dt>
+                  <dt>{t('courses.tuition')}</dt>
                   <dd>
                     <strong className="text-primary">{formatVND(c.tuition_fee)}</strong>
                   </dd>
-                  <dt>Sĩ số</dt>
-                  <dd>{c.student_count} học viên</dd>
+                  <dt>{t('courses.capacity')}</dt>
+                  <dd>{t('courses.students', { count: c.student_count })}</dd>
                 </dl>
                 <button className="btn btn-primary btn-block" onClick={scrollToForm}>
-                  Đăng ký học thử
+                  {t('courses.trial')}
                 </button>
               </div>
             ))}
@@ -142,21 +144,21 @@ export function Landing() {
 
       <section className="landing-section landing-alt" id="giao-vien">
         <div className="landing-section-head">
-          <h2>Đội ngũ giáo viên</h2>
-          <p>Giáo viên tận tâm, giàu kinh nghiệm đồng hành cùng học viên</p>
+          <h2>{t('teachers.title')}</h2>
+          <p>{t('teachers.sub')}</p>
         </div>
         {teachers.length === 0 ? (
           <p className="muted" style={{ textAlign: 'center' }}>
-            Đang cập nhật...
+            {t('teachers.empty')}
           </p>
         ) : (
           <div className="teacher-list">
-            {teachers.map((t, i) => (
+            {teachers.map((te, i) => (
               <div key={i} className="teacher-row">
-                <div className="teacher-avatar">{t.name.charAt(0).toUpperCase()}</div>
+                <div className="teacher-avatar">{te.name.charAt(0).toUpperCase()}</div>
                 <div>
-                  <div className="teacher-name">{t.name}</div>
-                  <div className="muted">{t.subject || 'Giáo viên'}</div>
+                  <div className="teacher-name">{te.name}</div>
+                  <div className="muted">{te.subject || t('teachers.fallback')}</div>
                 </div>
               </div>
             ))}
@@ -166,13 +168,13 @@ export function Landing() {
 
       <section className="landing-section" id="danh-gia">
         <div className="landing-section-head">
-          <h2>Phụ huynh nói gì</h2>
-          <p>Đánh giá thật từ phụ huynh đang cho con theo học</p>
+          <h2>{t('reviews.title')}</h2>
+          <p>{t('reviews.sub')}</p>
         </div>
         {reviews && reviews.items.length > 0 && (
           <p className="landing-avg">
             <Stars rating={reviews.avg} /> <strong>{reviews.avg.toFixed(1)}/5</strong>{' '}
-            <span className="muted">({reviews.total} đánh giá)</span>
+            <span className="muted">{t('reviews.count', { total: reviews.total })}</span>
           </p>
         )}
         <div className="course-grid">
@@ -182,20 +184,20 @@ export function Landing() {
               <p className="review-comment">{r.comment || '-'}</p>
               <div className="testimonial-foot">
                 <div className="testimonial-avatar">{(r.parent_name || 'P').charAt(0).toUpperCase()}</div>
-                <div className="muted">{r.parent_name || 'Phụ huynh'}</div>
+                <div className="muted">{r.parent_name || t('reviews.fallbackName')}</div>
               </div>
             </div>
           ))}
         </div>
         {(!reviews || reviews.items.length === 0) && (
           <p className="muted" style={{ textAlign: 'center' }}>
-            Chưa có đánh giá nào.
+            {t('reviews.empty')}
           </p>
         )}
       </section>
 
       <section className="landing-section landing-alt" ref={formRef}>
-        <h2>Đăng ký tư vấn & học thử</h2>
+        <h2>{t('formTitle')}</h2>
         <div className="two-col landing-forms">
           <LeadForm />
           <TrialForm refCode={searchParams.get('ref') || ''} courses={courses} />
@@ -220,10 +222,10 @@ export function Landing() {
           </div>
           <div className="landing-footer-links">
             <Link className="btn btn-sm" to="/login">
-              Đăng nhập
+              {t('footerLogin')}
             </Link>
             <Link className="btn btn-sm btn-primary" to="/parent/login">
-              Cổng phụ huynh
+              {t('footerParent')}
             </Link>
           </div>
         </div>
@@ -233,6 +235,7 @@ export function Landing() {
 }
 
 function LeadForm() {
+  const { t } = useTranslation(['landing', 'common']);
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [note, setNote] = useState('');
@@ -244,12 +247,12 @@ function LeadForm() {
     setBusy(true);
     try {
       await http.post('/public/leads', { name, phone, note: note || undefined });
-      toast('Đã gửi đăng ký tư vấn. Chúng tôi sẽ liên hệ sớm!', 'success');
+      toast(t('lead.success'), 'success');
       setName('');
       setPhone('');
       setNote('');
     } catch (err) {
-      toast(err instanceof Error ? err.message : 'Gửi thất bại', 'error');
+      toast(err instanceof Error ? err.message : t('lead.fail'), 'error');
     } finally {
       setBusy(false);
     }
@@ -257,17 +260,17 @@ function LeadForm() {
 
   return (
     <div className="card">
-      <h3 className="card-title">Đăng ký tư vấn</h3>
-      <p className="card-desc">Để lại thông tin, trung tâm sẽ gọi lại tư vấn khóa học phù hợp.</p>
+      <h3 className="card-title">{t('lead.title')}</h3>
+      <p className="card-desc">{t('lead.desc')}</p>
       <form onSubmit={submit}>
         <div className="form-grid">
-          <Field label="Họ tên *" span>
+          <Field label={t('fields.name')} span>
             <input className="text-input" value={name} onChange={(e) => setName(e.target.value)} required />
           </Field>
-          <Field label="Số điện thoại *" span>
+          <Field label={t('fields.phone')} span>
             <input className="text-input" value={phone} onChange={(e) => setPhone(e.target.value)} required />
           </Field>
-          <Field label="Ghi chú" span>
+          <Field label={t('fields.note')} span>
             <textarea
               className="text-input"
               rows={2}
@@ -277,7 +280,7 @@ function LeadForm() {
           </Field>
         </div>
         <button className="btn btn-primary btn-block" type="submit" disabled={busy}>
-          {busy ? 'Đang gửi...' : 'Gửi đăng ký tư vấn'}
+          {busy ? t('sending') : t('lead.submit')}
         </button>
       </form>
     </div>
@@ -285,6 +288,7 @@ function LeadForm() {
 }
 
 function TrialForm({ refCode, courses }: { refCode: string; courses: PublicClassItem[] }) {
+  const { t } = useTranslation(['landing', 'common']);
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [classId, setClassId] = useState('');
@@ -306,14 +310,14 @@ function TrialForm({ refCode, courses }: { refCode: string; courses: PublicClass
         note: note || undefined,
         referral_code: referralCode || undefined,
       });
-      toast('Đã đăng ký học thử thành công!', 'success');
+      toast(t('trial.success'), 'success');
       setName('');
       setPhone('');
       setClassId('');
       setDesiredDate('');
       setNote('');
     } catch (err) {
-      toast(err instanceof Error ? err.message : 'Gửi thất bại', 'error');
+      toast(err instanceof Error ? err.message : t('trial.fail'), 'error');
     } finally {
       setBusy(false);
     }
@@ -321,19 +325,19 @@ function TrialForm({ refCode, courses }: { refCode: string; courses: PublicClass
 
   return (
     <div className="card">
-      <h3 className="card-title">Đăng ký học thử</h3>
-      <p className="card-desc">Trải nghiệm một buổi học miễn phí trước khi quyết định.</p>
+      <h3 className="card-title">{t('trial.title')}</h3>
+      <p className="card-desc">{t('trial.desc')}</p>
       <form onSubmit={submit}>
         <div className="form-grid">
-          <Field label="Họ tên *">
+          <Field label={t('fields.name')}>
             <input className="text-input" value={name} onChange={(e) => setName(e.target.value)} required />
           </Field>
-          <Field label="Số điện thoại *">
+          <Field label={t('fields.phone')}>
             <input className="text-input" value={phone} onChange={(e) => setPhone(e.target.value)} required />
           </Field>
-          <Field label="Lớp muốn học thử">
+          <Field label={t('fields.class')}>
             <select className="text-input" value={classId} onChange={(e) => setClassId(e.target.value)}>
-              <option value="">- Chưa chọn -</option>
+              <option value="">{t('fields.noClass')}</option>
               {courses.map((c) => (
                 <option key={c.id} value={c.id}>
                   {c.name}
@@ -341,7 +345,7 @@ function TrialForm({ refCode, courses }: { refCode: string; courses: PublicClass
               ))}
             </select>
           </Field>
-          <Field label="Ngày mong muốn">
+          <Field label={t('fields.date')}>
             <input
               className="text-input"
               type="date"
@@ -349,15 +353,15 @@ function TrialForm({ refCode, courses }: { refCode: string; courses: PublicClass
               onChange={(e) => setDesiredDate(e.target.value)}
             />
           </Field>
-          <Field label="Mã giới thiệu">
+          <Field label={t('fields.referral')}>
             <input
               className="text-input"
               value={referralCode}
               onChange={(e) => setReferralCode(e.target.value)}
-              placeholder="Nhập mã nếu được giới thiệu"
+              placeholder={t('fields.referralPh')}
             />
           </Field>
-          <Field label="Ghi chú">
+          <Field label={t('fields.note')}>
             <textarea
               className="text-input"
               rows={2}
@@ -367,7 +371,7 @@ function TrialForm({ refCode, courses }: { refCode: string; courses: PublicClass
           </Field>
         </div>
         <button className="btn btn-primary btn-block" type="submit" disabled={busy}>
-          {busy ? 'Đang gửi...' : 'Đăng ký học thử'}
+          {busy ? t('sending') : t('trial.submit')}
         </button>
       </form>
     </div>

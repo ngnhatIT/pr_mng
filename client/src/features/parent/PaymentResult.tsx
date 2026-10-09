@@ -1,8 +1,10 @@
 import { Link, useSearchParams } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { Icon } from '../../shared/components/icons';
 import './parent.css';
 
 export function PaymentResult() {
+  const { t } = useTranslation(['parent', 'common']);
   const [searchParams] = useSearchParams();
   const status = searchParams.get('status');
   const success = status === 'success' || status === '00' || status === 'paid';
@@ -14,18 +16,16 @@ export function PaymentResult() {
           <Icon name={success ? 'check' : 'x'} size={38} />
         </div>
         <span className={`badge ${success ? 'badge-paid' : 'badge-overdue'}`}>
-          {success ? 'Đã thanh toán' : 'Chưa hoàn tất'}
+          {success ? t('payment.paidBadge') : t('payment.pendingBadge')}
         </span>
         <h1 className="parent-title" style={{ marginTop: 12 }}>
-          {success ? 'Thanh toán thành công!' : 'Thanh toán chưa thành công'}
+          {success ? t('payment.successTitle') : t('payment.failTitle')}
         </h1>
         <p className="muted">
-          {success
-            ? 'Học phí đã được thanh toán. Cảm ơn bạn!'
-            : 'Giao dịch không hoàn tất. Vui lòng thử lại hoặc liên hệ trung tâm để được hỗ trợ.'}
+          {success ? t('payment.successDesc') : t('payment.failDesc')}
         </p>
         <Link className="btn btn-primary btn-block" to="/parent">
-          Về trang chủ
+          {t('payment.backHome')}
         </Link>
       </div>
     </div>

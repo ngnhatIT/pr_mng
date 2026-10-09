@@ -25,13 +25,13 @@
 }
 
 .score-pass {
-  background: #e8f7ee;
-  color: #15803d;
+  background: var(--success-soft);
+  color: var(--success);
 }
 
 .score-fail {
-  background: #fdeeee;
-  color: #b91c1c;
+  background: var(--danger-soft);
+  color: var(--danger);
 }
 
 .grades-add-btn {

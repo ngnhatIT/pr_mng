@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { studentsApi, type Student } from './students.api';
 import { useToast } from '../../shared/ui/toast';
 import { Modal, ConfirmDialog } from '../../shared/components/Modal';
@@ -9,7 +10,6 @@ import { EmptyState } from '../../shared/components/EmptyState';
 import { TableSkeleton } from '../../shared/components/Skeleton';
 import { Pagination, type PaginationMeta } from '../../shared/components/Pagination';
 import { Icon } from '../../shared/components/icons';
-import { STUDENT_STATUS_LABEL } from '../../shared/types';
 import './Students.css';
 
 const emptyForm = {
@@ -24,6 +24,7 @@ const emptyForm = {
 };
 
 export function Students() {
+  const { t } = useTranslation(['students', 'common']);
   const [students, setStudents] = useState<Student[]>([]);
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState('');
@@ -49,11 +50,11 @@ export function Students() {
       setStudents(res.data);
       setPagination(res.pagination);
     } catch (err) {
-      toast(err instanceof Error ? err.message : 'Không tải được danh sách', 'error');
+      toast(err instanceof Error ? err.message : t('toast.loadError'), 'error');
     } finally {
       setLoading(false);
     }
-  }, [search, status, page, toast]);
+  }, [search, status, page, toast, t]);
 
   useEffect(() => {
     const t = window.setTimeout(() => void load(), search ? 350 : 0);
@@ -64,11 +65,11 @@ export function Students() {
     try {
       if (id) await studentsApi.update(id, form);
       else await studentsApi.create(form);
-      toast('Đã lưu học viên', 'success');
+      toast(t('toast.saved'), 'success');
       setEditing(null);
       void load();
     } catch (err) {
-      toast(err instanceof Error ? err.message : 'Lưu thất bại', 'error');
+      toast(err instanceof Error ? err.message : t('states.saveError', { ns: 'common' }), 'error');
     }
   };
 
@@ -76,23 +77,23 @@ export function Students() {
     if (!deleting) return;
     try {
       await studentsApi.remove(deleting.id);
-      toast('Đã xóa học viên', 'success');
+      toast(t('toast.deleted'), 'success');
       setDeleting(null);
       void load();
     } catch (err) {
-      toast(err instanceof Error ? err.message : 'Xóa thất bại', 'error');
+      toast(err instanceof Error ? err.message : t('states.deleteError', { ns: 'common' }), 'error');
     }
   };
 
   return (
     <div className="page">
       <PageHeader
-        title="Học viên"
-        desc="Quản lý hồ sơ và trạng thái học viên"
+        title={t('title')}
+        desc={t('desc')}
         actions={
           <button className="btn btn-primary btn-inline" onClick={() => setEditing('new')}>
             <Icon name="plus" size={14} />
-            Thêm học viên
+            {t('add')}
           </button>
         }
       />
@@ -104,16 +105,16 @@ export function Students() {
           </span>
           <input
             className="text-input search-input"
-            placeholder="Tìm theo tên, mã, số điện thoại..."
+            placeholder={t('searchPlaceholder')}
             value={search}
             onChange={(e) => setSearchReset(e.target.value)}
           />
         </span>
         <select className="text-input" value={status} onChange={(e) => setStatusReset(e.target.value)}>
-          <option value="">Tất cả trạng thái</option>
-          <option value="studying">Đang học</option>
-          <option value="paused">Tạm nghỉ</option>
-          <option value="quit">Đã nghỉ</option>
+          <option value="">{t('allStatuses')}</option>
+          <option value="studying">{t('status.studying')}</option>
+          <option value="paused">{t('status.paused')}</option>
+          <option value="quit">{t('status.quit')}</option>
         </select>
       </div>
 
@@ -122,12 +123,12 @@ export function Students() {
       ) : students.length === 0 ? (
         <EmptyState
           icon="users"
-          title="Chưa có học viên nào"
-          desc="Thêm học viên đầu tiên để bắt đầu quản lý danh sách."
+          title={t('empty.title')}
+          desc={t('empty.desc')}
           action={
             <button className="btn btn-primary btn-inline" onClick={() => setEditing('new')}>
               <Icon name="plus" size={14} />
-              Thêm học viên
+              {t('add')}
             </button>
           }
         />
@@ -136,11 +137,11 @@ export function Students() {
           <table className="table">
             <thead>
               <tr>
-                <th>Mã</th>
-                <th>Họ tên</th>
-                <th>Điện thoại</th>
-                <th>Trạng thái</th>
-                <th className="th-right">Thao tác</th>
+                <th>{t('table.code')}</th>
+                <th>{t('table.name')}</th>
+                <th>{t('table.phone')}</th>
+                <th>{t('table.status')}</th>
+                <th className="th-right">{t('table.actions')}</th>
               </tr>
             </thead>
             <tbody>
@@ -159,19 +160,19 @@ export function Students() {
                   </td>
                   <td>{s.phone || '-'}</td>
                   <td>
-                    <span className={`badge badge-${s.status}`}>{STUDENT_STATUS_LABEL[s.status]}</span>
+                    <span className={`badge badge-${s.status}`}>{t(`status.${s.status}`)}</span>
                   </td>
                   <td className="td-right">
                     <button className="btn btn-sm btn-inline" onClick={() => setEditing(s)}>
                       <Icon name="pencil" size={13} />
-                      Sửa
+                      {t('actions.edit', { ns: 'common' })}
                     </button>{' '}
                     <button
                       className="btn btn-sm btn-inline btn-danger-ghost"
                       onClick={() => setDeleting(s)}
                     >
                       <Icon name="trash" size={13} />
-                      Xóa
+                      {t('actions.delete', { ns: 'common' })}
                     </button>
                   </td>
                 </tr>
@@ -192,8 +193,8 @@ export function Students() {
       )}
       {deleting && (
         <ConfirmDialog
-          title="Xóa học viên"
-          message={`Bạn có chắc muốn xóa học viên "${deleting.name}"? Toàn bộ dữ liệu liên quan (ghi danh, điểm danh, hóa đơn) cũng sẽ bị xóa.`}
+          title={t('delete.title')}
+          message={t('delete.message', { name: deleting.name })}
           onClose={() => setDeleting(null)}
           onConfirm={remove}
           danger
@@ -212,6 +213,7 @@ function StudentForm({
   onClose: () => void;
   onSave: (form: typeof emptyForm, id?: number) => Promise<void>;
 }) {
+  const { t } = useTranslation(['students', 'common']);
   const [form, setForm] = useState<typeof emptyForm>({
     code: initial?.code || '',
     name: initial?.name || '',
@@ -240,44 +242,44 @@ function StudentForm({
   };
 
   return (
-    <Modal title={initial ? 'Sửa học viên' : 'Thêm học viên'} onClose={onClose} wide>
+    <Modal title={initial ? t('form.editTitle') : t('form.addTitle')} onClose={onClose} wide>
       <form onSubmit={submit}>
         <div className="form-grid">
-          <Field label="Mã học viên (để trống để tự sinh)">
+          <Field label={t('form.code')}>
             <input className="text-input" value={form.code} onChange={set('code')} disabled={!!initial} />
           </Field>
-          <Field label="Họ tên *">
+          <Field label={t('form.name')}>
             <input className="text-input" value={form.name} onChange={set('name')} required />
           </Field>
-          <Field label="Điện thoại">
+          <Field label={t('form.phone')}>
             <input className="text-input" value={form.phone} onChange={set('phone')} />
           </Field>
-          <Field label="Email">
+          <Field label={t('form.email')}>
             <input className="text-input" value={form.email} onChange={set('email')} />
           </Field>
-          <Field label="Ngày sinh">
+          <Field label={t('form.dob')}>
             <input className="text-input" type="date" value={form.dob} onChange={set('dob')} />
           </Field>
-          <Field label="Trạng thái">
+          <Field label={t('form.status')}>
             <select className="text-input" value={form.status} onChange={set('status')}>
-              <option value="studying">Đang học</option>
-              <option value="paused">Tạm nghỉ</option>
-              <option value="quit">Đã nghỉ</option>
+              <option value="studying">{t('status.studying')}</option>
+              <option value="paused">{t('status.paused')}</option>
+              <option value="quit">{t('status.quit')}</option>
             </select>
           </Field>
-          <Field label="Địa chỉ" span>
+          <Field label={t('form.address')} span>
             <input className="text-input" value={form.address} onChange={set('address')} />
           </Field>
-          <Field label="Ghi chú" span>
+          <Field label={t('form.note')} span>
             <textarea className="text-input" rows={2} value={form.note} onChange={set('note')} />
           </Field>
         </div>
         <div className="modal-actions">
           <button type="button" className="btn" onClick={onClose}>
-            Hủy
+            {t('actions.cancel', { ns: 'common' })}
           </button>
           <button type="submit" className="btn btn-primary" disabled={busy}>
-            {busy ? 'Đang lưu...' : 'Lưu'}
+            {busy ? t('actions.saving', { ns: 'common' }) : t('actions.save', { ns: 'common' })}
           </button>
         </div>
       </form>

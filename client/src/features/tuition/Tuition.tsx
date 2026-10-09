@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { useTranslation, Trans } from 'react-i18next';
 import { invoicesApi, paymentsApi, InvoiceItem, PendingPayment, DebtRow } from './tuition.api';
 import { studentsApi, Student } from '../students/students.api';
 import { classesApi, ClassItem } from '../classes/classes.api';
@@ -10,7 +11,8 @@ import { PageHeader } from '../../shared/components/PageHeader';
 import { EmptyState } from '../../shared/components/EmptyState';
 import { TableSkeleton } from '../../shared/components/Skeleton';
 import { Pagination, type PaginationMeta } from '../../shared/components/Pagination';
-import { INVOICE_STATUS_LABEL, formatVND, formatDate } from '../../shared/types';
+import { Icon } from '../../shared/components/icons';
+import { formatVND, formatDate } from '../../shared/types';
 import './Tuition.css';
 
 export function remindKind(dueDate: string | null): 'overdue' | 'upcoming' {
@@ -19,6 +21,7 @@ export function remindKind(dueDate: string | null): 'overdue' | 'upcoming' {
 }
 
 export function Tuition() {
+  const { t } = useTranslation(['tuition', 'common']);
   const [searchParams, setSearchParams] = useSearchParams();
   const tabParam = searchParams.get('tab');
   const [tab, setTab] = useState(tabParam === 'debt' || tabParam === 'pending' ? tabParam : 'invoices');
@@ -30,16 +33,16 @@ export function Tuition() {
 
   return (
     <div className="page">
-      <PageHeader title="Học phí" desc="Phiếu thu, công nợ và duyệt thanh toán online" />
+      <PageHeader title={t('title')} desc={t('desc')} />
       <div className="tabs">
         <button className={`tab${tab === 'invoices' ? ' active' : ''}`} onClick={() => switchTab('invoices')}>
-          Phiếu thu
+          {t('invoices.tab')}
         </button>
         <button className={`tab${tab === 'debt' ? ' active' : ''}`} onClick={() => switchTab('debt')}>
-          Công nợ
+          {t('debt.tab')}
         </button>
         <button className={`tab${tab === 'pending' ? ' active' : ''}`} onClick={() => switchTab('pending')}>
-          Chờ duyệt
+          {t('pending.tab')}
         </button>
       </div>
       {tab === 'invoices' ? <InvoiceList /> : tab === 'debt' ? <DebtList /> : <PendingPayments />}
@@ -48,6 +51,7 @@ export function Tuition() {
 }
 
 function PendingPayments() {
+  const { t } = useTranslation(['tuition', 'common']);
   const [items, setItems] = useState<PendingPayment[]>([]);
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState<number | null>(null);
@@ -62,11 +66,11 @@ function PendingPayments() {
       setItems(res.data);
       setPagination(res.pagination);
     } catch (err) {
-      toast(err instanceof Error ? err.message : 'Không tải được danh sách chờ duyệt', 'error');
+      toast(err instanceof Error ? err.message : t('pending.loadError'), 'error');
     } finally {
       setLoading(false);
     }
-  }, [page, toast]);
+  }, [page, toast, t]);
 
   useEffect(() => {
     void load();
@@ -77,10 +81,10 @@ function PendingPayments() {
     try {
       if (action === 'approve') await paymentsApi.approve(p.id);
       else await paymentsApi.reject(p.id);
-      toast(action === 'approve' ? 'Đã duyệt thanh toán' : 'Đã từ chối thanh toán', 'success');
+      toast(action === 'approve' ? t('pending.approved') : t('pending.rejected'), 'success');
       void load();
     } catch (err) {
-      toast(err instanceof Error ? err.message : 'Thất bại', 'error');
+      toast(err instanceof Error ? err.message : t('pending.fail'), 'error');
     } finally {
       setBusyId(null);
     }
@@ -89,27 +93,27 @@ function PendingPayments() {
   return (
     <>
       <div className="toolbar">
-        <span className="muted">Thanh toán do phụ huynh báo "đã chuyển khoản", chờ trung tâm xác nhận.</span>
+        <span className="muted">{t('pending.note')}</span>
       </div>
       {loading ? (
         <TableSkeleton cols={6} />
       ) : items.length === 0 ? (
         <EmptyState
           icon="check-circle"
-          title="Không có gì chờ duyệt"
-          desc="Các thanh toán do phụ huynh báo “đã chuyển khoản” sẽ hiện ở đây."
+          title={t('pending.emptyTitle')}
+          desc={t('pending.emptyDesc')}
         />
       ) : (
         <div className="table-wrap sticky">
           <table className="table">
             <thead>
               <tr>
-                <th>Học viên</th>
-                <th>Số tiền</th>
-                <th>Phương thức</th>
-                <th>Thời gian báo</th>
-                <th>Ghi chú</th>
-                <th className="th-right">Thao tác</th>
+                <th>{t('pending.table.student')}</th>
+                <th>{t('pending.table.amount')}</th>
+                <th>{t('pending.table.method')}</th>
+                <th>{t('pending.table.reportedAt')}</th>
+                <th>{t('pending.table.note')}</th>
+                <th className="th-right">{t('pending.table.actions')}</th>
               </tr>
             </thead>
             <tbody>
@@ -119,7 +123,7 @@ function PendingPayments() {
                     {p.student_name} <span className="muted mono">({p.student_code})</span>
                   </td>
                   <td className="num">{formatVND(p.amount)}</td>
-                  <td>{p.method || 'Chuyển khoản'}</td>
+                  <td>{p.method || t('pending.defaultMethod')}</td>
                   <td>{formatDate(p.paid_at)}</td>
                   <td>{p.note || '-'}</td>
                   <td className="td-right">
@@ -129,14 +133,14 @@ function PendingPayments() {
                         onClick={() => void moderate(p, 'approve')}
                         disabled={busyId === p.id}
                       >
-                        Duyệt
+                        {t('pending.approve')}
                       </button>
                       <button
                         className="btn btn-sm btn-danger-ghost"
                         onClick={() => void moderate(p, 'reject')}
                         disabled={busyId === p.id}
                       >
-                        Từ chối
+                        {t('pending.reject')}
                       </button>
                     </span>
                   </td>
@@ -152,6 +156,7 @@ function PendingPayments() {
 }
 
 function InvoiceList() {
+  const { t } = useTranslation(['tuition', 'common']);
   const [invoices, setInvoices] = useState<InvoiceItem[]>([]);
   const [debtSummary, setDebtSummary] = useState<{ totalDebt: number; debtorCount: number } | null>(null);
   const [status, setStatus] = useState('');
@@ -170,11 +175,11 @@ function InvoiceList() {
     try {
       const r = await invoicesApi.remind(inv.id, remindKind(inv.due_date));
       toast(
-        r.demo ? `Đã ghi log demo: ${r.message}` : r.message,
+        r.demo ? t('invoice.remindDemo', { message: r.message }) : r.message,
         r.status === 'failed' ? 'error' : 'success'
       );
     } catch (err) {
-      toast(err instanceof Error ? err.message : 'Gửi nhắc thất bại', 'error');
+      toast(err instanceof Error ? err.message : t('invoice.remindError'), 'error');
     } finally {
       setRemindingId(null);
     }
@@ -187,11 +192,11 @@ function InvoiceList() {
       setInvoices(res.data);
       setPagination(res.pagination);
     } catch (err) {
-      toast(err instanceof Error ? err.message : 'Không tải được phiếu thu', 'error');
+      toast(err instanceof Error ? err.message : t('invoices.loadError'), 'error');
     } finally {
       setLoading(false);
     }
-  }, [status, search, page, toast]);
+  }, [status, search, page, toast, t]);
 
   useEffect(() => {
     const t = window.setTimeout(() => void load(), search ? 350 : 0);
@@ -212,7 +217,7 @@ function InvoiceList() {
       <div className="toolbar tuition-toolbar">
         <input
           className="text-input search-input"
-          placeholder="Tìm theo tên/mã học viên..."
+          placeholder={t('invoices.searchPlaceholder')}
           value={search}
           onChange={(e) => {
             setSearch(e.target.value);
@@ -227,17 +232,18 @@ function InvoiceList() {
             setPage(1);
           }}
         >
-          <option value="">Tất cả trạng thái</option>
-          <option value="unpaid">Chưa thanh toán</option>
-          <option value="partial">Thanh toán một phần</option>
-          <option value="paid">Đã thanh toán</option>
+          <option value="">{t('searchAllStatuses')}</option>
+          <option value="unpaid">{t('invoiceStatus.unpaid')}</option>
+          <option value="partial">{t('invoiceStatus.partial')}</option>
+          <option value="paid">{t('invoiceStatus.paid')}</option>
         </select>
         <span className="spacer" />
         <span className="debt-pill" aria-live="polite">
-          Còn nợ: <strong className="debt-amount">{formatVND(totalDebt)}</strong>
+          {t('invoices.totalDebt')} <strong className="debt-amount">{formatVND(totalDebt)}</strong>
         </span>
-        <button className="btn btn-primary" onClick={() => setShowCreate(true)}>
-          + Tạo phiếu thu
+        <button className="btn btn-primary btn-inline" onClick={() => setShowCreate(true)}>
+          <Icon name="plus" size={14} />
+          {t('invoice.create')}
         </button>
       </div>
 
@@ -246,11 +252,12 @@ function InvoiceList() {
       ) : invoices.length === 0 ? (
         <EmptyState
           icon="banknote"
-          title="Chưa có phiếu thu nào"
-          desc="Tạo phiếu thu học phí cho học viên để bắt đầu thu tiền."
+          title={t('invoices.emptyTitle')}
+          desc={t('invoices.emptyDesc')}
           action={
-            <button className="btn btn-primary" onClick={() => setShowCreate(true)}>
-              + Tạo phiếu thu
+            <button className="btn btn-primary btn-inline" onClick={() => setShowCreate(true)}>
+              <Icon name="plus" size={14} />
+              {t('invoice.create')}
             </button>
           }
         />
@@ -259,14 +266,14 @@ function InvoiceList() {
           <table className="table">
             <thead>
               <tr>
-                <th>Học viên</th>
-                <th>Lớp</th>
-                <th className="th-right">Số tiền</th>
-                <th className="th-right">Đã thu</th>
-                <th className="th-right">Còn nợ</th>
-                <th>Hạn nộp</th>
-                <th>Trạng thái</th>
-                <th className="th-right">Thao tác</th>
+                <th>{t('invoice.table.student')}</th>
+                <th>{t('invoice.table.class')}</th>
+                <th className="th-right">{t('invoice.table.amount')}</th>
+                <th className="th-right">{t('invoice.table.paid')}</th>
+                <th className="th-right">{t('invoice.table.debt')}</th>
+                <th>{t('invoice.table.dueDate')}</th>
+                <th>{t('invoice.table.status')}</th>
+                <th className="th-right">{t('invoice.table.actions')}</th>
               </tr>
             </thead>
             <tbody>
@@ -283,7 +290,7 @@ function InvoiceList() {
                     <td className="num debt-amount">{formatVND(inv.amount - paid)}</td>
                     <td>{formatDate(inv.due_date)}</td>
                     <td>
-                      <span className={`badge badge-${inv.status}`}>{INVOICE_STATUS_LABEL[inv.status]}</span>
+                      <span className={`badge badge-${inv.status}`}>{t(`invoiceStatus.${inv.status}`)}</span>
                     </td>
                     <td className="td-right nowrap">
                       {inv.status !== 'paid' && (
@@ -292,19 +299,19 @@ function InvoiceList() {
                             className="btn btn-sm"
                             onClick={() => void remindInvoice(inv)}
                             disabled={remindingId === inv.id}
-                            title="Gửi nhắc học phí qua Zalo"
+                            title={t('invoice.remindTitle')}
                           >
-                            {remindingId === inv.id ? 'Đang gửi...' : 'Nhắc Zalo'}
+                            {remindingId === inv.id ? t('invoice.sending') : t('invoice.remindZalo')}
                           </button>
                           <button
                             className="btn btn-sm"
                             onClick={() => setCrediting(inv)}
-                            title="Áp dụng credits của phụ huynh vào hóa đơn"
+                            title={t('credit.applyTitle')}
                           >
                             Credits
                           </button>
                           <button className="btn btn-sm btn-primary" onClick={() => setPaying(inv)}>
-                            Thu tiền
+                            {t('pay.collect')}
                           </button>
                         </span>
                       )}
@@ -361,6 +368,7 @@ function ApplyCreditModal({
   onClose: () => void;
   onDone: () => void;
 }) {
+  const { t } = useTranslation(['tuition', 'common']);
   const [creditId, setCreditId] = useState('');
   const [busy, setBusy] = useState(false);
   const toast = useToast();
@@ -369,49 +377,56 @@ function ApplyCreditModal({
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!creditId.trim()) {
-      toast('Vui lòng nhập ID credits', 'error');
+      toast(t('credit.idRequired'), 'error');
       return;
     }
     setBusy(true);
     try {
       const r = await invoicesApi.applyCredit(invoice.id, Number(creditId));
-      toast(`Đã áp dụng ${formatVND(r.applied)} credits vào hóa đơn`, 'success');
+      toast(t('credit.applied', { amount: formatVND(r.applied) }), 'success');
       onDone();
     } catch (err) {
-      toast(err instanceof Error ? err.message : 'Áp dụng thất bại', 'error');
+      toast(err instanceof Error ? err.message : t('credit.applyError'), 'error');
     } finally {
       setBusy(false);
     }
   };
 
   return (
-    <Modal title="Áp dụng credits vào hóa đơn" onClose={onClose}>
+    <Modal title={t('credit.title')} onClose={onClose}>
       <form onSubmit={submit}>
         <p className="confirm-text">
-          {invoice.student_name} ({invoice.student_code}) - còn nợ{' '}
-          <strong className="debt-amount">{formatVND(remain)}</strong>
+          <Trans
+            i18nKey="credit.confirmText"
+            ns="tuition"
+            values={{
+              name: invoice.student_name,
+              code: invoice.student_code,
+              amount: formatVND(remain),
+            }}
+            components={{ strong: <strong className="debt-amount" /> }}
+          />
         </p>
         <p className="muted">
-          Nhập <strong>ID credits</strong> của phụ huynh (xem trong trang Giới thiệu của phụ huynh hoặc quản
-          lý credits). Hệ thống sẽ trừ credits khả dụng vào số tiền còn nợ của hóa đơn.
+          <Trans i18nKey="credit.help" ns="tuition" components={{ strong: <strong /> }} />
         </p>
-        <Field label="ID credits *">
+        <Field label={t('credit.idLabel')}>
           <input
             className="text-input"
             type="number"
             min={1}
             value={creditId}
             onChange={(e) => setCreditId(e.target.value)}
-            placeholder="VD: 12"
+            placeholder={t('credit.idPlaceholder')}
             required
           />
         </Field>
         <div className="modal-actions">
           <button type="button" className="btn" onClick={onClose}>
-            Hủy
+            {t('actions.cancel', { ns: 'common' })}
           </button>
           <button type="submit" className="btn btn-primary" disabled={busy}>
-            {busy ? 'Đang áp dụng...' : 'Áp dụng'}
+            {busy ? t('credit.applying') : t('credit.apply')}
           </button>
         </div>
       </form>
@@ -420,6 +435,7 @@ function ApplyCreditModal({
 }
 
 function InvoiceFormModal({ onClose, onDone }: { onClose: () => void; onDone: () => void }) {
+  const { t } = useTranslation(['tuition', 'common']);
   const [students, setStudents] = useState<Student[]>([]);
   const [classes, setClasses] = useState<ClassItem[]>([]);
   const [studentId, setStudentId] = useState('');
@@ -442,7 +458,7 @@ function InvoiceFormModal({ onClose, onDone }: { onClose: () => void; onDone: ()
       .catch((err: Error) => toast(err.message, 'error'));
   }, [toast]);
 
-  // Tự điền học phí khi chọn lớp
+  // Auto-fill tuition fee when a class is picked
   const pickClass = (cid: string) => {
     setClassId(cid);
     const c = classes.find((x) => String(x.id) === cid);
@@ -452,7 +468,7 @@ function InvoiceFormModal({ onClose, onDone }: { onClose: () => void; onDone: ()
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!studentId) {
-      toast('Vui lòng chọn học viên', 'error');
+      toast(t('invoiceForm.studentRequired'), 'error');
       return;
     }
     setBusy(true);
@@ -464,27 +480,27 @@ function InvoiceFormModal({ onClose, onDone }: { onClose: () => void; onDone: ()
         due_date: dueDate || null,
         note: note || null,
       });
-      toast('Đã tạo phiếu thu', 'success');
+      toast(t('invoiceForm.created'), 'success');
       onDone();
     } catch (err) {
-      toast(err instanceof Error ? err.message : 'Tạo thất bại', 'error');
+      toast(err instanceof Error ? err.message : t('invoiceForm.createError'), 'error');
     } finally {
       setBusy(false);
     }
   };
 
   return (
-    <Modal title="Tạo phiếu thu" onClose={onClose}>
+    <Modal title={t('invoiceForm.title')} onClose={onClose}>
       <form onSubmit={submit}>
         <div className="form-grid">
-          <Field label="Học viên *" span>
+          <Field label={t('invoiceForm.student')} span>
             <select
               className="text-input"
               value={studentId}
               onChange={(e) => setStudentId(e.target.value)}
               required
             >
-              <option value="">- Chọn học viên -</option>
+              <option value="">{t('invoiceForm.selectStudent')}</option>
               {students.map((s) => (
                 <option key={s.id} value={s.id}>
                   {s.name} ({s.code})
@@ -492,17 +508,17 @@ function InvoiceFormModal({ onClose, onDone }: { onClose: () => void; onDone: ()
               ))}
             </select>
           </Field>
-          <Field label="Lớp học" span>
+          <Field label={t('invoiceForm.class')} span>
             <select className="text-input" value={classId} onChange={(e) => pickClass(e.target.value)}>
-              <option value="">- Không gắn lớp -</option>
+              <option value="">{t('invoiceForm.noClass')}</option>
               {classes.map((c) => (
                 <option key={c.id} value={c.id}>
-                  {c.name} - {formatVND(c.tuition_fee)}
+                  {t('invoiceForm.classOption', { name: c.name, fee: formatVND(c.tuition_fee) })}
                 </option>
               ))}
             </select>
           </Field>
-          <Field label="Số tiền (đ) *">
+          <Field label={t('invoiceForm.amount')}>
             <input
               className="text-input"
               type="number"
@@ -512,7 +528,7 @@ function InvoiceFormModal({ onClose, onDone }: { onClose: () => void; onDone: ()
               required
             />
           </Field>
-          <Field label="Hạn nộp">
+          <Field label={t('invoiceForm.dueDate')}>
             <input
               className="text-input"
               type="date"
@@ -520,16 +536,16 @@ function InvoiceFormModal({ onClose, onDone }: { onClose: () => void; onDone: ()
               onChange={(e) => setDueDate(e.target.value)}
             />
           </Field>
-          <Field label="Ghi chú" span>
+          <Field label={t('invoiceForm.note')} span>
             <input className="text-input" value={note} onChange={(e) => setNote(e.target.value)} />
           </Field>
         </div>
         <div className="modal-actions">
           <button type="button" className="btn" onClick={onClose}>
-            Hủy
+            {t('actions.cancel', { ns: 'common' })}
           </button>
           <button type="submit" className="btn btn-primary" disabled={busy}>
-            {busy ? 'Đang tạo...' : 'Tạo phiếu'}
+            {busy ? t('invoiceForm.creating') : t('invoiceForm.create')}
           </button>
         </div>
       </form>
@@ -546,6 +562,7 @@ function PayModal({
   onClose: () => void;
   onDone: () => void;
 }) {
+  const { t } = useTranslation(['tuition', 'common']);
   const paid = invoice.paid || 0;
   const remain = invoice.amount - paid;
   const [amount, setAmount] = useState(String(remain));
@@ -563,23 +580,28 @@ function PayModal({
         method,
         note: note || null,
       });
-      toast('Đã ghi nhận thanh toán', 'success');
+      toast(t('pay.recorded'), 'success');
       onDone();
     } catch (err) {
-      toast(err instanceof Error ? err.message : 'Thu tiền thất bại', 'error');
+      toast(err instanceof Error ? err.message : t('pay.payError'), 'error');
     } finally {
       setBusy(false);
     }
   };
 
   return (
-    <Modal title="Thu tiền học phí" onClose={onClose}>
+    <Modal title={t('pay.title')} onClose={onClose}>
       <form onSubmit={submit}>
         <p className="confirm-text">
-          {invoice.student_name} - còn nợ <strong className="debt-amount">{formatVND(remain)}</strong>
+          <Trans
+            i18nKey="pay.confirmText"
+            ns="tuition"
+            values={{ name: invoice.student_name, debt: formatVND(remain) }}
+            components={{ strong: <strong className="debt-amount" /> }}
+          />
         </p>
         <div className="form-grid">
-          <Field label="Số tiền thu (đ) *">
+          <Field label={t('pay.amount')}>
             <input
               className="text-input"
               type="number"
@@ -590,7 +612,7 @@ function PayModal({
               required
             />
           </Field>
-          <Field label="Phương thức">
+          <Field label={t('pay.method')}>
             <select className="text-input" value={method} onChange={(e) => setMethod(e.target.value)}>
               <option>Tiền mặt</option>
               <option>Chuyển khoản</option>
@@ -598,16 +620,16 @@ function PayModal({
               <option>Ví điện tử</option>
             </select>
           </Field>
-          <Field label="Ghi chú" span>
+          <Field label={t('pay.note')} span>
             <input className="text-input" value={note} onChange={(e) => setNote(e.target.value)} />
           </Field>
         </div>
         <div className="modal-actions">
           <button type="button" className="btn" onClick={onClose}>
-            Hủy
+            {t('actions.cancel', { ns: 'common' })}
           </button>
           <button type="submit" className="btn btn-primary" disabled={busy}>
-            {busy ? 'Đang lưu...' : 'Xác nhận thu'}
+            {busy ? t('pay.collecting') : t('pay.confirm')}
           </button>
         </div>
       </form>
@@ -616,6 +638,7 @@ function PayModal({
 }
 
 function DebtList() {
+  const { t } = useTranslation(['tuition', 'common']);
   const [debts, setDebts] = useState<DebtRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [remindingId, setRemindingId] = useState<number | null>(null);
@@ -630,11 +653,11 @@ function DebtList() {
       setDebts(r.data);
       setPagination(r.pagination);
     } catch (err) {
-      toast(err instanceof Error ? err.message : 'Không tải được công nợ', 'error');
+      toast(err instanceof Error ? err.message : t('debt.loadError'), 'error');
     } finally {
       setLoading(false);
     }
-  }, [page, toast]);
+  }, [page, toast, t]);
 
   useEffect(() => {
     void loadDebts();
@@ -653,7 +676,7 @@ function DebtList() {
       })
       .filter((x) => !Number.isNaN(x.id));
     if (dues.length === 0) {
-      toast('Không tìm thấy hóa đơn cần nhắc', 'error');
+      toast(t('debt.noInvoices'), 'error');
       return;
     }
     setRemindingId(d.id);
@@ -672,7 +695,7 @@ function DebtList() {
         }
       }
       toast(
-        `Nhắc Zalo cho ${d.name}: ${sent} đã gửi, ${demo} demo, ${failed} thất bại`,
+        t('debt.remindResult', { name: d.name, sent, demo, failed }),
         failed > 0 ? 'error' : 'success'
       );
     } finally {
@@ -684,7 +707,12 @@ function DebtList() {
     <>
       <div className="toolbar">
         <span className="muted">
-          {debts.length} học viên còn nợ · Tổng: <strong className="debt-amount">{formatVND(total)}</strong>
+          <Trans
+            i18nKey="debt.summary"
+            ns="tuition"
+            values={{ count: debts.length, total: formatVND(total) }}
+            components={{ strong: <strong className="debt-amount" /> }}
+          />
         </span>
       </div>
       {loading ? (
@@ -692,20 +720,20 @@ function DebtList() {
       ) : debts.length === 0 ? (
         <EmptyState
           icon="check-circle"
-          title="Không còn công nợ"
-          desc="Tất cả học viên đã thanh toán đầy đủ. Tuyệt vời!"
+          title={t('debt.emptyTitle')}
+          desc={t('debt.emptyDesc')}
         />
       ) : (
         <div className="table-wrap sticky">
           <table className="table">
             <thead>
               <tr>
-                <th>Học viên</th>
-                <th>SĐT</th>
-                <th className="th-right">Tổng phải thu</th>
-                <th className="th-right">Đã thu</th>
-                <th className="th-right">Còn nợ</th>
-                <th className="th-right">Thao tác</th>
+                <th>{t('debt.table.student')}</th>
+                <th>{t('debt.table.phone')}</th>
+                <th className="th-right">{t('debt.table.total')}</th>
+                <th className="th-right">{t('debt.table.paid')}</th>
+                <th className="th-right">{t('debt.table.debt')}</th>
+                <th className="th-right">{t('debt.table.actions')}</th>
               </tr>
             </thead>
             <tbody>
@@ -723,9 +751,9 @@ function DebtList() {
                       className="btn btn-sm"
                       onClick={() => void remindStudent(d)}
                       disabled={remindingId === d.id}
-                      title="Gửi nhắc học phí qua Zalo cho các hóa đơn chưa thanh toán"
+                      title={t('debt.remindTitle')}
                     >
-                      {remindingId === d.id ? 'Đang gửi...' : 'Nhắc Zalo'}
+                      {remindingId === d.id ? t('debt.sending') : t('debt.remindZalo')}
                     </button>
                   </td>
                 </tr>

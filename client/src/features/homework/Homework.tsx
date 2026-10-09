@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import {
   homeworkApi,
   type HomeworkStats,
@@ -21,25 +23,20 @@ import { QuestionBank } from './QuestionBank';
 import { SubmissionsModal } from './SubmissionsModal';
 import { AnalyticsModal } from './AnalyticsModal';
 
-function dueStatus(due: string | null): { label: string; badge: string } | null {
+function dueStatus(due: string | null, t: TFunction): { label: string; badge: string } | null {
   if (!due) return null;
   const today = new Date().toISOString().slice(0, 10);
   const diff = Math.ceil((new Date(due).getTime() - new Date(today).getTime()) / 86400000);
-  if (diff < 0) return { label: `Quá hạn ${-diff} ngày`, badge: 'badge-overdue' };
-  if (diff === 0) return { label: 'Hết hạn hôm nay', badge: 'badge-overdue' };
-  if (diff <= 3) return { label: `Còn ${diff} ngày`, badge: 'badge-late' };
+  if (diff < 0) return { label: t('due.overdueDays', { count: -diff }), badge: 'badge-overdue' };
+  if (diff === 0) return { label: t('due.today'), badge: 'badge-overdue' };
+  if (diff <= 3) return { label: t('due.daysLeft', { count: diff }), badge: 'badge-late' };
   return { label: formatDate(due), badge: 'badge-upcoming' };
 }
-
-const STATUS_BADGE: Record<string, { label: string; cls: string }> = {
-  draft: { label: 'Nháp', cls: 'badge-general' },
-  scheduled: { label: 'Hẹn giờ', cls: 'badge-late' },
-  published: { label: 'Đã đăng', cls: 'badge-paid' },
-};
 
 type StatusTab = '' | 'published' | 'draft' | 'scheduled';
 
 export function Homework() {
+  const { t } = useTranslation(['homework', 'common']);
   const [classes, setClasses] = useState<ClassItem[]>([]);
   const [items, setItems] = useState<HomeworkItem[]>([]);
   const [stats, setStats] = useState<HomeworkStats | null>(null);
@@ -58,6 +55,12 @@ export function Homework() {
   const [pagination, setPagination] = useState<PaginationMeta | null>(null);
   const toast = useToast();
 
+  const STATUS_BADGE: Record<string, { label: string; cls: string }> = {
+    draft: { label: t('status.draft'), cls: 'badge-general' },
+    scheduled: { label: t('status.scheduled'), cls: 'badge-late' },
+    published: { label: t('status.published'), cls: 'badge-paid' },
+  };
+
   useEffect(() => {
     homeworkApi
       .listClasses()
@@ -73,18 +76,18 @@ export function Homework() {
       setItems(res.data);
       setPagination(res.pagination);
     } catch (err) {
-      toast(err instanceof Error ? err.message : 'Không tải được bài tập', 'error');
+      toast(err instanceof Error ? err.message : t('toast.loadFail'), 'error');
     } finally {
       setLoading(false);
     }
-  }, [filters, statusTab, page, toast]);
+  }, [filters, statusTab, page, toast, t]);
 
   useEffect(() => {
-    const t = setTimeout(() => {
+    const tm = setTimeout(() => {
       setFilters((f) => ({ ...f, search: search.trim() || undefined }));
       setPage(1);
     }, 400);
-    return () => clearTimeout(t);
+    return () => clearTimeout(tm);
   }, [search]);
 
   useEffect(() => { void load(); }, [load]);
@@ -103,46 +106,46 @@ export function Homework() {
     if (!deleting) return;
     try {
       await homeworkApi.remove(deleting.id);
-      toast('Đã xóa bài tập', 'success');
+      toast(t('toast.deleted'), 'success');
       setDeleting(null);
       void load();
       refreshStats();
     } catch (err) {
-      toast(err instanceof Error ? err.message : 'Xóa thất bại', 'error');
+      toast(err instanceof Error ? err.message : t('toast.deleteFail'), 'error');
     }
   };
 
   const doReuse = async (h: HomeworkItem) => {
     try {
       const res = await homeworkApi.reuse(h.id);
-      toast('Đã tạo bản nháp từ bài tập cũ - chỉnh sửa rồi đăng', 'success');
+      toast(t('toast.reused'), 'success');
       setEditing(res.created);
       void load();
     } catch (err) {
-      toast(err instanceof Error ? err.message : 'Tái sử dụng thất bại', 'error');
+      toast(err instanceof Error ? err.message : t('toast.reuseFail'), 'error');
     }
   };
 
   const doPublish = async (h: HomeworkItem) => {
     try {
       await homeworkApi.publish(h.id);
-      toast('Đã đăng bài tập', 'success');
+      toast(t('toast.published'), 'success');
       void load();
       refreshStats();
     } catch (err) {
-      toast(err instanceof Error ? err.message : 'Đăng thất bại', 'error');
+      toast(err instanceof Error ? err.message : t('toast.publishFail'), 'error');
     }
   };
 
   const doUnpublish = async (h: HomeworkItem) => {
-    if (!confirm(`Gỡ đăng "${h.title}" về nháp? Phụ huynh sẽ không thấy bài này nữa.`)) return;
+    if (!confirm(t('toast.unpublishConfirm', { title: h.title }))) return;
     try {
       await homeworkApi.unpublish(h.id);
-      toast('Đã gỡ về nháp', 'success');
+      toast(t('toast.unpublished'), 'success');
       void load();
       refreshStats();
     } catch (err) {
-      toast(err instanceof Error ? err.message : 'Gỡ đăng thất bại', 'error');
+      toast(err instanceof Error ? err.message : t('toast.unpublishFail'), 'error');
     }
   };
 
@@ -152,73 +155,73 @@ export function Homework() {
   };
 
   const tabs: { id: StatusTab; label: string }[] = [
-    { id: '', label: 'Tất cả' },
-    { id: 'published', label: 'Đã đăng' },
-    { id: 'scheduled', label: 'Hẹn giờ' },
-    { id: 'draft', label: 'Nháp' },
+    { id: '', label: t('tabs.all') },
+    { id: 'published', label: t('tabs.published') },
+    { id: 'scheduled', label: t('tabs.scheduled') },
+    { id: 'draft', label: t('tabs.draft') },
   ];
 
   return (
     <div className="page">
       <PageHeader
-        title="Bài tập về nhà"
-        desc="Giao bài tập và quiz cho các lớp, chấm điểm và theo dõi bài nộp"
+        title={t('page.title')}
+        desc={t('page.desc')}
         actions={
           <>
             <button className="btn hw-action-icon" onClick={() => setShowAnalytics(true)}>
-              <Icon name="chart" size={15} /> Phân tích
+              <Icon name="chart" size={15} /> {t('actions.analytics')}
             </button>
             <button className="btn hw-action-icon" onClick={() => setShowBank(true)}>
-              <Icon name="book" size={15} /> Ngân hàng câu hỏi
+              <Icon name="book" size={15} /> {t('actions.questionBank')}
             </button>
             <button className="btn btn-primary hw-action-icon" onClick={() => setEditing('new')}>
-              <Icon name="plus" size={15} /> Tạo bài tập
+              <Icon name="plus" size={15} /> {t('actions.create')}
             </button>
           </>
         }
       />
 
       {stats && (
-        <div className="stat-grid" style={{ gridTemplateColumns: 'repeat(4, 1fr)' }}>
+        <div className="stat-grid hw-stat-grid">
           <div className="stat-card tone-blue">
             <div className="stat-top">
               <div className="stat-icon"><Icon name="clipboard" size={20} /></div>
             </div>
             <div className="stat-value">{stats.total}</div>
-            <div className="stat-label">Đã đăng</div>
+            <div className="stat-label">{t('stats.published')}</div>
           </div>
           <div className="stat-card tone-amber">
             <div className="stat-top">
               <div className="stat-icon"><Icon name="clock" size={20} /></div>
             </div>
             <div className="stat-value">{stats.dueSoon}</div>
-            <div className="stat-label">Sắp hết hạn (≤ 3 ngày)</div>
+            <div className="stat-label">{t('stats.dueSoon')}</div>
           </div>
           <div className="stat-card tone-red">
             <div className="stat-top">
               <div className="stat-icon"><Icon name="calendar-x" size={20} /></div>
             </div>
             <div className="stat-value">{stats.overdue}</div>
-            <div className="stat-label">Đã quá hạn</div>
+            <div className="stat-label">{t('stats.overdue')}</div>
           </div>
           <div className="stat-card tone-violet">
             <div className="stat-top">
               <div className="stat-icon"><Icon name="file" size={20} /></div>
             </div>
             <div className="stat-value">{stats.drafts}</div>
-            <div className="stat-label">Nháp / Hẹn giờ</div>
+            <div className="stat-label">{t('stats.drafts')}</div>
           </div>
         </div>
       )}
 
-      <div className="tabs" style={{ marginBottom: 16 }}>
-        {tabs.map((t) => (
+      <div className="tabs hw-tabs">
+        {tabs.map((tab) => (
           <button
-            key={t.id}
-            className={`tab ${statusTab === t.id ? 'active' : ''}`}
-            onClick={() => { setStatusTab(t.id); setPage(1); }}
+            key={tab.id}
+            className={`tab ${statusTab === tab.id ? 'active' : ''}`}
+            onClick={() => { setStatusTab(tab.id); setPage(1); }}
           >
-            {t.label}
+            {tab.label}
           </button>
         ))}
       </div>
@@ -226,7 +229,7 @@ export function Homework() {
       <div className="toolbar">
         <input
           className="text-input search-input"
-          placeholder="Tìm theo tiêu đề, nội dung..."
+          placeholder={t('filters.searchPlaceholder')}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
@@ -235,7 +238,7 @@ export function Homework() {
           value={filters.class_id || ''}
           onChange={(e) => setFilter({ class_id: e.target.value || undefined })}
         >
-          <option value="">Tất cả lớp</option>
+          <option value="">{t('filters.allClasses')}</option>
           {classes.map((c) => (
             <option key={c.id} value={c.id}>{c.name}</option>
           ))}
@@ -245,19 +248,19 @@ export function Homework() {
           value={filters.kind || ''}
           onChange={(e) => setFilter({ kind: (e.target.value || undefined) as HomeworkFilters['kind'] })}
         >
-          <option value="">Mọi loại</option>
-          <option value="homework">Bài tập</option>
-          <option value="quiz">Quiz trắc nghiệm</option>
+          <option value="">{t('filters.allKinds')}</option>
+          <option value="homework">{t('filters.kindHomework')}</option>
+          <option value="quiz">{t('filters.kindQuiz')}</option>
         </select>
         <select
           className="text-input"
           value={filters.due || ''}
           onChange={(e) => setFilter({ due: (e.target.value || undefined) as HomeworkFilters['due'] })}
         >
-          <option value="">Mọi hạn nộp</option>
-          <option value="upcoming">Sắp tới</option>
-          <option value="overdue">Quá hạn</option>
-          <option value="nodate">Chưa đặt hạn</option>
+          <option value="">{t('filters.allDues')}</option>
+          <option value="upcoming">{t('filters.upcoming')}</option>
+          <option value="overdue">{t('filters.overdue')}</option>
+          <option value="nodate">{t('filters.noDate')}</option>
         </select>
       </div>
 
@@ -267,11 +270,11 @@ export function Homework() {
         ) : items.length === 0 ? (
           <EmptyState
             icon="file"
-            title="Chưa có bài tập nào"
-            desc="Tạo bài tập mới, lưu nháp hoặc hẹn giờ đăng."
+            title={t('empty.title')}
+            desc={t('empty.desc')}
             action={
               <button className="btn btn-primary hw-action-icon" onClick={() => setEditing('new')}>
-                <Icon name="plus" size={15} /> Tạo bài tập
+                <Icon name="plus" size={15} /> {t('actions.create')}
               </button>
             }
           />
@@ -280,17 +283,17 @@ export function Homework() {
             <table className="table">
               <thead>
                 <tr>
-                  <th>Bài tập</th>
-                  <th>Lớp</th>
-                  <th>Trạng thái</th>
-                  <th>Hạn nộp</th>
-                  <th className="th-right">Hoàn thành</th>
-                  <th className="th-right">Thao tác</th>
+                  <th>{t('table.title')}</th>
+                  <th>{t('table.class')}</th>
+                  <th>{t('table.status')}</th>
+                  <th>{t('table.due')}</th>
+                  <th className="th-right">{t('table.progress')}</th>
+                  <th className="th-right">{t('table.actions')}</th>
                 </tr>
               </thead>
               <tbody>
                 {items.map((h) => {
-                  const due = dueStatus(h.due_date);
+                  const due = dueStatus(h.due_date, t);
                   const st = STATUS_BADGE[h.status] || STATUS_BADGE.published;
                   const done = h.completed_count ?? 0;
                   const totalStudents = h.student_count ?? 0;
@@ -298,19 +301,19 @@ export function Homework() {
                   return (
                     <tr key={h.id}>
                       <td>
-                        <div style={{ fontWeight: 600 }}>
-                          {h.kind === 'quiz' && <span className="badge badge-plan-premium" style={{ marginRight: 6 }}>Quiz</span>}
+                        <div className="hw-item-title">
+                          {h.kind === 'quiz' && <span className="badge badge-plan-premium hw-quiz-badge">Quiz</span>}
                           {h.title}
                         </div>
                         {h.max_score != null && (
-                          <div className="muted" style={{ fontSize: 13 }}>Điểm tối đa: {h.max_score}</div>
+                          <div className="muted hw-sub">{t('table.maxScore', { max: h.max_score })}</div>
                         )}
                       </td>
                       <td><span className="badge badge-general">{h.class_name}</span></td>
                       <td>
                         <span className={`badge ${st.cls}`}>{st.label}</span>
                         {h.status === 'scheduled' && h.publish_at && (
-                          <div className="muted" style={{ fontSize: 12 }}>{formatDate(h.publish_at)}</div>
+                          <div className="muted hw-sub-sm">{formatDate(h.publish_at)}</div>
                         )}
                       </td>
                       <td>{due ? <span className={`badge ${due.badge}`}>{due.label}</span> : <span className="muted">-</span>}</td>
@@ -324,23 +327,23 @@ export function Homework() {
                       </td>
                       <td className="td-right nowrap">
                         {h.status !== 'published' ? (
-                          <button className="btn btn-sm btn-primary" onClick={() => doPublish(h)} title="Đăng ngay">Đăng</button>
+                          <button className="btn btn-sm btn-primary" onClick={() => doPublish(h)} title={t('actions.publishNow')}>{t('actions.publish')}</button>
                         ) : (
-                          <button className="btn btn-sm" onClick={() => doUnpublish(h)} title="Gỡ về nháp">Gỡ đăng</button>
+                          <button className="btn btn-sm" onClick={() => doUnpublish(h)} title={t('actions.unpublishTitle')}>{t('actions.unpublish')}</button>
                         )}{' '}
-                        <button className="btn btn-sm" onClick={() => doReuse(h)} title="Tạo bản mới từ bài này">Tái sử dụng</button>{' '}
+                        <button className="btn btn-sm" onClick={() => doReuse(h)} title={t('actions.reuseTitle')}>{t('actions.reuse')}</button>{' '}
                         {h.kind === 'quiz' ? (
-                          <button className="btn btn-sm" onClick={() => setAttempts(h)}>Kết quả</button>
+                          <button className="btn btn-sm" onClick={() => setAttempts(h)}>{t('actions.viewResults')}</button>
                         ) : (
-                          <button className="btn btn-sm" onClick={() => setGrading(h)}>Chấm điểm</button>
+                          <button className="btn btn-sm" onClick={() => setGrading(h)}>{t('actions.grade')}</button>
                         )}{' '}
-                        <button className="btn btn-sm" onClick={() => setEditing(h)}>Sửa</button>{' '}
+                        <button className="btn btn-sm" onClick={() => setEditing(h)}>{t('actions.edit', { ns: 'common' })}</button>{' '}
                         {h.kind === 'homework' && (
                           <>
-                            <button className="btn btn-sm" onClick={() => setViewSubs(h)}>Bài nộp</button>{' '}
+                            <button className="btn btn-sm" onClick={() => setViewSubs(h)}>{t('actions.viewSubmissions')}</button>{' '}
                           </>
                         )}
-                        <button className="btn btn-sm btn-danger-ghost" onClick={() => setDeleting(h)}>Xóa</button>
+                        <button className="btn btn-sm btn-danger-ghost" onClick={() => setDeleting(h)}>{t('actions.delete', { ns: 'common' })}</button>
                       </td>
                     </tr>
                   );
@@ -374,8 +377,8 @@ export function Homework() {
       )}
       {deleting && (
         <ConfirmDialog
-          title="Xóa bài tập"
-          message={`Xóa bài tập "${deleting.title}"?`}
+          title={t('delete.title')}
+          message={t('delete.message', { title: deleting.title })}
           onClose={() => setDeleting(null)}
           onConfirm={remove}
           danger

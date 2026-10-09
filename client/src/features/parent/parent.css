@@ -10,14 +10,14 @@
   gap: 6px;
 }
 .child-card {
-  transition: transform 0.15s ease-out, box-shadow 0.15s ease-out;
+  transition: box-shadow 0.15s ease-out, border-color 0.15s ease-out;
 }
 .child-card:hover {
-  transform: translateY(-1px);
   box-shadow: var(--shadow-md);
+  border-color: var(--border-strong);
 }
 .child-card:active {
-  transform: none;
+  transform: scale(0.99);
 }
 .child-arrow {
   margin-left: auto;
@@ -67,9 +67,9 @@
   margin: 8px 0 0;
   padding: 10px 12px;
   font-size: 13px;
-  color: #166534;
-  background: var(--success-soft, #dcfce7);
-  border: 1px solid #bbf7d0;
+  color: var(--success);
+  background: var(--success-soft);
+  border: 1px solid var(--border);
   border-radius: var(--radius-md);
 }
 .hw-feedback svg {
@@ -77,8 +77,8 @@
   margin-top: 1px;
 }
 .badge-quiz {
-  background: var(--primary-soft, #eef3ff);
-  color: var(--primary-600, #1b44b8);
+  background: var(--primary-soft);
+  color: var(--primary);
   font-weight: 700;
 }
 .hw-actions {
@@ -304,9 +304,9 @@ button.quiz-take-opt {
   padding: 10px 12px;
   margin-bottom: 12px;
   font-size: 14px;
-  color: #991b1b;
-  background: #fee2e2;
-  border: 1px solid #fca5a5;
+  color: var(--danger);
+  background: var(--danger-soft);
+  border: 1px solid var(--border);
   border-radius: var(--radius-md);
 }
 .auth-error svg {
@@ -344,4 +344,45 @@ button.quiz-take-opt {
   .parent-tabs .tab {
     padding: 9px 14px;
   }
+}
+
+/* ---------- Biểu đồ tiến bộ: màu theo theme (SVG dùng CSS vars) ---------- */
+.progress-svg .chart-axis {
+  stroke: var(--border-strong);
+}
+.progress-svg .chart-area {
+  fill: var(--primary-soft);
+}
+.progress-svg .chart-line {
+  stroke: var(--primary);
+}
+.progress-svg .chart-dot {
+  fill: var(--primary);
+}
+.progress-svg .chart-label {
+  fill: var(--text-muted);
+}
+
+/* ---------- Dark mode: các điểm màu đặc biệt ---------- */
+[data-theme='dark'] .quiz-result-ic.good {
+  background: #15803d;
+}
+[data-theme='dark'] .quiz-result-ic.mid {
+  background: #b45309;
+}
+[data-theme='dark'] .quiz-result-ic.bad {
+  background: #b91c1c;
+}
+[data-theme='dark'] .result-success {
+  background: #15803d;
+}
+[data-theme='dark'] .result-fail {
+  background: #b91c1c;
+}
+[data-theme='dark'] .hw-check.done {
+  background: #15803d;
+  border-color: #15803d;
+}
+[data-theme='dark'] .payment-result .result-icon {
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.5);
 }

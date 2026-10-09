@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { getUser } from '../../shared/api/client';
 import { zaloApi } from './notifications.api';
 import { useToast } from '../../shared/ui/toast';
@@ -12,8 +13,6 @@ import { Icon } from '../../shared/components/icons';
 import {
   ZaloConfig,
   ReminderItem,
-  REMINDER_KIND_LABEL,
-  REMINDER_STATUS_LABEL,
   formatVND,
   formatDate,
 } from '../../shared/types';
@@ -32,6 +31,7 @@ const EMPTY_CONFIG: ZaloConfig = {
 };
 
 export function ZaloReminders() {
+  const { t } = useTranslation(['ops', 'common']);
   const user = getUser();
   const isAdmin = user?.role === 'admin';
   const toast = useToast();
@@ -57,11 +57,11 @@ export function ZaloReminders() {
       const data = await zaloApi.getConfig();
       setConfig({ ...EMPTY_CONFIG, ...data });
     } catch (err) {
-      toast(err instanceof Error ? err.message : 'Không tải được cấu hình', 'error');
+      toast(err instanceof Error ? err.message : t('zalo.toast.loadConfigFail'), 'error');
     } finally {
       setLoading(false);
     }
-  }, [isAdmin, toast]);
+  }, [isAdmin, toast, t]);
 
   const loadHistory = useCallback(async () => {
     setLoadingHistory(true);
@@ -69,11 +69,11 @@ export function ZaloReminders() {
       const data = await zaloApi.history(100);
       setReminders(data);
     } catch (err) {
-      toast(err instanceof Error ? err.message : 'Không tải được lịch sử', 'error');
+      toast(err instanceof Error ? err.message : t('zalo.toast.loadHistoryFail'), 'error');
     } finally {
       setLoadingHistory(false);
     }
-  }, [toast]);
+  }, [toast, t]);
 
   useEffect(() => {
     void loadConfig();
@@ -88,9 +88,9 @@ export function ZaloReminders() {
     try {
       const data = await zaloApi.saveConfig(config);
       setConfig({ ...EMPTY_CONFIG, ...data });
-      toast('Đã lưu cấu hình Zalo', 'success');
+      toast(t('zalo.toast.savedConfig'), 'success');
     } catch (err) {
-      toast(err instanceof Error ? err.message : 'Lưu thất bại', 'error');
+      toast(err instanceof Error ? err.message : t('zalo.toast.saveFail'), 'error');
     } finally {
       setSaving(false);
     }
@@ -98,7 +98,7 @@ export function ZaloReminders() {
 
   const sendTest = async () => {
     if (!testPhone.trim()) {
-      toast('Vui lòng nhập số điện thoại', 'error');
+      toast(t('zalo.toast.needPhone'), 'error');
       return;
     }
     setTesting(true);
@@ -107,7 +107,7 @@ export function ZaloReminders() {
       toast(r.message, r.status === 'failed' ? 'error' : 'success');
       void loadHistory();
     } catch (err) {
-      toast(err instanceof Error ? err.message : 'Gửi thử thất bại', 'error');
+      toast(err instanceof Error ? err.message : t('zalo.toast.sendFail'), 'error');
     } finally {
       setTesting(false);
     }
@@ -120,7 +120,7 @@ export function ZaloReminders() {
       toast(r.message, 'success');
       void loadHistory();
     } catch (err) {
-      toast(err instanceof Error ? err.message : 'Chạy thất bại', 'error');
+      toast(err instanceof Error ? err.message : t('zalo.toast.runFail'), 'error');
     } finally {
       setRunning(false);
     }
@@ -129,8 +129,8 @@ export function ZaloReminders() {
   return (
     <div className="page">
       <PageHeader
-        title="Nhắc học phí qua Zalo"
-        desc="Gửi tin nhắn nhắc học phí tự động tới phụ huynh/học viên qua Zalo ZNS. Khi chưa cấu hình Access Token, hệ thống chạy ở chế độ demo - chỉ ghi log, không gửi tin thật."
+        title={t('zalo.title')}
+        desc={t('zalo.desc')}
       />
 
       {isAdmin && !loading && (
@@ -139,17 +139,17 @@ export function ZaloReminders() {
             <Icon name="zap" size={18} />
           </span>
           <div className="status-text">
-            <div className="status-title">Trạng thái nhắc tự động</div>
+            <div className="status-title">{t('zalo.status.title')}</div>
             <div className="status-desc">
               {config.zalo_access_token
-                ? 'Đã cấu hình Access Token - tin nhắn gửi thật qua Zalo ZNS.'
-                : 'Chưa có Access Token - hệ thống đang chạy chế độ demo, chỉ ghi log.'}
+                ? t('zalo.status.descConfigured')
+                : t('zalo.status.descDemo')}
             </div>
           </div>
           {config.zalo_enabled === '1' ? (
-            <span className="badge badge-approved">Đang bật</span>
+            <span className="badge badge-approved">{t('zalo.status.on')}</span>
           ) : (
-            <span className="badge badge-pending">Đang tắt</span>
+            <span className="badge badge-pending">{t('zalo.status.off')}</span>
           )}
         </div>
       )}
@@ -157,7 +157,7 @@ export function ZaloReminders() {
       {!isAdmin && (
         <div className="card">
           <p className="confirm-text">
-            Mục cấu hình chỉ dành cho Quản trị viên. Bạn vẫn có thể xem lịch sử nhắc bên dưới.
+            {t('zalo.notAdmin')}
           </p>
         </div>
       )}
@@ -165,44 +165,42 @@ export function ZaloReminders() {
       {isAdmin && (
         <>
           <div className="card">
-            <h2 className="card-title">Cấu hình Zalo OA</h2>
+            <h2 className="card-title">{t('zalo.config.title')}</h2>
             <p className="card-desc">
-              Lấy Access Token tại trang quản trị Zalo OA (mục Ứng dụng / API). Template ID lấy từ các mẫu tin
-              ZNS đã được Zalo duyệt. Tên tham số mẫu ZNS cần đặt: ten_trung_tam, ten_hoc_vien, so_tien,
-              han_nop, ma_hoa_don.
+              {t('zalo.config.desc')}
             </p>
             {loading ? (
               <div aria-hidden="true">
                 <Skeleton height={38} radius={8} />
-                <div style={{ marginTop: 12 }}>
+                <div className="zalo-skel-gap">
                   <Skeleton height={38} radius={8} />
                 </div>
-                <div style={{ marginTop: 12 }}>
+                <div className="zalo-skel-gap">
                   <Skeleton width="60%" height={38} radius={8} />
                 </div>
               </div>
             ) : (
               <form onSubmit={save}>
                 <div className="zalo-form-group">
-                  <h3 className="zalo-group-title">Thông tin Zalo OA</h3>
+                  <h3 className="zalo-group-title">{t('zalo.groups.oaInfo')}</h3>
                   <div className="form-grid">
-                    <Field label="Tên trung tâm">
+                    <Field label={t('zalo.fields.centerName')}>
                       <input
                         className="text-input"
                         value={config.center_name}
                         onChange={(e) => set('center_name')(e.target.value)}
-                        placeholder="Trung tâm Anh ngữ ABC"
+                        placeholder={t('zalo.ph.centerName')}
                       />
                     </Field>
-                    <Field label="OA ID">
+                    <Field label={t('zalo.fields.oaId')}>
                       <input
                         className="text-input"
                         value={config.zalo_oa_id}
                         onChange={(e) => set('zalo_oa_id')(e.target.value)}
-                        placeholder="VD: 1234567890"
+                        placeholder={t('zalo.ph.oaId')}
                       />
                     </Field>
-                    <Field label="Access Token" span>
+                    <Field label={t('zalo.fields.accessToken')} span>
                       <input
                         className="text-input"
                         type="password"
@@ -210,8 +208,8 @@ export function ZaloReminders() {
                         onChange={(e) => set('zalo_access_token')(e.target.value)}
                         placeholder={
                           config.zalo_access_token
-                            ? '•••••••• (đã lưu - nhập mới để thay đổi)'
-                            : 'Dán access token của OA'
+                            ? t('zalo.ph.tokenSaved')
+                            : t('zalo.ph.tokenNew')
                         }
                         autoComplete="off"
                       />
@@ -219,22 +217,22 @@ export function ZaloReminders() {
                   </div>
                 </div>
                 <div className="zalo-form-group">
-                  <h3 className="zalo-group-title">Mẫu tin ZNS</h3>
+                  <h3 className="zalo-group-title">{t('zalo.groups.templates')}</h3>
                   <div className="form-grid">
-                    <Field label="Template ID - tin quá hạn">
+                    <Field label={t('zalo.fields.templateOverdue')}>
                       <input
                         className="text-input"
                         value={config.zalo_template_overdue}
                         onChange={(e) => set('zalo_template_overdue')(e.target.value)}
-                        placeholder="ID mẫu ZNS quá hạn"
+                        placeholder={t('zalo.ph.templateOverdue')}
                       />
                     </Field>
-                    <Field label="Template ID - tin sắp đến hạn">
+                    <Field label={t('zalo.fields.templateUpcoming')}>
                       <input
                         className="text-input"
                         value={config.zalo_template_upcoming}
                         onChange={(e) => set('zalo_template_upcoming')(e.target.value)}
-                        placeholder="ID mẫu ZNS sắp đến hạn"
+                        placeholder={t('zalo.ph.templateUpcoming')}
                       />
                     </Field>
                   </div>
@@ -245,11 +243,11 @@ export function ZaloReminders() {
                     checked={config.zalo_enabled === '1'}
                     onChange={(e) => set('zalo_enabled')(e.target.checked ? '1' : '0')}
                   />
-                  Bật nhắc học phí tự động mỗi ngày
+                  {t('zalo.enableDaily')}
                 </label>
                 <div className="modal-actions">
                   <button type="submit" className="btn btn-primary" disabled={saving}>
-                    {saving ? 'Đang lưu...' : 'Lưu cấu hình'}
+                    {saving ? t('actions.saving', { ns: 'common' }) : t('zalo.saveConfig')}
                   </button>
                 </div>
               </form>
@@ -257,10 +255,9 @@ export function ZaloReminders() {
           </div>
 
           <div className="card">
-            <h2 className="card-title">Lịch nhắc tự động</h2>
+            <h2 className="card-title">{t('zalo.schedule.title')}</h2>
             <p className="card-desc">
-              Hệ thống tự quét mỗi ngày vào giờ đã đặt. Chống spam: mỗi hóa đơn chỉ được nhắc 1 lần mỗi 3 ngày
-              cho cùng một loại.
+              {t('zalo.schedule.desc')}
             </p>
             <form
               onSubmit={(e) => {
@@ -269,7 +266,7 @@ export function ZaloReminders() {
               }}
             >
               <div className="form-grid">
-                <Field label="Giờ gửi mỗi ngày">
+                <Field label={t('zalo.fields.hour')}>
                   <input
                     className="text-input"
                     type="time"
@@ -277,7 +274,7 @@ export function ZaloReminders() {
                     onChange={(e) => set('reminder_hour')(e.target.value)}
                   />
                 </Field>
-                <Field label="Nhắc trước hạn (ngày)">
+                <Field label={t('zalo.fields.upcomingDays')}>
                   <input
                     className="text-input"
                     type="number"
@@ -287,7 +284,7 @@ export function ZaloReminders() {
                     onChange={(e) => set('reminder_upcoming_days')(e.target.value)}
                   />
                 </Field>
-                <Field label="Nhắc khi quá hạn sau (ngày)">
+                <Field label={t('zalo.fields.overdueDays')}>
                   <input
                     className="text-input"
                     type="number"
@@ -300,31 +297,31 @@ export function ZaloReminders() {
               </div>
               <div className="modal-actions">
                 <button type="submit" className="btn btn-primary" disabled={saving}>
-                  {saving ? 'Đang lưu...' : 'Lưu lịch'}
+                  {saving ? t('actions.saving', { ns: 'common' }) : t('zalo.saveSchedule')}
                 </button>
                 <button type="button" className="btn" onClick={runOnce} disabled={running}>
                   <Icon name="play" size={15} />
-                  {running ? 'Đang chạy...' : 'Chạy ngay một lần'}
+                  {running ? t('zalo.running') : t('zalo.runNow')}
                 </button>
               </div>
             </form>
           </div>
 
           <div className="card">
-            <h2 className="card-title">Gửi tin nhắn thử</h2>
-            <p className="card-desc">Gửi một tin nhắn mẫu tới số điện thoại bất kỳ để kiểm tra cấu hình.</p>
+            <h2 className="card-title">{t('zalo.test.title')}</h2>
+            <p className="card-desc">{t('zalo.test.desc')}</p>
             <div className="inline-form">
-              <Field label="Số điện thoại">
+              <Field label={t('zalo.test.phone')}>
                 <input
                   className="text-input"
                   value={testPhone}
                   onChange={(e) => setTestPhone(e.target.value)}
-                  placeholder="VD: 0912345678"
+                  placeholder={t('zalo.ph.testPhone')}
                 />
               </Field>
               <button className="btn btn-primary" onClick={sendTest} disabled={testing}>
                 <Icon name="send" size={15} />
-                {testing ? 'Đang gửi...' : 'Gửi tin nhắn thử'}
+                {testing ? t('actions.sending', { ns: 'common' }) : t('zalo.test.send')}
               </button>
             </div>
           </div>
@@ -332,15 +329,15 @@ export function ZaloReminders() {
       )}
 
       <div className="card zalo-history">
-        <h2 className="card-title">Lịch sử nhắc</h2>
-        <p className="card-desc">100 lần nhắc gần nhất.</p>
+        <h2 className="card-title">{t('zalo.history.title')}</h2>
+        <p className="card-desc">{t('zalo.history.desc')}</p>
         {loadingHistory ? (
           <TableSkeleton cols={7} />
         ) : reminders.length === 0 ? (
           <EmptyState
             icon="bell"
-            title="Chưa có lịch sử nhắc nào"
-            desc="Các tin nhắn nhắc học phí sẽ được ghi lại tại đây."
+            title={t('zalo.empty.title')}
+            desc={t('zalo.empty.desc')}
           />
         ) : (
           <>
@@ -348,13 +345,13 @@ export function ZaloReminders() {
               <table className="table">
                 <thead>
                   <tr>
-                    <th>Thời gian</th>
-                    <th>Học viên</th>
-                    <th>SĐT</th>
-                    <th>Số tiền</th>
-                    <th>Loại</th>
-                    <th>Trạng thái</th>
-                    <th className="th-right">Thao tác</th>
+                    <th>{t('zalo.col.time')}</th>
+                    <th>{t('zalo.col.student')}</th>
+                    <th>{t('zalo.col.phone')}</th>
+                    <th>{t('zalo.col.amount')}</th>
+                    <th>{t('zalo.col.kind')}</th>
+                    <th>{t('zalo.col.status')}</th>
+                    <th className="th-right">{t('zalo.col.actions')}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -373,18 +370,18 @@ export function ZaloReminders() {
                         </td>
                         <td>
                           <span className={`badge badge-${r.kind}`}>
-                            {REMINDER_KIND_LABEL[r.kind] || r.kind}
+                            {t(`zalo.kind.${r.kind}`, { defaultValue: r.kind })}
                           </span>
                         </td>
                         <td>
                           <span className={`badge badge-${r.status}`}>
-                            {REMINDER_STATUS_LABEL[r.status] || r.status}
+                            {t(`zalo.reminderStatus.${r.status}`, { defaultValue: r.status })}
                           </span>
                         </td>
                         <td className="td-right">
                           <button className="btn btn-sm" onClick={() => setViewing(r)}>
                             <Icon name="eye" size={14} />
-                            Xem nội dung
+                            {t('zalo.viewContent')}
                           </button>
                         </td>
                       </tr>
@@ -407,31 +404,31 @@ export function ZaloReminders() {
       </div>
 
       {viewing && (
-        <Modal title="Nội dung tin nhắn" onClose={() => setViewing(null)}>
+        <Modal title={t('zalo.view.title')} onClose={() => setViewing(null)}>
           <dl className="dl dl-compact">
-            <dt>Học viên</dt>
+            <dt>{t('zalo.col.student')}</dt>
             <dd>{viewing.student_name || '-'}</dd>
-            <dt>SĐT</dt>
+            <dt>{t('zalo.col.phone')}</dt>
             <dd className="mono">{viewing.phone || '-'}</dd>
-            <dt>Loại</dt>
-            <dd>{REMINDER_KIND_LABEL[viewing.kind] || viewing.kind}</dd>
-            <dt>Trạng thái</dt>
-            <dd>{REMINDER_STATUS_LABEL[viewing.status] || viewing.status}</dd>
-            <dt>Hạn nộp</dt>
+            <dt>{t('zalo.col.kind')}</dt>
+            <dd>{t(`zalo.kind.${viewing.kind}`, { defaultValue: viewing.kind })}</dd>
+            <dt>{t('zalo.col.status')}</dt>
+            <dd>{t(`zalo.reminderStatus.${viewing.status}`, { defaultValue: viewing.status })}</dd>
+            <dt>{t('zalo.view.dueDate')}</dt>
             <dd>{formatDate(viewing.due_date)}</dd>
           </dl>
-          <div className="message-preview">{viewing.message || '(không có nội dung)'}</div>
+          <div className="message-preview">{viewing.message || t('zalo.view.noContent')}</div>
           {viewing.response && (
             <>
-              <p className="card-desc" style={{ marginTop: 12 }}>
-                Phản hồi từ Zalo API:
+              <p className="card-desc zalo-response-label">
+                {t('zalo.view.responseLabel')}
               </p>
               <div className="message-preview mono">{viewing.response}</div>
             </>
           )}
           <div className="modal-actions">
             <button className="btn btn-primary" onClick={() => setViewing(null)}>
-              Đóng
+              {t('actions.close', { ns: 'common' })}
             </button>
           </div>
         </Modal>

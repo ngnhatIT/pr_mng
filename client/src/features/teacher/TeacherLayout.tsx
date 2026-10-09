@@ -1,17 +1,20 @@
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { getUser, clearAuth } from '../../shared/api/client';
 import { Icon, IconName } from '../../shared/components/icons';
+import { ThemeLangSwitch } from '../../shared/ui/ThemeLangSwitch';
 import './TeacherLayout.css';
 
-const TABS: { to: string; label: string; end?: boolean; icon: IconName }[] = [
-  { to: '/teacher', label: 'Buổi dạy', end: true, icon: 'home' },
-  { to: '/teacher/diem-danh', label: 'Điểm danh', icon: 'clipboard' },
-  { to: '/teacher/bai-tap', label: 'Bài tập', icon: 'book' },
-  { to: '/teacher/diem-so', label: 'Điểm số', icon: 'cap' },
-  { to: '/teacher/luong', label: 'Lương', icon: 'banknote' },
+const TABS: { to: string; labelKey: string; end?: boolean; icon: IconName }[] = [
+  { to: '/teacher', labelKey: 'bottomNav.today', end: true, icon: 'home' },
+  { to: '/teacher/diem-danh', labelKey: 'bottomNav.attendance', icon: 'clipboard' },
+  { to: '/teacher/bai-tap', labelKey: 'bottomNav.homework', icon: 'book' },
+  { to: '/teacher/diem-so', labelKey: 'bottomNav.grades', icon: 'cap' },
+  { to: '/teacher/luong', labelKey: 'bottomNav.salary', icon: 'banknote' },
 ];
 
 export function TeacherLayout() {
+  const { t } = useTranslation(['teacher', 'common']);
   const navigate = useNavigate();
   const user = getUser();
 
@@ -27,30 +30,33 @@ export function TeacherLayout() {
           <div className="brand-logo brand-logo-sm">E</div>
           <div>
             <div className="parent-app-name">EduCenter Pro</div>
-            <div className="parent-user-name">{user?.name || 'Giáo viên'}</div>
+            <div className="parent-user-name">{user?.name || t('bottomNav.teacherFallback')}</div>
           </div>
         </div>
-        <button className="btn btn-ghost btn-sm" onClick={logout} aria-label="Đăng xuất">
-          <Icon name="logout" size={18} />
-        </button>
+        <div className="parent-topbar-actions">
+          <ThemeLangSwitch />
+          <button className="btn btn-ghost btn-sm" onClick={logout} aria-label={t('nav.logout', { ns: 'common' })}>
+            <Icon name="logout" size={18} />
+          </button>
+        </div>
       </header>
 
       <main className="parent-content">
         <Outlet />
       </main>
 
-      <nav className="parent-bottomnav" aria-label="Điều hướng giáo viên">
-        {TABS.map((t) => (
+      <nav className="parent-bottomnav" aria-label={t('bottomNav.navLabel')}>
+        {TABS.map((tab) => (
           <NavLink
-            key={t.to}
-            to={t.to}
-            end={t.end}
+            key={tab.to}
+            to={tab.to}
+            end={tab.end}
             className={({ isActive }) => `pnav-link${isActive ? ' active' : ''}`}
           >
             <span className="pnav-icon">
-              <Icon name={t.icon} size={22} />
+              <Icon name={tab.icon} size={22} />
             </span>
-            <span>{t.label}</span>
+            <span>{t(tab.labelKey)}</span>
           </NavLink>
         ))}
       </nav>

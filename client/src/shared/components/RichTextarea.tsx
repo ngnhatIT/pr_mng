@@ -1,4 +1,5 @@
 import { useRef, type ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 
 /**
  * Editor nội dung bài tập với thanh công cụ markdown:
@@ -15,6 +16,7 @@ export function RichTextarea({
   rows?: number;
   placeholder?: string;
 }) {
+  const { t } = useTranslation(['homework', 'common']);
   const ref = useRef<HTMLTextAreaElement>(null);
 
   const wrap = (before: string, after = '') => {
@@ -22,7 +24,7 @@ export function RichTextarea({
     if (!el) return;
     const start = el.selectionStart;
     const end = el.selectionEnd;
-    const sel = value.slice(start, end) || 'nội dung';
+    const sel = value.slice(start, end) || t('editor.selFallback');
     const next = value.slice(0, start) + before + sel + after + value.slice(end);
     onChange(next);
     requestAnimationFrame(() => {
@@ -45,18 +47,18 @@ export function RichTextarea({
   };
 
   const tools: { label: ReactNode; title: string; fn: () => void }[] = [
-    { label: 'B', title: 'In đậm', fn: () => wrap('**', '**') },
-    { label: 'I', title: 'In nghiêng', fn: () => wrap('*', '*') },
-    { label: 'H', title: 'Tiêu đề', fn: () => linePrefix('## ') },
-    { label: '•', title: 'Danh sách', fn: () => linePrefix('- ') },
-    { label: '1.', title: 'Danh sách số', fn: () => linePrefix('1. ') },
+    { label: 'B', title: t('editor.bold'), fn: () => wrap('**', '**') },
+    { label: 'I', title: t('editor.italic'), fn: () => wrap('*', '*') },
+    { label: 'H', title: t('editor.heading'), fn: () => linePrefix('## ') },
+    { label: '•', title: t('editor.bullets'), fn: () => linePrefix('- ') },
+    { label: '1.', title: t('editor.numbered'), fn: () => linePrefix('1. ') },
     {
       label: (
         <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
           <path d="M7 7h4v4c0 2.8-1.8 3.9-3 4.6l-1.2-1.4c.7-.4 1.2-.9 1.2-1.7H7V7zm9 0h4v4c0 2.8-1.8 3.9-3 4.6l-1.2-1.4c.7-.4 1.2-.9 1.2-1.7h-1V7z" />
         </svg>
       ),
-      title: 'Trích dẫn',
+      title: t('editor.quote'),
       fn: () => linePrefix('> '),
     },
   ];
@@ -64,13 +66,13 @@ export function RichTextarea({
   return (
     <div className="rich-editor">
       <div className="rich-toolbar">
-        {tools.map((t) => (
-          <button key={t.title} type="button" className="rich-tool" title={t.title} onClick={t.fn}>
-            {t.label}
+        {tools.map((tool) => (
+          <button key={tool.title} type="button" className="rich-tool" title={tool.title} onClick={tool.fn}>
+            {tool.label}
           </button>
         ))}
         <span className="muted" style={{ fontSize: 12, marginLeft: 'auto' }}>
-          Hỗ trợ markdown
+          {t('editor.markdownHint')}
         </span>
       </div>
       <textarea

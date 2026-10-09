@@ -1,0 +1,383 @@
+{
+  "audit": {
+    "action": {
+      "apply_credit": "Credit applied",
+      "approve": "Approved",
+      "create": "Created",
+      "delete": "Deleted",
+      "login": "Login",
+      "payment": "Payment",
+      "reject": "Rejected",
+      "update": "Updated"
+    },
+    "allActions": "All actions",
+    "allEntities": "All entities",
+    "col": {
+      "action": "Action",
+      "actor": "Actor",
+      "detail": "Detail",
+      "time": "Time"
+    },
+    "desc": "Who did what - especially money operations and data deletion",
+    "empty": {
+      "desc": "Important operations (payments, payment approvals, data deletion) will be recorded here.",
+      "title": "No logs yet"
+    },
+    "entity": {
+      "classes": "Classes",
+      "invoices": "Invoices",
+      "payments": "Payments",
+      "students": "Students",
+      "teachers": "Teachers"
+    },
+    "filterAction": "Filter by action",
+    "filterEntity": "Filter by entity",
+    "title": "Activity log",
+    "toast": {
+      "loadFail": "Could not load the activity log"
+    },
+    "totalCount_one": "{{total}} log entry total",
+    "totalCount_other": "{{total}} log entries total"
+  },
+  "leads": {
+    "add": "Add lead",
+    "convert": "To student",
+    "convertTitle": "Convert to student",
+    "countTitle_one": "{{count}} lead",
+    "countTitle_other": "{{count}} leads",
+    "delete": {
+      "message": "Delete lead \"{{name}}\"?",
+      "title": "Delete lead"
+    },
+    "deleteTitle": "Delete lead",
+    "desc": "Track prospects from first contact to enrollment",
+    "editTitle": "Edit lead",
+    "empty": {
+      "desc": "Leads from the landing page signup form will flow in here automatically.",
+      "title": "No leads yet"
+    },
+    "emptyCol": "No leads",
+    "form": {
+      "name": "Full name *",
+      "note": "Notes",
+      "phone": "Phone number *",
+      "titleEdit": "Edit lead",
+      "titleNew": "Add lead"
+    },
+    "moveNext": "Move to {{label}}",
+    "moveNextAria": "Move {{name}} to {{label}}",
+    "pipelineLabel": "Admissions pipeline",
+    "reopen": "Reopen lead",
+    "reopenAria": "Reopen lead {{name}}",
+    "status": {
+      "contacted": "Contacted",
+      "enrolled": "Enrolled",
+      "lost": "Lost",
+      "new": "New",
+      "trial": "Trial"
+    },
+    "title": "Admissions (Leads)",
+    "toast": {
+      "convertFail": "Conversion failed",
+      "converted": "New student created (ID {{id}})",
+      "deleteFail": "Delete failed",
+      "deleted": "Lead deleted",
+      "loadFail": "Could not load leads",
+      "moved": "Moved \"{{name}}\" to {{label}}",
+      "saveFail": "Save failed",
+      "saved": "Lead saved",
+      "updateFail": "Update failed"
+    }
+  },
+  "leaves": {
+    "allStatuses": "All statuses",
+    "approve": "Approve",
+    "approvedTitle": "Approved - {{name}}",
+    "col": {
+      "actions": "Actions",
+      "fromDate": "From date",
+      "reason": "Reason",
+      "status": "Status",
+      "student": "Student",
+      "toDate": "To date"
+    },
+    "desc": "Review student leave requests",
+    "empty": {
+      "desc": "There are no leave requests to process yet.",
+      "title": "No leave requests"
+    },
+    "filterLabel": "Filter by request status",
+    "makeupHint": "Suggested makeup sessions:",
+    "noMakeup": "No suitable makeup sessions found.",
+    "reject": "Reject",
+    "rejectDialog": {
+      "message": "Reject the leave request of \"{{name}}\" ({{from}} to {{to}})?",
+      "title": "Reject leave request"
+    },
+    "status": {
+      "approved": "Approved",
+      "pending": "Pending",
+      "rejected": "Rejected"
+    },
+    "title": "Leave requests",
+    "toast": {
+      "approveFail": "Approval failed",
+      "loadFail": "Could not load leave requests",
+      "rejectFail": "Failed",
+      "rejected": "Leave request rejected"
+    },
+    "totalCount_one": "{{total}} request total",
+    "totalCount_other": "{{total}} requests total"
+  },
+  "referrals": {
+    "allStatuses": "All statuses",
+    "col": {
+      "createdAt": "Created at",
+      "referred": "Referred person",
+      "reward": "Reward",
+      "status": "Status"
+    },
+    "desc": "Track referrals and credit rewards",
+    "empty": {
+      "desc": "No parent has referred friends yet.",
+      "title": "No referrals"
+    },
+    "filterLabel": "Filter by status",
+    "noName": "No name yet",
+    "stats": {
+      "pending": "Pending rewards",
+      "rewarded": "Rewarded",
+      "total": "Total referrals"
+    },
+    "status": {
+      "pending": "Pending",
+      "rewarded": "Rewarded"
+    },
+    "title": "Referrals",
+    "toast": {
+      "loadFail": "Could not load referral data"
+    }
+  },
+  "reviews": {
+    "anonymousParent": "Parent",
+    "approve": "Approve",
+    "delete": {
+      "message": "Delete this review from the public page?",
+      "title": "Delete review"
+    },
+    "desc": "Approve reviews to show publicly on the landing page",
+    "empty": {
+      "approvedDesc": "No reviews have been approved yet.",
+      "pendingDesc": "No reviews are waiting for approval.",
+      "title": "No reviews yet"
+    },
+    "reject": "Reject",
+    "starsAria": "Rated {{rating}} out of 5 stars",
+    "status": {
+      "approved": "Approved",
+      "pending": "Pending",
+      "rejected": "Rejected"
+    },
+    "tabs": {
+      "approved": "Approved",
+      "pending": "Pending"
+    },
+    "title": "Parent reviews",
+    "toast": {
+      "approved": "Review approved",
+      "deleteFail": "Delete failed",
+      "deleted": "Review deleted",
+      "loadFail": "Could not load reviews",
+      "moderateFail": "Failed",
+      "rejected": "Review rejected"
+    }
+  },
+  "system": {
+    "col": {
+      "actions": "Actions",
+      "center": "Center",
+      "counts": "Students / Classes / Users",
+      "phone": "Phone",
+      "plan": "Plan",
+      "planExpiry": "Plan expiry"
+    },
+    "create": "Create new center",
+    "createForm": {
+      "address": "Address",
+      "adminPassword": "Admin password *",
+      "adminUsername": "Admin username *",
+      "creating": "Creating...",
+      "expires": "Plan expiry",
+      "name": "Center name *",
+      "phone": "Phone",
+      "plan": "Plan",
+      "sectionAdmin": "Admin account",
+      "sectionInfo": "Center information",
+      "sectionPlan": "Plan",
+      "subdomain": "Subdomain *",
+      "submit": "Create center",
+      "title": "Create new center"
+    },
+    "desc": "Create new centers and manage plans",
+    "editPlan": "Edit plan / expiry",
+    "editPlanTitle": "Edit plan - {{name}}",
+    "empty": {
+      "desc": "Click \"Create new center\" to add the first one.",
+      "title": "No centers yet"
+    },
+    "plan": {
+      "basic": "Basic",
+      "premium": "Premium",
+      "standard": "Standard"
+    },
+    "title": "System - Center management",
+    "toast": {
+      "createFail": "Creation failed",
+      "created": "New center created",
+      "loadFail": "Could not load center list",
+      "planUpdated": "Plan updated",
+      "updateFail": "Update failed"
+    }
+  },
+  "trials": {
+    "allStatuses": "All statuses",
+    "changeStatusAria": "Change status of {{name}}",
+    "col": {
+      "actions": "Actions",
+      "desiredClass": "Desired class",
+      "desiredDate": "Desired date",
+      "name": "Full name",
+      "phone": "Phone",
+      "referral": "Referral code",
+      "status": "Status"
+    },
+    "convert": "To student",
+    "convertForm": {
+      "classLabel": "Enroll into class (optional)",
+      "confirm": "Confirm",
+      "converting": "Converting...",
+      "noEnroll": "- Don't enroll yet -"
+    },
+    "convertTitle": "Convert \"{{name}}\" to student",
+    "desc": "Trial signups from the landing page - review and convert to students",
+    "empty": {
+      "desc": "When parents register for a trial on the landing page, it will appear here.",
+      "title": "No trial registrations"
+    },
+    "filterLabel": "Filter by status",
+    "quickStatus": "Quick status change",
+    "status": {
+      "contacted": "Contacted",
+      "enrolled": "Enrolled",
+      "lost": "Lost",
+      "new": "New",
+      "trialed": "Tried"
+    },
+    "title": "Trial lessons",
+    "toast": {
+      "convertFail": "Conversion failed",
+      "converted": "New student created (ID {{id}})",
+      "loadFail": "Could not load trial list",
+      "statusUpdated": "Status updated",
+      "updateFail": "Update failed"
+    },
+    "totalCount": "{{total}} registrations total"
+  },
+  "zalo": {
+    "col": {
+      "actions": "Actions",
+      "amount": "Amount",
+      "kind": "Kind",
+      "phone": "Phone",
+      "status": "Status",
+      "student": "Student",
+      "time": "Time"
+    },
+    "config": {
+      "desc": "Get the Access Token from the Zalo OA admin page (Applications / API section). Template IDs come from your Zalo-approved ZNS templates. Required ZNS template parameters: ten_trung_tam, ten_hoc_vien, so_tien, han_nop, ma_hoa_don.",
+      "title": "Zalo OA configuration"
+    },
+    "desc": "Send automatic tuition reminders to parents/students via Zalo ZNS. Without an Access Token, the system runs in demo mode - it only logs, no real messages are sent.",
+    "empty": {
+      "desc": "Tuition reminder messages will be logged here.",
+      "title": "No reminder history"
+    },
+    "enableDaily": "Enable automatic daily tuition reminders",
+    "fields": {
+      "accessToken": "Access Token",
+      "centerName": "Center name",
+      "hour": "Daily send time",
+      "oaId": "OA ID",
+      "overdueDays": "Remind after overdue (days)",
+      "templateOverdue": "Template ID - overdue message",
+      "templateUpcoming": "Template ID - upcoming message",
+      "upcomingDays": "Remind before due (days)"
+    },
+    "groups": {
+      "oaInfo": "Zalo OA information",
+      "templates": "ZNS templates"
+    },
+    "history": {
+      "desc": "The 100 most recent reminders.",
+      "title": "Reminder history"
+    },
+    "kind": {
+      "overdue": "Overdue",
+      "test": "Test message",
+      "upcoming": "Upcoming"
+    },
+    "notAdmin": "Configuration is for administrators only. You can still view the reminder history below.",
+    "ph": {
+      "centerName": "ABC English Center",
+      "oaId": "E.g. 1234567890",
+      "templateOverdue": "Overdue ZNS template ID",
+      "templateUpcoming": "Upcoming ZNS template ID",
+      "testPhone": "E.g. 0912345678",
+      "tokenNew": "Paste the OA access token",
+      "tokenSaved": "•••••••• (saved - enter a new one to change)"
+    },
+    "reminderStatus": {
+      "demo": "Demo",
+      "failed": "Failed",
+      "sent": "Sent"
+    },
+    "runNow": "Run once now",
+    "running": "Running...",
+    "saveConfig": "Save configuration",
+    "saveSchedule": "Save schedule",
+    "schedule": {
+      "desc": "The system scans daily at the set time. Anti-spam: each invoice is reminded at most once every 3 days for the same kind.",
+      "title": "Automatic reminder schedule"
+    },
+    "status": {
+      "descConfigured": "Access Token configured - messages are sent for real via Zalo ZNS.",
+      "descDemo": "No Access Token - the system is running in demo mode, logging only.",
+      "off": "Disabled",
+      "on": "Enabled",
+      "title": "Auto-reminder status"
+    },
+    "test": {
+      "desc": "Send a sample message to any phone number to verify the configuration.",
+      "phone": "Phone number",
+      "send": "Send test message",
+      "title": "Send a test message"
+    },
+    "title": "Tuition reminders via Zalo",
+    "toast": {
+      "loadConfigFail": "Could not load configuration",
+      "loadHistoryFail": "Could not load history",
+      "needPhone": "Please enter a phone number",
+      "runFail": "Run failed",
+      "saveFail": "Save failed",
+      "savedConfig": "Zalo configuration saved",
+      "sendFail": "Test send failed"
+    },
+    "view": {
+      "dueDate": "Due date",
+      "noContent": "(no content)",
+      "responseLabel": "Response from Zalo API:",
+      "title": "Message content"
+    },
+    "viewContent": "View content"
+  }
+}

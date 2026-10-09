@@ -1,0 +1,152 @@
+{
+  "config": {
+    "bank": {
+      "accountName": "Tên chủ tài khoản",
+      "accountNo": "Số tài khoản",
+      "bank": "Ngân hàng",
+      "selectBank": "- Chọn ngân hàng -",
+      "title": "Tài khoản ngân hàng nhận tiền"
+    },
+    "desc": "Dùng để tạo mã VietQR cho phụ huynh quét thanh toán.",
+    "pageDesc": "Thiết lập tài khoản nhận tiền, VNPay và thưởng giới thiệu",
+    "loadError": "Không tải được cấu hình",
+    "loadFailDesc": "Vui lòng thử tải lại trang.",
+    "loadFailTitle": "Không tải được cấu hình",
+    "referral": {
+      "desc": "Credits tặng khi giới thiệu thành công.",
+      "forReferred": "Thưởng cho người được giới thiệu",
+      "forReferrer": "Thưởng cho người giới thiệu",
+      "title": "Thưởng giới thiệu"
+    },
+    "saveConfig": "Lưu cấu hình",
+    "saved": "Đã lưu cấu hình thanh toán",
+    "title": "Cấu hình thanh toán",
+    "vnpay": {
+      "desc": "Cổng thanh toán online cho phụ huynh.",
+      "disabled": "Tắt",
+      "enabled": "Bật",
+      "hashSecret": "Chuỗi bí mật (Hash Secret)",
+      "savedPlaceholder": "Đã lưu (để trống nếu không đổi)",
+      "status": "Trạng thái",
+      "title": "VNPay",
+      "tmnCode": "Mã website (TMN Code)"
+    }
+  },
+  "credit": {
+    "applied": "Đã áp dụng {{amount}} credits vào hóa đơn",
+    "apply": "Áp dụng",
+    "applyError": "Áp dụng thất bại",
+    "applying": "Đang áp dụng...",
+    "applyTitle": "Áp dụng credits của phụ huynh vào hóa đơn",
+    "confirmText": "{{name}} ({{code}}) - còn nợ <strong>{{amount}}</strong>",
+    "help": "Nhập <strong>ID credits</strong> của phụ huynh (xem trong trang Giới thiệu của phụ huynh hoặc trang quản lý credits). Hệ thống sẽ trừ credits khả dụng vào số tiền còn nợ của hóa đơn.",
+    "idLabel": "ID credits *",
+    "idPlaceholder": "VD: 12",
+    "idRequired": "Vui lòng nhập ID credits",
+    "title": "Áp dụng credits vào hóa đơn"
+  },
+  "debt": {
+    "emptyDesc": "Tất cả học viên đã thanh toán đầy đủ. Tuyệt vời!",
+    "emptyTitle": "Không còn công nợ",
+    "loadError": "Không tải được công nợ",
+    "noInvoices": "Không tìm thấy hóa đơn cần nhắc",
+    "remindResult": "Nhắc Zalo cho {{name}}: {{sent}} đã gửi, {{demo}} demo, {{failed}} thất bại",
+    "remindTitle": "Gửi nhắc học phí qua Zalo cho các hóa đơn chưa thanh toán",
+    "remindZalo": "Nhắc Zalo",
+    "sending": "Đang gửi...",
+    "summary": "{{count}} học viên còn nợ. Tổng: <strong>{{total}}</strong>",
+    "tab": "Công nợ",
+    "table": {
+      "actions": "Thao tác",
+      "debt": "Còn nợ",
+      "paid": "Đã thu",
+      "phone": "SĐT",
+      "student": "Học viên",
+      "total": "Tổng phải thu"
+    }
+  },
+  "desc": "Phiếu thu, công nợ và duyệt thanh toán online",
+  "invoice": {
+    "create": "Tạo phiếu thu",
+    "creating": "Đang tạo...",
+    "remindDemo": "Đã ghi log demo: {{message}}",
+    "remindError": "Gửi nhắc thất bại",
+    "remindTitle": "Gửi nhắc học phí qua Zalo",
+    "remindZalo": "Nhắc Zalo",
+    "sending": "Đang gửi...",
+    "table": {
+      "actions": "Thao tác",
+      "amount": "Số tiền",
+      "class": "Lớp",
+      "debt": "Còn nợ",
+      "dueDate": "Hạn nộp",
+      "paid": "Đã thu",
+      "status": "Trạng thái",
+      "student": "Học viên"
+    }
+  },
+  "invoiceForm": {
+    "amount": "Số tiền (đ) *",
+    "class": "Lớp học",
+    "classOption": "{{name}} - {{fee}}",
+    "create": "Tạo phiếu",
+    "createError": "Tạo thất bại",
+    "created": "Đã tạo phiếu thu",
+    "creating": "Đang tạo...",
+    "dueDate": "Hạn nộp",
+    "noClass": "- Không gắn lớp -",
+    "note": "Ghi chú",
+    "selectStudent": "- Chọn học viên -",
+    "student": "Học viên *",
+    "studentRequired": "Vui lòng chọn học viên",
+    "title": "Tạo phiếu thu"
+  },
+  "invoiceStatus": {
+    "paid": "Đã thanh toán",
+    "partial": "Thanh toán một phần",
+    "unpaid": "Chưa thanh toán"
+  },
+  "invoices": {
+    "emptyDesc": "Tạo phiếu thu học phí cho học viên để bắt đầu thu tiền.",
+    "emptyTitle": "Chưa có phiếu thu nào",
+    "loadError": "Không tải được phiếu thu",
+    "searchPlaceholder": "Tìm theo tên/mã học viên...",
+    "tab": "Phiếu thu",
+    "totalDebt": "Còn nợ:"
+  },
+  "pay": {
+    "amount": "Số tiền thu (đ) *",
+    "collect": "Thu tiền",
+    "collecting": "Đang lưu...",
+    "confirm": "Xác nhận thu",
+    "confirmText": "{{name}} - còn nợ <strong>{{debt}}</strong>",
+    "method": "Phương thức",
+    "note": "Ghi chú",
+    "payError": "Thu tiền thất bại",
+    "recorded": "Đã ghi nhận thanh toán",
+    "title": "Thu tiền học phí"
+  },
+  "pending": {
+    "approve": "Duyệt",
+    "approved": "Đã duyệt thanh toán",
+    "defaultMethod": "Chuyển khoản",
+    "emptyDesc": "Các thanh toán do phụ huynh báo \"đã chuyển khoản\" sẽ hiện ở đây.",
+    "emptyTitle": "Không có gì chờ duyệt",
+    "fail": "Thất bại",
+    "loadError": "Không tải được danh sách chờ duyệt",
+    "note": "Thanh toán do phụ huynh báo \"đã chuyển khoản\", chờ trung tâm xác nhận.",
+    "reject": "Từ chối",
+    "rejected": "Đã từ chối thanh toán",
+    "tab": "Chờ duyệt",
+    "table": {
+      "actions": "Thao tác",
+      "amount": "Số tiền",
+      "method": "Phương thức",
+      "note": "Ghi chú",
+      "reportedAt": "Thời gian báo",
+      "student": "Học viên"
+    }
+  },
+  "searchAllStatuses": "Tất cả trạng thái",
+  "title": "Học phí"
+}

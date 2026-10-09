@@ -1,0 +1,194 @@
+{
+  "add": "Thêm lớp học",
+  "attendance": {
+    "checkin": {
+      "close": "Đóng",
+      "codeTitle": "Mã chấm công",
+      "createError": "Tạo mã thất bại",
+      "help": "Giáo viên nhập mã này trong trang \"Buổi dạy hôm nay\" > \"Chấm công\" để ghi nhận điểm danh."
+    },
+    "createSession": "Tạo buổi mới",
+    "creating": "Đang tạo...",
+    "emptyDesc": "Lớp này chưa có học viên nào được ghi danh.",
+    "emptyTitle": "Chưa có học viên để điểm danh",
+    "newSession": {
+      "create": "Tạo",
+      "creating": "Đang tạo...",
+      "date": "Ngày *",
+      "title": "Tạo buổi học mới",
+      "topic": "Chủ đề"
+    },
+    "row": {
+      "noteAria": "Ghi chú cho {{name}}",
+      "notePlaceholder": "Ghi chú...",
+      "statusAria": "Trạng thái của {{name}}"
+    },
+    "save": "Lưu điểm danh",
+    "selectClass": "- Chọn lớp học -",
+    "selectSession": "- Chọn buổi học -",
+    "sessionOption": "{{date}}{{topic}} ({{count}} đã điểm danh)",
+    "status": {
+      "absent": "Vắng",
+      "late": "Muộn",
+      "present": "Có mặt"
+    },
+    "summary": {
+      "absent": "vắng",
+      "late": "muộn",
+      "present": "có mặt",
+      "students": "học viên"
+    },
+    "title": "Điểm danh",
+    "toast": {
+      "attendanceError": "Không tải được điểm danh",
+      "createError": "Tạo thất bại",
+      "created": "Đã tạo buổi học",
+      "saved": "Đã lưu điểm danh",
+      "sessionsError": "Không tải được buổi học"
+    },
+    "toolbar": {
+      "allPresent": "Tất cả có mặt",
+      "createCode": "Tạo mã điểm danh",
+      "creatingCode": "Đang tạo..."
+    },
+    "topic": {
+      "label": "Chủ đề buổi học",
+      "placeholder": "VD: Thì hiện tại đơn..."
+    },
+    "desc": "Chọn lớp và buổi học, sau đó ghi nhận trạng thái từng học viên"
+  },
+  "classStatus": {
+    "active": "Đang mở",
+    "inactive": "Đã đóng"
+  },
+  "classes": {
+    "capacityAria": "Sĩ số lớp {{name}}: {{pct}}%",
+    "full": "Đã đầy",
+    "title": "Lớp học"
+  },
+  "delete": {
+    "message": "Bạn có chắc muốn xóa lớp \"{{name}}\"? Buổi học, điểm danh và ghi danh liên quan sẽ bị xóa theo.",
+    "title": "Xóa lớp học"
+  },
+  "desc": "Tạo lớp, xếp lịch, phân công giáo viên và ghi danh",
+  "detail": {
+    "back": "Danh sách lớp học",
+    "dateRange": "Thời gian",
+    "emptySessionsDesc": "Buổi học sẽ tự sinh từ lịch học của lớp.",
+    "emptySessionsTitle": "Chưa có buổi học nào",
+    "emptyStudentsDesc": "Thêm học viên vào lớp để bắt đầu điểm danh.",
+    "emptyStudentsTitle": "Chưa có học viên nào",
+    "enroll": {
+      "add": "Thêm",
+      "addError": "Thêm thất bại",
+      "added": "Đã thêm học viên vào lớp",
+      "adding": "Đang thêm...",
+      "notFound": "Không tìm thấy học viên.",
+      "searchLabel": "Tìm học viên",
+      "searchPlaceholder": "Nhập tên hoặc mã...",
+      "title": "Thêm học viên vào lớp"
+    },
+    "kick": {
+      "confirmMessage": "Xóa học viên \"{{student}}\" khỏi lớp \"{{class}}\"?",
+      "confirmTitle": "Xóa khỏi lớp",
+      "removeFromClass": "Xóa khỏi lớp",
+      "removed": "Đã xóa học viên khỏi lớp"
+    },
+    "loadError": "Không tải được chi tiết lớp",
+    "noRoom": "Chưa gán phòng",
+    "noTeacher": "Chưa phân công",
+    "notFoundDesc": "Lớp học không tồn tại hoặc đã bị xóa.",
+    "notFoundTitle": "Không tìm thấy lớp học",
+    "recentSessions": "Buổi học gần đây",
+    "room": "Phòng học",
+    "schedule": "Lịch học",
+    "sessionCount": "Số buổi học",
+    "size": "Sĩ số",
+    "students": "học viên",
+    "studentsTitle": "Học viên ({{count}})",
+    "teacher": "Giáo viên",
+    "tuition": "Học phí",
+    "noTopic": "Chưa có chủ đề",
+    "attendanceCount": "{{count}} lượt điểm danh",
+    "sizeBadge": "{{count}}/{{max}} học viên"
+  },
+  "empty": {
+    "desc": "Tạo lớp học đầu tiên với lịch học, giáo viên và học phí.",
+    "title": "Chưa có lớp học nào"
+  },
+  "form": {
+    "addSlot": "Thêm buổi",
+    "addTitle": "Thêm lớp học",
+    "editTitle": "Sửa lớp học",
+    "endDate": "Ngày kết thúc",
+    "maxStudents": "Sĩ số tối đa",
+    "name": "Tên lớp *",
+    "noSchedule": "Chưa có lịch học. Buổi học sẽ không tự sinh.",
+    "room": "Phòng học",
+    "roomNoAssign": "Chưa gán phòng",
+    "scheduleLabel": "Lịch học hàng tuần",
+    "seats": "{{n}} chỗ",
+    "startDate": "Ngày bắt đầu",
+    "status": "Trạng thái",
+    "teacher": "Giáo viên",
+    "teacherUnassigned": "Chưa phân công",
+    "tuitionFee": "Học phí (đ) *",
+    "weeklySchedule": "Lịch học",
+    "roomCapacity": " ({{capacity}} chỗ)"
+  },
+  "rooms": {
+    "add": "Thêm phòng",
+    "delete": {
+      "message": "Xóa phòng \"{{name}}\"? Các lớp đang gán phòng này sẽ chuyển thành \"Chưa gán phòng\".",
+      "title": "Xóa phòng học"
+    },
+    "deleted": "Đã xóa phòng học",
+    "desc": "Xếp phòng cho các lớp. Hệ thống tự cảnh báo khi trùng lịch.",
+    "empty": {
+      "desc": "Thêm phòng học để xếp lịch cho các lớp.",
+      "title": "Chưa có phòng học nào"
+    },
+    "form": {
+      "addTitle": "Thêm phòng học",
+      "capacity": "Sức chứa",
+      "editTitle": "Sửa phòng học",
+      "name": "Tên phòng *"
+    },
+    "loadError": "Không tải được danh sách phòng",
+    "saved": "Đã lưu phòng học",
+    "status": {
+      "idle": "Trống",
+      "inUse": "Đang dùng"
+    },
+    "table": {
+      "actions": "Thao tác",
+      "capacity": "Sức chứa",
+      "classesUsing": "Số lớp đang dùng",
+      "name": "Tên phòng",
+      "status": "Tình trạng"
+    },
+    "title": "Phòng học"
+  },
+  "table": {
+    "actions": "Thao tác",
+    "fee": "Học phí",
+    "schedule": "Lịch học",
+    "size": "Sĩ số",
+    "teacher": "Giáo viên"
+  },
+  "title": "Lớp học",
+  "toast": {
+    "deleted": "Đã xóa lớp học",
+    "loadError": "Không tải được danh sách lớp",
+    "saved": "Đã lưu lớp học"
+  },
+  "days": {
+    "2": "Thứ Hai",
+    "3": "Thứ Ba",
+    "4": "Thứ Tư",
+    "5": "Thứ Năm",
+    "6": "Thứ Sáu",
+    "7": "Thứ Bảy",
+    "8": "Chủ Nhật"
+  }
+}

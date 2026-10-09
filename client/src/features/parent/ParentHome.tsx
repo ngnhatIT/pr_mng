@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { getUser } from '../../shared/api/client';
 import { parentApi } from './parent.api';
 import { useToast } from '../../shared/ui/toast';
@@ -11,6 +12,7 @@ import { ParentChild } from '../../shared/types';
 import './parent.css';
 
 export function ParentHome() {
+  const { t } = useTranslation(['parent', 'common']);
   const [children, setChildren] = useState<ParentChild[]>([]);
   const [loading, setLoading] = useState(true);
   const [code, setCode] = useState('');
@@ -24,11 +26,11 @@ export function ParentHome() {
       const data = await parentApi.children();
       setChildren(data);
     } catch (err) {
-      toast(err instanceof Error ? err.message : 'Không tải được danh sách con', 'error');
+      toast(err instanceof Error ? err.message : t('home.loadError'), 'error');
     } finally {
       setLoading(false);
     }
-  }, [toast]);
+  }, [toast, t]);
 
   useEffect(() => {
     void load();
@@ -37,17 +39,17 @@ export function ParentHome() {
   const linkChild = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!code.trim()) {
-      toast('Vui lòng nhập mã học viên', 'error');
+      toast(t('home.codeRequired'), 'error');
       return;
     }
     setLinking(true);
     try {
       const r = await parentApi.linkChild(code.trim());
-      toast(`Đã liên kết với học viên ${r.student.name}`, 'success');
+      toast(t('home.linkedSuccess', { name: r.student.name }), 'success');
       setCode('');
       void load();
     } catch (err) {
-      toast(err instanceof Error ? err.message : 'Liên kết thất bại', 'error');
+      toast(err instanceof Error ? err.message : t('home.linkError'), 'error');
     } finally {
       setLinking(false);
     }
@@ -55,8 +57,8 @@ export function ParentHome() {
 
   return (
     <div className="parent-page">
-      <h1 className="parent-title">Xin chào, {user?.name}!</h1>
-      <p className="muted">Theo dõi tiến độ học tập của con bạn tại đây.</p>
+      <h1 className="parent-title">{t('home.greeting', { name: user?.name })}</h1>
+      <p className="muted">{t('home.subtitle')}</p>
 
       {loading ? (
         <div className="child-list" aria-hidden="true">
@@ -70,11 +72,7 @@ export function ParentHome() {
           ))}
         </div>
       ) : children.length === 0 ? (
-        <EmptyState
-          icon="users"
-          title="Chưa liên kết con nào"
-          desc="Nhập mã học viên do trung tâm cấp ở biểu mẫu bên dưới để bắt đầu theo dõi."
-        />
+        <EmptyState icon="users" title={t('home.emptyTitle')} desc={t('home.emptyDesc')} />
       ) : (
         <div className="child-list">
           {children.map((c) => (
@@ -83,7 +81,7 @@ export function ParentHome() {
                 <div className="child-avatar">{c.name.charAt(0).toUpperCase()}</div>
                 <div>
                   <div className="child-name">{c.name}</div>
-                  <div className="muted mono child-code">Mã: {c.code}</div>
+                  <div className="muted mono child-code">{t('home.codeLabel', { code: c.code })}</div>
                 </div>
                 <span className="child-arrow" aria-hidden="true">
                   <Icon name="chevron-right" size={20} />
@@ -98,7 +96,7 @@ export function ParentHome() {
                   ))}
                 </div>
               ) : (
-                <p className="muted">Chưa ghi danh lớp nào</p>
+                <p className="muted">{t('home.noClasses')}</p>
               )}
             </Link>
           ))}
@@ -106,19 +104,19 @@ export function ParentHome() {
       )}
 
       <section className="card parent-link-card">
-        <h3 className="card-title">Liên kết con</h3>
-        <p className="card-desc">Nhập mã học viên do trung tâm cấp để xem thông tin học tập của con.</p>
+        <h3 className="card-title">{t('home.linkTitle')}</h3>
+        <p className="card-desc">{t('home.linkDesc')}</p>
         <form onSubmit={linkChild}>
-          <Field label="Mã học viên">
+          <Field label={t('home.codeField')}>
             <input
               className="text-input"
               value={code}
               onChange={(e) => setCode(e.target.value)}
-              placeholder="VD: HV001"
+              placeholder={t('home.codePlaceholder')}
             />
           </Field>
           <button className="btn btn-primary btn-block" type="submit" disabled={linking}>
-            {linking ? 'Đang liên kết...' : 'Liên kết'}
+            {linking ? t('home.linking') : t('home.linkAction')}
           </button>
         </form>
       </section>

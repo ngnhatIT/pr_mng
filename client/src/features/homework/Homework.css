@@ -2,7 +2,7 @@
    Design read: cụm bài tập cho giáo viên/admin, calm, chấm bài và xem bài nộp phải nhanh. */
 
 /* ---------- Stat cards: tone đỏ cho quá hạn ---------- */
-.tone-red .stat-icon { background: #fee2e2; color: #dc2626; }
+.tone-red .stat-icon { background: var(--danger-soft); color: var(--danger); }
 
 /* ---------- PageHeader actions có icon ---------- */
 .hw-action-icon { display: inline-flex; align-items: center; gap: 6px; }
@@ -108,3 +108,62 @@ a:hover .submission-thumb { transform: translateY(-2px); box-shadow: var(--shado
   .publish-options { flex-direction: column; }
   .publish-btn { height: 44px; }
 }
+
+/* ---------- Homework page: thay inline styles ---------- */
+.hw-stat-grid { grid-template-columns: repeat(4, 1fr); }
+.hw-tabs { margin-bottom: 16px; }
+.hw-item-title { font-weight: 600; }
+.hw-sub { font-size: 13px; }
+.hw-sub-sm { font-size: 12px; }
+.hw-quiz-badge { margin-right: 6px; }
+@media (max-width: 900px) {
+  .hw-stat-grid { grid-template-columns: repeat(2, 1fr); }
+}
+
+/* ---------- GradeModal: thay inline styles ---------- */
+.grade-sub { font-size: 13px; }
+.grade-progress-label { font-size: 13px; white-space: nowrap; }
+.grade-actions { margin-top: 0; padding-top: 0; border-top: none; }
+
+/* ---------- QuestionBank: thay inline styles ---------- */
+.bank-check { width: 18px; height: 18px; flex: none; }
+.bank-item-body { flex: 1; min-width: 0; }
+.bank-item-meta { font-size: 13px; margin-top: 4px; }
+.bank-tag-badge { margin-right: 6px; }
+.bank-form-row { display: flex; gap: 8px; }
+.bank-opt { margin-left: 0; }
+.bank-opt-input { flex: 1; }
+.bank-form-actions { display: flex; gap: 8px; justify-content: flex-end; }
+
+/* ---------- SubmissionsModal: thay inline styles ---------- */
+.submissions-count { font-size: 13px; margin-bottom: 10px; }
+.submission-body { flex: 1; min-width: 0; }
+.submission-student { font-weight: 600; }
+.submission-time { font-size: 13px; }
+.submission-note { margin-top: 6px; line-height: 1.5; }
+
+/* ---------- AnalyticsModal: thay inline styles ---------- */
+.th-center, .td-center { text-align: center; }
+.analytics-recent-head { margin-top: 20px; }
+.analytics-item-title { font-weight: 600; }
+.analytics-item-sub { font-size: 13px; }
+
+/* ---------- QuizAttemptsModal: thay inline styles ---------- */
+.attempts-summary { margin-bottom: 12px; font-size: 13px; }
+.attempts-student { font-weight: 600; }
+.attempts-score { font-weight: 700; }
+
+/* ---------- HomeworkFormModal: thay inline styles ---------- */
+.hw-mb-8 { margin-bottom: 8px; }
+.hw-mb-12 { margin-bottom: 12px; }
+.hw-mt-4 { margin-top: 4px; }
+.hw-mt-8 { margin-top: 8px; }
+.hw-flex { display: flex; gap: 8px; }
+.hw-flex-wrap { display: flex; gap: 8px; flex-wrap: wrap; }
+.hw-flex-6-wrap { display: flex; gap: 6px; flex-wrap: wrap; }
+.hw-flex-1 { flex: 1; }
+.hw-w-80 { width: 80px; }
+.hw-w-100 { width: 100px; }
+.hw-text-12 { font-size: 12px; }
+.hw-text-13 { font-size: 13px; }
+.hw-flat-card { margin: 0; }

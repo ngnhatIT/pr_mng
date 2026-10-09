@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { classesApi, roomsApi, ClassItem, Room } from './classes.api';
 import { peopleApi } from '../people/people.api';
 import { useToast } from '../../shared/ui/toast';
@@ -9,7 +10,7 @@ import { PageHeader } from '../../shared/components/PageHeader';
 import { EmptyState } from '../../shared/components/EmptyState';
 import { CardGridSkeleton } from '../../shared/components/Skeleton';
 import { Pagination, type PaginationMeta } from '../../shared/components/Pagination';
-import { Teacher, ScheduleEntry, DAY_NAMES, formatVND, formatScheduleText } from '../../shared/types';
+import { Teacher, ScheduleEntry, DAY_NAMES, formatVND } from '../../shared/types';
 import { Icon } from '../../shared/components/icons';
 import './Classes.css';
 
@@ -26,6 +27,7 @@ interface ClassForm {
 }
 
 export function Classes() {
+  const { t } = useTranslation(['classes', 'common']);
   const [classes, setClasses] = useState<ClassItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState<ClassItem | null | 'new'>(null);
@@ -34,6 +36,16 @@ export function Classes() {
   const [pagination, setPagination] = useState<PaginationMeta | null>(null);
   const toast = useToast();
 
+  /** Localized schedule text (shared formatScheduleText is Vietnamese-only) */
+  const formatSchedule = (scheduleJson: string) => {
+    try {
+      const s: ScheduleEntry[] = JSON.parse(scheduleJson || '[]');
+      return s.map((e) => `${t('days.' + e.day)} ${e.start}-${e.end}`).join(', ');
+    } catch {
+      return '';
+    }
+  };
+
   const load = useCallback(async () => {
     setLoading(true);
     try {
@@ -41,11 +53,11 @@ export function Classes() {
       setClasses(res.data);
       setPagination(res.pagination);
     } catch (err) {
-      toast(err instanceof Error ? err.message : 'Không tải được danh sách lớp', 'error');
+      toast(err instanceof Error ? err.message : t('toast.loadError'), 'error');
     } finally {
       setLoading(false);
     }
-  }, [page, toast]);
+  }, [page, toast, t]);
 
   useEffect(() => {
     void load();
@@ -62,11 +74,11 @@ export function Classes() {
       };
       if (id) await classesApi.update(id, payload);
       else await classesApi.create(payload);
-      toast('Đã lưu lớp học', 'success');
+      toast(t('toast.saved'), 'success');
       setEditing(null);
       void load();
     } catch (err) {
-      toast(err instanceof Error ? err.message : 'Lưu thất bại', 'error');
+      toast(err instanceof Error ? err.message : t('states.saveError', { ns: 'common' }), 'error');
     }
   };
 
@@ -74,23 +86,23 @@ export function Classes() {
     if (!deleting) return;
     try {
       await classesApi.remove(deleting.id);
-      toast('Đã xóa lớp học', 'success');
+      toast(t('toast.deleted'), 'success');
       setDeleting(null);
       void load();
     } catch (err) {
-      toast(err instanceof Error ? err.message : 'Xóa thất bại', 'error');
+      toast(err instanceof Error ? err.message : t('states.deleteError', { ns: 'common' }), 'error');
     }
   };
 
   return (
     <div className="page">
       <PageHeader
-        title="Lớp học"
-        desc="Tạo lớp, xếp lịch, phân công giáo viên và ghi danh"
+        title={t('title')}
+        desc={t('desc')}
         actions={
-          <button className="btn btn-primary" onClick={() => setEditing('new')}>
+          <button className="btn btn-primary btn-inline" onClick={() => setEditing('new')}>
             <Icon name="plus" size={14} />
-            Thêm lớp học
+            {t('add')}
           </button>
         }
       />
@@ -100,12 +112,12 @@ export function Classes() {
       ) : classes.length === 0 ? (
         <EmptyState
           icon="book"
-          title="Chưa có lớp học nào"
-          desc="Tạo lớp học đầu tiên với lịch học, giáo viên và học phí."
+          title={t('empty.title')}
+          desc={t('empty.desc')}
           action={
-            <button className="btn btn-primary" onClick={() => setEditing('new')}>
+            <button className="btn btn-primary btn-inline" onClick={() => setEditing('new')}>
               <Icon name="plus" size={14} />
-              Thêm lớp học
+              {t('add')}
             </button>
           }
         />
@@ -123,24 +135,24 @@ export function Classes() {
                     </Link>
                   </h2>
                   <span className={`badge badge-${c.status}`}>
-                    {c.status === 'active' ? 'Đang mở' : 'Đã đóng'}
+                    {t('classStatus.' + c.status)}
                   </span>
                 </div>
                 <dl className="dl dl-compact">
-                  <dt>Giáo viên</dt>
-                  <dd>{c.teacher_name || 'Chưa phân công'}</dd>
-                  <dt>Lịch học</dt>
-                  <dd>{formatScheduleText(c.schedule || '') || '-'}</dd>
-                  <dt>Học phí</dt>
+                  <dt>{t('table.teacher')}</dt>
+                  <dd>{c.teacher_name || t('form.teacherUnassigned')}</dd>
+                  <dt>{t('table.schedule')}</dt>
+                  <dd>{formatSchedule(c.schedule || '') || '-'}</dd>
+                  <dt>{t('table.fee')}</dt>
                   <dd className="num">{formatVND(c.tuition_fee)}</dd>
-                  <dt>Sĩ số</dt>
+                  <dt>{t('table.size')}</dt>
                   <dd>
                     <span className="capacity-label">
                       <span className="num">
                         {c.student_count}/{c.max_students}
                       </span>
                       {isFull && (
-                        <span className="badge badge-danger">Đã đầy</span>
+                        <span className="badge badge-danger">{t('classes.full')}</span>
                       )}
                     </span>
                     <div
@@ -149,7 +161,7 @@ export function Classes() {
                       aria-valuenow={pct}
                       aria-valuemin={0}
                       aria-valuemax={100}
-                      aria-label={`Sĩ số lớp ${c.name}: ${pct}%`}
+                      aria-label={t('classes.capacityAria', { name: c.name, pct })}
                     >
                       <span style={{ width: `${pct}%` }} />
                     </div>
@@ -157,13 +169,13 @@ export function Classes() {
                 </dl>
                 <div className="card-foot">
                   <Link className="btn btn-sm" to={`/app/classes/${c.id}`}>
-                    Chi tiết
+                    {t('actions.detail', { ns: 'common' })}
                   </Link>
                   <button className="btn btn-sm" onClick={() => setEditing(c)}>
-                    Sửa
+                    {t('actions.edit', { ns: 'common' })}
                   </button>
                   <button className="btn btn-sm btn-danger-ghost" onClick={() => setDeleting(c)}>
-                    Xóa
+                    {t('actions.delete', { ns: 'common' })}
                   </button>
                 </div>
               </div>
@@ -183,8 +195,8 @@ export function Classes() {
       )}
       {deleting && (
         <ConfirmDialog
-          title="Xóa lớp học"
-          message={`Bạn có chắc muốn xóa lớp "${deleting.name}"? Buổi học, điểm danh và ghi danh liên quan sẽ bị xóa theo.`}
+          title={t('delete.title')}
+          message={t('delete.message', { name: deleting.name })}
           onClose={() => setDeleting(null)}
           onConfirm={remove}
           danger
@@ -203,6 +215,7 @@ function ClassFormModal({
   onClose: () => void;
   onSave: (form: ClassForm, id?: number) => Promise<void>;
 }) {
+  const { t } = useTranslation(['classes', 'common']);
   const [teachers, setTeachers] = useState<Teacher[]>([]);
   const [rooms, setRooms] = useState<Room[]>([]);
   const [form, setForm] = useState<ClassForm>(() => ({
@@ -259,46 +272,46 @@ function ClassFormModal({
   };
 
   return (
-    <Modal title={initial ? 'Sửa lớp học' : 'Thêm lớp học'} onClose={onClose} wide>
+    <Modal title={initial ? t('form.editTitle') : t('form.addTitle')} onClose={onClose} wide>
       <form onSubmit={submit}>
         <div className="form-grid">
-          <Field label="Tên lớp *" span>
+          <Field label={t('form.name')} span>
             <input className="text-input" value={form.name} onChange={set('name')} required />
           </Field>
-          <Field label="Giáo viên">
+          <Field label={t('form.teacher')}>
             <select className="text-input" value={form.teacher_id} onChange={set('teacher_id')}>
-              <option value="">Chưa phân công</option>
-              {teachers.map((t) => (
-                <option key={t.id} value={t.id}>
-                  {t.name}
+              <option value="">{t('form.teacherUnassigned')}</option>
+              {teachers.map((tch) => (
+                <option key={tch.id} value={tch.id}>
+                  {tch.name}
                 </option>
               ))}
             </select>
           </Field>
-          <Field label="Trạng thái">
+          <Field label={t('form.status')}>
             <select className="text-input" value={form.status} onChange={set('status')}>
-              <option value="active">Đang mở</option>
-              <option value="inactive">Đã đóng</option>
+              <option value="active">{t('classStatus.active')}</option>
+              <option value="inactive">{t('classStatus.inactive')}</option>
             </select>
           </Field>
-          <Field label="Phòng học">
+          <Field label={t('form.room')}>
             <select className="text-input" value={form.room_id} onChange={set('room_id')}>
-              <option value="">Chưa gán phòng</option>
+              <option value="">{t('form.roomNoAssign')}</option>
               {rooms.map((r) => (
                 <option key={r.id} value={r.id}>
                   {r.name}
-                  {r.capacity != null ? ` (${r.capacity} chỗ)` : ''}
+                  {r.capacity != null ? t('form.roomCapacity', { capacity: r.capacity }) : ''}
                 </option>
               ))}
             </select>
           </Field>
-          <Field label="Ngày bắt đầu">
+          <Field label={t('form.startDate')}>
             <input className="text-input" type="date" value={form.start_date} onChange={set('start_date')} />
           </Field>
-          <Field label="Ngày kết thúc">
+          <Field label={t('form.endDate')}>
             <input className="text-input" type="date" value={form.end_date} onChange={set('end_date')} />
           </Field>
-          <Field label="Học phí (đ) *">
+          <Field label={t('form.tuitionFee')}>
             <input
               className="text-input"
               type="number"
@@ -308,7 +321,7 @@ function ClassFormModal({
               required
             />
           </Field>
-          <Field label="Sĩ số tối đa">
+          <Field label={t('form.maxStudents')}>
             <input
               className="text-input"
               type="number"
@@ -321,10 +334,10 @@ function ClassFormModal({
 
         <div className="schedule-editor">
           <div className="schedule-head">
-            <span className="field-label">Lịch học hàng tuần</span>
-            <button type="button" className="btn btn-sm" onClick={addSlot}>
+            <span className="field-label">{t('form.weeklySchedule')}</span>
+            <button type="button" className="btn btn-sm btn-inline" onClick={addSlot}>
               <Icon name="plus" size={13} />
-              Thêm buổi
+              {t('form.addSlot')}
             </button>
           </div>
           {form.schedule.map((s, i) => (
@@ -334,9 +347,9 @@ function ClassFormModal({
                 value={s.day}
                 onChange={(e) => updateSlot(i, { day: Number(e.target.value) })}
               >
-                {Object.entries(DAY_NAMES).map(([d, name]) => (
+                {Object.keys(DAY_NAMES).map((d) => (
                   <option key={d} value={d}>
-                    {name}
+                    {t('days.' + d)}
                   </option>
                 ))}
               </select>
@@ -354,21 +367,21 @@ function ClassFormModal({
                 onChange={(e) => updateSlot(i, { end: e.target.value })}
               />
               <button type="button" className="btn btn-sm btn-danger-ghost" onClick={() => removeSlot(i)}>
-                Xóa
+                {t('actions.delete', { ns: 'common' })}
               </button>
             </div>
           ))}
           {form.schedule.length === 0 && (
-            <p className="muted">Chưa có lịch học. Buổi học sẽ không tự sinh.</p>
+            <p className="muted">{t('form.noSchedule')}</p>
           )}
         </div>
 
         <div className="modal-actions">
           <button type="button" className="btn" onClick={onClose}>
-            Hủy
+            {t('actions.cancel', { ns: 'common' })}
           </button>
           <button type="submit" className="btn btn-primary" disabled={busy}>
-            {busy ? 'Đang lưu...' : 'Lưu'}
+            {busy ? t('actions.saving', { ns: 'common' }) : t('actions.save', { ns: 'common' })}
           </button>
         </div>
       </form>

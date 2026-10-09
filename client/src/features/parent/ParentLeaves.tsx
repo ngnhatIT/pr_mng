@@ -1,15 +1,17 @@
 import { useCallback, useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { parentApi } from './parent.api';
 import { useToast } from '../../shared/ui/toast';
 import { Modal } from '../../shared/components/Modal';
 import { Field } from '../../shared/components/Form';
 import { EmptyState } from '../../shared/components/EmptyState';
 import { Skeleton } from '../../shared/components/Skeleton';
-import { LeaveRequest, ParentChild, LEAVE_STATUS_LABEL, labelOf, formatDate } from '../../shared/types';
+import { LeaveRequest, ParentChild, formatDate } from '../../shared/types';
 import { Icon } from '../../shared/components/icons';
 import './parent.css';
 
 export function ParentLeaves() {
+  const { t } = useTranslation(['parent', 'common']);
   const [leaves, setLeaves] = useState<LeaveRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -21,11 +23,11 @@ export function ParentLeaves() {
       const data = await parentApi.leaves();
       setLeaves(data);
     } catch (err) {
-      toast(err instanceof Error ? err.message : 'Không tải được đơn nghỉ phép', 'error');
+      toast(err instanceof Error ? err.message : t('leaves.loadError'), 'error');
     } finally {
       setLoading(false);
     }
-  }, [toast]);
+  }, [toast, t]);
 
   useEffect(() => {
     void load();
@@ -34,10 +36,10 @@ export function ParentLeaves() {
   return (
     <div className="parent-page">
       <div className="page-head">
-        <h1 className="parent-title">Xin nghỉ phép</h1>
+        <h1 className="parent-title">{t('leaves.title')}</h1>
         <button className="btn btn-primary btn-sm create-leave-btn" onClick={() => setShowForm(true)}>
           <Icon name="plus" size={15} />
-          Tạo đơn mới
+          {t('leaves.create')}
         </button>
       </div>
 
@@ -55,8 +57,8 @@ export function ParentLeaves() {
       ) : leaves.length === 0 ? (
         <EmptyState
           icon="calendar-x"
-          title="Chưa có đơn nghỉ phép nào"
-          desc="Nhấn “+ Tạo đơn mới” để gửi đơn xin nghỉ phép cho con."
+          title={t('leaves.emptyTitle')}
+          desc={t('leaves.emptyDesc')}
         />
       ) : (
         <div className="leave-list">
@@ -66,7 +68,7 @@ export function ParentLeaves() {
                 <strong>
                   {l.student_name} <span className="muted">· {l.class_name || '-'}</span>
                 </strong>
-                <span className={`badge badge-${l.status}`}>{labelOf(LEAVE_STATUS_LABEL, l.status)}</span>
+                <span className={`badge badge-${l.status}`}>{t(`status.leave.${l.status}`)}</span>
               </div>
               <div className="muted">
                 {formatDate(l.from_date)} → {formatDate(l.to_date)}
@@ -91,6 +93,7 @@ export function ParentLeaves() {
 }
 
 function LeaveFormModal({ onClose, onDone }: { onClose: () => void; onDone: () => void }) {
+  const { t } = useTranslation(['parent', 'common']);
   const [children, setChildren] = useState<ParentChild[]>([]);
   const [studentId, setStudentId] = useState('');
   const [classId, setClassId] = useState('');
@@ -113,7 +116,7 @@ function LeaveFormModal({ onClose, onDone }: { onClose: () => void; onDone: () =
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!studentId) {
-      toast('Vui lòng chọn con', 'error');
+      toast(t('leaves.childRequired'), 'error');
       return;
     }
     setBusy(true);
@@ -125,20 +128,20 @@ function LeaveFormModal({ onClose, onDone }: { onClose: () => void; onDone: () =
         to_date: toDate,
         reason: reason || null,
       });
-      toast('Đã gửi đơn xin nghỉ phép', 'success');
+      toast(t('leaves.sent'), 'success');
       onDone();
     } catch (err) {
-      toast(err instanceof Error ? err.message : 'Gửi thất bại', 'error');
+      toast(err instanceof Error ? err.message : t('leaves.sendError'), 'error');
     } finally {
       setBusy(false);
     }
   };
 
   return (
-    <Modal title="Tạo đơn xin nghỉ phép" onClose={onClose}>
+    <Modal title={t('leaves.formTitle')} onClose={onClose}>
       <form onSubmit={submit}>
         <div className="form-grid">
-          <Field label="Con *" span>
+          <Field label={t('leaves.child')} span>
             <select
               className="text-input"
               value={studentId}
@@ -148,7 +151,7 @@ function LeaveFormModal({ onClose, onDone }: { onClose: () => void; onDone: () =
               }}
               required
             >
-              <option value="">- Chọn con -</option>
+              <option value="">{t('leaves.selectChild')}</option>
               {children.map((c) => (
                 <option key={c.id} value={c.id}>
                   {c.name} ({c.code})
@@ -156,9 +159,9 @@ function LeaveFormModal({ onClose, onDone }: { onClose: () => void; onDone: () =
               ))}
             </select>
           </Field>
-          <Field label="Lớp" span>
+          <Field label={t('leaves.class')} span>
             <select className="text-input" value={classId} onChange={(e) => setClassId(e.target.value)}>
-              <option value="">- Tất cả các lớp -</option>
+              <option value="">{t('leaves.allClasses')}</option>
               {classes.map((c) => (
                 <option key={c.id} value={c.id}>
                   {c.name}
@@ -166,7 +169,7 @@ function LeaveFormModal({ onClose, onDone }: { onClose: () => void; onDone: () =
               ))}
             </select>
           </Field>
-          <Field label="Từ ngày *">
+          <Field label={t('leaves.fromDate')}>
             <input
               className="text-input"
               type="date"
@@ -175,7 +178,7 @@ function LeaveFormModal({ onClose, onDone }: { onClose: () => void; onDone: () =
               required
             />
           </Field>
-          <Field label="Đến ngày *">
+          <Field label={t('leaves.toDate')}>
             <input
               className="text-input"
               type="date"
@@ -184,7 +187,7 @@ function LeaveFormModal({ onClose, onDone }: { onClose: () => void; onDone: () =
               required
             />
           </Field>
-          <Field label="Lý do" span>
+          <Field label={t('leaves.reason')} span>
             <textarea
               className="text-input"
               rows={3}
@@ -195,10 +198,10 @@ function LeaveFormModal({ onClose, onDone }: { onClose: () => void; onDone: () =
         </div>
         <div className="modal-actions">
           <button type="button" className="btn" onClick={onClose}>
-            Hủy
+            {t('actions.cancel', { ns: 'common' })}
           </button>
           <button type="submit" className="btn btn-primary" disabled={busy}>
-            {busy ? 'Đang gửi...' : 'Gửi đơn'}
+            {busy ? t('actions.sending', { ns: 'common' }) : t('leaves.submit')}
           </button>
         </div>
       </form>

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { parentApi, VietQRInfo } from './parent.api';
 import { useToast } from '../../shared/ui/toast';
 import { Modal } from '../../shared/components/Modal';
@@ -16,23 +17,22 @@ import {
   ChildOverviewInvoice,
   Grade,
   HomeworkItem,
-  INVOICE_STATUS_LABEL,
   formatVND,
   formatDate,
 } from '../../shared/types';
 
 type Tab = 'schedule' | 'attendance' | 'tuition' | 'grades' | 'homework';
 
-const TABS: { id: Tab; label: string; icon: IconName }[] = [
-  { id: 'schedule', label: 'Lịch học', icon: 'calendar' },
-  { id: 'attendance', label: 'Điểm danh', icon: 'clipboard' },
-  { id: 'tuition', label: 'Học phí', icon: 'banknote' },
-  { id: 'grades', label: 'Điểm số', icon: 'cap' },
-  { id: 'homework', label: 'Bài tập', icon: 'file' },
-];
-
 export function ChildDetail() {
   const { id } = useParams<{ id: string }>();
+  const { t } = useTranslation(['parent', 'common']);
+  const TABS: { id: Tab; label: string; icon: IconName }[] = [
+    { id: 'schedule', label: t('child.tabs.schedule'), icon: 'calendar' },
+    { id: 'attendance', label: t('child.tabs.attendance'), icon: 'clipboard' },
+    { id: 'tuition', label: t('child.tabs.tuition'), icon: 'banknote' },
+    { id: 'grades', label: t('child.tabs.grades'), icon: 'cap' },
+    { id: 'homework', label: t('child.tabs.homework'), icon: 'file' },
+  ];
   const [data, setData] = useState<ChildOverview | null>(null);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<Tab>('schedule');
@@ -44,7 +44,7 @@ export function ChildDetail() {
       const d = await parentApi.childOverview(id || '');
       setData(d);
     } catch (err) {
-      toast(err instanceof Error ? err.message : 'Không tải được thông tin', 'error');
+      toast(err instanceof Error ? err.message : t('child.loadError'), 'error');
     } finally {
       setLoading(false);
     }
@@ -83,7 +83,7 @@ export function ChildDetail() {
   if (!data)
     return (
       <div className="parent-page">
-        <EmptyState icon="user" title="Không tìm thấy học viên" desc="Thông tin học viên không tồn tại." />
+        <EmptyState icon="user" title={t('child.notFoundTitle')} desc={t('child.notFoundDesc')} />
       </div>
     );
 
@@ -91,7 +91,7 @@ export function ChildDetail() {
     <div className="parent-page">
       <Link className="link back-link" to="/parent">
         <Icon name="arrow-left" size={16} />
-        Trang chủ
+        {t('child.backHome')}
       </Link>
       <div className="parent-child-head">
         <div className="child-avatar child-avatar-lg">{data.student.name.charAt(0).toUpperCase()}</div>
@@ -102,10 +102,10 @@ export function ChildDetail() {
       </div>
 
       <div className="tabs parent-tabs pill-tabs">
-        {TABS.map((t) => (
-          <button key={t.id} className={`tab${tab === t.id ? ' active' : ''}`} onClick={() => setTab(t.id)}>
-            <Icon name={t.icon} size={15} />
-            {t.label}
+        {TABS.map((tb) => (
+          <button key={tb.id} className={`tab${tab === tb.id ? ' active' : ''}`} onClick={() => setTab(tb.id)}>
+            <Icon name={tb.icon} size={15} />
+            {tb.label}
           </button>
         ))}
       </div>
@@ -120,22 +120,23 @@ export function ChildDetail() {
 }
 
 function ScheduleTab({ data }: { data: ChildOverview }) {
+  const { t } = useTranslation(['parent', 'common']);
   return (
     <>
       <section className="card">
-        <h3 className="card-title">Các lớp đang học</h3>
+        <h3 className="card-title">{t('child.schedule.title')}</h3>
         {data.classes.length === 0 ? (
-          <EmptyState icon="book" title="Chưa ghi danh lớp nào" />
+          <EmptyState icon="book" title={t('child.schedule.empty')} />
         ) : (
           data.classes.map((c) => (
             <div key={c.id} className="class-info-card">
               <strong>{c.name}</strong>
-              <div className="muted">Lịch: {c.schedule || '-'}</div>
+              <div className="muted">{t('child.schedule.scheduleLabel', { value: c.schedule || '-' })}</div>
               {(c.teacher_name || c.room_name) && (
                 <div className="muted">
-                  {c.teacher_name ? `GV: ${c.teacher_name}` : ''}
+                  {c.teacher_name ? t('child.schedule.teacherLabel', { name: c.teacher_name }) : ''}
                   {c.teacher_name && c.room_name ? ' · ' : ''}
-                  {c.room_name ? `Phòng: ${c.room_name}` : ''}
+                  {c.room_name ? t('child.schedule.roomLabel', { name: c.room_name }) : ''}
                 </div>
               )}
             </div>
@@ -143,9 +144,9 @@ function ScheduleTab({ data }: { data: ChildOverview }) {
         )}
       </section>
       <section className="card">
-        <h3 className="card-title">Buổi học sắp tới</h3>
+        <h3 className="card-title">{t('child.schedule.upcoming')}</h3>
         {data.upcomingSessions.length === 0 ? (
-          <EmptyState icon="calendar" title="Chưa có buổi học nào sắp diễn ra" />
+          <EmptyState icon="calendar" title={t('child.schedule.upcomingEmpty')} />
         ) : (
           <ul className="list">
             {data.upcomingSessions.map((s) => (
@@ -165,15 +166,16 @@ function ScheduleTab({ data }: { data: ChildOverview }) {
 }
 
 function AttendanceTab({ data }: { data: ChildOverview }) {
+  const { t } = useTranslation(['parent', 'common']);
   const a = data.attendance;
   const stats: { label: string; value: number; badge: string }[] = [
-    { label: 'Có mặt', value: a.present, badge: 'badge-present' },
-    { label: 'Muộn', value: a.late, badge: 'badge-late' },
-    { label: 'Vắng', value: a.absent, badge: 'badge-absent' },
+    { label: t('child.attendance.present'), value: a.present, badge: 'badge-present' },
+    { label: t('child.attendance.late'), value: a.late, badge: 'badge-late' },
+    { label: t('child.attendance.absent'), value: a.absent, badge: 'badge-absent' },
   ];
   return (
     <section className="card">
-      <h3 className="card-title">Thống kê điểm danh</h3>
+      <h3 className="card-title">{t('child.attendance.title')}</h3>
       <div className="stat-grid stat-grid-2">
         {stats.map((s) => (
           <div key={s.label} className="stat-card">
@@ -185,21 +187,22 @@ function AttendanceTab({ data }: { data: ChildOverview }) {
         ))}
         <div className="stat-card stat-card-highlight">
           <div className="stat-value">{(a.rate * 100).toFixed(0)}%</div>
-          <div className="stat-label">Tỷ lệ chuyên cần</div>
+          <div className="stat-label">{t('child.attendance.rate')}</div>
         </div>
       </div>
-      <p className="muted">Tổng {a.total} buổi đã điểm danh.</p>
+      <p className="muted">{t('child.attendance.total', { count: a.total })}</p>
     </section>
   );
 }
 
 function TuitionTab({ data, onPaid }: { data: ChildOverview; onPaid: () => void }) {
+  const { t } = useTranslation(['parent', 'common']);
   const [paying, setPaying] = useState<ChildOverviewInvoice | null>(null);
   return (
     <section className="card">
-      <h3 className="card-title">Hóa đơn học phí</h3>
+      <h3 className="card-title">{t('child.tuition.title')}</h3>
       {data.invoices.length === 0 ? (
-        <EmptyState icon="banknote" title="Chưa có hóa đơn nào" />
+        <EmptyState icon="banknote" title={t('child.tuition.empty')} />
       ) : (
         <div className="invoice-list">
           {data.invoices.map((inv) => {
@@ -207,25 +210,25 @@ function TuitionTab({ data, onPaid }: { data: ChildOverview; onPaid: () => void 
             return (
               <div key={inv.id} className="invoice-card">
                 <div className="invoice-card-head">
-                  <strong>{inv.class_name || 'Học phí'}</strong>
-                  <span className={`badge badge-${inv.status}`}>{INVOICE_STATUS_LABEL[inv.status]}</span>
+                  <strong>{inv.class_name || t('child.tuition.tuitionFallback')}</strong>
+                  <span className={`badge badge-${inv.status}`}>{t(`status.invoice.${inv.status}`)}</span>
                 </div>
                 <dl className="dl dl-compact">
-                  <dt>Số tiền</dt>
+                  <dt>{t('child.tuition.amount')}</dt>
                   <dd className="num">{formatVND(inv.amount)}</dd>
-                  <dt>Đã trả</dt>
+                  <dt>{t('child.tuition.paid')}</dt>
                   <dd className="num">{formatVND(inv.paid || 0)}</dd>
-                  <dt>Còn lại</dt>
+                  <dt>{t('child.tuition.remain')}</dt>
                   <dd className="num debt-amount">
                     <strong>{formatVND(remain)}</strong>
                   </dd>
-                  <dt>Hạn nộp</dt>
+                  <dt>{t('child.tuition.dueDate')}</dt>
                   <dd>{formatDate(inv.due_date)}</dd>
                 </dl>
                 {inv.note && <p className="muted">{inv.note}</p>}
                 {inv.status !== 'paid' && (
                   <button className="btn btn-primary btn-block btn-pay" onClick={() => setPaying(inv)}>
-                    Thanh toán {formatVND(remain)}
+                    {t('child.tuition.payNow', { amount: formatVND(remain) })}
                   </button>
                 )}
               </div>
@@ -256,6 +259,7 @@ function PayModal({
   onClose: () => void;
   onDone: () => void;
 }) {
+  const { t } = useTranslation(['parent', 'common']);
   const [mode, setMode] = useState<'menu' | 'qr'>('menu');
   const [qr, setQr] = useState<VietQRInfo | null>(null);
   const [busy, setBusy] = useState(false);
@@ -269,7 +273,7 @@ function PayModal({
       setQr(data);
       setMode('qr');
     } catch (err) {
-      toast(err instanceof Error ? err.message : 'Không tạo được mã QR', 'error');
+      toast(err instanceof Error ? err.message : t('child.pay.qrError'), 'error');
     } finally {
       setBusy(false);
     }
@@ -280,9 +284,9 @@ function PayModal({
     try {
       const data = await parentApi.vnpay(invoice.id);
       window.open(data.pay_url, '_blank');
-      toast('Đã mở cổng thanh toán VNPay trong tab mới', 'info');
+      toast(t('child.pay.vnpayOpened'), 'info');
     } catch (err) {
-      toast(err instanceof Error ? err.message : 'Không tạo được link VNPay', 'error');
+      toast(err instanceof Error ? err.message : t('child.pay.vnpayError'), 'error');
     } finally {
       setBusy(false);
     }
@@ -292,21 +296,21 @@ function PayModal({
     setBusy(true);
     try {
       await parentApi.claimPaid(invoice.id);
-      toast('Đã ghi nhận. Trung tâm sẽ xác nhận thanh toán của bạn sớm.', 'success');
+      toast(t('child.pay.claimed'), 'success');
       onDone();
     } catch (err) {
-      toast(err instanceof Error ? err.message : 'Gửi thất bại', 'error');
+      toast(err instanceof Error ? err.message : t('child.pay.claimError'), 'error');
     } finally {
       setBusy(false);
     }
   };
 
   return (
-    <Modal title={`Thanh toán ${formatVND(remain)}`} onClose={onClose}>
+    <Modal title={t('child.pay.title', { amount: formatVND(remain) })} onClose={onClose}>
       {mode === 'menu' && (
         <div className="pay-menu">
           <p className="confirm-text">
-            Chọn cách thanh toán cho hóa đơn "{invoice.class_name || 'Học phí'}":
+            {t('child.pay.chooseMethod', { name: invoice.class_name || t('child.tuition.tuitionFallback') })}
           </p>
           <button
             className="btn btn-primary btn-block pay-option"
@@ -314,37 +318,37 @@ function PayModal({
             disabled={busy}
           >
             <Icon name="qr" size={20} />
-            {busy ? 'Đang tạo mã...' : 'Quét VietQR'}
+            {busy ? t('child.pay.creatingQr') : t('child.pay.vietqr')}
           </button>
           <button className="btn btn-block pay-option" onClick={() => void payVNPay()} disabled={busy}>
             <Icon name="card" size={20} />
-            {busy ? 'Đang tạo link...' : 'Thanh toán VNPay'}
+            {busy ? t('child.pay.creatingLink') : t('child.pay.vnpay')}
           </button>
           <button className="btn btn-block pay-option" onClick={() => void claimPaid()} disabled={busy}>
             <Icon name="check-circle" size={20} />
-            {busy ? 'Đang gửi...' : 'Tôi đã chuyển khoản'}
+            {busy ? t('actions.sending', { ns: 'common' }) : t('child.pay.claimPaid')}
           </button>
         </div>
       )}
       {mode === 'qr' && qr && (
         <div className="qr-box">
-          <img src={qr.qr_url} alt="Mã QR thanh toán" />
+          <img src={qr.qr_url} alt={t('child.pay.qrAlt')} />
           <dl className="dl dl-compact">
-            <dt>Số tiền</dt>
+            <dt>{t('child.tuition.amount')}</dt>
             <dd className="num">
               <strong>{formatVND(qr.amount)}</strong>
             </dd>
-            <dt>Ngân hàng</dt>
+            <dt>{t('child.pay.bank')}</dt>
             <dd>{qr.bank}</dd>
-            <dt>Số TK</dt>
+            <dt>{t('child.pay.accountNo')}</dt>
             <dd className="mono">{qr.account_no}</dd>
-            <dt>Chủ TK</dt>
+            <dt>{t('child.pay.accountName')}</dt>
             <dd>{qr.account_name}</dd>
-            <dt>Nội dung</dt>
+            <dt>{t('child.pay.addInfo')}</dt>
             <dd className="mono">{qr.addInfo}</dd>
           </dl>
           <button className="btn btn-block" onClick={() => setMode('menu')}>
-            ← Chọn cách khác
+            {t('child.pay.otherMethod')}
           </button>
         </div>
       )}
@@ -353,12 +357,13 @@ function PayModal({
 }
 
 function GradesTab({ data }: { data: ChildOverview }) {
+  const { t } = useTranslation(['parent', 'common']);
   const grades = [...data.grades].sort((a, b) => a.created_at.localeCompare(b.created_at));
   return (
     <section className="card">
-      <h3 className="card-title">Điểm số</h3>
+      <h3 className="card-title">{t('child.grades.title')}</h3>
       {grades.length === 0 ? (
-        <EmptyState icon="cap" title="Chưa có điểm số nào" />
+        <EmptyState icon="cap" title={t('child.grades.empty')} />
       ) : (
         <>
           <div className="progress-line">
@@ -368,10 +373,10 @@ function GradesTab({ data }: { data: ChildOverview }) {
             <table className="table">
               <thead>
                 <tr>
-                  <th>Bài kiểm tra</th>
-                  <th>Lớp</th>
-                  <th>Điểm</th>
-                  <th>Nhận xét</th>
+                  <th>{t('child.grades.test')}</th>
+                  <th>{t('child.grades.class')}</th>
+                  <th>{t('child.grades.score')}</th>
+                  <th>{t('child.grades.comment')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -397,6 +402,7 @@ function GradesTab({ data }: { data: ChildOverview }) {
 }
 
 function ProgressChart({ grades }: { grades: Grade[] }) {
+  const { t } = useTranslation(['parent', 'common']);
   const W = 400;
   const H = 180;
   const PAD = 30;
@@ -411,14 +417,14 @@ function ProgressChart({ grades }: { grades: Grade[] }) {
   const points = xs.map((x, i) => `${x.toFixed(1)},${ys[i].toFixed(1)}`).join(' ');
   const area = `${PAD},${(H - PAD).toFixed(1)} ${points} ${(W - PAD).toFixed(1)},${(H - PAD).toFixed(1)}`;
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} className="progress-svg" role="img" aria-label="Biểu đồ tiến bộ">
-      <line x1={PAD} y1={H - PAD} x2={W - PAD} y2={H - PAD} stroke="#dfe4ee" />
-      <polygon points={area} fill="rgba(37,99,235,0.12)" />
-      <polyline points={points} fill="none" stroke="#2563eb" strokeWidth="2.5" strokeLinejoin="round" />
+    <svg viewBox={`0 0 ${W} ${H}`} className="progress-svg" role="img" aria-label={t('child.grades.chartLabel')}>
+      <line x1={PAD} y1={H - PAD} x2={W - PAD} y2={H - PAD} className="chart-axis" />
+      <polygon points={area} className="chart-area" />
+      <polyline points={points} fill="none" className="chart-line" strokeWidth="2.5" strokeLinejoin="round" />
       {xs.map((x, i) => (
         <g key={i}>
-          <circle cx={x} cy={ys[i]} r="4" fill="#2563eb" />
-          <text x={x} y={ys[i] - 8} textAnchor="middle" fontSize="11" fill="#1a2233">
+          <circle cx={x} cy={ys[i]} r="4" className="chart-dot" />
+          <text x={x} y={ys[i] - 8} textAnchor="middle" fontSize="11" className="chart-label">
             {pct[i].toFixed(0)}%
           </text>
         </g>
@@ -428,6 +434,7 @@ function ProgressChart({ grades }: { grades: Grade[] }) {
 }
 
 function HomeworkTab({ data, onChanged }: { data: ChildOverview; onChanged: () => void }) {
+  const { t } = useTranslation(['parent', 'common']);
   const toast = useToast();
   const [busy, setBusy] = useState<number | null>(null);
   const [takingQuiz, setTakingQuiz] = useState<HomeworkItem | null>(null);
@@ -444,11 +451,11 @@ function HomeworkTab({ data, onChanged }: { data: ChildOverview; onChanged: () =
         await parentApi.unmarkHomeworkDone(h.id, studentId);
       } else {
         await parentApi.markHomeworkDone(h.id, studentId);
-        toast('Tuyệt vời! Đã đánh dấu hoàn thành', 'success');
+        toast(t('child.homework.markedDone'), 'success');
       }
       onChanged();
     } catch (err) {
-      toast(err instanceof Error ? err.message : 'Thao tác thất bại', 'error');
+      toast(err instanceof Error ? err.message : t('child.homework.actionError'), 'error');
     } finally {
       setBusy(null);
     }
@@ -462,7 +469,9 @@ function HomeworkTab({ data, onChanged }: { data: ChildOverview; onChanged: () =
     if (h.score === null || h.score === undefined) return null;
     return (
       <span className="badge badge-paid" style={{ marginLeft: 8 }}>
-        {h.score}{h.max_score != null ? `/${h.max_score}` : ''}đ
+        {h.max_score != null
+          ? t('child.homework.scoreLine', { score: h.score, max: h.max_score })
+          : t('child.homework.scoreShort', { score: h.score })}
       </span>
     );
   };
@@ -478,8 +487,8 @@ function HomeworkTab({ data, onChanged }: { data: ChildOverview; onChanged: () =
             className={`hw-check ${isDone ? 'done' : ''}`}
             onClick={() => void toggle(h)}
             disabled={busy === h.id}
-            title={isDone ? 'Bỏ đánh dấu' : 'Đánh dấu đã làm xong'}
-            aria-label={isDone ? 'Bỏ đánh dấu đã làm xong' : 'Đánh dấu đã làm xong'}
+            title={isDone ? t('child.homework.unmark') : t('child.homework.mark')}
+            aria-label={isDone ? t('child.homework.unmark') : t('child.homework.mark')}
           >
             {isDone ? <Icon name="check" size={14} /> : null}
           </button>
@@ -504,19 +513,19 @@ function HomeworkTab({ data, onChanged }: { data: ChildOverview; onChanged: () =
           <div className="hw-actions">
             {isQuiz && !isDone && (
               <button className="btn btn-sm btn-primary" onClick={() => setTakingQuiz(h)}>
-                Làm bài ngay
+                {t('child.homework.takeQuiz')}
               </button>
             )}
             {!isQuiz && !isDone && (
               <button className="btn btn-sm btn-primary" onClick={() => setSubmitting(h)}>
                 <Icon name="upload" size={15} />
-                Nộp bài
+                {t('child.homework.submit')}
               </button>
             )}
             {!isQuiz && (
               <button className="btn btn-sm" onClick={() => setViewingSubs(h)}>
                 <Icon name="file" size={15} />
-                Bài đã nộp
+                {t('child.homework.viewSubmissions')}
               </button>
             )}
           </div>
@@ -524,9 +533,9 @@ function HomeworkTab({ data, onChanged }: { data: ChildOverview; onChanged: () =
         <div>
           {h.due_date &&
             (isOverdue ? (
-              <span className="badge badge-overdue">Quá hạn: {formatDate(h.due_date)}</span>
+              <span className="badge badge-overdue">{t('child.homework.overdueLabel', { date: formatDate(h.due_date) })}</span>
             ) : (
-              <span className="badge badge-upcoming">Hạn: {formatDate(h.due_date)}</span>
+              <span className="badge badge-upcoming">{t('child.homework.dueLabel', { date: formatDate(h.due_date) })}</span>
             ))}
         </div>
       </div>
@@ -535,27 +544,27 @@ function HomeworkTab({ data, onChanged }: { data: ChildOverview; onChanged: () =
 
   return (
     <section className="card">
-      <h3 className="card-title">Bài tập về nhà</h3>
-      <p className="card-desc">Tick vào ô tròn khi con đã làm xong. Quiz trắc nghiệm làm trực tiếp và chấm tự động.</p>
+      <h3 className="card-title">{t('child.homework.title')}</h3>
+      <p className="card-desc">{t('child.homework.desc')}</p>
       {data.homework.length === 0 ? (
-        <EmptyState icon="file" title="Chưa có bài tập nào" />
+        <EmptyState icon="file" title={t('child.homework.empty')} />
       ) : (
         <>
           {todo.length > 0 && (
             <>
-              <div className="hw-group-title">Cần làm ({todo.length})</div>
+              <div className="hw-group-title">{t('child.homework.todo', { count: todo.length })}</div>
               {todo.map(renderItem)}
             </>
           )}
           {overdue.length > 0 && (
             <>
-              <div className="hw-group-title" style={{ color: '#dc2626' }}>Quá hạn ({overdue.length})</div>
+              <div className="hw-group-title" style={{ color: 'var(--danger)' }}>{t('child.homework.overdue', { count: overdue.length })}</div>
               {overdue.map(renderItem)}
             </>
           )}
           {done.length > 0 && (
             <>
-              <div className="hw-group-title">Đã hoàn thành ({done.length})</div>
+              <div className="hw-group-title">{t('child.homework.done', { count: done.length })}</div>
               {done.map(renderItem)}
             </>
           )}

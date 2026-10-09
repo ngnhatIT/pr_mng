@@ -262,7 +262,7 @@
 }
 
 .perm-row.on:hover {
-  background: #e6efff;
+  background: var(--primary-soft);
 }
 
 .perm-info {
@@ -322,18 +322,18 @@
 }
 
 .scope-seg-btn.active.scope-own {
-  background: #fef3c7;
-  color: #92400e;
+  background: var(--warning-soft);
+  color: var(--warning);
 }
 
 .scope-seg-btn.active.scope-center {
-  background: #dbeafe;
-  color: #1e40af;
+  background: var(--primary-soft);
+  color: var(--primary);
 }
 
 .scope-seg-btn.active.scope-all {
-  background: #dcfce7;
-  color: #166534;
+  background: var(--success-soft);
+  color: var(--success);
 }
 
 /* Tag phạm vi (chế độ chỉ xem) */
@@ -346,18 +346,18 @@
 }
 
 .scope-tag.scope-own {
-  background: #fef3c7;
-  color: #92400e;
+  background: var(--warning-soft);
+  color: var(--warning);
 }
 
 .scope-tag.scope-center {
-  background: #dbeafe;
-  color: #1e40af;
+  background: var(--primary-soft);
+  color: var(--primary);
 }
 
 .scope-tag.scope-all {
-  background: #dcfce7;
-  color: #166534;
+  background: var(--success-soft);
+  color: var(--success);
 }
 
 /* ---------- Thanh lưu (sticky) ---------- */

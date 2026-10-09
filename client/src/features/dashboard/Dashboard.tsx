@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { dashboardApi } from './dashboard.api';
 import { DebtRow } from '../tuition/tuition.api';
 import { useToast } from '../../shared/ui/toast';
@@ -11,33 +12,37 @@ import { StatGridSkeleton } from '../../shared/components/Skeleton';
 import { Icon, IconName } from '../../shared/components/icons';
 import './Dashboard.css';
 
-const QUICK_ACTIONS: { to: string; label: string; desc: string; icon: IconName }[] = [
-  { to: '/app/students', label: 'Thêm học viên', desc: 'Tạo hồ sơ học viên mới', icon: 'plus' },
-  { to: '/app/tuition', label: 'Tạo hóa đơn', desc: 'Lập phiếu thu học phí', icon: 'banknote' },
-  { to: '/app/attendance', label: 'Điểm danh', desc: 'Ghi nhận buổi học', icon: 'clipboard' },
-  { to: '/app/zalo-reminders', label: 'Nhắc học phí', desc: 'Gửi nhắc qua Zalo', icon: 'bell' },
-];
-
-function greeting(): string {
+function greeting(t: (k: string) => string): string {
   const h = new Date().getHours();
-  if (h < 11) return 'Chào buổi sáng';
-  if (h < 13) return 'Chào buổi trưa';
-  if (h < 18) return 'Chào buổi chiều';
-  return 'Chào buổi tối';
+  if (h < 11) return t('greeting.morning');
+  if (h < 13) return t('greeting.midday');
+  if (h < 18) return t('greeting.afternoon');
+  return t('greeting.evening');
 }
 
-function todayLine(): string {
-  const d = new Date();
-  const days = ['Chủ nhật', 'Thứ hai', 'Thứ ba', 'Thứ tư', 'Thứ năm', 'Thứ sáu', 'Thứ bảy'];
-  return `${days[d.getDay()]}, ngày ${d.getDate()} tháng ${d.getMonth() + 1} năm ${d.getFullYear()}`;
+function todayLine(lang: string): string {
+  return new Intl.DateTimeFormat(lang === 'en' ? 'en-US' : 'vi-VN', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'numeric',
+    year: 'numeric',
+  }).format(new Date());
 }
 
 export function Dashboard() {
+  const { t, i18n } = useTranslation(['dashboard', 'common']);
   const [data, setData] = useState<DashboardData | null>(null);
   const [debts, setDebts] = useState<DebtRow[]>([]);
   const [loading, setLoading] = useState(true);
   const toast = useToast();
   const user = getUser();
+
+  const quickActions: { to: string; label: string; desc: string; icon: IconName }[] = [
+    { to: '/app/students', label: t('quick.addStudent'), desc: t('quick.addStudentDesc'), icon: 'plus' },
+    { to: '/app/tuition', label: t('quick.createInvoice'), desc: t('quick.createInvoiceDesc'), icon: 'banknote' },
+    { to: '/app/attendance', label: t('quick.attendance'), desc: t('quick.attendanceDesc'), icon: 'clipboard' },
+    { to: '/app/zalo-reminders', label: t('quick.zalo'), desc: t('quick.zaloDesc'), icon: 'bell' },
+  ];
 
   useEffect(() => {
     (async () => {
@@ -46,17 +51,17 @@ export function Dashboard() {
         setData(d);
         setDebts(debt.data);
       } catch (err) {
-        toast(err instanceof Error ? err.message : 'Không tải được dữ liệu', 'error');
+        toast(err instanceof Error ? err.message : t('loadError'), 'error');
       } finally {
         setLoading(false);
       }
     })();
-  }, [toast]);
+  }, [toast, t]);
 
   if (loading) {
     return (
       <div className="page">
-        <PageHeader title="Tổng quan" desc="Tình hình hoạt động của trung tâm hôm nay" />
+        <PageHeader title={t('pageTitle')} desc={t('pageDesc')} />
         <StatGridSkeleton />
       </div>
     );
@@ -64,38 +69,38 @@ export function Dashboard() {
   if (!data) {
     return (
       <div className="page">
-        <PageHeader title="Tổng quan" />
-        <div className="loading">Không có dữ liệu</div>
+        <PageHeader title={t('pageTitle')} />
+        <div className="loading">{t('noData')}</div>
       </div>
     );
   }
 
   const stats = [
     {
-      label: 'Học viên đang học',
+      label: t('stats.students'),
       value: data.studyingStudents,
-      sub: `${data.totalStudents} học viên tổng`,
+      sub: t('stats.studentsSub', { total: data.totalStudents }),
       tone: 'blue' as const,
       icon: 'users' as IconName,
     },
     {
-      label: 'Lớp đang mở',
+      label: t('stats.classes'),
       value: data.activeClasses,
-      sub: `${data.totalTeachers} giáo viên`,
+      sub: t('stats.classesSub', { total: data.totalTeachers }),
       tone: 'green' as const,
       icon: 'book' as IconName,
     },
     {
-      label: 'Doanh thu tháng này',
+      label: t('stats.revenue'),
       value: formatVND(data.revenueThisMonth),
-      sub: 'từ các khoản đã thu',
+      sub: t('stats.revenueSub'),
       tone: 'violet' as const,
       icon: 'wallet' as IconName,
     },
     {
-      label: 'Công nợ cần thu',
+      label: t('stats.debt'),
       value: formatVND(data.unpaidTotal),
-      sub: 'hóa đơn chưa thanh toán hết',
+      sub: t('stats.debtSub'),
       tone: 'amber' as const,
       icon: 'alert' as IconName,
     },
@@ -106,12 +111,12 @@ export function Dashboard() {
       <div className="dash-greet">
         <div>
           <h1 className="dash-greet-title">
-            {greeting()}, {user?.name || 'bạn'}
+            {greeting(t)}, {user?.name || t('fallbackName')}
           </h1>
           <p className="dash-greet-sub">
-            {todayLine()} · {data.todaySessions.length > 0
-              ? `Hôm nay có ${data.todaySessions.length} buổi học`
-              : 'Hôm nay không có buổi học nào'}
+            {todayLine(i18n.language)} · {data.todaySessions.length > 0
+              ? t('today.count', { count: data.todaySessions.length })
+              : t('today.none')}
           </p>
         </div>
       </div>
@@ -122,9 +127,9 @@ export function Dashboard() {
         ))}
       </div>
 
-      <div className="dash-section-label">Thao tác nhanh</div>
+      <div className="dash-section-label">{t('quick.actionsTitle')}</div>
       <div className="quick-actions dash-quick">
-        {QUICK_ACTIONS.map((q) => (
+        {quickActions.map((q) => (
           <Link key={q.to} to={q.to} className="quick-action">
             <span className="quick-action-icon">
               <Icon name={q.icon} size={20} />
@@ -141,13 +146,13 @@ export function Dashboard() {
       <div className="two-col dash-cols">
         <section className="card">
           <div className="card-head">
-            <h2>Buổi học hôm nay</h2>
+            <h2>{t('today.title')}</h2>
             <Link className="link" to="/app/attendance">
-              Điểm danh <Icon name="arrow-right" size={14} />
+              {t('today.attendance')} <Icon name="arrow-right" size={14} />
             </Link>
           </div>
           {data.todaySessions.length === 0 ? (
-            <p className="muted">Hôm nay không có buổi học nào.</p>
+            <p className="muted">{t('today.empty')}</p>
           ) : (
             <ul className="list">
               {data.todaySessions.map((s) => (
@@ -155,12 +160,12 @@ export function Dashboard() {
                   <div>
                     <div className="list-title">{s.class_name}</div>
                     <div className="list-sub">
-                      {s.teacher_name || 'Chưa phân công'} · {s.scheduleText}
+                      {s.teacher_name || t('today.unassigned')} · {s.scheduleText}
                     </div>
-                    {s.topic && <div className="list-sub">Chủ đề: {s.topic}</div>}
+                    {s.topic && <div className="list-sub">{t('today.topic', { topic: s.topic })}</div>}
                   </div>
                   <Link className="btn btn-sm" to={`/app/attendance?class=${s.class_id}&session=${s.id}`}>
-                    Điểm danh
+                    {t('today.attendance')}
                   </Link>
                 </li>
               ))}
@@ -170,13 +175,13 @@ export function Dashboard() {
 
         <section className="card">
           <div className="card-head">
-            <h2>Công nợ cao nhất</h2>
+            <h2>{t('debtTitle')}</h2>
             <Link className="link" to="/app/tuition?tab=debt">
-              Xem tất cả <Icon name="arrow-right" size={14} />
+              {t('viewAll')} <Icon name="arrow-right" size={14} />
             </Link>
           </div>
           {debts.length === 0 ? (
-            <p className="muted">Không có công nợ.</p>
+            <p className="muted">{t('debtEmpty')}</p>
           ) : (
             <ul className="list">
               {debts.map((d) => (

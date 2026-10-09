@@ -123,3 +123,29 @@
   font-weight: 600;
   color: var(--text-strong);
 }
+
+/* ============ Dark mode ============ */
+[data-theme='dark'] .landing {
+  background: var(--bg);
+}
+
+[data-theme='dark'] .landing-nav {
+  background: rgba(13, 18, 32, 0.95);
+}
+
+[data-theme='dark'] .landing-hero {
+  background:
+    radial-gradient(600px 300px at 20% 10%, rgba(107, 148, 255, 0.14), transparent),
+    radial-gradient(600px 300px at 80% 20%, rgba(45, 212, 191, 0.08), transparent),
+    linear-gradient(135deg, #141b30 0%, #0d1220 60%, #0f1a24 100%);
+}
+
+[data-theme='dark'] .landing-badge {
+  background: var(--bg-soft);
+  border-color: var(--border-strong);
+  color: var(--primary);
+}
+
+[data-theme='dark'] .landing .star {
+  color: #33405f;
+}

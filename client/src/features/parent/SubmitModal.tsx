@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Modal } from '../../shared/components/Modal';
 import { Field } from '../../shared/components/Form';
 import { parentApi } from './parent.api';
@@ -19,6 +20,7 @@ export function SubmitModal({
   onClose: () => void;
   onDone: () => void;
 }) {
+  const { t } = useTranslation(['parent', 'common']);
   const toast = useToast();
   const [file, setFile] = useState<File | null>(null);
   const [note, setNote] = useState('');
@@ -26,24 +28,24 @@ export function SubmitModal({
 
   const submit = async () => {
     if (!file && !note.trim()) {
-      toast('Vui lòng chọn file hoặc nhập ghi chú', 'error');
+      toast(t('submit.fileOrNoteRequired'), 'error');
       return;
     }
     setBusy(true);
     try {
       await parentApi.submitHomework(homework.id, studentId, file, note.trim());
-      toast('Đã nộp bài', 'success');
+      toast(t('submit.submitted'), 'success');
       onDone();
     } catch (err) {
-      toast(err instanceof Error ? err.message : 'Nộp bài thất bại', 'error');
+      toast(err instanceof Error ? err.message : t('submit.submitError'), 'error');
     } finally {
       setBusy(false);
     }
   };
 
   return (
-    <Modal title={`Nộp bài - ${homework.title}`} onClose={onClose}>
-      <Field label="Ảnh / file bài làm (jpg, png, pdf... tối đa 10MB)">
+    <Modal title={t('submit.title', { title: homework.title })} onClose={onClose}>
+      <Field label={t('submit.fileLabel')}>
         <label className="file-drop">
           <input
             type="file"
@@ -54,10 +56,10 @@ export function SubmitModal({
             <Icon name="upload" size={20} />
           </span>
           <span>
-            <strong>Chụp ảnh hoặc chọn file</strong>
+            <strong>{t('submit.chooseFile')}</strong>
             <br />
             <span className="muted" style={{ fontSize: 13 }}>
-              {file ? 'Đã chọn 1 file, bấm để đổi file khác' : 'Chạm để mở máy ảnh / thư viện'}
+              {file ? t('submit.fileChosen') : t('submit.tapToChoose')}
             </span>
           </span>
         </label>
@@ -68,19 +70,19 @@ export function SubmitModal({
           </div>
         )}
       </Field>
-      <Field label="Ghi chú (không bắt buộc)">
+      <Field label={t('submit.noteLabel')}>
         <textarea
           className="text-input"
           rows={3}
           value={note}
           onChange={(e) => setNote(e.target.value)}
-          placeholder="VD: Con đã làm xong trang 45-47..."
+          placeholder={t('submit.notePlaceholder')}
         />
       </Field>
       <div className="modal-actions">
-        <button className="btn" onClick={onClose}>Hủy</button>
+        <button className="btn" onClick={onClose}>{t('actions.cancel', { ns: 'common' })}</button>
         <button className="btn btn-primary" disabled={busy} onClick={submit}>
-          {busy ? 'Đang nộp...' : 'Nộp bài'}
+          {busy ? t('submit.submitting') : t('submit.submitAction')}
         </button>
       </div>
     </Modal>

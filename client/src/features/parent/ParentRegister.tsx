@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { setAuth } from '../../shared/api/client';
 import { parentApi } from './parent.api';
 import { useToast } from '../../shared/ui/toast';
@@ -7,6 +8,7 @@ import { Icon } from '../../shared/components/icons';
 import './parent.css';
 
 export function ParentRegister() {
+  const { t } = useTranslation(['parent', 'common']);
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
@@ -20,13 +22,13 @@ export function ParentRegister() {
     e.preventDefault();
     if (busy) return;
     if (password !== confirm) {
-      const msg = 'Mật khẩu nhập lại không khớp';
+      const msg = t('auth.passwordMismatch');
       setError(msg);
       toast(msg, 'error');
       return;
     }
     if (password.length < 6) {
-      const msg = 'Mật khẩu phải có ít nhất 6 ký tự';
+      const msg = t('auth.passwordTooShort');
       setError(msg);
       toast(msg, 'error');
       return;
@@ -36,10 +38,10 @@ export function ParentRegister() {
     try {
       const data = await parentApi.register(phone, password, name);
       setAuth(data.token, { ...data.parent, role: 'parent', username: data.parent.phone });
-      toast('Đăng ký thành công!', 'success');
+      toast(t('auth.registerSuccess'), 'success');
       navigate('/parent');
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Đăng ký thất bại';
+      const msg = err instanceof Error ? err.message : t('auth.registerError');
       setError(msg);
       toast(msg, 'error');
     } finally {
@@ -51,8 +53,8 @@ export function ParentRegister() {
     <div className="login-page parent-auth">
       <form className="login-card" onSubmit={submit} noValidate>
         <div className="login-logo">E</div>
-        <h1 className="login-title">Đăng ký phụ huynh</h1>
-        <p className="login-sub">Tạo tài khoản để liên kết với hồ sơ của con bạn</p>
+        <h1 className="login-title">{t('auth.registerTitle')}</h1>
+        <p className="login-sub">{t('auth.registerSub')}</p>
         {error && (
           <div className="auth-error" role="alert">
             <Icon name="alert" size={16} />
@@ -60,59 +62,59 @@ export function ParentRegister() {
           </div>
         )}
         <label className="field">
-          <span className="field-label">Họ tên *</span>
+          <span className="field-label">{t('auth.fullName')}</span>
           <input
             className="text-input"
             value={name}
             onChange={(e) => setName(e.target.value)}
             autoComplete="name"
-            placeholder="Nguyễn Văn A"
+            placeholder={t('auth.namePlaceholder')}
             required
           />
         </label>
         <label className="field">
-          <span className="field-label">Số điện thoại *</span>
+          <span className="field-label">{t('auth.phoneRequired')}</span>
           <input
             className="text-input"
             value={phone}
             onChange={(e) => setPhone(e.target.value)}
             autoComplete="tel"
             inputMode="tel"
-            placeholder="VD: 0912345678"
+            placeholder={t('auth.phonePlaceholder')}
             required
           />
         </label>
         <label className="field">
-          <span className="field-label">Mật khẩu *</span>
+          <span className="field-label">{t('auth.passwordRequired')}</span>
           <input
             className="text-input"
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             autoComplete="new-password"
-            placeholder="Ít nhất 6 ký tự"
+            placeholder={t('auth.passwordHint')}
             required
           />
         </label>
         <label className="field">
-          <span className="field-label">Nhập lại mật khẩu *</span>
+          <span className="field-label">{t('auth.confirmPassword')}</span>
           <input
             className="text-input"
             type="password"
             value={confirm}
             onChange={(e) => setConfirm(e.target.value)}
             autoComplete="new-password"
-            placeholder="Nhập lại mật khẩu"
+            placeholder={t('auth.confirmPlaceholder')}
             required
           />
         </label>
         <button className="btn btn-primary btn-block btn-lg" type="submit" disabled={busy}>
-          {busy ? 'Đang đăng ký...' : 'Đăng ký'}
+          {busy ? t('auth.registering') : t('auth.registerAction')}
         </button>
         <p className="login-hint">
-          Đã có tài khoản?{' '}
+          {t('auth.hasAccount')}{' '}
           <Link className="link" to="/parent/login">
-            Đăng nhập
+            {t('auth.loginAction')}
           </Link>
         </p>
       </form>

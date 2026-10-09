@@ -1,4 +1,5 @@
 import { ReactNode, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Icon } from './icons';
 
 export function Modal({
@@ -12,6 +13,7 @@ export function Modal({
   children: ReactNode;
   wide?: boolean;
 }) {
+  const { t } = useTranslation('common');
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose();
@@ -25,7 +27,7 @@ export function Modal({
       <div className={`modal ${wide ? 'modal-wide' : ''}`} onMouseDown={(e) => e.stopPropagation()}>
         <div className="modal-head">
           <div className="modal-title">{title}</div>
-          <button className="btn btn-icon modal-close" onClick={onClose} aria-label="Đóng">
+          <button className="btn btn-icon modal-close" onClick={onClose} aria-label={t('actions.close')}>
             <Icon name="x" size={16} />
           </button>
         </div>
@@ -48,12 +50,13 @@ export function ConfirmDialog({
   onConfirm: () => void | Promise<void>;
   danger?: boolean;
 }) {
+  const { t } = useTranslation('common');
   return (
     <Modal title={title} onClose={onClose}>
       <p className="confirm-text">{message}</p>
       <div className="modal-actions">
         <button className="btn" onClick={onClose}>
-          Hủy
+          {t('actions.cancel')}
         </button>
         <button
           className={`btn ${danger ? 'btn-danger' : 'btn-primary'}`}
@@ -61,7 +64,7 @@ export function ConfirmDialog({
             void Promise.resolve(onConfirm());
           }}
         >
-          Xác nhận
+          {t('actions.confirm')}
         </button>
       </div>
     </Modal>

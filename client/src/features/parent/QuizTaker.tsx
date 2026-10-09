@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { parentApi, type QuizQuestion, type QuizAttempt } from './parent.api';
 import { HomeworkItem } from '../../shared/types';
 import { useToast } from '../../shared/ui/toast';
@@ -26,6 +27,7 @@ export function QuizTaker({
   onDone: () => void;
 }) {
   const toast = useToast();
+  const { t } = useTranslation(['parent', 'common']);
   const [questions, setQuestions] = useState<QuizQuestion[]>([]);
   const [answers, setAnswers] = useState<Record<number, number>>({});
   const [qIndex, setQIndex] = useState(0);
@@ -56,10 +58,10 @@ export function QuizTaker({
 
   const submit = async () => {
     if (Object.keys(answers).length < questions.length) {
-      toast(`Còn ${questions.length - Object.keys(answers).length} câu chưa trả lời`, 'error');
+      toast(t('quiz.unanswered', { count: questions.length - Object.keys(answers).length }), 'error');
       return;
     }
-    if (!confirm('Nộp bài? Bạn vẫn có thể làm lại để cải thiện điểm.')) return;
+    if (!confirm(t('quiz.confirmSubmit'))) return;
     setSubmitting(true);
     try {
       const res = await parentApi.submitQuiz(
@@ -70,7 +72,7 @@ export function QuizTaker({
       setResult(res);
       onDone();
     } catch (err) {
-      toast(err instanceof Error ? err.message : 'Nộp bài thất bại', 'error');
+      toast(err instanceof Error ? err.message : t('quiz.submitError'), 'error');
     } finally {
       setSubmitting(false);
     }
@@ -82,32 +84,32 @@ export function QuizTaker({
       setReview(r);
       setShowReview(true);
     } catch (err) {
-      toast(err instanceof Error ? err.message : 'Không tải được đáp án', 'error');
+      toast(err instanceof Error ? err.message : t('quiz.reviewError'), 'error');
     }
   };
 
   const pct = result && result.max_score > 0 ? (result.score / result.max_score) * 100 : 0;
 
   return (
-    <Modal title={`Quiz: ${homework.title}`} onClose={onClose} wide>
+    <Modal title={t('quiz.title', { title: homework.title })} onClose={onClose} wide>
       {/* Thông tin quiz + lịch sử làm bài */}
       {!result && !showReview && (
         <div className="quiz-info-bar">
           <span className="muted" style={{ fontSize: 13 }}>
-            {questions.length} câu
-            {homework.max_score != null && ` (${homework.max_score}đ)`}
-            {homework.due_date && ` - Hạn: ${homework.due_date}`}
+            {t('quiz.questionCount', { count: questions.length })}
+            {homework.max_score != null && ` ${t('quiz.maxScore', { score: homework.max_score })}`}
+            {homework.due_date && ` ${t('quiz.dueDate', { date: homework.due_date })}`}
           </span>
           {history.length > 0 && (
             <span className="muted" style={{ fontSize: 13 }}>
-              Đã làm {history.length} lần · Cao nhất:{' '}
-              <strong>{Math.max(...history.map((h) => h.score))}/{history[0].max_score}đ</strong>
+              {t('quiz.attempted', { count: history.length })} · {t('quiz.bestScore')}{' '}
+              <strong>{t('quiz.bestScoreLine', { best: Math.max(...history.map((h) => h.score)), max: history[0].max_score })}</strong>
             </span>
           )}
         </div>
       )}
       {loading ? (
-        <p className="muted">Đang tải đề...</p>
+        <p className="muted">{t('quiz.loadingQuiz')}</p>
       ) : result ? (
         <div className="quiz-result">
           <div className={`quiz-result-ic ${pct >= 80 ? 'good' : pct >= 50 ? 'mid' : 'bad'}`}>
@@ -122,18 +124,18 @@ export function QuizTaker({
             </span>
             {result.attempt_no > 1 && (
               <span className="muted" style={{ marginLeft: 8, fontSize: 13 }}>
-                Lần làm thứ {result.attempt_no} - giữ điểm cao nhất
+                {t('quiz.attemptNo', { no: result.attempt_no })}
               </span>
             )}
           </div>
           <p className="muted" style={{ marginTop: 12 }}>
-            {pct >= 80 ? 'Xuất sắc!' : pct >= 50 ? 'Khá tốt, cố gắng thêm nhé!' : 'Cần ôn lại bài nhé!'}
+            {pct >= 80 ? t('quiz.excellent') : pct >= 50 ? t('quiz.good') : t('quiz.tryHarder')}
           </p>
           <div style={{ display: 'flex', gap: 8, justifyContent: 'center' }}>
             <button className="btn" onClick={() => void loadReview(result.attempt_id)}>
-              Xem đáp án
+              {t('quiz.viewAnswers')}
             </button>
-            <button className="btn btn-primary" onClick={onClose}>Đóng</button>
+            <button className="btn btn-primary" onClick={onClose}>{t('actions.close', { ns: 'common' })}</button>
           </div>
         </div>
       ) : showReview && review ? (
@@ -149,7 +151,7 @@ export function QuizTaker({
                     <Icon name="x" size={18} className="icon-bad" />
                   )}
                   <span>
-                    Câu {qi + 1}: {q.question}
+                    {t('quiz.questionLabel', { num: qi + 1, question: q.question })}
                   </span>
                 </div>
                 {q.options.map((o) => (
@@ -165,28 +167,28 @@ export function QuizTaker({
                       <span className="opt-dot" aria-hidden="true" />
                     )}
                     <span>{o.text}</span>
-                    {o.chosen && <span className="muted" style={{ fontSize: 12 }}> (bạn chọn)</span>}
+                    {o.chosen && <span className="muted" style={{ fontSize: 12 }}> {t('quiz.youChose')}</span>}
                   </div>
                 ))}
               </div>
             );
           })}
           <div className="modal-actions">
-            <button className="btn" onClick={() => setShowReview(false)}>Quay lại</button>
-            <button className="btn btn-primary" onClick={onClose}>Đóng</button>
+            <button className="btn" onClick={() => setShowReview(false)}>{t('actions.back', { ns: 'common' })}</button>
+            <button className="btn btn-primary" onClick={onClose}>{t('actions.close', { ns: 'common' })}</button>
           </div>
         </div>
       ) : questions.length === 0 ? (
-        <EmptyState icon="file" title="Chưa có câu hỏi" />
+        <EmptyState icon="file" title={t('quiz.noQuestions')} />
       ) : (
         <>
           <div className="quiz-progress">
             <div className="quiz-progress-top">
               <span className="quiz-progress-label">
-                Câu {qIndex + 1}/{questions.length}
+                {t('quiz.progressLabel', { current: qIndex + 1, total: questions.length })}
               </span>
               <span className="muted" style={{ fontSize: 13 }}>
-                Đã trả lời {Object.keys(answers).length}/{questions.length}
+                {t('quiz.answeredCount', { answered: Object.keys(answers).length, total: questions.length })}
               </span>
             </div>
             <div className="quiz-progress-bar" role="progressbar" aria-valuenow={qIndex + 1} aria-valuemin={1} aria-valuemax={questions.length}>
@@ -199,7 +201,7 @@ export function QuizTaker({
               <div key={q.id} className="quiz-take-q">
                 <div style={{ fontWeight: 600, marginBottom: 12 }}>
                   {q.question}
-                  <span className="muted" style={{ fontWeight: 400 }}> ({q.points}đ)</span>
+                  <span className="muted" style={{ fontWeight: 400 }}> {t('quiz.points', { points: q.points })}</span>
                 </div>
                 {q.options.map((o) => (
                   <button
@@ -219,21 +221,21 @@ export function QuizTaker({
             {qIndex > 0 ? (
               <button className="btn" onClick={() => setQIndex((i) => i - 1)}>
                 <Icon name="arrow-left" size={16} />
-                Câu trước
+                {t('actions.prev', { ns: 'common' })}
               </button>
             ) : (
               <button className="btn" onClick={onClose}>
-                Để sau
+                {t('quiz.later')}
               </button>
             )}
             {qIndex < questions.length - 1 ? (
               <button className="btn btn-primary" onClick={() => setQIndex((i) => i + 1)}>
-                Câu sau
+                {t('actions.next', { ns: 'common' })}
                 <Icon name="arrow-right" size={16} />
               </button>
             ) : (
               <button className="btn btn-primary" disabled={submitting} onClick={submit}>
-                {submitting ? 'Đang chấm...' : 'Nộp bài'}
+                {submitting ? t('quiz.grading') : t('quiz.submitQuiz')}
               </button>
             )}
           </div>

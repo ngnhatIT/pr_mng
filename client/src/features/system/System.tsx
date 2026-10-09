@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { systemApi } from './system.api';
 import { useToast } from '../../shared/ui/toast';
 import { Modal } from '../../shared/components/Modal';
@@ -7,13 +8,14 @@ import { PageHeader } from '../../shared/components/PageHeader';
 import { EmptyState } from '../../shared/components/EmptyState';
 import { TableSkeleton } from '../../shared/components/Skeleton';
 import { Pagination, type PaginationMeta } from '../../shared/components/Pagination';
-import { CenterItem, PLAN_LABEL, labelOf, formatDate } from '../../shared/types';
+import { CenterItem, formatDate } from '../../shared/types';
 import { Icon } from '../../shared/components/icons';
 import './SystemAdmin.css';
 
 const CENTERS_PER_PAGE = 20;
 
 export function System() {
+  const { t } = useTranslation(['ops', 'common']);
   const [centers, setCenters] = useState<CenterItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
@@ -27,11 +29,11 @@ export function System() {
       const data = await systemApi.listCenters();
       setCenters(data);
     } catch (err) {
-      toast(err instanceof Error ? err.message : 'Không tải được danh sách trung tâm', 'error');
+      toast(err instanceof Error ? err.message : t('system.toast.loadFail'), 'error');
     } finally {
       setLoading(false);
     }
-  }, [toast]);
+  }, [toast, t]);
 
   useEffect(() => {
     void load();
@@ -40,12 +42,12 @@ export function System() {
   return (
     <div className="page">
       <PageHeader
-        title="Hệ thống - Quản lý trung tâm"
-        desc="Tạo trung tâm mới và quản lý gói cước"
+        title={t('system.title')}
+        desc={t('system.desc')}
         actions={
           <button className="btn btn-primary" onClick={() => setShowCreate(true)}>
             <Icon name="plus" size={15} />
-            Tạo trung tâm mới
+            {t('system.create')}
           </button>
         }
       />
@@ -55,20 +57,20 @@ export function System() {
       ) : centers.length === 0 ? (
         <EmptyState
           icon="building"
-          title="Chưa có trung tâm nào"
-          desc="Nhấn “+ Tạo trung tâm mới” để thêm trung tâm đầu tiên."
+          title={t('system.empty.title')}
+          desc={t('system.empty.desc')}
         />
       ) : (
         <div className="table-wrap">
           <table className="table">
             <thead>
               <tr>
-                <th>Trung tâm</th>
-                <th>Điện thoại</th>
-                <th>Gói</th>
-                <th>Hạn gói</th>
-                <th>HV / Lớp / TK</th>
-                <th className="th-right">Thao tác</th>
+                <th>{t('system.col.center')}</th>
+                <th>{t('system.col.phone')}</th>
+                <th>{t('system.col.plan')}</th>
+                <th>{t('system.col.planExpiry')}</th>
+                <th>{t('system.col.counts')}</th>
+                <th className="th-right">{t('system.col.actions')}</th>
               </tr>
             </thead>
             <tbody>
@@ -80,7 +82,7 @@ export function System() {
                   </td>
                   <td>{c.phone || '-'}</td>
                   <td>
-                    <span className={`badge badge-plan-${c.plan}`}>{labelOf(PLAN_LABEL, c.plan)}</span>
+                    <span className={`badge badge-plan-${c.plan}`}>{t(`system.plan.${c.plan}`)}</span>
                   </td>
                   <td className="plan-expiry">{formatDate(c.plan_expires_at)}</td>
                   <td className="num">
@@ -89,7 +91,7 @@ export function System() {
                   <td className="td-right">
                     <button className="btn btn-sm" onClick={() => setEditing(c)}>
                       <Icon name="pencil" size={14} />
-                      Sửa gói / hạn
+                      {t('system.editPlan')}
                     </button>
                   </td>
                 </tr>
@@ -134,6 +136,7 @@ export function System() {
 }
 
 function CreateCenterModal({ onClose, onDone }: { onClose: () => void; onDone: () => void }) {
+  const { t } = useTranslation(['ops', 'common']);
   const [name, setName] = useState('');
   const [subdomain, setSubdomain] = useState('');
   const [phone, setPhone] = useState('');
@@ -160,25 +163,27 @@ function CreateCenterModal({ onClose, onDone }: { onClose: () => void; onDone: (
         admin_username: adminUsername,
         admin_password: adminPassword,
       });
-      toast('Đã tạo trung tâm mới', 'success');
+      toast(t('system.toast.created'), 'success');
       onDone();
     } catch (err) {
-      toast(err instanceof Error ? err.message : 'Tạo thất bại', 'error');
+      toast(err instanceof Error ? err.message : t('system.toast.createFail'), 'error');
     } finally {
       setBusy(false);
     }
   };
 
+  const planOptions = ['basic', 'standard', 'premium'] as const;
+
   return (
-    <Modal title="Tạo trung tâm mới" onClose={onClose} wide>
+    <Modal title={t('system.createForm.title')} onClose={onClose} wide>
       <form onSubmit={submit}>
         <div className="center-form-section">
-          <h3>Thông tin trung tâm</h3>
+          <h3>{t('system.createForm.sectionInfo')}</h3>
           <div className="form-grid">
-            <Field label="Tên trung tâm *">
+            <Field label={t('system.createForm.name')}>
               <input className="text-input" value={name} onChange={(e) => setName(e.target.value)} required />
             </Field>
-            <Field label="Subdomain *">
+            <Field label={t('system.createForm.subdomain')}>
               <input
                 className="text-input mono"
                 value={subdomain}
@@ -186,25 +191,25 @@ function CreateCenterModal({ onClose, onDone }: { onClose: () => void; onDone: (
                 required
               />
             </Field>
-            <Field label="Điện thoại">
+            <Field label={t('system.createForm.phone')}>
               <input className="text-input" value={phone} onChange={(e) => setPhone(e.target.value)} />
             </Field>
-            <Field label="Địa chỉ" span>
+            <Field label={t('system.createForm.address')} span>
               <input className="text-input" value={address} onChange={(e) => setAddress(e.target.value)} />
             </Field>
           </div>
         </div>
         <div className="center-form-section">
-          <h3>Gói cước</h3>
+          <h3>{t('system.createForm.sectionPlan')}</h3>
           <div className="form-grid">
-            <Field label="Gói">
+            <Field label={t('system.createForm.plan')}>
               <select className="text-input" value={plan} onChange={(e) => setPlan(e.target.value)}>
-                <option value="basic">Cơ bản</option>
-                <option value="standard">Tiêu chuẩn</option>
-                <option value="premium">Cao cấp</option>
+                {planOptions.map((p) => (
+                  <option key={p} value={p}>{t(`system.plan.${p}`)}</option>
+                ))}
               </select>
             </Field>
-            <Field label="Hạn gói">
+            <Field label={t('system.createForm.expires')}>
               <input
                 className="text-input"
                 type="date"
@@ -215,9 +220,9 @@ function CreateCenterModal({ onClose, onDone }: { onClose: () => void; onDone: (
           </div>
         </div>
         <div className="center-form-section">
-          <h3>Tài khoản quản trị</h3>
+          <h3>{t('system.createForm.sectionAdmin')}</h3>
           <div className="form-grid">
-            <Field label="Tài khoản admin *">
+            <Field label={t('system.createForm.adminUsername')}>
               <input
                 className="text-input"
                 value={adminUsername}
@@ -225,7 +230,7 @@ function CreateCenterModal({ onClose, onDone }: { onClose: () => void; onDone: (
                 required
               />
             </Field>
-            <Field label="Mật khẩu admin *">
+            <Field label={t('system.createForm.adminPassword')}>
               <input
                 className="text-input"
                 type="password"
@@ -238,10 +243,10 @@ function CreateCenterModal({ onClose, onDone }: { onClose: () => void; onDone: (
         </div>
         <div className="modal-actions">
           <button type="button" className="btn" onClick={onClose}>
-            Hủy
+            {t('actions.cancel', { ns: 'common' })}
           </button>
           <button type="submit" className="btn btn-primary" disabled={busy}>
-            {busy ? 'Đang tạo...' : 'Tạo trung tâm'}
+            {busy ? t('system.createForm.creating') : t('system.createForm.submit')}
           </button>
         </div>
       </form>
@@ -258,6 +263,7 @@ function EditPlanModal({
   onClose: () => void;
   onDone: () => void;
 }) {
+  const { t } = useTranslation(['ops', 'common']);
   const [plan, setPlan] = useState(center.plan);
   const [expires, setExpires] = useState(center.plan_expires_at?.slice(0, 10) || '');
   const [busy, setBusy] = useState(false);
@@ -272,31 +278,33 @@ function EditPlanModal({
         plan,
         plan_expires_at: expires || null,
       });
-      toast('Đã cập nhật gói', 'success');
+      toast(t('system.toast.planUpdated'), 'success');
       onDone();
     } catch (err) {
-      toast(err instanceof Error ? err.message : 'Cập nhật thất bại', 'error');
+      toast(err instanceof Error ? err.message : t('system.toast.updateFail'), 'error');
     } finally {
       setBusy(false);
     }
   };
 
+  const planOptions = ['basic', 'standard', 'premium'] as const;
+
   return (
-    <Modal title={`Sửa gói - ${center.name}`} onClose={onClose}>
+    <Modal title={t('system.editPlanTitle', { name: center.name })} onClose={onClose}>
       <form onSubmit={submit}>
         <div className="form-grid">
-          <Field label="Gói">
+          <Field label={t('system.createForm.plan')}>
             <select
               className="text-input"
               value={plan}
               onChange={(e) => setPlan(e.target.value as CenterItem['plan'])}
             >
-              <option value="basic">Cơ bản</option>
-              <option value="standard">Tiêu chuẩn</option>
-              <option value="premium">Cao cấp</option>
+              {planOptions.map((p) => (
+                <option key={p} value={p}>{t(`system.plan.${p}`)}</option>
+              ))}
             </select>
           </Field>
-          <Field label="Hạn gói">
+          <Field label={t('system.createForm.expires')}>
             <input
               className="text-input"
               type="date"
@@ -307,10 +315,10 @@ function EditPlanModal({
         </div>
         <div className="modal-actions">
           <button type="button" className="btn" onClick={onClose}>
-            Hủy
+            {t('actions.cancel', { ns: 'common' })}
           </button>
           <button type="submit" className="btn btn-primary" disabled={busy}>
-            {busy ? 'Đang lưu...' : 'Lưu'}
+            {busy ? t('actions.saving', { ns: 'common' }) : t('actions.save', { ns: 'common' })}
           </button>
         </div>
       </form>

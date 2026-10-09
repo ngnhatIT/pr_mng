@@ -50,15 +50,19 @@
 
 /* Nút chấm công trắng trên nền primary */
 .checkin-submit {
-  background: #fff;
-  color: #1d4ed8;
-  border: 1px solid #fff;
+  background: var(--primary-soft);
+  color: var(--primary);
+  border: 1px solid transparent;
   font-weight: 700;
   min-height: 48px;
 }
 
 .checkin-submit:hover:not(:disabled) {
-  background: #f3f6ff;
-  border-color: #f3f6ff;
-  color: #1d4ed8;
+  background: var(--bg-hover);
+  border-color: transparent;
+  color: var(--primary);
+}
+
+[data-theme='dark'] .today-time-chip {
+  color: var(--primary);
 }

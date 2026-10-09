@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { teacherApi } from './teacher.api';
 import { useToast } from '../../shared/ui/toast';
 import { Modal, ConfirmDialog } from '../../shared/components/Modal';
@@ -13,6 +14,7 @@ import { Grade, formatDate } from '../../shared/types';
 import './TeacherGrades.css';
 
 export function TeacherGrades() {
+  const { t } = useTranslation(['teacher', 'common']);
   const [classes, setClasses] = useState<ClassItem[]>([]);
   const [students, setStudents] = useState<{ id: number; name: string; code: string }[]>([]);
   const [grades, setGrades] = useState<Grade[]>([]);
@@ -44,11 +46,11 @@ export function TeacherGrades() {
       setGrades(res.data);
       setPagination(res.pagination);
     } catch (err) {
-      toast(err instanceof Error ? err.message : 'Không tải được điểm', 'error');
+      toast(err instanceof Error ? err.message : t('grades.loadError'), 'error');
     } finally {
       setLoading(false);
     }
-  }, [studentId, classId, page, toast]);
+  }, [studentId, classId, page, toast, t]);
 
   useEffect(() => {
     void loadGrades();
@@ -65,7 +67,7 @@ export function TeacherGrades() {
       const d = await teacherApi.classStudents(cid);
       setStudents(d.students);
     } catch (err) {
-      toast(err instanceof Error ? err.message : 'Không tải được học viên', 'error');
+      toast(err instanceof Error ? err.message : t('grades.studentsError'), 'error');
     }
   };
 
@@ -73,24 +75,24 @@ export function TeacherGrades() {
     if (!deleting) return;
     try {
       await teacherApi.deleteGrade(deleting.id);
-      toast('Đã xóa điểm', 'success');
+      toast(t('grades.deleted'), 'success');
       setDeleting(null);
       void loadGrades();
     } catch (err) {
-      toast(err instanceof Error ? err.message : 'Xóa thất bại', 'error');
+      toast(err instanceof Error ? err.message : t('grades.deleteFail'), 'error');
     }
   };
 
   return (
     <div className="page">
       <PageHeader
-        title="Điểm số"
-        desc="Xem và nhập điểm cho học viên"
+        title={t('grades.title')}
+        desc={t('grades.desc')}
         actions={
           studentId ? (
             <button className="btn btn-primary grades-add-btn" onClick={() => setShowForm(true)}>
               <Icon name="plus" size={16} />
-              Nhập điểm
+              {t('grades.add')}
             </button>
           ) : undefined
         }
@@ -98,7 +100,7 @@ export function TeacherGrades() {
 
       <div className="toolbar grades-toolbar">
         <select className="text-input" value={classId} onChange={(e) => void pickClass(e.target.value)}>
-          <option value="">- Chọn lớp học -</option>
+          <option value="">{t('grades.selectClass')}</option>
           {classes.map((c) => (
             <option key={c.id} value={c.id}>
               {c.name}
@@ -114,7 +116,7 @@ export function TeacherGrades() {
           }}
           disabled={!classId}
         >
-          <option value="">- Chọn học viên -</option>
+          <option value="">{t('grades.selectStudent')}</option>
           {students.map((s) => (
             <option key={s.id} value={s.id}>
               {s.name} ({s.code})
@@ -126,23 +128,23 @@ export function TeacherGrades() {
       {loading ? (
         <TableSkeleton cols={5} />
       ) : !studentId ? (
-        <EmptyState icon="cap" title="Chưa chọn học viên" desc="Chọn lớp và học viên để xem / nhập điểm." />
+        <EmptyState icon="cap" title={t('grades.noStudentTitle')} desc={t('grades.noStudentDesc')} />
       ) : grades.length === 0 ? (
         <EmptyState
           icon="file"
-          title="Chưa có điểm nào"
-          desc="Nhấn “+ Nhập điểm” để thêm điểm cho học viên."
+          title={t('grades.noGradesTitle')}
+          desc={t('grades.noGradesDesc')}
         />
       ) : (
         <div className="table-wrap">
           <table className="table">
             <thead>
               <tr>
-                <th>Bài kiểm tra</th>
-                <th>Điểm</th>
-                <th>Nhận xét</th>
-                <th>Ngày nhập</th>
-                <th className="th-right">Thao tác</th>
+                <th>{t('grades.thTest')}</th>
+                <th>{t('grades.thScore')}</th>
+                <th>{t('grades.thComment')}</th>
+                <th>{t('grades.thDate')}</th>
+                <th className="th-right">{t('grades.thActions')}</th>
               </tr>
             </thead>
             <tbody>
@@ -162,7 +164,7 @@ export function TeacherGrades() {
                   <td>{formatDate(g.created_at)}</td>
                   <td className="td-right">
                     <button className="btn btn-sm btn-danger-ghost" onClick={() => setDeleting(g)}>
-                      Xóa
+                      {t('actions.delete', { ns: 'common' })}
                     </button>
                   </td>
                 </tr>
@@ -187,8 +189,8 @@ export function TeacherGrades() {
       )}
       {deleting && (
         <ConfirmDialog
-          title="Xóa điểm"
-          message={`Xóa điểm "${deleting.title}" (${deleting.score}/${deleting.max_score})?`}
+          title={t('grades.deleteTitle')}
+          message={t('grades.deleteMessage', { title: deleting.title, score: deleting.score, max: deleting.max_score })}
           onClose={() => setDeleting(null)}
           onConfirm={remove}
           danger
@@ -209,6 +211,7 @@ function GradeFormModal({
   onClose: () => void;
   onDone: () => void;
 }) {
+  const { t } = useTranslation(['teacher', 'common']);
   const [title, setTitle] = useState('');
   const [score, setScore] = useState('');
   const [maxScore, setMaxScore] = useState('10');
@@ -228,23 +231,23 @@ function GradeFormModal({
         max_score: Number(maxScore) || 10,
         comment: comment || null,
       });
-      toast('Đã nhập điểm', 'success');
+      toast(t('grades.saved'), 'success');
       onDone();
     } catch (err) {
-      toast(err instanceof Error ? err.message : 'Nhập điểm thất bại', 'error');
+      toast(err instanceof Error ? err.message : t('grades.saveFail'), 'error');
     } finally {
       setBusy(false);
     }
   };
 
   return (
-    <Modal title="Nhập điểm" onClose={onClose}>
+    <Modal title={t('grades.formTitle')} onClose={onClose}>
       <form onSubmit={submit}>
         <div className="form-grid">
-          <Field label="Tên bài kiểm tra *" span>
+          <Field label={t('grades.formTestName')} span>
             <input className="text-input" value={title} onChange={(e) => setTitle(e.target.value)} required />
           </Field>
-          <Field label="Điểm *">
+          <Field label={t('grades.formScore')}>
             <input
               className="text-input"
               type="number"
@@ -255,7 +258,7 @@ function GradeFormModal({
               required
             />
           </Field>
-          <Field label="Thang điểm">
+          <Field label={t('grades.formMaxScore')}>
             <input
               className="text-input"
               type="number"
@@ -264,7 +267,7 @@ function GradeFormModal({
               onChange={(e) => setMaxScore(e.target.value)}
             />
           </Field>
-          <Field label="Nhận xét" span>
+          <Field label={t('grades.formComment')} span>
             <textarea
               className="text-input"
               rows={2}
@@ -275,10 +278,10 @@ function GradeFormModal({
         </div>
         <div className="modal-actions">
           <button type="button" className="btn" onClick={onClose}>
-            Hủy
+            {t('actions.cancel', { ns: 'common' })}
           </button>
           <button type="submit" className="btn btn-primary" disabled={busy}>
-            {busy ? 'Đang lưu...' : 'Lưu'}
+            {busy ? t('actions.saving', { ns: 'common' }) : t('actions.save', { ns: 'common' })}
           </button>
         </div>
       </form>

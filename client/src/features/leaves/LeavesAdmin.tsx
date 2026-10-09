@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { leavesApi, MakeupSuggestion } from './leaves.api';
 import { useToast } from '../../shared/ui/toast';
 import { Modal, ConfirmDialog } from '../../shared/components/Modal';
@@ -6,11 +7,12 @@ import { PageHeader } from '../../shared/components/PageHeader';
 import { EmptyState } from '../../shared/components/EmptyState';
 import { TableSkeleton } from '../../shared/components/Skeleton';
 import { Pagination, type PaginationMeta } from '../../shared/components/Pagination';
-import { LeaveRequest, LEAVE_STATUS_LABEL, labelOf, formatDate } from '../../shared/types';
+import { LeaveRequest, formatDate } from '../../shared/types';
 import { Icon } from '../../shared/components/icons';
 import './LeavesAdmin.css';
 
 export function LeavesAdmin() {
+  const { t } = useTranslation(['ops', 'common']);
   const [leaves, setLeaves] = useState<LeaveRequest[]>([]);
   const [status, setStatus] = useState('');
   const [loading, setLoading] = useState(false);
@@ -28,11 +30,11 @@ export function LeavesAdmin() {
       setLeaves(res.data);
       setPagination(res.pagination);
     } catch (err) {
-      toast(err instanceof Error ? err.message : 'Không tải được đơn nghỉ phép', 'error');
+      toast(err instanceof Error ? err.message : t('leaves.toast.loadFail'), 'error');
     } finally {
       setLoading(false);
     }
-  }, [status, page, toast]);
+  }, [status, page, toast, t]);
 
   useEffect(() => {
     void load();
@@ -45,7 +47,7 @@ export function LeavesAdmin() {
       setApproving(l);
       void load();
     } catch (err) {
-      toast(err instanceof Error ? err.message : 'Duyệt thất bại', 'error');
+      toast(err instanceof Error ? err.message : t('leaves.toast.approveFail'), 'error');
     }
   };
 
@@ -53,17 +55,17 @@ export function LeavesAdmin() {
     if (!rejecting) return;
     try {
       await leavesApi.reject(rejecting.id);
-      toast('Đã từ chối đơn nghỉ phép', 'success');
+      toast(t('leaves.toast.rejected'), 'success');
       setRejecting(null);
       void load();
     } catch (err) {
-      toast(err instanceof Error ? err.message : 'Thất bại', 'error');
+      toast(err instanceof Error ? err.message : t('leaves.toast.rejectFail'), 'error');
     }
   };
 
   return (
     <div className="page">
-      <PageHeader title="Quản lý đơn nghỉ phép" desc="Duyệt đơn xin nghỉ phép của học viên" />
+      <PageHeader title={t('leaves.title')} desc={t('leaves.desc')} />
 
       <div className="toolbar">
         <select
@@ -73,16 +75,16 @@ export function LeavesAdmin() {
             setStatus(e.target.value);
             setPage(1);
           }}
-          aria-label="Lọc theo trạng thái đơn"
+          aria-label={t('leaves.filterLabel')}
         >
-          <option value="">Tất cả trạng thái</option>
-          <option value="pending">Chờ duyệt</option>
-          <option value="approved">Đã duyệt</option>
-          <option value="rejected">Từ chối</option>
+          <option value="">{t('leaves.allStatuses')}</option>
+          <option value="pending">{t('leaves.status.pending')}</option>
+          <option value="approved">{t('leaves.status.approved')}</option>
+          <option value="rejected">{t('leaves.status.rejected')}</option>
         </select>
         {pagination && (
           <span className="toolbar-summary">
-            Tổng <strong>{pagination.total}</strong> đơn
+            {t('leaves.totalCount', { total: pagination.total, count: pagination.total })}
           </span>
         )}
       </div>
@@ -92,20 +94,20 @@ export function LeavesAdmin() {
       ) : leaves.length === 0 ? (
         <EmptyState
           icon="calendar-x"
-          title="Không có đơn nghỉ phép nào"
-          desc="Chưa có đơn xin nghỉ phép nào cần xử lý."
+          title={t('leaves.empty.title')}
+          desc={t('leaves.empty.desc')}
         />
       ) : (
         <div className="table-wrap">
           <table className="table">
             <thead>
               <tr>
-                <th>Học viên</th>
-                <th>Từ ngày</th>
-                <th>Đến ngày</th>
-                <th>Lý do</th>
-                <th>Trạng thái</th>
-                <th className="th-right">Thao tác</th>
+                <th>{t('leaves.col.student')}</th>
+                <th>{t('leaves.col.fromDate')}</th>
+                <th>{t('leaves.col.toDate')}</th>
+                <th>{t('leaves.col.reason')}</th>
+                <th>{t('leaves.col.status')}</th>
+                <th className="th-right">{t('leaves.col.actions')}</th>
               </tr>
             </thead>
             <tbody>
@@ -122,18 +124,18 @@ export function LeavesAdmin() {
                     {l.reason || '-'}
                   </td>
                   <td>
-                    <span className={`badge badge-${l.status}`}>{labelOf(LEAVE_STATUS_LABEL, l.status)}</span>
+                    <span className={`badge badge-${l.status}`}>{t(`leaves.status.${l.status}`)}</span>
                   </td>
                   <td className="td-right">
                     {l.status === 'pending' && (
                       <span className="leave-actions">
                         <button className="btn btn-sm btn-primary" onClick={() => void approve(l)}>
                           <Icon name="check" size={14} />
-                          Duyệt
+                          {t('leaves.approve')}
                         </button>
                         <button className="btn btn-sm btn-danger-ghost" onClick={() => setRejecting(l)}>
                           <Icon name="x" size={14} />
-                          Từ chối
+                          {t('leaves.reject')}
                         </button>
                       </span>
                     )}
@@ -148,8 +150,8 @@ export function LeavesAdmin() {
       {pagination && <Pagination pagination={pagination} onChange={(p) => setPage(p)} />}
 
       {approving && (
-        <Modal title={`Đã duyệt đơn - ${approving.student_name}`} onClose={() => setApproving(null)}>
-          <p className="confirm-text">Gợi ý các buổi học bù phù hợp:</p>
+        <Modal title={t('leaves.approvedTitle', { name: approving.student_name })} onClose={() => setApproving(null)}>
+          <p className="confirm-text">{t('leaves.makeupHint')}</p>
           {suggestions && suggestions.length > 0 ? (
             <ul className="makeup-list">
               {suggestions.map((s) => (
@@ -163,19 +165,23 @@ export function LeavesAdmin() {
               ))}
             </ul>
           ) : (
-            <p className="muted">Không có buổi học bù nào phù hợp.</p>
+            <p className="muted">{t('leaves.noMakeup')}</p>
           )}
           <div className="modal-actions">
             <button className="btn btn-primary" onClick={() => setApproving(null)}>
-              Đóng
+              {t('actions.close', { ns: 'common' })}
             </button>
           </div>
         </Modal>
       )}
       {rejecting && (
         <ConfirmDialog
-          title="Từ chối đơn nghỉ phép"
-          message={`Từ chối đơn nghỉ phép của "${rejecting.student_name}" (${formatDate(rejecting.from_date)} đến ${formatDate(rejecting.to_date)})?`}
+          title={t('leaves.rejectDialog.title')}
+          message={t('leaves.rejectDialog.message', {
+            name: rejecting.student_name,
+            from: formatDate(rejecting.from_date),
+            to: formatDate(rejecting.to_date),
+          })}
           onClose={() => setRejecting(null)}
           onConfirm={reject}
           danger

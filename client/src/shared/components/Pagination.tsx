@@ -2,6 +2,7 @@
  * Component phân trang dùng chung.
  * Dùng kèm API trả về envelope { data, pagination: { page, limit, total, totalPages } }.
  */
+import { useTranslation } from 'react-i18next';
 import './Pagination.css';
 
 export interface PaginationMeta {
@@ -17,6 +18,7 @@ interface Props {
 }
 
 export function Pagination({ pagination, onChange }: Props) {
+  const { t, i18n } = useTranslation('common');
   const { page, totalPages, total, limit } = pagination;
   if (totalPages <= 1) return null;
 
@@ -32,14 +34,14 @@ export function Pagination({ pagination, onChange }: Props) {
   return (
     <div className="pagination">
       <span className="pagination-info">
-        {from}–{to} / {total.toLocaleString('vi-VN')}
+        {from}–{to} / {total.toLocaleString(i18n.language === 'en' ? 'en-US' : 'vi-VN')}
       </span>
       <div className="pagination-buttons">
         <button
           className="btn btn-sm"
           disabled={page <= 1}
           onClick={() => onChange(1)}
-          aria-label="Trang đầu"
+          aria-label={t('pagination.first')}
         >
           «
         </button>
@@ -47,7 +49,7 @@ export function Pagination({ pagination, onChange }: Props) {
           className="btn btn-sm"
           disabled={page <= 1}
           onClick={() => onChange(page - 1)}
-          aria-label="Trang trước"
+          aria-label={t('pagination.prev')}
         >
           ‹
         </button>
@@ -64,7 +66,7 @@ export function Pagination({ pagination, onChange }: Props) {
           className="btn btn-sm"
           disabled={page >= totalPages}
           onClick={() => onChange(page + 1)}
-          aria-label="Trang sau"
+          aria-label={t('pagination.next')}
         >
           ›
         </button>
@@ -72,7 +74,7 @@ export function Pagination({ pagination, onChange }: Props) {
           className="btn btn-sm"
           disabled={page >= totalPages}
           onClick={() => onChange(totalPages)}
-          aria-label="Trang cuối"
+          aria-label={t('pagination.last')}
         >
           »
         </button>

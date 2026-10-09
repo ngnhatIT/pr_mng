@@ -9,11 +9,11 @@
 
 /* Muộn: nền vàng nhạt; Vắng: nền đỏ nhạt - badge trạng thái vẫn là tín hiệu chính */
 .att-item.att-late {
-  background: #fffdf5;
+  background: var(--warning-soft);
 }
 
 .att-item.att-absent {
-  background: #fef7f7;
+  background: var(--danger-soft);
 }
 
 /* Tóm tắt savebar: số liệu tách cụm, số tabular */

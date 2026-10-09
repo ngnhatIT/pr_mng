@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { homeworkApi, type BankQuestion } from './homework.api';
 import { useToast } from '../../shared/ui/toast';
 import { Modal } from '../../shared/components/Modal';
@@ -16,6 +17,7 @@ export function QuestionBank({
   onImport?: (questions: BankQuestion[]) => void;
   selectMode?: boolean;
 }) {
+  const { t } = useTranslation(['homework', 'common']);
   const toast = useToast();
   const [questions, setQuestions] = useState<BankQuestion[]>([]);
   const [tags, setTags] = useState<string[]>([]);
@@ -35,27 +37,27 @@ export function QuestionBank({
       setTags(res.tags);
       res.questions.forEach((q) => allSeen.current.set(q.id, q));
     } catch (err) {
-      toast(err instanceof Error ? err.message : 'Không tải được ngân hàng', 'error');
+      toast(err instanceof Error ? err.message : t('bank.toast.loadFail'), 'error');
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    const t = setTimeout(() => void load(), 300);
-    return () => clearTimeout(t);
+    const tm = setTimeout(() => void load(), 300);
+    return () => clearTimeout(tm);
   }, [search, tag]);
 
   const toggle = (id: number) =>
     setSelected((s) => (s.includes(id) ? s.filter((x) => x !== id) : [...s, id]));
 
   const doDelete = async (id: number) => {
-    if (!confirm('Xóa câu hỏi này khỏi ngân hàng?')) return;
+    if (!confirm(t('bank.deleteConfirm'))) return;
     try {
       await homeworkApi.bankDelete(id);
       void load();
     } catch (err) {
-      toast(err instanceof Error ? err.message : 'Xóa thất bại', 'error');
+      toast(err instanceof Error ? err.message : t('bank.toast.deleteFail'), 'error');
     }
   };
 
@@ -66,7 +68,7 @@ export function QuestionBank({
       .map((id) => allSeen.current.get(id))
       .filter((q): q is BankQuestion => !!q);
     if (picked.length < selected.length) {
-      toast(`Có ${selected.length - picked.length} câu đã chọn không còn trong danh sách`, 'error');
+      toast(t('bank.toast.staleSelection', { count: selected.length - picked.length }), 'error');
       return;
     }
     onImport(picked);
@@ -74,30 +76,30 @@ export function QuestionBank({
   };
 
   return (
-    <Modal title="Ngân hàng câu hỏi" onClose={onClose} wide>
+    <Modal title={t('bank.title')} onClose={onClose} wide>
       <div className="toolbar">
         <div className="hw-search-wrap">
           <Icon name="search" size={15} />
           <input
             className="text-input search-input"
-            placeholder="Tìm câu hỏi..."
+            placeholder={t('bank.searchPh')}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
           {search && (
-            <button type="button" className="hw-search-clear" onClick={() => setSearch('')} aria-label="Xóa tìm kiếm">
+            <button type="button" className="hw-search-clear" onClick={() => setSearch('')} aria-label={t('bank.clearSearch')}>
               <Icon name="x" size={14} />
             </button>
           )}
         </div>
         <select className="text-input" value={tag} onChange={(e) => setTag(e.target.value)}>
-          <option value="">Mọi chủ đề</option>
-          {tags.map((t) => (
-            <option key={t} value={t}>{t}</option>
+          <option value="">{t('bank.allTags')}</option>
+          {tags.map((tg) => (
+            <option key={tg} value={tg}>{tg}</option>
           ))}
         </select>
         <button className="btn btn-primary hw-action-icon" onClick={() => setShowForm(true)}>
-          <Icon name="plus" size={15} /> Thêm câu hỏi
+          <Icon name="plus" size={15} /> {t('bank.add')}
         </button>
       </div>
 
@@ -110,9 +112,9 @@ export function QuestionBank({
       )}
 
       {loading ? (
-        <p className="muted">Đang tải...</p>
+        <p className="muted">{t('actions.loading', { ns: 'common' })}</p>
       ) : questions.length === 0 ? (
-        <EmptyState icon="file" title="Ngân hàng trống" desc="Thêm câu hỏi để tái dùng cho nhiều quiz." />
+        <EmptyState icon="file" title={t('bank.empty')} desc={t('bank.emptyDesc')} />
       ) : (
         <div className="bank-list">
           {questions.map((q) => (
@@ -120,20 +122,20 @@ export function QuestionBank({
               {selectMode && (
                 <input
                   type="checkbox"
+                  className="bank-check"
                   checked={selected.includes(q.id)}
                   onChange={() => toggle(q.id)}
-                  style={{ width: 18, height: 18 }}
                 />
               )}
-              <div style={{ flex: 1, minWidth: 0 }}>
+              <div className="bank-item-body">
                 <div className="bank-q">{q.question}</div>
-                <div className="muted" style={{ fontSize: 13, marginTop: 4 }}>
-                  {q.tag && <span className="badge badge-general" style={{ marginRight: 6 }}>{q.tag}</span>}
-                  {q.points}đ · {q.options.length} đáp án
+                <div className="muted bank-item-meta">
+                  {q.tag && <span className="badge badge-general bank-tag-badge">{q.tag}</span>}
+                  {t('bank.meta', { points: q.points, count: q.options.length })}
                 </div>
               </div>
               <button className="btn btn-sm btn-danger-ghost" onClick={() => void doDelete(q.id)}>
-                Xóa
+                {t('actions.delete', { ns: 'common' })}
               </button>
             </div>
           ))}
@@ -142,11 +144,11 @@ export function QuestionBank({
 
       {selectMode && (
         <div className="modal-actions">
-          <span className="muted">Đã chọn {selected.length} câu</span>
+          <span className="muted">{t('bank.selected', { count: selected.length })}</span>
           <span className="spacer" />
-          <button className="btn" onClick={onClose}>Hủy</button>
+          <button className="btn" onClick={onClose}>{t('actions.cancel', { ns: 'common' })}</button>
           <button className="btn btn-primary hw-action-icon" disabled={!selected.length} onClick={doImport}>
-            <Icon name="plus" size={15} /> Thêm {selected.length} câu vào đề
+            <Icon name="plus" size={15} /> {t('bank.import', { count: selected.length })}
           </button>
         </div>
       )}
@@ -163,6 +165,7 @@ function BankQuestionForm({
   onClose: () => void;
   onSaved: () => void;
 }) {
+  const { t } = useTranslation(['homework', 'common']);
   const toast = useToast();
   const [question, setQuestion] = useState('');
   const [tag, setTag] = useState('');
@@ -175,9 +178,9 @@ function BankQuestionForm({
   const [busy, setBusy] = useState(false);
 
   const save = async () => {
-    if (!question.trim()) { toast('Nhập câu hỏi', 'error'); return; }
+    if (!question.trim()) { toast(t('bank.form.questionRequired'), 'error'); return; }
     if (options.length < 2 || !options.some((o) => o.is_correct && o.text.trim())) {
-      toast('Cần ít nhất 2 đáp án và 1 đáp án đúng', 'error');
+      toast(t('bank.form.answersRequired'), 'error');
       return;
     }
     setBusy(true);
@@ -188,10 +191,10 @@ function BankQuestionForm({
         points: Number(points) || 1,
         options: options.map((o) => ({ text: o.text.trim(), is_correct: o.is_correct })),
       });
-      toast('Đã thêm vào ngân hàng', 'success');
+      toast(t('bank.form.added'), 'success');
       onSaved();
     } catch (err) {
-      toast(err instanceof Error ? err.message : 'Lưu thất bại', 'error');
+      toast(err instanceof Error ? err.message : t('form.toast.saveFail'), 'error');
     } finally {
       setBusy(false);
     }
@@ -199,36 +202,36 @@ function BankQuestionForm({
 
   return (
     <div className="bank-form">
-      <Field label="Câu hỏi *">
+      <Field label={t('bank.form.question')}>
         <input className="text-input" value={question} onChange={(e) => setQuestion(e.target.value)}
-          placeholder="VD: 'Apple' nghĩa là gì?" />
+          placeholder={t('bank.form.questionPh')} />
       </Field>
       <div className="form-grid">
-        <Field label="Chủ đề">
-          <div style={{ display: 'flex', gap: 8 }}>
+        <Field label={t('bank.form.tag')}>
+          <div className="bank-form-row">
             <select className="text-input" value={tag} onChange={(e) => setTag(e.target.value)}>
-              <option value="">- Chọn -</option>
-              {tags.map((t) => <option key={t} value={t}>{t}</option>)}
+              <option value="">{t('bank.form.chooseTag')}</option>
+              {tags.map((tg) => <option key={tg} value={tg}>{tg}</option>)}
             </select>
-            <input className="text-input" placeholder="Hoặc tạo mới" value={newTag}
+            <input className="text-input" placeholder={t('bank.form.newTagPh')} value={newTag}
               onChange={(e) => setNewTag(e.target.value)} />
           </div>
         </Field>
-        <Field label="Điểm">
+        <Field label={t('bank.form.points')}>
           <input className="text-input" type="number" min="0.5" step="0.5" value={points}
             onChange={(e) => setPoints(e.target.value)} />
         </Field>
       </div>
-      <Field label="Đáp án (tick vào đáp án đúng)">
+      <Field label={t('bank.form.answers')}>
         {options.map((o, i) => (
-          <div key={i} className="quiz-opt" style={{ marginLeft: 0 }}>
+          <div key={i} className="quiz-opt bank-opt">
             <button type="button" className={`quiz-correct ${o.is_correct ? 'active' : ''}`}
               onClick={() => setOptions((x) => x.map((y, j) => ({ ...y, is_correct: j === i })))}>
               {o.is_correct ? '●' : '○'}
             </button>
-            <input className="text-input input-sm" value={o.text}
+            <input className="text-input input-sm bank-opt-input" value={o.text}
               onChange={(e) => setOptions((x) => x.map((y, j) => (j === i ? { ...y, text: e.target.value } : y)))}
-              placeholder={`Đáp án ${String.fromCharCode(65 + i)}`} style={{ flex: 1 }} />
+              placeholder={t('form.optionPh', { letter: String.fromCharCode(65 + i) })} />
             {options.length > 2 && (
               <button type="button" className="btn btn-sm btn-danger-ghost"
                 onClick={() => setOptions((x) => x.filter((_, j) => j !== i))}>×</button>
@@ -237,13 +240,13 @@ function BankQuestionForm({
         ))}
         <button type="button" className="btn btn-sm"
           onClick={() => setOptions((x) => [...x, { text: '', is_correct: false }])}>
-          + Thêm đáp án
+          {t('form.addOption')}
         </button>
       </Field>
-      <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-        <button type="button" className="btn" onClick={onClose}>Hủy</button>
+      <div className="bank-form-actions">
+        <button type="button" className="btn" onClick={onClose}>{t('actions.cancel', { ns: 'common' })}</button>
         <button type="button" className="btn btn-primary" disabled={busy} onClick={save}>
-          {busy ? 'Đang lưu...' : 'Lưu vào ngân hàng'}
+          {busy ? t('actions.saving', { ns: 'common' }) : t('bank.form.save')}
         </button>
       </div>
     </div>

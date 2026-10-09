@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { referralsApi, ReferralStats } from './growth.api';
 import { useToast } from '../../shared/ui/toast';
 import { PageHeader } from '../../shared/components/PageHeader';
@@ -10,6 +11,7 @@ import { ReferralItem, formatDate } from '../../shared/types';
 import './Growth.css';
 
 export function ReferralsAdmin() {
+  const { t } = useTranslation(['ops', 'common']);
   const [referrals, setReferrals] = useState<ReferralItem[]>([]);
   const [stats, setStats] = useState<ReferralStats | null>(null);
   const [status, setStatus] = useState('');
@@ -26,11 +28,11 @@ export function ReferralsAdmin() {
       setPagination(list.pagination);
       setStats(st);
     } catch (err) {
-      toast(err instanceof Error ? err.message : 'Không tải được dữ liệu giới thiệu', 'error');
+      toast(err instanceof Error ? err.message : t('referrals.toast.loadFail'), 'error');
     } finally {
       setLoading(false);
     }
-  }, [status, page, toast]);
+  }, [status, page, toast, t]);
 
   useEffect(() => {
     void load();
@@ -38,21 +40,21 @@ export function ReferralsAdmin() {
 
   return (
     <div className="page">
-      <PageHeader title="Giới thiệu" desc="Theo dõi lượt giới thiệu và thưởng credits" />
+      <PageHeader title={t('referrals.title')} desc={t('referrals.desc')} />
 
       {loading ? (
         <>
           <StatGridSkeleton count={3} />
-          <div style={{ height: 16 }} />
+          <div className="referral-skel-spacer" aria-hidden="true" />
           <TableSkeleton cols={4} />
         </>
       ) : (
         <>
           {stats && (
             <div className="stat-grid stat-grid-3">
-              <StatCard icon="users" tone="blue" value={stats.total} label="Tổng lượt giới thiệu" />
-              <StatCard icon="clock" tone="amber" value={stats.pending} label="Đang chờ thưởng" />
-              <StatCard icon="gift" tone="green" value={stats.rewarded} label="Đã thưởng" />
+              <StatCard icon="users" tone="blue" value={stats.total} label={t('referrals.stats.total')} />
+              <StatCard icon="clock" tone="amber" value={stats.pending} label={t('referrals.stats.pending')} />
+              <StatCard icon="gift" tone="green" value={stats.rewarded} label={t('referrals.stats.rewarded')} />
             </div>
           )}
 
@@ -64,40 +66,41 @@ export function ReferralsAdmin() {
                 setStatus(e.target.value);
                 setPage(1);
               }}
+              aria-label={t('referrals.filterLabel')}
             >
-              <option value="">Tất cả trạng thái</option>
-              <option value="pending">Đang chờ</option>
-              <option value="rewarded">Đã thưởng</option>
+              <option value="">{t('referrals.allStatuses')}</option>
+              <option value="pending">{t('referrals.status.pending')}</option>
+              <option value="rewarded">{t('referrals.status.rewarded')}</option>
             </select>
           </div>
 
           {referrals.length === 0 ? (
             <EmptyState
               icon="gift"
-              title="Không có lượt giới thiệu nào"
-              desc="Chưa có phụ huynh nào giới thiệu bạn bè."
+              title={t('referrals.empty.title')}
+              desc={t('referrals.empty.desc')}
             />
           ) : (
             <div className="table-wrap">
               <table className="table">
                 <thead>
                   <tr>
-                    <th>Người được giới thiệu</th>
-                    <th>Trạng thái</th>
-                    <th>Thưởng</th>
-                    <th>Ngày tạo</th>
+                    <th>{t('referrals.col.referred')}</th>
+                    <th>{t('referrals.col.status')}</th>
+                    <th>{t('referrals.col.reward')}</th>
+                    <th>{t('referrals.col.createdAt')}</th>
                   </tr>
                 </thead>
                 <tbody>
                   {referrals.map((r) => (
                     <tr key={r.id}>
                       <td>
-                        {r.referred_name || <span className="muted">Chưa có tên</span>}
+                        {r.referred_name || <span className="muted">{t('referrals.noName')}</span>}
                         <div className="muted mono">{r.referred_phone}</div>
                       </td>
                       <td>
                         <span className={`badge badge-${r.status === 'rewarded' ? 'rewarded' : 'pending'}`}>
-                          {r.status === 'rewarded' ? 'Đã thưởng' : 'Đang chờ'}
+                          {r.status === 'rewarded' ? t('referrals.status.rewarded') : t('referrals.status.pending')}
                         </span>
                       </td>
                       <td className="num">{r.reward_amount != null ? r.reward_amount : '-'}</td>

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { teacherApi, SalaryInfo } from './teacher.api';
 import { useToast } from '../../shared/ui/toast';
 import { Field } from '../../shared/components/Form';
@@ -9,6 +10,7 @@ import { formatVND } from '../../shared/types';
 import './TeacherSalary.css';
 
 export function TeacherSalary() {
+  const { t } = useTranslation(['teacher', 'common']);
   const now = new Date();
   const defaultMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
   const [month, setMonth] = useState(defaultMonth);
@@ -22,11 +24,11 @@ export function TeacherSalary() {
       const data = await teacherApi.payroll(month);
       setSalary(data);
     } catch (err) {
-      toast(err instanceof Error ? err.message : 'Không tải được lương', 'error');
+      toast(err instanceof Error ? err.message : t('salary.loadError'), 'error');
     } finally {
       setLoading(false);
     }
-  }, [month, toast]);
+  }, [month, toast, t]);
 
   useEffect(() => {
     void load();
@@ -34,10 +36,10 @@ export function TeacherSalary() {
 
   return (
     <div className="page">
-      <PageHeader title="Lương của tôi" desc="Chi tiết lương theo từng tháng" />
+      <PageHeader title={t('salary.title')} desc={t('salary.desc')} />
 
       <div className="toolbar">
-        <Field label="Tháng">
+        <Field label={t('salary.month')}>
           <input
             className="text-input"
             type="month"
@@ -52,17 +54,17 @@ export function TeacherSalary() {
       ) : salary ? (
         <>
           <div className="salary-hero">
-            <div className="salary-month">Tổng lương tháng {month.slice(5, 7)}/{month.slice(0, 4)}</div>
+            <div className="salary-month">{t('salary.totalOfMonth', { month: `${month.slice(5, 7)}/${month.slice(0, 4)}` })}</div>
             <div className="salary-total">{formatVND(salary.total)}</div>
-            <div className="salary-sub">{salary.sessions} buổi đã chấm công</div>
+            <div className="salary-sub">{t('salary.sessionsDone', { count: salary.sessions })}</div>
           </div>
           <div className="card salary-breakdown">
             <div className="salary-row">
-              <span>Số buổi đã chấm công</span>
+              <span>{t('salary.sessions')}</span>
               <strong>{salary.sessions}</strong>
             </div>
             <div className="salary-row">
-              <span>Đơn giá / buổi</span>
+              <span>{t('salary.perSession')}</span>
               <strong>{formatVND(salary.per_session)}</strong>
             </div>
           </div>
@@ -70,8 +72,8 @@ export function TeacherSalary() {
       ) : (
         <EmptyState
           icon="wallet"
-          title="Không có dữ liệu lương"
-          desc="Không có dữ liệu lương cho tháng này."
+          title={t('salary.emptyTitle')}
+          desc={t('salary.emptyDesc')}
         />
       )}
     </div>

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { homeworkApi, type HomeworkScoreRow, type Rubric } from './homework.api';
 import { HomeworkItem } from '../../shared/types';
 import { useToast } from '../../shared/ui/toast';
@@ -7,13 +8,8 @@ import { TableSkeleton } from '../../shared/components/Skeleton';
 import { EmptyState } from '../../shared/components/EmptyState';
 import { Icon } from '../../shared/components/icons';
 
-function rowStatus(r: HomeworkScoreRow) {
-  if (r.score !== null) return <span className="badge badge-paid">Đã chấm</span>;
-  if (r.completed) return <span className="badge badge-upcoming">Đã nộp</span>;
-  return <span className="badge badge-general">Chưa nộp</span>;
-}
-
 export function GradeModal({ homework, onClose }: { homework: HomeworkItem; onClose: () => void }) {
+  const { t } = useTranslation(['homework', 'common']);
   const toast = useToast();
   const [rows, setRows] = useState<HomeworkScoreRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -22,6 +18,12 @@ export function GradeModal({ homework, onClose }: { homework: HomeworkItem; onCl
   const [score, setScore] = useState('');
   const [feedback, setFeedback] = useState('');
   const [busy, setBusy] = useState(false);
+
+  const rowStatus = (r: HomeworkScoreRow) => {
+    if (r.score !== null) return <span className="badge badge-paid">{t('grade.status.graded')}</span>;
+    if (r.completed) return <span className="badge badge-upcoming">{t('grade.status.submitted')}</span>;
+    return <span className="badge badge-general">{t('grade.status.pending')}</span>;
+  };
 
   const load = async (keepSelection: boolean) => {
     setLoading(true);
@@ -34,7 +36,7 @@ export function GradeModal({ homework, onClose }: { homework: HomeworkItem; onCl
         return next ? next.student_id : null;
       });
     } catch (err) {
-      toast(err instanceof Error ? err.message : 'Không tải được bảng điểm', 'error');
+      toast(err instanceof Error ? err.message : t('grade.toast.loadFail'), 'error');
     } finally {
       setLoading(false);
     }
@@ -68,18 +70,18 @@ export function GradeModal({ homework, onClose }: { homework: HomeworkItem; onCl
     try {
       const s = score === '' ? null : Number(score);
       if (s !== null && (!Number.isFinite(s) || s < 0)) {
-        toast('Điểm không hợp lệ', 'error');
+        toast(t('grade.toast.invalidScore'), 'error');
         return;
       }
       if (homework.max_score != null && s !== null && s > homework.max_score) {
-        toast(`Điểm không vượt quá ${homework.max_score}`, 'error');
+        toast(t('grade.toast.overMax', { max: homework.max_score }), 'error');
         return;
       }
       await homeworkApi.grade(homework.id, studentId, s, feedback);
-      toast('Đã lưu điểm', 'success');
+      toast(t('grade.toast.saved'), 'success');
       void load(true);
     } catch (err) {
-      toast(err instanceof Error ? err.message : 'Lưu điểm thất bại', 'error');
+      toast(err instanceof Error ? err.message : t('grade.toast.saveFail'), 'error');
     } finally {
       setBusy(false);
     }
@@ -90,19 +92,19 @@ export function GradeModal({ homework, onClose }: { homework: HomeworkItem; onCl
   const current = rows.find((r) => r.student_id === selected);
 
   return (
-    <Modal title={`Chấm điểm: ${homework.title}`} onClose={onClose} wide>
+    <Modal title={t('grade.title', { title: homework.title })} onClose={onClose} wide>
       {rubric && (
         <div className="rubric-banner">
-          <strong>Rubric: {rubric.name}</strong>
-          <div className="muted" style={{ fontSize: 13 }}>
-            {rubric.criteria.map((c) => `${c.name} (${c.max_score}đ)`).join(', ')}
+          <strong>{t('grade.rubric', { name: rubric.name })}</strong>
+          <div className="muted grade-sub">
+            {rubric.criteria.map((c) => t('form.rubricOption', { name: c.name, score: c.max_score })).join(', ')}
           </div>
         </div>
       )}
       <div className="grade-progress">
-        <span className="muted" style={{ fontSize: 13, whiteSpace: 'nowrap' }}>
-          Đã chấm <strong className="num">{graded}/{rows.length}</strong>
-          {homework.max_score != null && ` · Thang điểm ${homework.max_score}`}
+        <span className="muted grade-progress-label">
+          {t('grade.progressDone')} <strong className="num">{graded}/{rows.length}</strong>
+          {homework.max_score != null && ` · ${t('grade.scale', { max: homework.max_score })}`}
         </span>
         <div className="hw-progress-track" aria-hidden="true">
           <div className="hw-progress-fill" style={{ width: `${pct}%` }} />
@@ -112,11 +114,11 @@ export function GradeModal({ homework, onClose }: { homework: HomeworkItem; onCl
       {loading ? (
         <TableSkeleton rows={5} cols={4} />
       ) : rows.length === 0 ? (
-        <EmptyState icon="users" title="Chưa có học viên" />
+        <EmptyState icon="users" title={t('grade.empty')} />
       ) : (
         <div className="grade-layout">
           {/* Vùng trái: danh sách học viên */}
-          <div className="grade-list" role="listbox" aria-label="Danh sách học viên">
+          <div className="grade-list" role="listbox" aria-label={t('grade.studentList')}>
             {rows.map((r) => (
               <button
                 key={r.student_id}
@@ -151,8 +153,8 @@ export function GradeModal({ homework, onClose }: { homework: HomeworkItem; onCl
                     step="0.5"
                     value={score}
                     onChange={(e) => setScore(e.target.value)}
-                    placeholder="Điểm"
-                    aria-label="Điểm"
+                    placeholder={t('grade.score')}
+                    aria-label={t('grade.score')}
                   />
                   {homework.max_score != null && (
                     <span className="muted">/ {homework.max_score}</span>
@@ -161,19 +163,19 @@ export function GradeModal({ homework, onClose }: { homework: HomeworkItem; onCl
                 <textarea
                   className="text-input"
                   rows={3}
-                  placeholder="Nhận xét cho học viên..."
+                  placeholder={t('grade.feedbackPh')}
                   value={feedback}
                   onChange={(e) => setFeedback(e.target.value)}
-                  aria-label="Nhận xét"
+                  aria-label={t('grade.feedback')}
                 />
-                <div className="modal-actions" style={{ marginTop: 0, paddingTop: 0, borderTop: 'none' }}>
+                <div className="modal-actions grade-actions">
                   <button className="btn btn-primary hw-action-icon" disabled={busy} onClick={() => void save(current.student_id)}>
-                    <Icon name="check" size={15} /> {busy ? 'Đang lưu...' : 'Lưu điểm'}
+                    <Icon name="check" size={15} /> {busy ? t('actions.saving', { ns: 'common' }) : t('grade.saveScore')}
                   </button>
                 </div>
               </>
             ) : (
-              <EmptyState icon="pencil" title="Chọn học viên để chấm" desc="Bấm vào tên trong danh sách bên trái." />
+              <EmptyState icon="pencil" title={t('grade.pickStudent')} desc={t('grade.pickStudentDesc')} />
             )}
           </div>
         </div>

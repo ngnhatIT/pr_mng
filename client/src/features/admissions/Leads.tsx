@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { leadsApi, LeadForm } from './admissions.api';
 import { useToast } from '../../shared/ui/toast';
 import { Modal, ConfirmDialog } from '../../shared/components/Modal';
@@ -7,7 +8,7 @@ import { PageHeader } from '../../shared/components/PageHeader';
 import { EmptyState } from '../../shared/components/EmptyState';
 import { Skeleton } from '../../shared/components/Skeleton';
 import { Pagination, type PaginationMeta } from '../../shared/components/Pagination';
-import { LeadItem, LEAD_STATUS_LABEL, labelOf, formatDate } from '../../shared/types';
+import { LeadItem, formatDate } from '../../shared/types';
 import { Icon } from '../../shared/components/icons';
 import { ConvertModal } from './Trials';
 import './Admissions.css';
@@ -21,6 +22,7 @@ const NEXT_STATUS: Record<string, string> = {
 };
 
 export function Leads() {
+  const { t } = useTranslation(['ops', 'common']);
   const [leads, setLeads] = useState<LeadItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState<LeadItem | null | 'new'>(null);
@@ -30,6 +32,8 @@ export function Leads() {
   const [pagination, setPagination] = useState<PaginationMeta | null>(null);
   const toast = useToast();
 
+  const statusLabel = (s: string) => t(`leads.status.${s}`);
+
   const load = useCallback(async () => {
     setLoading(true);
     try {
@@ -37,11 +41,11 @@ export function Leads() {
       setLeads(res.data);
       setPagination(res.pagination);
     } catch (err) {
-      toast(err instanceof Error ? err.message : 'Không tải được leads', 'error');
+      toast(err instanceof Error ? err.message : t('leads.toast.loadFail'), 'error');
     } finally {
       setLoading(false);
     }
-  }, [page, toast]);
+  }, [page, toast, t]);
 
   useEffect(() => {
     void load();
@@ -51,11 +55,11 @@ export function Leads() {
     try {
       if (id) await leadsApi.update(id, form);
       else await leadsApi.create(form);
-      toast('Đã lưu lead', 'success');
+      toast(t('leads.toast.saved'), 'success');
       setEditing(null);
       void load();
     } catch (err) {
-      toast(err instanceof Error ? err.message : 'Lưu thất bại', 'error');
+      toast(err instanceof Error ? err.message : t('leads.toast.saveFail'), 'error');
     }
   };
 
@@ -63,33 +67,33 @@ export function Leads() {
     if (!deleting) return;
     try {
       await leadsApi.remove(deleting.id);
-      toast('Đã xóa lead', 'success');
+      toast(t('leads.toast.deleted'), 'success');
       setDeleting(null);
       void load();
     } catch (err) {
-      toast(err instanceof Error ? err.message : 'Xóa thất bại', 'error');
+      toast(err instanceof Error ? err.message : t('leads.toast.deleteFail'), 'error');
     }
   };
 
   const moveStatus = async (l: LeadItem, next: string) => {
     try {
       await leadsApi.setStatus(l.id, next);
-      toast(`Đã chuyển "${l.name}" sang ${labelOf(LEAD_STATUS_LABEL, next)}`, 'success');
+      toast(t('leads.toast.moved', { name: l.name, label: statusLabel(next) }), 'success');
       void load();
     } catch (err) {
-      toast(err instanceof Error ? err.message : 'Cập nhật thất bại', 'error');
+      toast(err instanceof Error ? err.message : t('leads.toast.updateFail'), 'error');
     }
   };
 
   return (
     <div className="page">
       <PageHeader
-        title="Tuyển sinh (Lead)"
-        desc="Theo dõi khách hàng tiềm năng từ lúc liên hệ đến khi đăng ký"
+        title={t('leads.title')}
+        desc={t('leads.desc')}
         actions={
           <button className="btn btn-primary" onClick={() => setEditing('new')}>
             <Icon name="plus" size={15} />
-            Thêm lead
+            {t('leads.add')}
           </button>
         }
       />
@@ -99,10 +103,10 @@ export function Leads() {
           {COLUMNS.map((col) => (
             <div key={col} className="pipeline-col">
               <Skeleton width="50%" height={16} />
-              <div style={{ marginTop: 10 }}>
+              <div className="pipeline-skel">
                 <Skeleton height={90} />
               </div>
-              <div style={{ marginTop: 8 }}>
+              <div className="pipeline-skel pipeline-skel-2">
                 <Skeleton height={90} />
               </div>
             </div>
@@ -111,29 +115,29 @@ export function Leads() {
       ) : leads.length === 0 ? (
         <EmptyState
           icon="filter"
-          title="Chưa có lead nào"
-          desc="Lead từ form đăng ký trên landing page sẽ tự động chảy vào đây."
+          title={t('leads.empty.title')}
+          desc={t('leads.empty.desc')}
           action={
             <button className="btn btn-primary" onClick={() => setEditing('new')}>
               <Icon name="plus" size={15} />
-              Thêm lead
+              {t('leads.add')}
             </button>
           }
         />
       ) : (
         <div className="lead-pipeline">
-          <div className="pipeline" role="list" aria-label="Pipeline tuyển sinh">
+          <div className="pipeline" role="list" aria-label={t('leads.pipelineLabel')}>
             {COLUMNS.map((col) => {
               const items = leads.filter((l) => l.status === col);
               return (
                 <div key={col} className="pipeline-col" role="listitem">
                   <div className="pipeline-head">
-                    <span className={`badge badge-${col}`}>{labelOf(LEAD_STATUS_LABEL, col)}</span>
-                    <span className="pipeline-count" title={`${items.length} lead`}>
+                    <span className={`badge badge-${col}`}>{statusLabel(col)}</span>
+                    <span className="pipeline-count" title={t('leads.countTitle', { count: items.length })}>
                       {items.length}
                     </span>
                   </div>
-                  {items.length === 0 && <p className="muted pipeline-empty">Chưa có lead</p>}
+                  {items.length === 0 && <p className="muted pipeline-empty">{t('leads.emptyCol')}</p>}
                   {items.map((l) => (
                     <div key={l.id} className="pipeline-card">
                       <div className="lead-name" title={l.name}>
@@ -146,21 +150,21 @@ export function Leads() {
                         <button
                           className="btn btn-sm btn-primary"
                           onClick={() => setConverting(l)}
-                          title="Chuyển thành học viên"
+                          title={t('leads.convertTitle')}
                         >
-                          Thành HV
+                          {t('leads.convert')}
                         </button>
                         <button
                           className="btn btn-sm"
                           onClick={() => setEditing(l)}
-                          title="Sửa lead"
+                          title={t('leads.editTitle')}
                         >
                           <Icon name="pencil" size={14} />
                         </button>
                         <button
                           className="btn btn-sm btn-danger-ghost"
                           onClick={() => setDeleting(l)}
-                          title="Xóa lead"
+                          title={t('leads.deleteTitle')}
                         >
                           <Icon name="trash" size={14} />
                         </button>
@@ -168,8 +172,8 @@ export function Leads() {
                           <button
                             className="btn btn-sm btn-icon"
                             onClick={() => void moveStatus(l, NEXT_STATUS[col])}
-                            title={`Chuyển sang ${labelOf(LEAD_STATUS_LABEL, NEXT_STATUS[col])}`}
-                            aria-label={`Chuyển ${l.name} sang ${labelOf(LEAD_STATUS_LABEL, NEXT_STATUS[col])}`}
+                            title={t('leads.moveNext', { label: statusLabel(NEXT_STATUS[col]) })}
+                            aria-label={t('leads.moveNextAria', { name: l.name, label: statusLabel(NEXT_STATUS[col]) })}
                           >
                             <Icon name="arrow-right" size={15} />
                           </button>
@@ -178,8 +182,8 @@ export function Leads() {
                           <button
                             className="btn btn-sm btn-icon"
                             onClick={() => void moveStatus(l, 'new')}
-                            title="Mở lại lead"
-                            aria-label={`Mở lại lead ${l.name}`}
+                            title={t('leads.reopen')}
+                            aria-label={t('leads.reopenAria', { name: l.name })}
                           >
                             <Icon name="rotate" size={15} />
                           </button>
@@ -205,8 +209,8 @@ export function Leads() {
       )}
       {deleting && (
         <ConfirmDialog
-          title="Xóa lead"
-          message={`Xóa lead "${deleting.name}"?`}
+          title={t('leads.delete.title')}
+          message={t('leads.delete.message', { name: deleting.name })}
           onClose={() => setDeleting(null)}
           onConfirm={remove}
           danger
@@ -214,16 +218,16 @@ export function Leads() {
       )}
       {converting && (
         <ConvertModal
-          title={`Chuyển lead "${converting.name}" thành học viên`}
+          title={t('trials.convertTitle', { name: converting.name })}
           onClose={() => setConverting(null)}
           onConvert={async (classId) => {
             try {
               const r = await leadsApi.convert(converting.id, classId ?? null);
-              toast(`Đã tạo học viên mới (ID ${r.student_id})`, 'success');
+              toast(t('leads.toast.converted', { id: r.student_id }), 'success');
               setConverting(null);
               void load();
             } catch (err) {
-              toast(err instanceof Error ? err.message : 'Chuyển đổi thất bại', 'error');
+              toast(err instanceof Error ? err.message : t('leads.toast.convertFail'), 'error');
             }
           }}
         />
@@ -241,6 +245,7 @@ function LeadFormModal({
   onClose: () => void;
   onSave: (form: LeadForm, id?: number) => Promise<void>;
 }) {
+  const { t } = useTranslation(['ops', 'common']);
   const [name, setName] = useState(initial?.name || '');
   const [phone, setPhone] = useState(initial?.phone || '');
   const [note, setNote] = useState(initial?.note || '');
@@ -258,16 +263,16 @@ function LeadFormModal({
   };
 
   return (
-    <Modal title={initial ? 'Sửa lead' : 'Thêm lead'} onClose={onClose}>
+    <Modal title={initial ? t('leads.form.titleEdit') : t('leads.form.titleNew')} onClose={onClose}>
       <form onSubmit={submit}>
         <div className="form-grid">
-          <Field label="Họ tên *" span>
+          <Field label={t('leads.form.name')} span>
             <input className="text-input" value={name} onChange={(e) => setName(e.target.value)} required />
           </Field>
-          <Field label="Số điện thoại *" span>
+          <Field label={t('leads.form.phone')} span>
             <input className="text-input" value={phone} onChange={(e) => setPhone(e.target.value)} required />
           </Field>
-          <Field label="Ghi chú" span>
+          <Field label={t('leads.form.note')} span>
             <textarea
               className="text-input"
               rows={3}
@@ -278,10 +283,10 @@ function LeadFormModal({
         </div>
         <div className="modal-actions">
           <button type="button" className="btn" onClick={onClose}>
-            Hủy
+            {t('actions.cancel', { ns: 'common' })}
           </button>
           <button type="submit" className="btn btn-primary" disabled={busy}>
-            {busy ? 'Đang lưu...' : 'Lưu'}
+            {busy ? t('actions.saving', { ns: 'common' }) : t('actions.save', { ns: 'common' })}
           </button>
         </div>
       </form>

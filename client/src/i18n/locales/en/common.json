@@ -1,0 +1,101 @@
+{
+  "actions": {
+    "add": "Add",
+    "apply": "Apply",
+    "back": "Back",
+    "cancel": "Cancel",
+    "clear": "Clear filters",
+    "close": "Close",
+    "confirm": "Confirm",
+    "create": "Create",
+    "delete": "Delete",
+    "deleting": "Deleting...",
+    "detail": "Details",
+    "download": "Download",
+    "edit": "Edit",
+    "finish": "Finish",
+    "loading": "Loading...",
+    "next": "Next",
+    "prev": "Back",
+    "refresh": "Refresh",
+    "save": "Save",
+    "saving": "Saving...",
+    "search": "Search",
+    "select": "Select",
+    "send": "Send",
+    "sending": "Sending...",
+    "update": "Update",
+    "upload": "Upload",
+    "viewAll": "View all"
+  },
+  "confirm": {
+    "deleteMessage": "This action cannot be undone.",
+    "deleteTitle": "Delete this item?",
+    "no": "Cancel",
+    "yes": "Delete"
+  },
+  "lang": {
+    "en": "English",
+    "label": "Language",
+    "vi": "Tiếng Việt"
+  },
+  "nav": {
+    "logout": "Log out",
+    "openMenu": "Open menu",
+    "sections": {
+      "manage": "Manage",
+      "ops": "Operations",
+      "growth": "Growth",
+      "system": "System"
+    },
+    "dashboard": "Dashboard",
+    "students": "Students",
+    "classes": "Classes",
+    "attendance": "Attendance",
+    "tuition": "Tuition",
+    "rooms": "Rooms",
+    "leaves": "Leaves",
+    "trials": "Trial classes",
+    "homework": "Homework",
+    "payroll": "Teacher payroll",
+    "teachers": "Teachers",
+    "leads": "Leads",
+    "reviews": "Reviews",
+    "referrals": "Referrals",
+    "zalo": "Zalo reminders",
+    "paymentConfig": "Payment config",
+    "audit": "Audit log",
+    "roles": "Roles",
+    "systemAdmin": "System",
+    "tagline": "Center management"
+  },
+  "states": {
+    "deleteError": "Delete failed",
+    "deleteSuccess": "Deleted",
+    "empty": "No data yet",
+    "error": "Something went wrong",
+    "loadError": "Failed to load data",
+    "loading": "Loading...",
+    "noData": "No data",
+    "saveError": "Save failed",
+    "saveSuccess": "Saved"
+  },
+  "theme": {
+    "dark": "Dark",
+    "light": "Light",
+    "toggle": "Toggle light/dark theme"
+  },
+  "roles": {
+    "superadmin": "System admin",
+    "admin": "Admin",
+    "staff": "Staff",
+    "teacher": "Teacher",
+    "parent": "Parent"
+  },
+  "pagination": {
+    "first": "First page",
+    "prev": "Previous page",
+    "next": "Next page",
+    "last": "Last page"
+  }
+}

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { paymentsApi, PaymentConfigData } from './tuition.api';
 import { useToast } from '../../shared/ui/toast';
 import { Field } from '../../shared/components/Form';
@@ -20,6 +21,7 @@ const BANKS = [
 ];
 
 export function PaymentConfig() {
+  const { t } = useTranslation(['tuition', 'common']);
   const [form, setForm] = useState<PaymentConfigData | null>(null);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -31,11 +33,11 @@ export function PaymentConfig() {
       const data = await paymentsApi.getConfig();
       setForm(data);
     } catch (err) {
-      toast(err instanceof Error ? err.message : 'Không tải được cấu hình', 'error');
+      toast(err instanceof Error ? err.message : t('config.loadError'), 'error');
     } finally {
       setLoading(false);
     }
-  }, [toast]);
+  }, [toast, t]);
 
   useEffect(() => {
     void load();
@@ -50,10 +52,10 @@ export function PaymentConfig() {
     setBusy(true);
     try {
       await paymentsApi.saveConfig(form);
-      toast('Đã lưu cấu hình thanh toán', 'success');
+      toast(t('config.saved'), 'success');
       void load();
     } catch (err) {
-      toast(err instanceof Error ? err.message : 'Lưu thất bại', 'error');
+      toast(err instanceof Error ? err.message : t('states.saveError', { ns: 'common' }), 'error');
     } finally {
       setBusy(false);
     }
@@ -63,8 +65,8 @@ export function PaymentConfig() {
     return (
       <div className="page">
         <PageHeader
-          title="Cấu hình thanh toán"
-          desc="Thiết lập tài khoản nhận tiền, VNPay và thưởng giới thiệu"
+          title={t('config.title')}
+          desc={t('config.pageDesc')}
         />
         {[0, 1, 2].map((i) => (
           <section key={i} className="card" aria-hidden="true">
@@ -83,30 +85,30 @@ export function PaymentConfig() {
     return (
       <div className="page">
         <PageHeader
-          title="Cấu hình thanh toán"
-          desc="Thiết lập tài khoản nhận tiền, VNPay và thưởng giới thiệu"
+          title={t('config.title')}
+          desc={t('config.pageDesc')}
         />
-        <EmptyState icon="settings" title="Không tải được cấu hình" desc="Vui lòng thử tải lại trang." />
+        <EmptyState icon="settings" title={t('config.loadFailTitle')} desc={t('config.loadFailDesc')} />
       </div>
     );
 
   return (
     <div className="page">
       <PageHeader
-        title="Cấu hình thanh toán"
-        desc="Thiết lập tài khoản nhận tiền, VNPay và thưởng giới thiệu"
+        title={t('config.title')}
+        desc={t('config.pageDesc')}
       />
       <form onSubmit={submit}>
         <section className="card">
           <h2 className="card-title">
             <Icon name="banknote" size={18} className="title-icon" />
-            Tài khoản ngân hàng nhận tiền
+            {t('config.bank.title')}
           </h2>
-          <p className="card-desc">Dùng để tạo mã VietQR cho phụ huynh quét thanh toán.</p>
+          <p className="card-desc">{t('config.desc')}</p>
           <div className="form-grid">
-            <Field label="Ngân hàng">
+            <Field label={t('config.bank.bank')}>
               <select className="text-input" value={form.pay_bank_code} onChange={set('pay_bank_code')}>
-                <option value="">- Chọn ngân hàng -</option>
+                <option value="">{t('config.bank.selectBank')}</option>
                 {BANKS.map((b) => (
                   <option key={b.code} value={b.code}>
                     {b.label}
@@ -114,14 +116,14 @@ export function PaymentConfig() {
                 ))}
               </select>
             </Field>
-            <Field label="Số tài khoản">
+            <Field label={t('config.bank.accountNo')}>
               <input
                 className="text-input mono"
                 value={form.pay_bank_account_no}
                 onChange={set('pay_bank_account_no')}
               />
             </Field>
-            <Field label="Tên chủ tài khoản" span>
+            <Field label={t('config.bank.accountName')} span>
               <input
                 className="text-input"
                 value={form.pay_bank_account_name}
@@ -134,30 +136,30 @@ export function PaymentConfig() {
         <section className="card">
           <h2 className="card-title">
             <Icon name="card" size={18} className="title-icon" />
-            VNPay
+            {t('config.vnpay.title')}
           </h2>
-          <p className="card-desc">Cổng thanh toán online cho phụ huynh.</p>
+          <p className="card-desc">{t('config.vnpay.desc')}</p>
           <div className="form-grid">
-            <Field label="Mã website (TMN Code)">
+            <Field label={t('config.vnpay.tmnCode')}>
               <input
                 className="text-input mono"
                 value={form.pay_vnp_tmncode}
                 onChange={set('pay_vnp_tmncode')}
               />
             </Field>
-            <Field label="Chuỗi bí mật (Hash Secret)">
+            <Field label={t('config.vnpay.hashSecret')}>
               <input
                 className="text-input mono"
                 type="password"
                 value={form.pay_vnp_hashsecret}
                 onChange={set('pay_vnp_hashsecret')}
-                placeholder={form.pay_vnp_hashsecret === '••••••••' ? 'Đã lưu (để trống nếu không đổi)' : ''}
+                placeholder={form.pay_vnp_hashsecret === '••••••••' ? t('config.vnpay.savedPlaceholder') : ''}
               />
             </Field>
-            <Field label="Trạng thái">
+            <Field label={t('config.vnpay.status')}>
               <select className="text-input" value={form.pay_vnp_enabled} onChange={set('pay_vnp_enabled')}>
-                <option value="1">Bật</option>
-                <option value="0">Tắt</option>
+                <option value="1">{t('config.vnpay.enabled')}</option>
+                <option value="0">{t('config.vnpay.disabled')}</option>
               </select>
             </Field>
           </div>
@@ -166,11 +168,11 @@ export function PaymentConfig() {
         <section className="card">
           <h2 className="card-title">
             <Icon name="gift" size={18} className="title-icon" />
-            Thưởng giới thiệu
+            {t('config.referral.title')}
           </h2>
-          <p className="card-desc">Credits tặng khi giới thiệu thành công.</p>
+          <p className="card-desc">{t('config.referral.desc')}</p>
           <div className="form-grid">
-            <Field label="Thưởng cho người giới thiệu">
+            <Field label={t('config.referral.forReferrer')}>
               <input
                 className="text-input"
                 type="number"
@@ -179,7 +181,7 @@ export function PaymentConfig() {
                 onChange={set('referral_reward_referrer')}
               />
             </Field>
-            <Field label="Thưởng cho người được giới thiệu">
+            <Field label={t('config.referral.forReferred')}>
               <input
                 className="text-input"
                 type="number"
@@ -194,7 +196,7 @@ export function PaymentConfig() {
         <div className="toolbar payment-savebar">
           <span className="spacer" />
           <button type="submit" className="btn btn-primary btn-lg" disabled={busy}>
-            {busy ? 'Đang lưu...' : 'Lưu cấu hình'}
+            {busy ? t('actions.saving', { ns: 'common' }) : t('config.saveConfig')}
           </button>
         </div>
       </form>

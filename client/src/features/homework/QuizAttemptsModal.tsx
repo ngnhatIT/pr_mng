@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { homeworkApi, type QuizAttemptRow } from './homework.api';
 import { HomeworkItem, formatDate } from '../../shared/types';
 import { useToast } from '../../shared/ui/toast';
@@ -8,6 +9,7 @@ import { EmptyState } from '../../shared/components/EmptyState';
 import { Icon } from '../../shared/components/icons';
 
 export function QuizAttemptsModal({ homework, onClose }: { homework: HomeworkItem; onClose: () => void }) {
+  const { t } = useTranslation(['homework', 'common']);
   const toast = useToast();
   const [rows, setRows] = useState<QuizAttemptRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -18,7 +20,7 @@ export function QuizAttemptsModal({ homework, onClose }: { homework: HomeworkIte
       .then(setRows)
       .catch((err: Error) => toast(err.message, 'error'))
       .finally(() => setLoading(false));
-  }, [homework.id]);
+  }, [homework.id, toast]);
 
   const avg =
     rows.length > 0
@@ -26,27 +28,27 @@ export function QuizAttemptsModal({ homework, onClose }: { homework: HomeworkIte
       : 0;
 
   return (
-    <Modal title={`Kết quả quiz: ${homework.title}`} onClose={onClose} wide>
-      <div className="muted hw-action-icon" style={{ marginBottom: 12, fontSize: 13 }}>
+    <Modal title={t('attempts.title', { title: homework.title })} onClose={onClose} wide>
+      <div className="muted hw-action-icon attempts-summary">
         <Icon name="users" size={14} />
-        <span><strong className="num">{rows.length}</strong> lượt làm bài</span>
+        <span><strong className="num">{rows.length}</strong> {t('attempts.attempts', { count: rows.length })}</span>
         <span aria-hidden="true">·</span>
         <Icon name="star" size={14} />
-        <span>Điểm trung bình <strong className="num">{avg.toFixed(1)}%</strong></span>
+        <span>{t('attempts.avgScore', { avg: avg.toFixed(1) })}</span>
       </div>
       {loading ? (
         <TableSkeleton rows={5} cols={4} />
       ) : rows.length === 0 ? (
-        <EmptyState icon="file" title="Chưa có ai làm bài" />
+        <EmptyState icon="file" title={t('attempts.empty')} />
       ) : (
         <div className="table-wrap">
           <table className="table">
             <thead>
               <tr>
-                <th>Học viên</th>
-                <th className="th-right">Điểm</th>
-                <th className="th-right">Tỷ lệ</th>
-                <th className="th-right">Nộp lúc</th>
+                <th>{t('attempts.col.student')}</th>
+                <th className="th-right">{t('attempts.col.score')}</th>
+                <th className="th-right">{t('attempts.col.rate')}</th>
+                <th className="th-right">{t('attempts.col.submittedAt')}</th>
               </tr>
             </thead>
             <tbody>
@@ -54,9 +56,9 @@ export function QuizAttemptsModal({ homework, onClose }: { homework: HomeworkIte
                 const pct = r.max_score > 0 ? (r.score / r.max_score) * 100 : 0;
                 return (
                   <tr key={r.id}>
-                    <td style={{ fontWeight: 600 }}>{r.student_name}</td>
+                    <td className="attempts-student">{r.student_name}</td>
                     <td className="td-right">
-                      <span className="num" style={{ fontWeight: 700 }}>{r.score}/{r.max_score}</span>
+                      <span className="num attempts-score">{r.score}/{r.max_score}</span>
                     </td>
                     <td className="td-right">
                       <span className={`badge ${pct >= 80 ? 'badge-paid' : pct >= 50 ? 'badge-late' : 'badge-overdue'}`}>

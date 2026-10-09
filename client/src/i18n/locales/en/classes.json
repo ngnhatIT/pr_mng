@@ -1,0 +1,194 @@
+{
+  "add": "Add class",
+  "attendance": {
+    "checkin": {
+      "close": "Close",
+      "codeTitle": "Check-in code",
+      "createError": "Could not create code",
+      "help": "Teachers enter this code on the \"Today's sessions\" page > \"Check in\" to record attendance."
+    },
+    "createSession": "New session",
+    "creating": "Creating...",
+    "emptyDesc": "No students are enrolled in this class yet.",
+    "emptyTitle": "No students to check in",
+    "newSession": {
+      "create": "Create",
+      "creating": "Creating...",
+      "date": "Date *",
+      "title": "Create new session",
+      "topic": "Topic"
+    },
+    "row": {
+      "noteAria": "Note for {{name}}",
+      "notePlaceholder": "Note...",
+      "statusAria": "Status of {{name}}"
+    },
+    "save": "Save attendance",
+    "selectClass": "- Select class -",
+    "selectSession": "- Select session -",
+    "sessionOption": "{{date}}{{topic}} ({{count}} checked in)",
+    "status": {
+      "absent": "Absent",
+      "late": "Late",
+      "present": "Present"
+    },
+    "summary": {
+      "absent": "absent",
+      "late": "late",
+      "present": "present",
+      "students": "students"
+    },
+    "title": "Attendance",
+    "toast": {
+      "attendanceError": "Could not load attendance",
+      "createError": "Creation failed",
+      "created": "Session created",
+      "saved": "Attendance saved",
+      "sessionsError": "Could not load sessions"
+    },
+    "toolbar": {
+      "allPresent": "Mark all present",
+      "createCode": "Generate check-in code",
+      "creatingCode": "Generating..."
+    },
+    "topic": {
+      "label": "Session topic",
+      "placeholder": "E.g.: Present simple tense..."
+    },
+    "desc": "Pick a class and session, then record each student's status"
+  },
+  "classStatus": {
+    "active": "Open",
+    "inactive": "Closed"
+  },
+  "classes": {
+    "capacityAria": "Class {{name}} occupancy: {{pct}}%",
+    "full": "Full",
+    "title": "Classes"
+  },
+  "delete": {
+    "message": "Are you sure you want to delete class \"{{name}}\"? Related sessions, attendance and enrollments will also be deleted.",
+    "title": "Delete class"
+  },
+  "desc": "Create classes, schedule sessions, assign teachers and enroll students",
+  "detail": {
+    "back": "Class list",
+    "dateRange": "Duration",
+    "emptySessionsDesc": "Sessions will be auto-generated from the class schedule.",
+    "emptySessionsTitle": "No sessions yet",
+    "emptyStudentsDesc": "Add students to the class to start taking attendance.",
+    "emptyStudentsTitle": "No students yet",
+    "enroll": {
+      "add": "Add",
+      "addError": "Could not add",
+      "added": "Student added to class",
+      "adding": "Adding...",
+      "notFound": "No students found.",
+      "searchLabel": "Find student",
+      "searchPlaceholder": "Enter name or code...",
+      "title": "Add student to class"
+    },
+    "kick": {
+      "confirmMessage": "Remove student \"{{student}}\" from class \"{{class}}\"?",
+      "confirmTitle": "Remove from class",
+      "removeFromClass": "Remove from class",
+      "removed": "Student removed from class"
+    },
+    "loadError": "Could not load class details",
+    "noRoom": "No room assigned",
+    "noTeacher": "Unassigned",
+    "notFoundDesc": "The class does not exist or has been deleted.",
+    "notFoundTitle": "Class not found",
+    "recentSessions": "Recent sessions",
+    "room": "Room",
+    "schedule": "Schedule",
+    "sessionCount": "Sessions",
+    "size": "Size",
+    "students": "students",
+    "studentsTitle": "Students ({{count}})",
+    "teacher": "Teacher",
+    "tuition": "Tuition",
+    "noTopic": "No topic yet",
+    "attendanceCount": "{{count}} check-ins",
+    "sizeBadge": "{{count}}/{{max}} students"
+  },
+  "empty": {
+    "desc": "Create your first class with a schedule, teacher and tuition.",
+    "title": "No classes yet"
+  },
+  "form": {
+    "addSlot": "Add slot",
+    "addTitle": "Add class",
+    "editTitle": "Edit class",
+    "endDate": "End date",
+    "maxStudents": "Max students",
+    "name": "Class name *",
+    "noSchedule": "No schedule yet. Sessions will not be auto-generated.",
+    "room": "Room",
+    "roomNoAssign": "No room assigned",
+    "scheduleLabel": "Weekly schedule",
+    "seats": "{{n}} seats",
+    "startDate": "Start date",
+    "status": "Status",
+    "teacher": "Teacher",
+    "teacherUnassigned": "Unassigned",
+    "tuitionFee": "Tuition (VND) *",
+    "weeklySchedule": "Schedule",
+    "roomCapacity": " ({{capacity}} seats)"
+  },
+  "rooms": {
+    "add": "Add room",
+    "delete": {
+      "message": "Delete room \"{{name}}\"? Classes assigned to this room will become \"No room assigned\".",
+      "title": "Delete room"
+    },
+    "deleted": "Room deleted",
+    "desc": "Assign rooms to classes. The system warns about schedule conflicts.",
+    "empty": {
+      "desc": "Add rooms to schedule classes.",
+      "title": "No rooms yet"
+    },
+    "form": {
+      "addTitle": "Add room",
+      "capacity": "Capacity",
+      "editTitle": "Edit room",
+      "name": "Room name *"
+    },
+    "loadError": "Could not load room list",
+    "saved": "Room saved",
+    "status": {
+      "idle": "Available",
+      "inUse": "In use"
+    },
+    "table": {
+      "actions": "Actions",
+      "capacity": "Capacity",
+      "classesUsing": "Classes using",
+      "name": "Room name",
+      "status": "Status"
+    },
+    "title": "Rooms"
+  },
+  "table": {
+    "actions": "Actions",
+    "fee": "Tuition",
+    "schedule": "Schedule",
+    "size": "Size",
+    "teacher": "Teacher"
+  },
+  "title": "Classes",
+  "toast": {
+    "deleted": "Class deleted",
+    "loadError": "Could not load class list",
+    "saved": "Class saved"
+  },
+  "days": {
+    "2": "Monday",
+    "3": "Tuesday",
+    "4": "Wednesday",
+    "5": "Thursday",
+    "6": "Friday",
+    "7": "Saturday",
+    "8": "Sunday"
+  }
+}

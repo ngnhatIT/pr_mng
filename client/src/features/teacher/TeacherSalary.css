@@ -60,3 +60,13 @@
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
+
+/* Dark mode: hero dùng nền tint thay vì primary đặc để chữ trắng không bị chói */
+[data-theme='dark'] .salary-hero {
+  background: var(--primary-soft);
+}
+
+[data-theme='dark'] .salary-month,
+[data-theme='dark'] .salary-sub {
+  color: var(--text-muted);
+}

@@ -1,0 +1,297 @@
+{
+  "actions": {
+    "analytics": "Analytics",
+    "create": "New assignment",
+    "grade": "Grade",
+    "publish": "Publish",
+    "publishNow": "Publish now",
+    "questionBank": "Question bank",
+    "reuse": "Reuse",
+    "reuseTitle": "Create a new copy from this",
+    "unpublish": "Unpublish",
+    "unpublishTitle": "Move back to drafts",
+    "viewResults": "Results",
+    "viewSubmissions": "Submissions"
+  },
+  "analytics": {
+    "byClass": "By class",
+    "col": {
+      "avgCompletion": "Avg. completion",
+      "avgScore": "Avg. score",
+      "class": "Class",
+      "published": "Published"
+    },
+    "noData": "No data yet.",
+    "noRecent": "No assignments yet.",
+    "recent": "Latest assignments",
+    "title": "Homework analytics"
+  },
+  "attempts": {
+    "attempts_one": "attempt",
+    "attempts_other": "attempts",
+    "avgScore": "Average score {{avg}}%",
+    "col": {
+      "rate": "Rate",
+      "score": "Score",
+      "student": "Student",
+      "submittedAt": "Submitted at"
+    },
+    "empty": "No attempts yet",
+    "title": "Quiz results: {{title}}"
+  },
+  "bank": {
+    "add": "Add question",
+    "allTags": "All topics",
+    "clearSearch": "Clear search",
+    "deleteConfirm": "Delete this question from the bank?",
+    "empty": "Bank is empty",
+    "emptyDesc": "Add questions to reuse across quizzes.",
+    "form": {
+      "added": "Added to the bank",
+      "answers": "Answers (tick the correct one)",
+      "answersRequired": "Need at least 2 answers with 1 correct",
+      "chooseTag": "- Select -",
+      "newTagPh": "Or create new",
+      "points": "Points",
+      "question": "Question *",
+      "questionPh": "E.g. What does 'Apple' mean?",
+      "questionRequired": "Enter the question",
+      "save": "Save to bank",
+      "tag": "Topic"
+    },
+    "import_one": "Add {{count}} question to quiz",
+    "import_other": "Add {{count}} questions to quiz",
+    "meta": "{{points}} pts · {{count}} answers",
+    "searchPh": "Search questions...",
+    "selected_one": "{{count}} question selected",
+    "selected_other": "{{count}} questions selected",
+    "title": "Question bank",
+    "toast": {
+      "deleteFail": "Delete failed",
+      "loadFail": "Could not load the bank",
+      "staleSelection_one": "{{count}} selected question is no longer in the list",
+      "staleSelection_other": "{{count}} selected questions are no longer in the list"
+    }
+  },
+  "delete": {
+    "message": "Delete \"{{title}}\"?",
+    "title": "Delete assignment"
+  },
+  "due": {
+    "daysLeft_one": "{{count}} day left",
+    "daysLeft_other": "{{count}} days left",
+    "overdueDays_one": "Overdue by {{count}} day",
+    "overdueDays_other": "Overdue by {{count}} days",
+    "today": "Due today"
+  },
+  "editor": {
+    "bold": "Bold",
+    "bullets": "Bulleted list",
+    "heading": "Heading",
+    "italic": "Italic",
+    "markdownHint": "Markdown supported",
+    "numbered": "Numbered list",
+    "quote": "Quote",
+    "selFallback": "text"
+  },
+  "empty": {
+    "desc": "Create a new assignment, save as draft or schedule it.",
+    "title": "No homework yet"
+  },
+  "filters": {
+    "allClasses": "All classes",
+    "allDues": "All due dates",
+    "allKinds": "All types",
+    "kindHomework": "Homework",
+    "kindQuiz": "Quiz",
+    "noDate": "No due date",
+    "overdue": "Overdue",
+    "searchPlaceholder": "Search by title, content...",
+    "upcoming": "Upcoming"
+  },
+  "form": {
+    "addAttachment": "+ Add",
+    "addCriterion": "+ Add criterion",
+    "addOption": "+ Add option",
+    "addQuestion": "+ Add question",
+    "assignTo": "Assign to",
+    "attNamePh": "Name (e.g. Listening audio)",
+    "attUrlPh": "Link https://...",
+    "attachments": "Attachments (doc, audio, video links)",
+    "content": "Content ({{count}}/5000)",
+    "contentPh": "Assignment details...\n1. ...\n2. ...",
+    "correctAnswer": "Correct answer",
+    "criterion": "Criterion",
+    "criterionScore": "{{score}} pts",
+    "defaultCriteria": [
+      "Pronunciation",
+      "Vocabulary"
+    ],
+    "deselectAll": "Deselect",
+    "dueDate": "Due date",
+    "dueNextWeek": "Next week",
+    "dueToday": "Today",
+    "dueTomorrow": "Tomorrow",
+    "dueWeekend": "This weekend",
+    "dueWithDate": "Due: {{date}}",
+    "fromBank": "Import from bank",
+    "hardDeadline": "Hard deadline",
+    "hardDeadlineHint": "Submissions lock after this date",
+    "hidePreview": "Hide preview",
+    "kindHomework": "Regular homework",
+    "kindQuiz": "Multiple-choice quiz",
+    "maxScore": "Max score",
+    "maxScorePh": "E.g. 10 (empty = no grading)",
+    "newRubric": "+ New",
+    "noResults": "No results",
+    "noRubric": "No rubric",
+    "noTitle": "(No title yet)",
+    "optionPh": "Answer {{letter}}",
+    "pickStudents": "Pick students",
+    "points": "Points",
+    "preview": "Preview",
+    "publishDraftOpt": "Save draft",
+    "publishFor_one": "Publish to {{count}} class",
+    "publishFor_other": "Publish to {{count}} classes",
+    "publishNowOpt": "Publish now",
+    "publishScheduleOpt": "Schedule",
+    "publishSection": "Publish",
+    "questionPh": "Question {{n}}",
+    "quickDue": "Quick due date",
+    "quickTemplates": "Quick templates",
+    "quizLocked": "Students have already taken this quiz - questions are locked. Create a new quiz to make changes.",
+    "quizQuestions_one": "{{count}} quiz question, {{total}} pts total",
+    "quizQuestions_other": "{{count}} quiz questions, {{total}} pts total",
+    "rubric": "Grading rubric",
+    "rubricNamePh": "Rubric name (e.g. Speaking)",
+    "rubricOption": "{{name}} ({{score}} pts)",
+    "saveChanges": "Save changes",
+    "saveDraft": "Save draft",
+    "saveRubric": "Save rubric",
+    "scheduleFor_one": "Schedule ({{count}} class)",
+    "scheduleFor_other": "Schedule ({{count}} classes)",
+    "searchClass": "Search classes...",
+    "searchStudent": "Search students...",
+    "selectAll": "Select all",
+    "selectClass": "Select classes ({{count}} selected) *",
+    "selectedCount_one": "{{count}} student selected",
+    "selectedCount_other": "{{count}} students selected",
+    "submitting": "Processing...",
+    "templates": [
+      {
+        "content": "1. Memorize 20 new words from the unit\n2. Write each word 3 times\n3. Make sentences with any 5 words",
+        "name": "Vocabulary review",
+        "title": "Review Unit {n} vocabulary"
+      },
+      {
+        "content": "Complete the exercises on page {n} of the textbook.\nTake a photo of your work for the teacher.",
+        "name": "Textbook exercises",
+        "title": "Textbook exercises p. {n}"
+      },
+      {
+        "content": "1. Listen to the audio 3 times\n2. Fill in the missing words\n3. Record the dialogue",
+        "name": "Listening practice",
+        "title": "Listening practice {n}"
+      }
+    ],
+    "title": "Title *",
+    "titleEdit": "Edit assignment",
+    "titleNew": "New assignment",
+    "titlePhHw": "E.g. Review Unit 5 vocabulary",
+    "titlePhQuiz": "E.g. Unit 5 vocabulary quiz",
+    "toast": {
+      "assigned_one": "Assigned to {{count}} class",
+      "assigned_other": "Assigned to {{count}} classes",
+      "attRequired": "Enter attachment name and link",
+      "bankImported_one": "Added {{count}} question from the bank",
+      "bankImported_other": "Added {{count}} questions from the bank",
+      "rubricCreated": "Rubric created",
+      "rubricFail": "Failed to create rubric",
+      "saveFail": "Save failed",
+      "savedDraft": "Draft saved",
+      "scheduled_one": "Scheduled for {{count}} class",
+      "scheduled_other": "Scheduled for {{count}} classes",
+      "updated": "Updated"
+    },
+    "wholeClass": "Whole class"
+  },
+  "grade": {
+    "empty": "No students yet",
+    "feedback": "Feedback",
+    "feedbackPh": "Feedback for the student...",
+    "pickStudent": "Pick a student to grade",
+    "pickStudentDesc": "Click a name in the list on the left.",
+    "progressDone": "Graded",
+    "rubric": "Rubric: {{name}}",
+    "saveScore": "Save score",
+    "scale": "Scale: {{max}}",
+    "score": "Score",
+    "status": {
+      "graded": "Graded",
+      "pending": "Not submitted",
+      "submitted": "Submitted"
+    },
+    "studentList": "Student list",
+    "title": "Grading: {{title}}",
+    "toast": {
+      "invalidScore": "Invalid score",
+      "loadFail": "Could not load the grade sheet",
+      "overMax": "Score cannot exceed {{max}}",
+      "saveFail": "Failed to save score",
+      "saved": "Score saved"
+    }
+  },
+  "page": {
+    "desc": "Assign homework and quizzes to classes, grade and track submissions",
+    "title": "Homework"
+  },
+  "stats": {
+    "drafts": "Drafts / Scheduled",
+    "dueSoon": "Due soon (≤ 3 days)",
+    "overdue": "Overdue",
+    "published": "Published"
+  },
+  "status": {
+    "draft": "Draft",
+    "published": "Published",
+    "scheduled": "Scheduled"
+  },
+  "submissions": {
+    "count_one": "{{count}} submission",
+    "count_other": "{{count}} submissions",
+    "downloadFile": "Download file",
+    "empty": "No submissions yet",
+    "emptyDesc": "Parents submit via the parent portal.",
+    "imageAlt": "Submission photo",
+    "submittedAt": "Submitted {{time}}",
+    "title": "Submissions - {{title}}",
+    "viewLarge": "View full image"
+  },
+  "table": {
+    "actions": "Actions",
+    "class": "Class",
+    "due": "Due date",
+    "maxScore": "Max score: {{max}}",
+    "progress": "Done",
+    "status": "Status",
+    "title": "Assignment"
+  },
+  "tabs": {
+    "all": "All",
+    "draft": "Drafts",
+    "published": "Published",
+    "scheduled": "Scheduled"
+  },
+  "toast": {
+    "deleteFail": "Delete failed",
+    "deleted": "Homework deleted",
+    "loadFail": "Could not load homework",
+    "publishFail": "Publish failed",
+    "published": "Homework published",
+    "reuseFail": "Reuse failed",
+    "reused": "Draft created from the old assignment - edit then publish",
+    "unpublishConfirm": "Unpublish \"{{title}}\" to drafts? Parents will no longer see it.",
+    "unpublishFail": "Unpublish failed",
+    "unpublished": "Moved back to drafts"
+  }
+}

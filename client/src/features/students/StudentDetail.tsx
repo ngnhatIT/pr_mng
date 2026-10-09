@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { http } from '../../shared/api/client';
 import { studentsApi } from './students.api';
 import { useToast } from '../../shared/ui/toast';
@@ -8,8 +9,6 @@ import {
   InvoiceItem,
   Grade,
   ClassItem,
-  STUDENT_STATUS_LABEL,
-  INVOICE_STATUS_LABEL,
   formatVND,
   formatDate,
 } from '../../shared/types';
@@ -27,6 +26,7 @@ interface Detail {
 }
 
 export function StudentDetail() {
+  const { t } = useTranslation(['students', 'common']);
   const { id } = useParams<{ id: string }>();
   const [data, setData] = useState<Detail | null>(null);
   const [loading, setLoading] = useState(true);
@@ -38,12 +38,12 @@ export function StudentDetail() {
         const d = await http.get<Detail>(`/students/${id}`);
         setData(d);
       } catch (err) {
-        toast(err instanceof Error ? err.message : 'Không tải được chi tiết', 'error');
+        toast(err instanceof Error ? err.message : t('detail.loadError'), 'error');
       } finally {
         setLoading(false);
       }
     })();
-  }, [id, toast]);
+  }, [id, toast, t]);
 
   if (loading)
     return (
@@ -73,8 +73,8 @@ export function StudentDetail() {
       <div className="page">
         <EmptyState
           icon="user"
-          title="Không tìm thấy học viên"
-          desc="Học viên không tồn tại hoặc đã bị xóa."
+          title={t('detail.notFoundTitle')}
+          desc={t('detail.notFoundDesc')}
         />
       </div>
     );
@@ -84,7 +84,7 @@ export function StudentDetail() {
     <div className="page">
       <Link className="link back-link" to="/app/students">
         <Icon name="arrow-right" size={14} className="flip-x" />
-        Danh sách học viên
+        {t('detail.back')}
       </Link>
       <div className="profile-head">
         <div className="profile-avatar">{student.name.charAt(0).toUpperCase()}</div>
@@ -93,7 +93,7 @@ export function StudentDetail() {
             {student.name} <span className="muted mono">({student.code})</span>
           </h1>
           <div className="profile-badges">
-            <span className={`badge badge-${student.status}`}>{STUDENT_STATUS_LABEL[student.status]}</span>
+            <span className={`badge badge-${student.status}`}>{t(`status.${student.status}`)}</span>
           </div>
         </div>
       </div>
@@ -101,28 +101,28 @@ export function StudentDetail() {
       <div className="two-col">
         <section className="card">
           <div className="section-head">
-            <h3>Thông tin cá nhân</h3>
+            <h3>{t('detail.personalInfo')}</h3>
           </div>
           <dl className="kv">
-            <dt>Điện thoại</dt>
+            <dt>{t('detail.phone')}</dt>
             <dd>{student.phone || '-'}</dd>
-            <dt>Email</dt>
+            <dt>{t('detail.email')}</dt>
             <dd>{student.email || '-'}</dd>
-            <dt>Ngày sinh</dt>
+            <dt>{t('detail.dob')}</dt>
             <dd>{formatDate(student.dob)}</dd>
-            <dt>Địa chỉ</dt>
+            <dt>{t('detail.address')}</dt>
             <dd>{student.address || '-'}</dd>
-            <dt>Ghi chú</dt>
+            <dt>{t('detail.note')}</dt>
             <dd>{student.note || '-'}</dd>
           </dl>
         </section>
 
         <section className="card">
           <div className="section-head">
-            <h3>Lớp đang theo học</h3>
+            <h3>{t('detail.classes')}</h3>
           </div>
           {data.classes.length === 0 ? (
-            <EmptyState icon="book" title="Chưa ghi danh lớp nào" />
+            <EmptyState icon="book" title={t('detail.noClasses')} />
           ) : (
             <ul className="list">
               {data.classes.map((c) => (
@@ -130,7 +130,7 @@ export function StudentDetail() {
                   <Link className="link" to={`/app/classes/${c.id}`}>
                     {c.name}
                   </Link>
-                  <span className="muted">từ {formatDate(c.enrolled_at)}</span>
+                  <span className="muted">{t('detail.fromDate', { date: formatDate(c.enrolled_at) })}</span>
                 </li>
               ))}
             </ul>
@@ -140,20 +140,20 @@ export function StudentDetail() {
 
       <section className="card">
         <div className="section-head">
-          <h3>Hóa đơn học phí</h3>
+          <h3>{t('detail.invoices')}</h3>
         </div>
         {data.invoices.length === 0 ? (
-          <EmptyState icon="banknote" title="Chưa có hóa đơn nào" />
+          <EmptyState icon="banknote" title={t('detail.noInvoices')} />
         ) : (
           <div className="table-wrap">
             <table className="table">
               <thead>
                 <tr>
-                  <th>Lớp</th>
-                  <th>Số tiền</th>
-                  <th>Đã thu</th>
-                  <th>Hạn nộp</th>
-                  <th>Trạng thái</th>
+                  <th>{t('detail.invoiceTable.class')}</th>
+                  <th>{t('detail.invoiceTable.amount')}</th>
+                  <th>{t('detail.invoiceTable.paid')}</th>
+                  <th>{t('detail.invoiceTable.dueDate')}</th>
+                  <th>{t('detail.invoiceTable.status')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -164,7 +164,7 @@ export function StudentDetail() {
                     <td className="num">{formatVND(inv.paid || 0)}</td>
                     <td>{formatDate(inv.due_date)}</td>
                     <td>
-                      <span className={`badge badge-${inv.status}`}>{INVOICE_STATUS_LABEL[inv.status]}</span>
+                      <span className={`badge badge-${inv.status}`}>{t(`invoiceStatus.${inv.status}`)}</span>
                     </td>
                   </tr>
                 ))}
@@ -180,6 +180,7 @@ export function StudentDetail() {
 }
 
 function GradesSection({ studentId }: { studentId: number }) {
+  const { t } = useTranslation(['students', 'common']);
   const [grades, setGrades] = useState<Grade[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -192,11 +193,11 @@ function GradesSection({ studentId }: { studentId: number }) {
       const res = await studentsApi.listGrades(studentId, { limit: 100 });
       setGrades(res.data);
     } catch (err) {
-      toast(err instanceof Error ? err.message : 'Không tải được điểm số', 'error');
+      toast(err instanceof Error ? err.message : t('detail.grades.loadError'), 'error');
     } finally {
       setLoading(false);
     }
-  }, [studentId, toast]);
+  }, [studentId, toast, t]);
 
   useEffect(() => {
     void load();
@@ -206,21 +207,21 @@ function GradesSection({ studentId }: { studentId: number }) {
     if (!deleting) return;
     try {
       await http.del(`/grades/${deleting.id}`);
-      toast('Đã xóa điểm', 'success');
+      toast(t('detail.grades.deleted'), 'success');
       setDeleting(null);
       void load();
     } catch (err) {
-      toast(err instanceof Error ? err.message : 'Xóa thất bại', 'error');
+      toast(err instanceof Error ? err.message : t('states.deleteError', { ns: 'common' }), 'error');
     }
   };
 
   return (
     <section className="card">
       <div className="section-head">
-        <h3>Điểm số</h3>
+        <h3>{t('detail.grades.title')}</h3>
         <button className="btn btn-sm btn-primary btn-inline" onClick={() => setShowForm(true)}>
           <Icon name="plus" size={13} />
-          Nhập điểm
+          {t('detail.grades.add')}
         </button>
       </div>
       {loading ? (
@@ -228,20 +229,20 @@ function GradesSection({ studentId }: { studentId: number }) {
       ) : grades.length === 0 ? (
         <EmptyState
           icon="cap"
-          title="Chưa có điểm số nào"
-          desc="Nhấn nút Nhập điểm ở trên để thêm điểm cho học viên."
+          title={t('detail.grades.emptyTitle')}
+          desc={t('detail.grades.emptyDesc')}
         />
       ) : (
         <div className="table-wrap">
           <table className="table">
             <thead>
               <tr>
-                <th>Bài kiểm tra</th>
-                <th>Lớp</th>
-                <th>Điểm</th>
-                <th>Nhận xét</th>
-                <th>Ngày nhập</th>
-                <th className="th-right">Thao tác</th>
+                <th>{t('detail.grades.table.exam')}</th>
+                <th>{t('detail.grades.table.class')}</th>
+                <th>{t('detail.grades.table.score')}</th>
+                <th>{t('detail.grades.table.comment')}</th>
+                <th>{t('detail.grades.table.date')}</th>
+                <th className="th-right">{t('detail.grades.table.actions')}</th>
               </tr>
             </thead>
             <tbody>
@@ -262,7 +263,7 @@ function GradesSection({ studentId }: { studentId: number }) {
                       onClick={() => setDeleting(g)}
                     >
                       <Icon name="trash" size={13} />
-                      Xóa
+                      {t('actions.delete', { ns: 'common' })}
                     </button>
                   </td>
                 </tr>
@@ -283,8 +284,12 @@ function GradesSection({ studentId }: { studentId: number }) {
       )}
       {deleting && (
         <ConfirmDialog
-          title="Xóa điểm"
-          message={`Xóa điểm "${deleting.title}" (${deleting.score}/${deleting.max_score})?`}
+          title={t('detail.grades.deleteTitle')}
+          message={t('detail.grades.deleteMessage', {
+            title: deleting.title,
+            score: deleting.score,
+            max: deleting.max_score,
+          })}
           onClose={() => setDeleting(null)}
           onConfirm={remove}
           danger
@@ -303,6 +308,7 @@ function StudentGradeFormModal({
   onClose: () => void;
   onDone: () => void;
 }) {
+  const { t } = useTranslation(['students', 'common']);
   const [classes, setClasses] = useState<ClassItem[]>([]);
   const [classId, setClassId] = useState('');
   const [title, setTitle] = useState('');
@@ -332,22 +338,22 @@ function StudentGradeFormModal({
         max_score: Number(maxScore) || 10,
         comment: comment || null,
       });
-      toast('Đã nhập điểm', 'success');
+      toast(t('detail.grades.saved'), 'success');
       onDone();
     } catch (err) {
-      toast(err instanceof Error ? err.message : 'Nhập điểm thất bại', 'error');
+      toast(err instanceof Error ? err.message : t('detail.grades.saveError'), 'error');
     } finally {
       setBusy(false);
     }
   };
 
   return (
-    <Modal title="Nhập điểm" onClose={onClose}>
+    <Modal title={t('detail.grades.formTitle')} onClose={onClose}>
       <form onSubmit={submit}>
         <div className="form-grid">
-          <Field label="Lớp">
+          <Field label={t('detail.grades.form.class')}>
             <select className="text-input" value={classId} onChange={(e) => setClassId(e.target.value)}>
-              <option value="">- Không gắn lớp -</option>
+              <option value="">{t('detail.grades.form.noClass')}</option>
               {classes.map((c) => (
                 <option key={c.id} value={c.id}>
                   {c.name}
@@ -355,10 +361,10 @@ function StudentGradeFormModal({
               ))}
             </select>
           </Field>
-          <Field label="Tên bài kiểm tra *">
+          <Field label={t('detail.grades.form.examName')}>
             <input className="text-input" value={title} onChange={(e) => setTitle(e.target.value)} required />
           </Field>
-          <Field label="Điểm *">
+          <Field label={t('detail.grades.form.score')}>
             <input
               className="text-input"
               type="number"
@@ -369,7 +375,7 @@ function StudentGradeFormModal({
               required
             />
           </Field>
-          <Field label="Thang điểm">
+          <Field label={t('detail.grades.form.maxScore')}>
             <input
               className="text-input"
               type="number"
@@ -378,7 +384,7 @@ function StudentGradeFormModal({
               onChange={(e) => setMaxScore(e.target.value)}
             />
           </Field>
-          <Field label="Nhận xét" span>
+          <Field label={t('detail.grades.form.comment')} span>
             <textarea
               className="text-input"
               rows={2}
@@ -389,10 +395,10 @@ function StudentGradeFormModal({
         </div>
         <div className="modal-actions">
           <button type="button" className="btn" onClick={onClose}>
-            Hủy
+            {t('actions.cancel', { ns: 'common' })}
           </button>
           <button type="submit" className="btn btn-primary" disabled={busy}>
-            {busy ? 'Đang lưu...' : 'Lưu'}
+            {busy ? t('actions.saving', { ns: 'common' }) : t('actions.save', { ns: 'common' })}
           </button>
         </div>
       </form>

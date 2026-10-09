@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { reviewsApi } from './growth.api';
 import { useToast } from '../../shared/ui/toast';
 import { ConfirmDialog } from '../../shared/components/Modal';
@@ -7,12 +8,13 @@ import { EmptyState } from '../../shared/components/EmptyState';
 import { CardGridSkeleton } from '../../shared/components/Skeleton';
 import { Pagination, type PaginationMeta } from '../../shared/components/Pagination';
 import { Icon } from '../../shared/components/icons';
-import { ReviewItem, REVIEW_STATUS_LABEL, labelOf, formatDate } from '../../shared/types';
+import { ReviewItem, formatDate } from '../../shared/types';
 import './Growth.css';
 
 function Stars({ rating }: { rating: number }) {
+  const { t } = useTranslation(['ops', 'common']);
   return (
-    <span className="stars-svg" role="img" aria-label={`Đánh giá ${rating} trên 5 sao`}>
+    <span className="stars-svg" role="img" aria-label={t('reviews.starsAria', { rating })}>
       {[1, 2, 3, 4, 5].map((i) => (
         <Icon key={i} name="star" size={15} className={i <= rating ? 'star-svg on' : 'star-svg'} />
       ))}
@@ -21,6 +23,7 @@ function Stars({ rating }: { rating: number }) {
 }
 
 export function ReviewsAdmin() {
+  const { t } = useTranslation(['ops', 'common']);
   const [tab, setTab] = useState<'pending' | 'approved'>('pending');
   const [reviews, setReviews] = useState<ReviewItem[]>([]);
   const [loading, setLoading] = useState(false);
@@ -29,8 +32,8 @@ export function ReviewsAdmin() {
   const [pagination, setPagination] = useState<PaginationMeta | null>(null);
   const toast = useToast();
 
-  const switchTab = (t: 'pending' | 'approved') => {
-    setTab(t);
+  const switchTab = (tb: 'pending' | 'approved') => {
+    setTab(tb);
     setPage(1);
   };
 
@@ -41,11 +44,11 @@ export function ReviewsAdmin() {
       setReviews(res.data);
       setPagination(res.pagination);
     } catch (err) {
-      toast(err instanceof Error ? err.message : 'Không tải được đánh giá', 'error');
+      toast(err instanceof Error ? err.message : t('reviews.toast.loadFail'), 'error');
     } finally {
       setLoading(false);
     }
-  }, [tab, page, toast]);
+  }, [tab, page, toast, t]);
 
   useEffect(() => {
     void load();
@@ -55,10 +58,10 @@ export function ReviewsAdmin() {
     try {
       if (action === 'approve') await reviewsApi.approve(r.id);
       else await reviewsApi.reject(r.id);
-      toast(action === 'approve' ? 'Đã duyệt đánh giá' : 'Đã từ chối đánh giá', 'success');
+      toast(action === 'approve' ? t('reviews.toast.approved') : t('reviews.toast.rejected'), 'success');
       void load();
     } catch (err) {
-      toast(err instanceof Error ? err.message : 'Thất bại', 'error');
+      toast(err instanceof Error ? err.message : t('reviews.toast.moderateFail'), 'error');
     }
   };
 
@@ -66,30 +69,30 @@ export function ReviewsAdmin() {
     if (!deleting) return;
     try {
       await reviewsApi.remove(deleting.id);
-      toast('Đã xóa đánh giá', 'success');
+      toast(t('reviews.toast.deleted'), 'success');
       setDeleting(null);
       void load();
     } catch (err) {
-      toast(err instanceof Error ? err.message : 'Xóa thất bại', 'error');
+      toast(err instanceof Error ? err.message : t('reviews.toast.deleteFail'), 'error');
     }
   };
 
   return (
     <div className="page">
       <PageHeader
-        title="Đánh giá của phụ huynh"
-        desc="Duyệt đánh giá để hiển thị công khai trên landing page"
+        title={t('reviews.title')}
+        desc={t('reviews.desc')}
       />
 
       <div className="tabs">
         <button className={`tab${tab === 'pending' ? ' active' : ''}`} onClick={() => switchTab('pending')}>
-          Chờ duyệt
+          {t('reviews.tabs.pending')}
           {tab === 'pending' && pagination && pagination.total > 0 && (
             <span className="tab-count">{pagination.total}</span>
           )}
         </button>
         <button className={`tab${tab === 'approved' ? ' active' : ''}`} onClick={() => switchTab('approved')}>
-          Đã duyệt
+          {t('reviews.tabs.approved')}
           {tab === 'approved' && pagination && pagination.total > 0 && (
             <span className="tab-count">{pagination.total}</span>
           )}
@@ -101,10 +104,8 @@ export function ReviewsAdmin() {
       ) : reviews.length === 0 ? (
         <EmptyState
           icon="star"
-          title="Chưa có đánh giá nào"
-          desc={
-            tab === 'pending' ? 'Chưa có đánh giá nào đang chờ duyệt.' : 'Chưa có đánh giá nào được duyệt.'
-          }
+          title={t('reviews.empty.title')}
+          desc={tab === 'pending' ? t('reviews.empty.pendingDesc') : t('reviews.empty.approvedDesc')}
         />
       ) : (
         <div className="card-grid">
@@ -112,12 +113,12 @@ export function ReviewsAdmin() {
             <div key={r.id} className="card review-card">
               <div className="review-head">
                 <Stars rating={r.rating} />
-                <span className={`badge badge-${r.status}`}>{labelOf(REVIEW_STATUS_LABEL, r.status)}</span>
+                <span className={`badge badge-${r.status}`}>{t(`reviews.status.${r.status}`)}</span>
               </div>
               <p className="review-comment">{r.comment || '-'}</p>
               <div className="review-meta">
                 <Icon name="user" size={13} />
-                <span>{r.parent_name || 'Phụ huynh'}</span>
+                <span>{r.parent_name || t('reviews.anonymousParent')}</span>
                 <span aria-hidden="true">·</span>
                 <span>{formatDate(r.created_at)}</span>
               </div>
@@ -126,20 +127,20 @@ export function ReviewsAdmin() {
                   <>
                     <button className="btn btn-sm btn-primary" onClick={() => void moderate(r, 'approve')}>
                       <Icon name="check" size={14} />
-                      Duyệt
+                      {t('reviews.approve')}
                     </button>
                     <button
                       className="btn btn-sm btn-danger-ghost"
                       onClick={() => void moderate(r, 'reject')}
                     >
                       <Icon name="x" size={14} />
-                      Từ chối
+                      {t('reviews.reject')}
                     </button>
                   </>
                 ) : (
                   <button className="btn btn-sm btn-danger-ghost" onClick={() => setDeleting(r)}>
                     <Icon name="trash" size={14} />
-                    Xóa
+                    {t('actions.delete', { ns: 'common' })}
                   </button>
                 )}
               </div>
@@ -152,8 +153,8 @@ export function ReviewsAdmin() {
 
       {deleting && (
         <ConfirmDialog
-          title="Xóa đánh giá"
-          message="Xóa đánh giá này khỏi trang public?"
+          title={t('reviews.delete.title')}
+          message={t('reviews.delete.message')}
           onClose={() => setDeleting(null)}
           onConfirm={remove}
           danger

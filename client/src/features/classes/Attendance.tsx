@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { classesApi, sessionsApi, ClassItem, SessionItem, AttendanceRow } from './classes.api';
 import { useToast } from '../../shared/ui/toast';
 import { Modal } from '../../shared/components/Modal';
@@ -9,11 +10,12 @@ import { EmptyState } from '../../shared/components/EmptyState';
 import { Skeleton } from '../../shared/components/Skeleton';
 import { Icon } from '../../shared/components/icons';
 import './Attendance.css';
-import { ATTENDANCE_LABEL, formatDate } from '../../shared/types';
+import { formatDate } from '../../shared/types';
 
 type Status = 'present' | 'absent' | 'late';
 
 export function Attendance() {
+  const { t } = useTranslation(['classes', 'common']);
   const [searchParams, setSearchParams] = useSearchParams();
   const [classes, setClasses] = useState<ClassItem[]>([]);
   const [sessions, setSessions] = useState<SessionItem[]>([]);
@@ -45,10 +47,10 @@ export function Attendance() {
         const s = await sessionsApi.listByClass(cid);
         setSessions(s);
       } catch (err) {
-        toast(err instanceof Error ? err.message : 'Không tải được buổi học', 'error');
+        toast(err instanceof Error ? err.message : t('attendance.toast.sessionsError'), 'error');
       }
     },
-    [toast]
+    [toast, t]
   );
 
   useEffect(() => {
@@ -67,12 +69,12 @@ export function Attendance() {
         setRows(data.students);
         setTopic(data.session.topic || '');
       } catch (err) {
-        toast(err instanceof Error ? err.message : 'Không tải được điểm danh', 'error');
+        toast(err instanceof Error ? err.message : t('attendance.toast.attendanceError'), 'error');
       } finally {
         setLoading(false);
       }
     },
-    [toast]
+    [toast, t]
   );
 
   useEffect(() => {
@@ -117,10 +119,10 @@ export function Attendance() {
         sessionId,
         rows.map((r) => ({ student_id: r.id, status: r.status || 'present', note: r.note || '' }))
       );
-      toast('Đã lưu điểm danh', 'success');
+      toast(t('attendance.toast.saved'), 'success');
       void loadSessions(classId);
     } catch (err) {
-      toast(err instanceof Error ? err.message : 'Lưu thất bại', 'error');
+      toast(err instanceof Error ? err.message : t('states.saveError', { ns: 'common' }), 'error');
     } finally {
       setSaving(false);
     }
@@ -137,7 +139,7 @@ export function Attendance() {
       const r = await sessionsApi.generateCheckinCode(sessionId);
       setCheckinCode(r.code);
     } catch (err) {
-      toast(err instanceof Error ? err.message : 'Tạo mã thất bại', 'error');
+      toast(err instanceof Error ? err.message : t('attendance.checkin.createError'), 'error');
     } finally {
       setMakingCode(false);
     }
@@ -145,11 +147,11 @@ export function Attendance() {
 
   return (
     <div className="page">
-      <PageHeader title="Điểm danh" desc="Chọn lớp và buổi học, sau đó ghi nhận trạng thái từng học viên" />
+      <PageHeader title={t('attendance.title')} desc={t('attendance.desc')} />
 
       <div className="toolbar">
-        <select className="text-input" value={classId} onChange={(e) => pickClass(e.target.value)}>
-          <option value="">- Chọn lớp học -</option>
+        <select className="text-input" value={classId} onChange={(e) => pickClass(e.target.value)} aria-label={t('attendance.selectClass')}>
+          <option value="">{t('attendance.selectClass')}</option>
           {classes.map((c) => (
             <option key={c.id} value={c.id}>
               {c.name}
@@ -161,19 +163,23 @@ export function Attendance() {
           value={sessionId}
           onChange={(e) => pickSession(e.target.value)}
           disabled={!classId}
+          aria-label={t('attendance.selectSession')}
         >
-          <option value="">- Chọn buổi học -</option>
+          <option value="">{t('attendance.selectSession')}</option>
           {sessions.map((s) => (
             <option key={s.id} value={s.id}>
-              {formatDate(s.date)}
-              {s.topic ? ` - ${s.topic}` : ''} ({s.attendance_count || 0} đã điểm danh)
+              {t('attendance.sessionOption', {
+                date: formatDate(s.date),
+                topic: s.topic ? ` - ${s.topic}` : '',
+                count: s.attendance_count || 0,
+              })}
             </option>
           ))}
         </select>
         {classId && (
-          <button className="btn" onClick={() => setShowNewSession(true)}>
+          <button className="btn btn-inline" onClick={() => setShowNewSession(true)}>
             <Icon name="plus" size={14} />
-            Tạo buổi mới
+            {t('attendance.createSession')}
           </button>
         )}
       </div>
@@ -181,20 +187,20 @@ export function Attendance() {
       {sessionId && (
         <>
           <div className="card">
-            <Field label="Chủ đề buổi học">
+            <Field label={t('attendance.topic.label')}>
               <input
                 className="text-input"
                 value={topic}
                 onChange={(e) => setTopic(e.target.value)}
-                placeholder="VD: Thì hiện tại đơn..."
+                placeholder={t('attendance.topic.placeholder')}
               />
             </Field>
             <div className="toolbar toolbar-tight">
               <button className="btn btn-sm" onClick={() => markAll('present')}>
-                Tất cả có mặt
+                {t('attendance.toolbar.allPresent')}
               </button>
               <button className="btn btn-sm" onClick={() => void makeCheckinCode()} disabled={makingCode}>
-                {makingCode ? 'Đang tạo...' : 'Tạo mã điểm danh'}
+                {makingCode ? t('attendance.toolbar.creatingCode') : t('attendance.toolbar.createCode')}
               </button>
             </div>
           </div>
@@ -216,8 +222,8 @@ export function Attendance() {
           ) : rows.length === 0 ? (
             <EmptyState
               icon="users"
-              title="Chưa có học viên để điểm danh"
-              desc="Lớp này chưa có học viên nào được ghi danh."
+              title={t('attendance.emptyTitle')}
+              desc={t('attendance.emptyDesc')}
             />
           ) : (
             <>
@@ -230,7 +236,7 @@ export function Attendance() {
                         <div className="att-item-name">{r.name}</div>
                         <div className="att-item-code mono muted">{r.code}</div>
                       </div>
-                      <div className="seg seg-lg" role="radiogroup" aria-label={`Trạng thái của ${r.name}`}>
+                      <div className="seg seg-lg" role="radiogroup" aria-label={t('attendance.row.statusAria', { name: r.name })}>
                         {(['present', 'late', 'absent'] as Status[]).map((s) => (
                           <button
                             key={s}
@@ -240,7 +246,7 @@ export function Attendance() {
                             className={`seg-btn seg-${s}${st === s ? ' active' : ''}`}
                             onClick={() => setStatus(r.id, s)}
                           >
-                            {ATTENDANCE_LABEL[s]}
+                            {t('attendance.status.' + s)}
                           </button>
                         ))}
                       </div>
@@ -248,8 +254,8 @@ export function Attendance() {
                         className="text-input input-sm att-note"
                         value={r.note || ''}
                         onChange={(e) => setNote(r.id, e.target.value)}
-                        placeholder="Ghi chú..."
-                        aria-label={`Ghi chú cho ${r.name}`}
+                        placeholder={t('attendance.row.notePlaceholder')}
+                        aria-label={t('attendance.row.noteAria', { name: r.name })}
                       />
                     </div>
                   );
@@ -258,25 +264,25 @@ export function Attendance() {
               <div className="att-savebar">
                 <span className="att-summary">
                   <span>
-                    <span className="num">{rows.length}</span> học viên
+                    <span className="num">{rows.length}</span> {t('attendance.summary.students')}
                   </span>
                   <span>
-                    <span className="num">{presentCount}</span> có mặt
+                    <span className="num">{presentCount}</span> {t('attendance.summary.present')}
                   </span>
                   {lateCount > 0 && (
                     <span className="sum-late">
-                      <span className="num">{lateCount}</span> muộn
+                      <span className="num">{lateCount}</span> {t('attendance.summary.late')}
                     </span>
                   )}
                   {absentCount > 0 && (
                     <span className="sum-absent">
-                      <span className="num">{absentCount}</span> vắng
+                      <span className="num">{absentCount}</span> {t('attendance.summary.absent')}
                     </span>
                   )}
                 </span>
                 <span className="spacer" />
                 <button className="btn btn-primary btn-lg" onClick={() => void save()} disabled={saving}>
-                  {saving ? 'Đang lưu...' : 'Lưu điểm danh'}
+                  {saving ? t('actions.saving', { ns: 'common' }) : t('attendance.save')}
                 </button>
               </div>
             </>
@@ -296,14 +302,14 @@ export function Attendance() {
       )}
 
       {checkinCode && (
-        <Modal title="Mã chấm công" onClose={() => setCheckinCode(null)}>
+        <Modal title={t('attendance.checkin.codeTitle')} onClose={() => setCheckinCode(null)}>
           <p className="confirm-text">
-            Giáo viên nhập mã này trong trang "Buổi dạy hôm nay" {'>'} "Chấm công" để ghi nhận điểm danh.
+            {t('attendance.checkin.help')}
           </p>
           <div className="checkin-code">{checkinCode}</div>
           <div className="modal-actions">
             <button className="btn btn-primary" onClick={() => setCheckinCode(null)}>
-              Đóng
+              {t('attendance.checkin.close')}
             </button>
           </div>
         </Modal>
@@ -321,6 +327,7 @@ function NewSessionModal({
   onClose: () => void;
   onCreated: (id: number) => void;
 }) {
+  const { t } = useTranslation(['classes', 'common']);
   const today = new Date();
   const iso = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(
     today.getDate()
@@ -335,20 +342,20 @@ function NewSessionModal({
     setBusy(true);
     try {
       const s = await sessionsApi.create(classId, date, topic);
-      toast('Đã tạo buổi học', 'success');
+      toast(t('attendance.toast.created'), 'success');
       onCreated(s.id);
     } catch (err) {
-      toast(err instanceof Error ? err.message : 'Tạo thất bại', 'error');
+      toast(err instanceof Error ? err.message : t('attendance.toast.createError'), 'error');
     } finally {
       setBusy(false);
     }
   };
 
   return (
-    <Modal title="Tạo buổi học mới" onClose={onClose}>
+    <Modal title={t('attendance.newSession.title')} onClose={onClose}>
       <form onSubmit={submit}>
         <div className="form-grid">
-          <Field label="Ngày *">
+          <Field label={t('attendance.newSession.date')}>
             <input
               className="text-input"
               type="date"
@@ -357,16 +364,16 @@ function NewSessionModal({
               required
             />
           </Field>
-          <Field label="Chủ đề">
+          <Field label={t('attendance.newSession.topic')}>
             <input className="text-input" value={topic} onChange={(e) => setTopic(e.target.value)} />
           </Field>
         </div>
         <div className="modal-actions">
           <button type="button" className="btn" onClick={onClose}>
-            Hủy
+            {t('actions.cancel', { ns: 'common' })}
           </button>
           <button type="submit" className="btn btn-primary" disabled={busy}>
-            {busy ? 'Đang tạo...' : 'Tạo'}
+            {busy ? t('attendance.newSession.creating') : t('attendance.newSession.create')}
           </button>
         </div>
       </form>

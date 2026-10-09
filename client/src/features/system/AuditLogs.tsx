@@ -1,15 +1,16 @@
 import { useCallback, useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useToast } from '../../shared/ui/toast';
 import { PageHeader } from '../../shared/components/PageHeader';
 import { EmptyState } from '../../shared/components/EmptyState';
 import { TableSkeleton } from '../../shared/components/Skeleton';
 import { Pagination, type PaginationMeta } from '../../shared/components/Pagination';
-import { auditApi, ACTION_LABEL, ENTITY_LABEL, type AuditLog } from './audit.api';
+import { auditApi, type AuditLog } from './audit.api';
 import { formatDateTime } from '../../shared/types';
 import './SystemAdmin.css';
 
-const ACTIONS = Object.keys(ACTION_LABEL);
-const ENTITIES = Object.keys(ENTITY_LABEL);
+const ACTIONS = ['create', 'update', 'delete', 'approve', 'reject', 'payment', 'apply_credit', 'login'] as const;
+const ENTITIES = ['invoices', 'payments', 'students', 'teachers', 'classes'] as const;
 
 function actionBadge(action: string): string {
   switch (action) {
@@ -26,6 +27,7 @@ function actionBadge(action: string): string {
 }
 
 export function AuditLogs() {
+  const { t } = useTranslation(['ops', 'common']);
   const [logs, setLogs] = useState<AuditLog[]>([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
@@ -41,11 +43,11 @@ export function AuditLogs() {
       setLogs(res.data);
       setPagination(res.pagination);
     } catch (err) {
-      toast(err instanceof Error ? err.message : 'Không tải được nhật ký', 'error');
+      toast(err instanceof Error ? err.message : t('audit.toast.loadFail'), 'error');
     } finally {
       setLoading(false);
     }
-  }, [action, entity, page, toast]);
+  }, [action, entity, page, toast, t]);
 
   useEffect(() => {
     void load();
@@ -54,8 +56,8 @@ export function AuditLogs() {
   return (
     <div className="page">
       <PageHeader
-        title="Nhật ký hoạt động"
-        desc="Ai đã làm gì - đặc biệt các thao tác tiền bạc và xóa dữ liệu"
+        title={t('audit.title')}
+        desc={t('audit.desc')}
       />
 
       <div className="toolbar">
@@ -66,12 +68,12 @@ export function AuditLogs() {
             setAction(e.target.value);
             setPage(1);
           }}
-          aria-label="Lọc theo hành động"
+          aria-label={t('audit.filterAction')}
         >
-          <option value="">Tất cả hành động</option>
+          <option value="">{t('audit.allActions')}</option>
           {ACTIONS.map((a) => (
             <option key={a} value={a}>
-              {ACTION_LABEL[a]}
+              {t(`audit.action.${a}`)}
             </option>
           ))}
         </select>
@@ -82,18 +84,18 @@ export function AuditLogs() {
             setEntity(e.target.value);
             setPage(1);
           }}
-          aria-label="Lọc theo đối tượng"
+          aria-label={t('audit.filterEntity')}
         >
-          <option value="">Tất cả đối tượng</option>
+          <option value="">{t('audit.allEntities')}</option>
           {ENTITIES.map((e) => (
             <option key={e} value={e}>
-              {ENTITY_LABEL[e]}
+              {t(`audit.entity.${e}`)}
             </option>
           ))}
         </select>
         {pagination && (
           <span className="audit-summary">
-            Tổng <strong>{pagination.total}</strong> dòng nhật ký
+            {t('audit.totalCount', { total: pagination.total, count: pagination.total })}
           </span>
         )}
       </div>
@@ -103,18 +105,18 @@ export function AuditLogs() {
       ) : logs.length === 0 ? (
         <EmptyState
           icon="shield"
-          title="Chưa có nhật ký nào"
-          desc="Các thao tác quan trọng (thu tiền, duyệt thanh toán, xóa dữ liệu) sẽ được ghi lại ở đây."
+          title={t('audit.empty.title')}
+          desc={t('audit.empty.desc')}
         />
       ) : (
         <div className="table-wrap sticky">
           <table className="table">
             <thead>
               <tr>
-                <th>Thời gian</th>
-                <th>Người thực hiện</th>
-                <th>Hành động</th>
-                <th>Chi tiết</th>
+                <th>{t('audit.col.time')}</th>
+                <th>{t('audit.col.actor')}</th>
+                <th>{t('audit.col.action')}</th>
+                <th>{t('audit.col.detail')}</th>
               </tr>
             </thead>
             <tbody>
@@ -127,7 +129,7 @@ export function AuditLogs() {
                   </td>
                   <td>
                     <span className={`badge ${actionBadge(l.action)}`}>
-                      {ACTION_LABEL[l.action] || l.action}
+                      {t(`audit.action.${l.action}`, { defaultValue: l.action })}
                     </span>
                   </td>
                   <td className="audit-detail" title={l.summary}>

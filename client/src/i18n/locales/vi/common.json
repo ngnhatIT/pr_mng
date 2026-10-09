@@ -1,0 +1,101 @@
+{
+  "actions": {
+    "add": "Thêm",
+    "apply": "Áp dụng",
+    "back": "Quay lại",
+    "cancel": "Hủy",
+    "clear": "Xóa lọc",
+    "close": "Đóng",
+    "confirm": "Xác nhận",
+    "create": "Tạo",
+    "delete": "Xóa",
+    "deleting": "Đang xóa...",
+    "detail": "Chi tiết",
+    "download": "Tải xuống",
+    "edit": "Sửa",
+    "finish": "Hoàn thành",
+    "loading": "Đang tải...",
+    "next": "Tiếp",
+    "prev": "Trước",
+    "refresh": "Tải lại",
+    "save": "Lưu",
+    "saving": "Đang lưu...",
+    "search": "Tìm kiếm",
+    "select": "Chọn",
+    "send": "Gửi",
+    "sending": "Đang gửi...",
+    "update": "Cập nhật",
+    "upload": "Tải lên",
+    "viewAll": "Xem tất cả"
+  },
+  "confirm": {
+    "deleteMessage": "Hành động này không thể hoàn tác.",
+    "deleteTitle": "Xóa mục này?",
+    "no": "Hủy",
+    "yes": "Xóa"
+  },
+  "lang": {
+    "en": "English",
+    "label": "Ngôn ngữ",
+    "vi": "Tiếng Việt"
+  },
+  "nav": {
+    "logout": "Đăng xuất",
+    "openMenu": "Mở menu",
+    "sections": {
+      "manage": "Quản lý",
+      "ops": "Vận hành",
+      "growth": "Tăng trưởng",
+      "system": "Hệ thống"
+    },
+    "dashboard": "Tổng quan",
+    "students": "Học viên",
+    "classes": "Lớp học",
+    "attendance": "Điểm danh",
+    "tuition": "Học phí",
+    "rooms": "Phòng học",
+    "leaves": "Nghỉ phép",
+    "trials": "Học thử",
+    "homework": "Bài tập",
+    "payroll": "Lương GV",
+    "teachers": "Giáo viên",
+    "leads": "Lead",
+    "reviews": "Đánh giá",
+    "referrals": "Giới thiệu",
+    "zalo": "Nhắc Zalo",
+    "paymentConfig": "Cấu hình TT",
+    "audit": "Nhật ký",
+    "roles": "Phân quyền",
+    "systemAdmin": "Hệ thống",
+    "tagline": "Quản lý trung tâm"
+  },
+  "states": {
+    "deleteError": "Xóa thất bại",
+    "deleteSuccess": "Đã xóa",
+    "empty": "Chưa có dữ liệu",
+    "error": "Có lỗi xảy ra",
+    "loadError": "Không tải được dữ liệu",
+    "loading": "Đang tải...",
+    "noData": "Không có dữ liệu",
+    "saveError": "Lưu thất bại",
+    "saveSuccess": "Đã lưu"
+  },
+  "theme": {
+    "dark": "Tối",
+    "light": "Sáng",
+    "toggle": "Chuyển giao diện sáng/tối"
+  },
+  "roles": {
+    "superadmin": "Quản trị hệ thống",
+    "admin": "Quản trị viên",
+    "staff": "Nhân viên",
+    "teacher": "Giáo viên",
+    "parent": "Phụ huynh"
+  },
+  "pagination": {
+    "first": "Trang đầu",
+    "prev": "Trang trước",
+    "next": "Trang sau",
+    "last": "Trang cuối"
+  }
+}

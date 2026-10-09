@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { peopleApi } from './people.api';
 import { useToast } from '../../shared/ui/toast';
 import { Modal } from '../../shared/components/Modal';
@@ -11,6 +12,7 @@ import { PayrollRow, formatVND } from '../../shared/types';
 import './Payroll.css';
 
 export function Payroll() {
+  const { t } = useTranslation(['people', 'common']);
   const now = new Date();
   const defaultMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
   const [month, setMonth] = useState(defaultMonth);
@@ -25,11 +27,11 @@ export function Payroll() {
       const data = await peopleApi.payroll(month);
       setRows(data);
     } catch (err) {
-      toast(err instanceof Error ? err.message : 'Không tải được bảng lương', 'error');
+      toast(err instanceof Error ? err.message : t('payroll.loadError'), 'error');
     } finally {
       setLoading(false);
     }
-  }, [month, toast]);
+  }, [month, toast, t]);
 
   useEffect(() => {
     void load();
@@ -40,19 +42,19 @@ export function Payroll() {
   return (
     <div className="page">
       <PageHeader
-        title="Lương giáo viên"
-        desc="Tính lương giáo viên theo số buổi đã dạy trong tháng"
+        title={t('payroll.title')}
+        desc={t('payroll.desc')}
         actions={
           <span className="payroll-total">
             <Icon name="banknote" size={16} />
-            Tổng chi
+            {t('payroll.totalSpent')}
             <strong className="debt-amount">{formatVND(total)}</strong>
           </span>
         }
       />
 
       <div className="toolbar">
-        <Field label="Tháng">
+        <Field label={t('payroll.month')}>
           <input
             className="text-input"
             type="month"
@@ -67,19 +69,19 @@ export function Payroll() {
       ) : rows.length === 0 ? (
         <EmptyState
           icon="banknote"
-          title="Không có dữ liệu lương"
-          desc="Chưa có dữ liệu lương cho tháng này."
+          title={t('payroll.emptyTitle')}
+          desc={t('payroll.emptyDesc')}
         />
       ) : (
         <div className="table-wrap sticky">
           <table className="table">
             <thead>
               <tr>
-                <th>Giáo viên</th>
-                <th>Số buổi</th>
-                <th>Đơn giá / buổi</th>
-                <th>Tổng lương</th>
-                <th className="th-right">Thao tác</th>
+                <th>{t('payroll.table.teacher')}</th>
+                <th>{t('payroll.table.sessions')}</th>
+                <th>{t('payroll.table.perSession')}</th>
+                <th>{t('payroll.table.total')}</th>
+                <th className="th-right">{t('payroll.table.actions')}</th>
               </tr>
             </thead>
             <tbody>
@@ -101,7 +103,7 @@ export function Payroll() {
                   <td className="td-right">
                     <button className="btn btn-sm btn-inline" onClick={() => setEditing(r)}>
                       <Icon name="pencil" size={13} />
-                      Đơn giá
+                      {t('payroll.rate')}
                     </button>
                   </td>
                 </tr>
@@ -126,6 +128,7 @@ export function Payroll() {
 }
 
 function RateModal({ row, onClose, onDone }: { row: PayrollRow; onClose: () => void; onDone: () => void }) {
+  const { t } = useTranslation(['people', 'common']);
   const [amount, setAmount] = useState(String(row.per_session));
   const [busy, setBusy] = useState(false);
   const toast = useToast();
@@ -135,19 +138,19 @@ function RateModal({ row, onClose, onDone }: { row: PayrollRow; onClose: () => v
     setBusy(true);
     try {
       await peopleApi.savePayRule(row.teacher_id, Number(amount));
-      toast(`Đã cập nhật đơn giá cho ${row.teacher_name}`, 'success');
+      toast(t('rate.updated', { name: row.teacher_name }), 'success');
       onDone();
     } catch (err) {
-      toast(err instanceof Error ? err.message : 'Cập nhật thất bại', 'error');
+      toast(err instanceof Error ? err.message : t('rate.updateError'), 'error');
     } finally {
       setBusy(false);
     }
   };
 
   return (
-    <Modal title={`Đơn giá dạy - ${row.teacher_name}`} onClose={onClose}>
+    <Modal title={t('rate.title', { name: row.teacher_name })} onClose={onClose}>
       <form onSubmit={submit}>
-        <Field label="Đơn giá mỗi buổi (đ)">
+        <Field label={t('rate.unit')}>
           <input
             className="text-input"
             type="number"
@@ -159,10 +162,10 @@ function RateModal({ row, onClose, onDone }: { row: PayrollRow; onClose: () => v
         </Field>
         <div className="modal-actions">
           <button type="button" className="btn" onClick={onClose}>
-            Hủy
+            {t('actions.cancel', { ns: 'common' })}
           </button>
           <button type="submit" className="btn btn-primary" disabled={busy}>
-            {busy ? 'Đang lưu...' : 'Lưu'}
+            {busy ? t('actions.saving', { ns: 'common' }) : t('actions.save', { ns: 'common' })}
           </button>
         </div>
       </form>

@@ -9,12 +9,12 @@
 }
 
 .star-svg {
-  color: #d7dde6;
+  color: var(--border-strong);
   flex: none;
 }
 
 .star-svg.on {
-  color: #f59e0b;
+  color: var(--warning);
 }
 
 .star-svg.on path {
@@ -103,3 +103,6 @@
   color: var(--primary-strong);
   letter-spacing: 0.04em;
 }
+
+/* ---------- ReferralsAdmin: thay inline styles ---------- */
+.referral-skel-spacer { height: 16px; }
