@@ -3611,4 +3611,10 @@ a:focus-visible,
     width: 40px;
     height: 40px;
   }
+  /* Chống iOS Safari tự zoom khi focus input < 16px */
+  .text-input,
+  .select-input,
+  textarea.text-input {
+    font-size: 16px;
+  }
 }
