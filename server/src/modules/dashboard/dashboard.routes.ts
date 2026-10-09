@@ -86,13 +86,15 @@ router.get(
       >,
     ]);
 
+    const isTeacher = !!req.user?.teacher_id;
     res.json({
       totalStudents,
       studyingStudents,
       totalTeachers,
       activeClasses,
-      revenueThisMonth,
-      unpaidTotal,
+      // Giáo viên không xem tài chính trung tâm (scope 'own')
+      revenueThisMonth: isTeacher ? 0 : revenueThisMonth,
+      unpaidTotal: isTeacher ? 0 : unpaidTotal,
       todaySessions: todaySessions.map((s) => ({ ...s, scheduleText: formatSchedule(s.schedule) })),
     });
   })
