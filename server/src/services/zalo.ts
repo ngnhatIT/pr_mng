@@ -1,4 +1,5 @@
 import { db, getSetting, getCenterSetting } from '../db';
+import { getCenterSettings } from '../db/helpers';
 import { logger } from '../shared/logger';
 
 const log = logger.scope('zalo');
@@ -33,11 +34,16 @@ export const ZALO_CONFIG_KEYS = Object.keys(ZALO_DEFAULTS) as (keyof ZaloConfig)
 
 export async function getZaloConfig(centerId?: number): Promise<ZaloConfig> {
   const cfg = {} as ZaloConfig;
-  for (const k of ZALO_CONFIG_KEYS) {
-    cfg[k] =
-      typeof centerId === 'number'
-        ? await getCenterSetting(centerId, k, ZALO_DEFAULTS[k])
-        : await getSetting(k, ZALO_DEFAULTS[k]);
+  if (typeof centerId === 'number') {
+    // Batch 1 query thay vì 9 query tuần tự (perf)
+    const map = await getCenterSettings(centerId, ZALO_CONFIG_KEYS as string[]);
+    for (const k of ZALO_CONFIG_KEYS) {
+      cfg[k] = (map.get(k) as ZaloConfig[typeof k]) ?? ZALO_DEFAULTS[k];
+    }
+  } else {
+    for (const k of ZALO_CONFIG_KEYS) {
+      cfg[k] = await getSetting(k, ZALO_DEFAULTS[k]);
+    }
   }
   return cfg;
 }
