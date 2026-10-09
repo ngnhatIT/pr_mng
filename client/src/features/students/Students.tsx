@@ -8,6 +8,7 @@ import { Field } from '../../shared/components/Form';
 import { PageHeader } from '../../shared/components/PageHeader';
 import { EmptyState } from '../../shared/components/EmptyState';
 import { TableSkeleton } from '../../shared/components/Skeleton';
+import { useDebounce } from '../../shared/hooks/useDebounce';
 import { Pagination, type PaginationMeta } from '../../shared/components/Pagination';
 import { Icon } from '../../shared/components/icons';
 import './Students.css';
@@ -43,10 +44,12 @@ export function Students() {
   const [pagination, setPagination] = useState<PaginationMeta | null>(null);
   const toast = useToast();
 
+  const debouncedSearch = useDebounce(search);
+
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await studentsApi.list(search, status, { page });
+      const res = await studentsApi.list(debouncedSearch, status, { page });
       setStudents(res.data);
       setPagination(res.pagination);
     } catch (err) {
@@ -54,12 +57,10 @@ export function Students() {
     } finally {
       setLoading(false);
     }
-  }, [search, status, page, toast, t]);
-
+  }, [debouncedSearch, status, page, toast, t]);
   useEffect(() => {
-    const t = window.setTimeout(() => void load(), search ? 350 : 0);
-    return () => window.clearTimeout(t);
-  }, [load, search]);
+    void load();
+  }, [load, debouncedSearch]);
 
   const save = async (form: typeof emptyForm, id?: number) => {
     try {
