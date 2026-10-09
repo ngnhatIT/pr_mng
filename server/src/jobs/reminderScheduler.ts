@@ -181,7 +181,7 @@ export function startReminderScheduler(): void {
           const published = await publishScheduled();
           if (published > 0) log.info(`Đã tự đăng ${published} bài tập hẹn giờ`);
         } catch (err) {
-          log.error('Lỗi tự đăng bài tập hẹn giờ', { error: String(err) });
+          log.error('Lỗi tự đăng bài tập hẹn giờ', { error: formatError(err) });
         }
         try {
           // Giờ Việt Nam — không phụ thuộc TZ của server
@@ -205,12 +205,12 @@ export function startReminderScheduler(): void {
                   { center: center.name }
                 );
               })
-              .catch((err) => log.error('Lỗi vòng nhắc', { error: String(err) }));
+              .catch((err) => log.error('Lỗi vòng nhắc', { error: formatError(err) }));
           }
         } catch (err) {
-          log.error('Lỗi scheduler', { error: String(err) });
+          log.error('Lỗi scheduler', { error: formatError(err) });
         }
-      })().catch((err) => log.error('Lỗi scheduler', { error: String(err) }));
+      })().catch((err) => log.error('Lỗi scheduler', { error: formatError(err) }));
     },
     { timezone: VN_TZ }
   );

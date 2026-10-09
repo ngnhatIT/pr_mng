@@ -179,7 +179,7 @@ export async function sendZNS(params: {
     return { ok: true, data };
   } catch (err) {
     // Không lọt raw error (tiếng Anh) ra UI — log server-side, trả message tiếng Việt chung
-    log.error('Lỗi kết nối Zalo API', { error: String(err) });
+    log.error('Lỗi kết nối Zalo API', { error: formatError(err) });
     return { ok: false, error: 'Lỗi kết nối Zalo API, vui lòng thử lại' };
   }
 }
