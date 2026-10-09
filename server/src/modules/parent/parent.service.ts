@@ -469,6 +469,12 @@ export async function createLeave(
   if (!from_date || !DATE_RE.test(from_date) || !to_date || !DATE_RE.test(to_date)) {
     throw AppError.badRequest('Ngày nghỉ phải có dạng YYYY-MM-DD');
   }
+  // Validate ngày thật (tránh "2026-13-99" qua được regex)
+  const { v, validate } = await import('../../shared/validate');
+  validate(
+    { from_date, to_date },
+    { from_date: v.date({ label: 'Ngày bắt đầu' }), to_date: v.date({ label: 'Ngày kết thúc' }) }
+  );
   if (from_date > to_date) throw AppError.badRequest('Ngày bắt đầu phải trước hoặc bằng ngày kết thúc');
   // Không cho xin nghỉ cho ngày đã qua
   if (to_date < toISODate(new Date())) throw AppError.badRequest('Không thể xin nghỉ cho ngày đã qua');
