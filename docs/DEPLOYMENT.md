@@ -65,7 +65,11 @@ server {
 
 1. **Đổi mật khẩu** các tài khoản khởi tạo ngay.
 2. **Backup DB**: app đã có backup tự động (`BACKUP_CRON`, mặc định 2h sáng, giữ `BACKUP_KEEP` bản,
-   có advisory lock + verify file dump sau mỗi lần backup).
+   có advisory lock + verify file dump sau mỗi lần backup, retry 2 lần cách 15 phút khi fail).
+   **RPO 24h**: nếu DB chết lúc 18h, mất ~16h dữ liệu kể từ backup 2h sáng. Trước khi restore,
+   kiểm tra timestamp bản backup mới nhất (`ls -lt backups/`) để biết phải nhập tay lại dữ liệu nào.
+   Nếu backup fail cả 3 lần, chỉ có log ERROR — nên giám sát log hoặc đặt `ALERT_WEBHOOK_URL`
+   (POST JSON khi backup fail).
    **Quan trọng**: backup mặc định nằm cùng disk với server (`./backups`, đã gitignored).
    Production PHẢI có bản offsite — đồng bộ thư mục backups ra S3/rclone mỗi đêm:
    ```bash

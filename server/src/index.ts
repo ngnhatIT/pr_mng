@@ -6,6 +6,7 @@ import { logger } from './shared/logger';
 import { createApp } from './app';
 import { startReminderScheduler, stopReminderScheduler } from './jobs/reminderScheduler';
 import { initDatabase, closePool, db } from './db';
+import { sendAlert } from './shared/alert';
 import { backupDatabase } from './db/backup';
 
 /**
@@ -88,6 +89,10 @@ function startBackupScheduler(): void {
             break;
           } catch (retryErr: unknown) {
             logger.error('Backup retry THẤT BẠI', { attempt, error: String(retryErr) });
+            if (attempt === 2) {
+              // Hết retry: gửi cảnh báo webhook (nếu cấu hình) — backup chết lặng rất nguy hiểm
+              await sendAlert('Backup DB thất bại sau 3 lần thử', String(retryErr));
+            }
           }
         }
       } finally {

@@ -8,6 +8,9 @@ import { validate, v } from '../../shared/validate';
 import { issueTokenPair, rotateRefreshToken, revokeRefreshToken, revokeAllForOwner } from './refresh.service';
 import { audit } from '../../shared/audit';
 import { assertStrongPassword } from '../../shared/password';
+import { logger } from '../../shared/logger';
+
+const log = logger.scope('auth');
 
 const router = Router();
 
@@ -39,6 +42,8 @@ router.post(
       ? bcrypt.compareSync(password, user.password_hash)
       : bcrypt.compareSync(password, DUMMY_PASSWORD_HASH);
     if (!user || !passwordOk) {
+      // Log failed login để phát hiện brute-force (không log password)
+      log.warn('Đăng nhập thất bại', { username, ip: reqMeta(req).ip });
       res.status(401).json({ error: 'Tên đăng nhập hoặc mật khẩu không đúng' });
       return;
     }
