@@ -166,8 +166,9 @@ router.post(
       return;
     }
     const body = req.body as Record<string, unknown> | undefined;
-    const name = String(body?.name ?? '').trim();
+    const name = String(body?.name ?? '').trim().slice(0, 100);
     const phone = normalizePhone(body?.phone as string | undefined);
+    const note = body?.note ? String(body.note).trim().slice(0, 1000) : null;
     if (!name) {
       res.status(400).json({ error: 'Vui lòng nhập họ tên', code: 'BAD_REQUEST' });
       return;
@@ -211,7 +212,6 @@ router.post(
       const parsed = validate({ d: desiredDateRaw }, { d: v.date({ label: 'Ngày mong muốn' }) });
       desiredDate = parsed.d ?? null;
     }
-    const note = body?.note ? String(body.note).trim() : null;
     await db
       .prepare(
         "INSERT INTO trial_registrations (center_id, name, phone, class_id, desired_date, note, referral_code, status) VALUES (?, ?, ?, ?, ?, ?, ?, 'new')"
