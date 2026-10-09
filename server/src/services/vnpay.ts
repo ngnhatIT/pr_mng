@@ -13,9 +13,24 @@ function pad(n: number): string {
   return String(n).padStart(2, '0');
 }
 
-/** yyyyMMddHHmmss theo giờ địa phương */
+/** yyyyMMddHHmmss theo giờ Việt Nam (VNPay yêu cầu GMT+7, không phụ thuộc TZ server) */
 function vnpDate(d: Date): string {
-  return `${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}`;
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Ho_Chi_Minh',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false,
+  })
+    .formatToParts(d)
+    .reduce<Record<string, string>>((acc, p) => {
+      acc[p.type] = p.value;
+      return acc;
+    }, {});
+  return `${parts.year}${parts.month}${parts.day}${parts.hour}${parts.minute}${parts.second}`;
 }
 
 /** Sắp xếp key tăng dần rồi nối key=value bằng & (KHÔNG encode) — đúng chuẩn mẫu VNPay Node.js */

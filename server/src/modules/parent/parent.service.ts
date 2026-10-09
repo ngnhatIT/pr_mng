@@ -397,29 +397,42 @@ export async function createVnpayPayment(
   const ref = `HD${invoiceId}_${Date.now()}`;
   // Chống double-click: nếu đã có pending txn cho hóa đơn này (tạo trong 15 phút),
   // tái sử dụng thay vì tạo mới (tránh 2 URL thanh toán → trừ tiền 2 lần)
-  const existing = (await db
-    .prepare(
-      `SELECT ref, amount FROM payment_txns
+  // Chống race tạo 2 pending txn đồng thời (phụ huynh bị trừ tiền 2 lần)
+  // Dùng advisory lock theo invoice_id
+  const lockKey = `vnpay-create:${invoiceId}`;
+  const lockRes = (await db.query('SELECT pg_try_advisory_lock(hashtext($1)) as locked', [lockKey])) as {
+    rows: { locked: boolean }[];
+  };
+  if (!lockRes.rows[0]?.locked) {
+    throw AppError.conflict('Đang có yêu cầu thanh toán khác cho hóa đơn này, vui lòng thử lại');
+  }
+  try {
+    const existing = (await db
+      .prepare(
+        `SELECT ref, amount FROM payment_txns
        WHERE invoice_id = ? AND status = 'pending'
          AND created_at > to_char(NOW() - INTERVAL '15 minutes', 'YYYY-MM-DD HH24:MI:SS')
        ORDER BY created_at DESC LIMIT 1`
-    )
-    .get(invoiceId)) as { ref: string; amount: number } | undefined;
-  if (existing && Math.abs(existing.amount - remaining) <= 1) {
-    const payUrl = buildVnpayUrl(
-      { tmnCode, hashSecret, returnUrl: `${baseUrl}/api/payments/vnpay-return` },
-      {
-        amountVnd: existing.amount,
-        txnRef: existing.ref,
-        orderInfo: 'Thanh toan hoc phi HD' + invoiceId,
-        ipAddr,
-      }
-    );
-    return { pay_url: payUrl };
+      )
+      .get(invoiceId)) as { ref: string; amount: number } | undefined;
+    if (existing && Math.abs(existing.amount - remaining) <= 1) {
+      const payUrl = buildVnpayUrl(
+        { tmnCode, hashSecret, returnUrl: `${baseUrl}/api/payments/vnpay-return` },
+        {
+          amountVnd: existing.amount,
+          txnRef: existing.ref,
+          orderInfo: 'Thanh toan hoc phi HD' + invoiceId,
+          ipAddr,
+        }
+      );
+      return { pay_url: payUrl };
+    }
+    await db
+      .prepare("INSERT INTO payment_txns (ref, invoice_id, amount, status) VALUES (?, ?, ?, 'pending')")
+      .run(ref, invoiceId, remaining);
+  } finally {
+    await db.query('SELECT pg_advisory_unlock(hashtext($1))', [lockKey]).catch(() => {});
   }
-  await db
-    .prepare("INSERT INTO payment_txns (ref, invoice_id, amount, status) VALUES (?, ?, ?, 'pending')")
-    .run(ref, invoiceId, remaining);
   const payUrl = buildVnpayUrl(
     { tmnCode, hashSecret, returnUrl: `${baseUrl}/api/payments/vnpay-return` },
     { amountVnd: remaining, txnRef: ref, orderInfo: 'Thanh toan hoc phi HD' + invoiceId, ipAddr }
