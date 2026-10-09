@@ -18,7 +18,7 @@ router.use(requirePermission('system.manage'));
  */
 function superadminOnly(req: AuthRequest, res: Response, next: NextFunction): void {
   if (req.user?.role !== 'superadmin') {
-    res.status(403).json({ error: 'Chỉ quản trị hệ thống mới có quyền này', code: 'BAD_REQUEST' });
+    res.status(403).json({ error: 'Chỉ quản trị hệ thống mới có quyền này', code: 'FORBIDDEN' });
     return;
   }
   next();
