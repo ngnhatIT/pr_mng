@@ -463,6 +463,38 @@ components:
               type: integer
               nullable: true
 paths:
+  /api/v1/client-errors:
+    post:
+      tags:
+        - System
+      summary: Nhận log lỗi crash từ client (ErrorBoundary)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                scope:
+                  type: string
+                message:
+                  type: string
+                stack:
+                  type: string
+                url:
+                  type: string
+      responses:
+        '200':
+          description: Đã nhận log
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                  request_id:
+                    type: string
   /api/v1/homework:
     get:
       tags:
@@ -3448,6 +3480,17 @@ paths:
         - Parent
       summary: Đổi parent refresh token (rotation)
       security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - refresh_token
+              properties:
+                refresh_token:
+                  type: string
       responses:
         '200':
           description: Token pair mới
@@ -3458,6 +3501,17 @@ paths:
       tags:
         - Parent
       summary: Thu hồi parent refresh token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - refresh_token
+              properties:
+                refresh_token:
+                  type: string
       responses:
         '200':
           description: OK
