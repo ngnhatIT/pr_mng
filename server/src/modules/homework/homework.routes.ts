@@ -316,11 +316,12 @@ router.get(
   '/bank/questions',
   requirePermission('homework.view'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
-    const { search = '', tag = '' } = req.query as Record<string, string>;
-    res.json({
-      questions: await listBankQuestions(reqCenterId(req), search, tag),
-      tags: await listBankTags(reqCenterId(req)),
+    const { search = '', tag = '', page, limit } = req.query as Record<string, string>;
+    const result = await listBankQuestions(reqCenterId(req), search, tag, {
+      page: page ? Number(page) : undefined,
+      limit: limit ? Number(limit) : undefined,
     });
+    res.json({ ...result, tags: await listBankTags(reqCenterId(req)) });
   })
 );
 
@@ -377,8 +378,13 @@ router.get(
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const id = Number(req.params.id);
     await requireHomework(req, id);
-    const rows = await getHomeworkSubmissions(id);
-    res.json(rows);
+    const { page, limit } = req.query as Record<string, string>;
+    res.json(
+      await getHomeworkSubmissions(id, {
+        page: page ? Number(page) : undefined,
+        limit: limit ? Number(limit) : undefined,
+      })
+    );
   })
 );
 

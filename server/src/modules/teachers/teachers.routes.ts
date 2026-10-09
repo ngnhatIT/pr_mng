@@ -80,6 +80,17 @@ router.delete(
       res.status(404).json({ error: 'Không tìm thấy giáo viên' });
       return;
     }
+    // Chặn xóa giáo viên đã có lịch sử lương (mất cấu hình tính lương, không đối chiếu được)
+    const payrollRow = (await db
+      .prepare('SELECT COUNT(*) as c FROM payroll_records WHERE teacher_id = ?')
+      .get(id)) as { c: string } | undefined;
+    if (payrollRow && (Number(payrollRow.c) || 0) > 0) {
+      res.status(400).json({
+        error: 'Không thể xóa: giáo viên đã có lịch sử lương. Vô hiệu hóa thay vì xóa.',
+        code: 'HAS_PAYROLL',
+      });
+      return;
+    }
     await db.prepare('UPDATE classes SET teacher_id = NULL WHERE teacher_id = ?').run(id);
     await db.prepare('DELETE FROM teacher_checkins WHERE teacher_id = ?').run(id);
     await db.prepare('DELETE FROM salary_rules WHERE teacher_id = ?').run(id);

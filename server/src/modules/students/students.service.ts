@@ -143,9 +143,39 @@ export async function updateStudent(
   return await db.prepare('SELECT * FROM students WHERE id = ?').get(id);
 }
 
-/** Xóa học viên + toàn bộ dữ liệu liên quan (transaction). */
+/** Xóa học viên + toàn bộ dữ liệu liên quan (transaction).
+ * CHẶN khi còn nợ, credits dương, hoặc đã có thanh toán confirmed
+ * (xóa lúc đó làm mất dữ liệu tài chính không thể đối soát).
+ */
 export async function deleteStudent(centerId: number | null, id: number, actor?: AuditActor): Promise<void> {
   const st = await findByIdOr404<StudentRow>('students', id, centerId, 'Không tìm thấy học viên');
+  // Guard tài chính trước khi xóa
+  const debtRow = (await db
+    .prepare(
+      "SELECT COALESCE(SUM(amount - paid_amount), 0) as debt FROM invoices WHERE student_id = ? AND status != 'cancelled'"
+    )
+    .get(id)) as { debt: string };
+  const debt = Number(debtRow?.debt) || 0;
+  if (debt > 0) {
+    throw AppError.badRequest(
+      `Không thể xóa: học viên còn nợ ${debt.toLocaleString('vi-VN')}đ. Thu hết nợ trước.`
+    );
+  }
+  const creditRow = (await db
+    .prepare('SELECT COALESCE(SUM(amount), 0) as c FROM parent_credits WHERE student_id = ?')
+    .get(id)) as { c: string };
+  if ((Number(creditRow?.c) || 0) > 0) {
+    throw AppError.badRequest('Không thể xóa: học viên còn credits. Xử lý credits trước.');
+  }
+  const paidRow = (await db
+    .prepare(
+      `SELECT COUNT(*) as c FROM payments p JOIN invoices i ON i.id = p.invoice_id
+       WHERE i.student_id = ? AND p.status = 'confirmed'`
+    )
+    .get(id)) as { c: string };
+  if ((Number(paidRow?.c) || 0) > 0) {
+    throw AppError.badRequest('Không thể xóa: học viên đã có thanh toán được xác nhận. Giữ lại để đối soát.');
+  }
   await db.transaction(async (tx) => {
     await tx.prepare('DELETE FROM attendance WHERE student_id = ?').run(id);
     await tx.prepare('DELETE FROM enrollments WHERE student_id = ?').run(id);

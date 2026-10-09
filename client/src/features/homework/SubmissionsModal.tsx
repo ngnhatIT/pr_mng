@@ -25,7 +25,7 @@ export function SubmissionsModal({
   useEffect(() => {
     homeworkApi
       .getSubmissions(homeworkId)
-      .then(setSubs)
+      .then((res) => setSubs(res.rows))
       .catch((err: Error) => setError(err.message))
       .finally(() => setLoading(false));
   }, [homeworkId]);

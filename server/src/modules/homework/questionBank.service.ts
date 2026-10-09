@@ -21,12 +21,16 @@ export interface BankQuestionInput {
 
 /* --------------------------------- Service --------------------------------- */
 
-/** Danh sách câu hỏi trong ngân hàng (tìm kiếm + lọc tag). */
+import { parsePagination } from '../../shared/pagination';
+
+/** Danh sách câu hỏi trong ngân hàng (tìm kiếm + lọc tag + phân trang). */
 export async function listBankQuestions(
   centerId: number | null,
   search = '',
-  tag = ''
-): Promise<BankQuestion[]> {
+  tag = '',
+  pageOpts: { page?: number; limit?: number } = {}
+): Promise<{ questions: BankQuestion[]; total: number; page: number; limit: number }> {
+  const { page, limit, offset } = parsePagination(pageOpts);
   const conds = ['1=1'];
   const params: unknown[] = [];
   if (centerId !== null) {
@@ -41,10 +45,15 @@ export async function listBankQuestions(
     conds.push('tag = ?');
     params.push(tag);
   }
+  const where = conds.join(' AND ');
+  const totalRow = (await db
+    .prepare(`SELECT COUNT(*) as c FROM question_bank WHERE ${where}`)
+    .get(...params)) as { c: string };
+  const total = Number(totalRow?.c) || 0;
   const rows = (await db
-    .prepare(`SELECT * FROM question_bank WHERE ${conds.join(' AND ')} ORDER BY id DESC LIMIT 100`)
-    .all(...params)) as { id: number; tag: string | null; question: string; points: number }[];
-  return Promise.all(
+    .prepare(`SELECT * FROM question_bank WHERE ${where} ORDER BY id DESC LIMIT ? OFFSET ?`)
+    .all(...params, limit, offset)) as { id: number; tag: string | null; question: string; points: number }[];
+  const questions = await Promise.all(
     rows.map(async (r) => ({
       ...r,
       options: (await db
@@ -54,6 +63,7 @@ export async function listBankQuestions(
         .all(r.id)) as { id: number; text: string; is_correct: boolean }[],
     }))
   );
+  return { questions, total, page, limit };
 }
 
 /** Các tag đã dùng (để filter). */
@@ -105,7 +115,7 @@ export async function addBankQuestion(
     }
     return qid;
   });
-  return (await listBankQuestions(centerId)).find((q) => q.id === qid)!;
+  return (await listBankQuestions(centerId)).questions.find((q) => q.id === qid)!;
 }
 
 /** Xóa câu hỏi khỏi ngân hàng (kiểm tra center để chống cross-tenant). */

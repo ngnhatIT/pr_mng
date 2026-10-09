@@ -539,15 +539,24 @@ export async function filterValidTargets(classIds: number[], targetStudentIds: u
   return rows.map((r) => r.student_id);
 }
 
-/** Danh sách bài nộp của 1 bài tập (staff xem). */
-export async function getHomeworkSubmissions(id: number): Promise<unknown[]> {
-  return await db
+/** Danh sách bài nộp của 1 bài tập (staff xem) — có phân trang. */
+export async function getHomeworkSubmissions(
+  id: number,
+  pageOpts: { page?: number; limit?: number } = {}
+): Promise<{ rows: unknown[]; total: number; page: number; limit: number }> {
+  const { page, limit, offset } = parsePagination(pageOpts);
+  const totalRow = (await db
+    .prepare('SELECT COUNT(*) as c FROM homework_submissions WHERE homework_id = ?')
+    .get(id)) as { c: string };
+  const total = Number(totalRow?.c) || 0;
+  const rows = await db
     .prepare(
       `SELECT hs.*, s.name as student_name FROM homework_submissions hs
        JOIN students s ON s.id = hs.student_id
-       WHERE hs.homework_id = ? ORDER BY hs.submitted_at DESC`
+       WHERE hs.homework_id = ? ORDER BY hs.submitted_at DESC LIMIT ? OFFSET ?`
     )
-    .all(id);
+    .all(id, limit, offset);
+  return { rows, total, page, limit };
 }
 
 /* --------------------------------- Chấm điểm --------------------------------- */

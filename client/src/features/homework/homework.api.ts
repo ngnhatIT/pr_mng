@@ -119,16 +119,19 @@ export const homeworkApi = {
   // Analytics
   analytics: () => http.get<HomeworkAnalytics>('/homework/analytics'),
   // Question bank
-  bankList: (search = '', tag = '') =>
-    http.get<{ questions: BankQuestion[]; tags: string[] }>(
-      `/homework/bank/questions?search=${encodeURIComponent(search)}&tag=${encodeURIComponent(tag)}`
+  bankList: (search = '', tag = '', page = 1, limit = 50) =>
+    http.get<{ questions: BankQuestion[]; tags: string[]; total: number; page: number; limit: number }>(
+      `/homework/bank/questions?search=${encodeURIComponent(search)}&tag=${encodeURIComponent(tag)}&page=${page}&limit=${limit}`
     ),
   bankCreate: (q: BankQuestionForm) => http.post<BankQuestion>('/homework/bank/questions', q),
   bankDelete: (id: number) => http.del<{ ok: boolean }>(`/homework/bank/questions/${id}`),
   bankImport: (homeworkId: number, bankIds: number[]) =>
     http.post<{ ok: boolean; count: number }>(`/homework/${homeworkId}/quiz/import`, { bank_ids: bankIds }),
   // Submissions (staff)
-  getSubmissions: (id: number) => http.get<Submission[]>(`/homework/${id}/submissions`),
+  getSubmissions: (id: number, page = 1, limit = 50) =>
+    http.get<{ rows: Submission[]; total: number; page: number; limit: number }>(
+      `/homework/${id}/submissions?page=${page}&limit=${limit}`
+    ),
 };
 
 export interface HomeworkAnalytics {
