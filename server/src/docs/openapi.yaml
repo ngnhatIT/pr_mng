@@ -993,15 +993,28 @@ paths:
           required: true
           schema:
             type: integer
+        - in: query
+          name: page
+          schema:
+            type: integer
+        - in: query
+          name: limit
+          schema:
+            type: integer
       responses:
         '200':
           description: OK
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Submission'
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Submission'
+                  pagination:
+                    $ref: '#/components/schemas/Pagination'
   /api/v1/homework/bank/questions:
     get:
       tags:
@@ -1024,10 +1037,12 @@ paths:
               schema:
                 type: object
                 properties:
-                  questions:
+                  data:
                     type: array
                     items:
                       $ref: '#/components/schemas/BankQuestion'
+                  pagination:
+                    $ref: '#/components/schemas/Pagination'
                   tags:
                     type: array
                     items:
@@ -3378,7 +3393,7 @@ paths:
         '302':
           description: Redirect về portal phụ huynh
   /api/v1/payments/vnpay-ipn:
-    get:
+    post:
       tags:
         - Parent
       summary: VNPay IPN (idempotent, verify checksum)

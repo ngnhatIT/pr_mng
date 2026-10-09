@@ -33,9 +33,9 @@ export function QuestionBank({
     setLoading(true);
     try {
       const res = await homeworkApi.bankList(search, tag);
-      setQuestions(res.questions);
+      setQuestions(res.data);
       setTags(res.tags);
-      res.questions.forEach((q) => allSeen.current.set(q.id, q));
+      res.data.forEach((q) => allSeen.current.set(q.id, q));
     } catch (err) {
       toast(err instanceof Error ? err.message : t('bank.toast.loadFail'), 'error');
     } finally {

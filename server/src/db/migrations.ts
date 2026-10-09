@@ -201,7 +201,7 @@ export async function runMigrations(db: Db): Promise<void> {
     // Advisory lock chống 2 instance chạy migration song song (rolling deploy).
     // Lock giữ trong transaction → tự release khi commit/rollback.
     await db.transaction(async (tx) => {
-      await tx.prepare("SELECT pg_advisory_xact_lock(hashtext('educenter-migrations'))").get();
+      await tx.exec("SELECT pg_advisory_xact_lock(hashtext('educenter-migrations'))");
       await m.up(tx);
       await tx
         .prepare(

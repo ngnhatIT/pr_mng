@@ -21,7 +21,7 @@ export interface BankQuestionInput {
 
 /* --------------------------------- Service --------------------------------- */
 
-import { parsePagination } from '../../shared/pagination';
+import { parsePagination, paginate, type Paginated } from '../../shared/pagination';
 
 /** Danh sách câu hỏi trong ngân hàng (tìm kiếm + lọc tag + phân trang). */
 export async function listBankQuestions(
@@ -29,7 +29,7 @@ export async function listBankQuestions(
   search = '',
   tag = '',
   pageOpts: { page?: number; limit?: number } = {}
-): Promise<{ questions: BankQuestion[]; total: number; page: number; limit: number }> {
+): Promise<Paginated<BankQuestion>> {
   const { page, limit, offset } = parsePagination(pageOpts);
   const conds = ['1=1'];
   const params: unknown[] = [];
@@ -63,7 +63,7 @@ export async function listBankQuestions(
         .all(r.id)) as { id: number; text: string; is_correct: boolean }[],
     }))
   );
-  return { questions, total, page, limit };
+  return paginate(questions, total, page, limit);
 }
 
 /** Các tag đã dùng (để filter). */
@@ -115,7 +115,7 @@ export async function addBankQuestion(
     }
     return qid;
   });
-  return (await listBankQuestions(centerId)).questions.find((q) => q.id === qid)!;
+  return (await listBankQuestions(centerId)).data.find((q) => q.id === qid)!;
 }
 
 /** Xóa câu hỏi khỏi ngân hàng (kiểm tra center để chống cross-tenant). */

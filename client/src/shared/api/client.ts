@@ -173,9 +173,10 @@ export async function api<T>(path: string, options: RequestInit = {}): Promise<T
     data = {};
   }
   if (!res.ok) {
-    const body = data as { error?: string; request_id?: string };
-    // Gắn request_id vào error để UI hiển thị mã lỗi cho user báo support
-    const err = new Error(body.error || tApi('api.error')) as Error & { requestId?: string };
+    const body = data as { error?: string; code?: string; request_id?: string };
+    // Gắn code + request_id vào error để UI xử lý theo code (không match message theo ngôn ngữ)
+    const err = new Error(body.error || tApi('api.error')) as Error & { code?: string; requestId?: string };
+    if (body.code) err.code = body.code;
     if (body.request_id) err.requestId = body.request_id;
     throw err;
   }

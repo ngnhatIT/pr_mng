@@ -162,9 +162,10 @@ export function Roles() {
         return r[0]?.id ?? null;
       });
     } catch (err) {
-      const msg = err instanceof Error ? err.message : '';
-      if (msg.includes('quyền')) setForbidden(true);
-      else toast(msg || t('toast.loadRolesFail'), 'error');
+      const e = err as Error & { code?: string };
+      // Match theo error code, không match message (message đổi theo ngôn ngữ)
+      if (e?.code === 'FORBIDDEN' || e?.code === 'PERMISSION_DENIED') setForbidden(true);
+      else toast(e instanceof Error ? e.message : t('toast.loadRolesFail'), 'error');
     } finally {
       setLoading(false);
     }

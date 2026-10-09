@@ -543,7 +543,7 @@ export async function filterValidTargets(classIds: number[], targetStudentIds: u
 export async function getHomeworkSubmissions(
   id: number,
   pageOpts: { page?: number; limit?: number } = {}
-): Promise<{ rows: unknown[]; total: number; page: number; limit: number }> {
+): Promise<Paginated<unknown>> {
   const { page, limit, offset } = parsePagination(pageOpts);
   const totalRow = (await db
     .prepare('SELECT COUNT(*) as c FROM homework_submissions WHERE homework_id = ?')
@@ -556,7 +556,7 @@ export async function getHomeworkSubmissions(
        WHERE hs.homework_id = ? ORDER BY hs.submitted_at DESC LIMIT ? OFFSET ?`
     )
     .all(id, limit, offset);
-  return { rows, total, page, limit };
+  return paginate(rows, total, page, limit);
 }
 
 /* --------------------------------- Chấm điểm --------------------------------- */
