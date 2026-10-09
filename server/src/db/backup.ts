@@ -40,9 +40,20 @@ export async function backupDatabase(backupDir: string, keep = 7): Promise<Backu
   const filePath = path.join(backupDir, fileName);
 
   // pg_dump custom format (-Fc): nén, restore linh hoạt từng bảng
-  await execFileAsync('pg_dump', ['-Fc', '-f', filePath, databaseUrl], {
+  // Parse URL để tránh lộ password trong process list (dùng PGPASSWORD env)
+  const dbUrl = new URL(databaseUrl);
+  const pgEnv = {
+    ...process.env,
+    PGHOST: dbUrl.hostname,
+    PGPORT: dbUrl.port || '5432',
+    PGDATABASE: dbUrl.pathname.slice(1),
+    PGUSER: decodeURIComponent(dbUrl.username),
+    PGPASSWORD: decodeURIComponent(dbUrl.password),
+  };
+  await execFileAsync('pg_dump', ['-Fc', '-f', filePath], {
     timeout: 10 * 60 * 1000,
     maxBuffer: 256 * 1024 * 1024,
+    env: pgEnv,
   });
 
   const sizeBytes = fs.statSync(filePath).size;
