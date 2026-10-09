@@ -237,7 +237,18 @@ export function createApp(): Express {
   });
 
   /* Xử lý lỗi tập trung — LUÔN đặt cuối cùng */
-  app.use('/api', notFoundHandler);
+  app.use(
+    '/api',
+    (req, res, next) => {
+      // 404 trên legacy prefix cũng cần biết prefix đã deprecated
+      if (!req.path.startsWith('/v1/') && req.path !== '/v1') {
+        res.setHeader('Deprecation', 'true');
+        res.setHeader('Sunset', 'Sat, 01 Jan 2028 00:00:00 GMT');
+      }
+      next();
+    },
+    notFoundHandler
+  );
   app.use(errorHandler);
 
   return app;
