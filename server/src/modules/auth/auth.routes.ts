@@ -119,7 +119,7 @@ router.post(
       old_password?: string;
       new_password?: string;
     };
-    if (!old_password || !new_password) {
+    if (!old_password || !new_password || typeof new_password !== 'string') {
       res
         .status(400)
         .json({ error: 'Vui lòng nhập mật khẩu cũ và mật khẩu mới', code: 'VALIDATION_REQUIRED' });
