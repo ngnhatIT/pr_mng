@@ -1,5 +1,6 @@
 import { Request } from 'express';
 import { db } from '../db';
+import { todayVN } from '../shared/vnTime';
 
 export interface PlanDef {
   name: string;
@@ -47,7 +48,7 @@ export async function getDefaultCenter(): Promise<Center | undefined> {
 export function effectivePlan(center: Center | undefined): string {
   if (!center) return 'basic';
   if (center.plan_expires_at) {
-    const today = new Date().toISOString().slice(0, 10);
+    const today = todayVN();
     if (center.plan_expires_at < today) return 'basic';
   }
   return PLANS[center.plan] ? center.plan : 'basic';

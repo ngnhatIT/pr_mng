@@ -4,6 +4,7 @@ import { AppError } from '../../shared/errors';
 import { escapeLike } from '../../shared/like';
 import { parsePagination, paginate, type PageOptions, type Paginated } from '../../shared/pagination';
 import { audit, formatVND, type AuditActor } from '../../shared/audit';
+import { nowVNSql } from '../../shared/vnTime';
 
 /* ---------------------------------- Types ---------------------------------- */
 
@@ -326,13 +327,7 @@ export async function recordPayment(
     }
     await tx
       .prepare('INSERT INTO payments (invoice_id, amount, paid_at, method, note) VALUES (?, ?, ?, ?, ?)')
-      .run(
-        id,
-        amt,
-        input.paid_at || new Date().toISOString().slice(0, 19).replace('T', ' '),
-        input.method || 'Tiền mặt',
-        input.note || null
-      );
+      .run(id, amt, input.paid_at || nowVNSql(), input.method || 'Tiền mặt', input.note || null);
     // Recalc tx-scoped: thấy INSERT vừa rồi, không cần connection riêng
     const newStatus = paidSoFar + amt >= inv.amount - 0.01 ? 'paid' : 'partial';
     await tx.prepare('UPDATE invoices SET status = ? WHERE id = ?').run(newStatus, id);

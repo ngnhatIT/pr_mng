@@ -1,4 +1,5 @@
 import { Router, Response } from 'express';
+import { nowVNSql } from '../../shared/vnTime';
 import { db } from '../../db';
 import { AuthRequest, reqCenterId } from '../../middleware/auth';
 import { requirePermission } from '../authorization/authorization.middleware';
@@ -62,7 +63,7 @@ router.post(
       res.status(404).json({ error: 'Không tìm thấy đơn xin nghỉ' });
       return;
     }
-    const now = new Date().toISOString().slice(0, 19).replace('T', ' ');
+    const now = nowVNSql();
     // Chỉ duyệt đơn đang pending — đơn đã xử lý thì báo 409
     const upd = await db
       .prepare(
@@ -109,7 +110,7 @@ router.post(
       res.status(404).json({ error: 'Không tìm thấy đơn xin nghỉ' });
       return;
     }
-    const now = new Date().toISOString().slice(0, 19).replace('T', ' ');
+    const now = nowVNSql();
     const upd = await db
       .prepare(
         "UPDATE leave_requests SET status = 'rejected', decided_by = ?, decided_at = ? WHERE id = ? AND status = 'pending'"
