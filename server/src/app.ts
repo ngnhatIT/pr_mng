@@ -127,8 +127,15 @@ export function createApp(): Express {
 
   // Health check CÔNG KHAI — M11: chỉ trả {ok, time}, KHÔNG lộ version PG/heap.
   // PHẢI đứng trước mọi mount có requireAuth.
-  app.get('/api/health', (_req: express.Request, res: express.Response) => {
-    res.json({ ok: true, time: new Date().toISOString() });
+  app.get('/api/health', async (_req: express.Request, res: express.Response) => {
+    // Public nhưng có ping DB để LB dùng làm readiness probe (không lộ chi tiết)
+    let dbOk = true;
+    try {
+      await db.prepare('SELECT 1').get();
+    } catch {
+      dbOk = false;
+    }
+    res.status(dbOk ? 200 : 503).json({ ok: dbOk, time: new Date().toISOString() });
   });
 
   // Health check CHI TIẾT (DB, disk, memory) — yêu cầu đăng nhập.
