@@ -12,6 +12,8 @@ info:
 
     Base path chính: /api/v1 (alias legacy /api vẫn hoạt động nhưng deprecated).'
   version: 1.0.0
+security:
+  - bearerAuth: []
 servers:
   - url: http://localhost:4000
     description: Dev server
