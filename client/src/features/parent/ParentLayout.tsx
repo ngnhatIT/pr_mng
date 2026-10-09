@@ -66,7 +66,14 @@ export function ParentLayout() {
             key={tab.to}
             to={tab.to}
             end={tab.end}
-            className={({ isActive }) => `pnav-link${isActive ? ' active' : ''}`}
+            className={({ isActive }) => {
+              // Tab home cũng active ở trang chi tiết con và kết quả thanh toán
+              const extraActive =
+                tab.to === '/parent' &&
+                (location.pathname.startsWith('/parent/children/') ||
+                  location.pathname.startsWith('/parent/thanh-toan'));
+              return `pnav-link${isActive || extraActive ? ' active' : ''}`;
+            }}
           >
             <span className="pnav-icon">
               <Icon name={tab.icon} size={22} />
