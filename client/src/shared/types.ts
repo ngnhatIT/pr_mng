@@ -151,41 +151,6 @@ export interface ReminderItem {
   due_date: string | null;
 }
 
-/** @deprecated Đã chuyển sang i18n (namespace tương ứng). Giữ lại để tương thích kiểu. */
-export const REMINDER_KIND_LABEL: Record<string, string> = {
-  overdue: 'Quá hạn',
-  upcoming: 'Sắp đến hạn',
-  test: 'Tin nhắn thử',
-};
-
-/** @deprecated Đã chuyển sang i18n (ops namespace). */
-export const REMINDER_STATUS_LABEL: Record<string, string> = {
-  sent: 'Đã gửi',
-  failed: 'Thất bại',
-  demo: 'Demo',
-};
-
-/** @deprecated Đã chuyển sang i18n (students namespace). */
-export const STUDENT_STATUS_LABEL: Record<string, string> = {
-  studying: 'Đang học',
-  paused: 'Tạm nghỉ',
-  quit: 'Đã nghỉ',
-};
-
-/** @deprecated Đã chuyển sang i18n (tuition namespace). */
-export const INVOICE_STATUS_LABEL: Record<string, string> = {
-  unpaid: 'Chưa thanh toán',
-  partial: 'Thanh toán một phần',
-  paid: 'Đã thanh toán',
-};
-
-/** @deprecated Đã chuyển sang i18n (classes namespace). */
-export const ATTENDANCE_LABEL: Record<string, string> = {
-  present: 'Có mặt',
-  absent: 'Vắng',
-  late: 'Muộn',
-};
-
 export const DAY_NAMES: Record<number, string> = {
   2: 'Thứ Hai',
   3: 'Thứ Ba',
@@ -461,45 +426,6 @@ export interface TeacherTodayItem {
   attendance_count: number;
   checked_in: boolean;
 }
-
-/** @deprecated Đã chuyển sang i18n (ops namespace). */
-export const LEAVE_STATUS_LABEL: Record<string, string> = {
-  pending: 'Chờ duyệt',
-  approved: 'Đã duyệt',
-  rejected: 'Từ chối',
-};
-
-/** @deprecated Đã chuyển sang i18n (ops namespace). */
-export const TRIAL_STATUS_LABEL: Record<string, string> = {
-  new: 'Mới',
-  contacted: 'Đã liên hệ',
-  trialed: 'Đã học thử',
-  enrolled: 'Đã đăng ký',
-  lost: 'Mất',
-};
-
-/** @deprecated Đã chuyển sang i18n (ops namespace). */
-export const LEAD_STATUS_LABEL: Record<string, string> = {
-  new: 'Mới',
-  contacted: 'Đã liên hệ',
-  trial: 'Học thử',
-  enrolled: 'Đăng ký',
-  lost: 'Mất',
-};
-
-/** @deprecated Đã chuyển sang i18n (ops namespace). */
-export const REVIEW_STATUS_LABEL: Record<string, string> = {
-  pending: 'Chờ duyệt',
-  approved: 'Đã duyệt',
-  rejected: 'Từ chối',
-};
-
-/** @deprecated Không còn sử dụng. */
-export const PLAN_LABEL: Record<string, string> = {
-  basic: 'Cơ bản',
-  standard: 'Tiêu chuẩn',
-  premium: 'Cao cấp',
-};
 
 /** @deprecated Đã chuyển sang i18n (common namespace 'roles'). */
 export const ROLE_LABEL: Record<string, string> = {
