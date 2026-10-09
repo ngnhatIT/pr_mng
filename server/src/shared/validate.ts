@@ -22,6 +22,8 @@ type Rule =
       label?: string;
       trim?: boolean;
       enum?: string[];
+      /** Kiểm tra ngày thật (không chỉ đúng pattern) */
+      isDate?: boolean;
     }
   | { kind: 'number'; required?: boolean; min?: number; max?: number; integer?: boolean; label?: string }
   | { kind: 'boolean'; required?: boolean; label?: string }
@@ -57,15 +59,28 @@ export const v = {
     ({ kind: 'boolean', ...o }) as O & { kind: 'boolean' },
   any: <O extends Omit<AnyRule, 'kind'>>(o: O = {} as O): O & { kind: 'any' } =>
     ({ kind: 'any', ...o }) as O & { kind: 'any' },
-  /** Ngày YYYY-MM-DD (dùng cho due_date, close_date...). */
+  /** Ngày YYYY-MM-DD thật (kiểm tra ngày tồn tại, không chỉ đúng pattern). */
   date: (o: { required?: boolean; label?: string } = {}) =>
     ({
       kind: 'string',
       trim: true,
       pattern: /^\d{4}-\d{2}-\d{2}$/,
+      isDate: true,
       ...o,
     }) as unknown as StringRule & { kind: 'string' },
 };
+
+/** Kiểm tra chuỗi YYYY-MM-DD là ngày thật (loại "2026-13-99"). */
+function isRealDate(s: string): boolean {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s);
+  if (!m) return false;
+  const y = Number(m[1]);
+  const mo = Number(m[2]);
+  const d = Number(m[3]);
+  if (mo < 1 || mo > 12 || d < 1 || d > 31) return false;
+  const dt = new Date(Date.UTC(y, mo - 1, d));
+  return dt.getUTCFullYear() === y && dt.getUTCMonth() === mo - 1 && dt.getUTCDate() === d;
+}
 
 function labelOf(rule: Rule, key: string): string {
   return (rule as { label?: string }).label || key;
@@ -96,6 +111,8 @@ export function validate<T extends Schema>(input: unknown, schema: T): Validated
         throw AppError.badRequest(`${label} tối đa ${rule.max} ký tự`, 'VALIDATION_MAX');
       if (rule.pattern && !rule.pattern.test(s))
         throw AppError.badRequest(`${label} không đúng định dạng`, 'VALIDATION_FORMAT');
+      if (rule.isDate && !isRealDate(s))
+        throw AppError.badRequest(`${label} không phải ngày hợp lệ (YYYY-MM-DD)`, 'VALIDATION_DATE');
       if (rule.enum && !rule.enum.includes(s))
         throw AppError.badRequest(`${label} không hợp lệ`, 'VALIDATION_ENUM');
       out[key] = s;

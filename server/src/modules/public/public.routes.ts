@@ -134,12 +134,16 @@ router.post(
       res.status(400).json({ error: 'Vui lòng nhập họ tên' });
       return;
     }
+    if (name.length > 100) {
+      res.status(400).json({ error: 'Họ tên tối đa 100 ký tự' });
+      return;
+    }
     if (!phone) {
       res.status(400).json({ error: 'Số điện thoại không hợp lệ (cần 10 số, bắt đầu bằng 0)' });
       return;
     }
-    const source = body?.source ? String(body.source).trim() : null;
-    const note = body?.note ? String(body.note).trim() : null;
+    const source = body?.source ? String(body.source).trim().slice(0, 50) : null;
+    const note = body?.note ? String(body.note).trim().slice(0, 1000) : null;
     await db
       .prepare(
         "INSERT INTO leads (center_id, name, phone, source, status, note) VALUES (?, ?, ?, ?, 'new', ?)"

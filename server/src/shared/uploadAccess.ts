@@ -34,12 +34,12 @@ export async function checkUploadAccess(
   if (!sub) throw AppError.notFound('Không tìm thấy file');
 
   let allowed = false;
-  if (
-    role === 'admin' ||
-    role === 'root' ||
-    (role !== 'parent' && (userCenterId === null || userCenterId === sub.center_id))
-  ) {
-    allowed = true; // staff cùng center
+  if (role === 'root') {
+    allowed = true; // root: toàn hệ thống
+  } else if (role !== 'parent' && userCenterId !== null && userCenterId === sub.center_id) {
+    allowed = true; // admin/staff/teacher: chỉ file trong center của mình
+  } else if (role !== 'parent' && userCenterId === null) {
+    allowed = true; // user chưa gán center (legacy)
   } else if (role === 'parent') {
     const pid = parentId ?? userId;
     const link = await db

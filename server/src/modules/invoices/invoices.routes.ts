@@ -58,7 +58,7 @@ router.post(
       student_id: v.number({ required: true, integer: true, label: 'Học viên' }),
       class_id: v.number({ integer: true, label: 'Lớp học' }),
       amount: v.number({ required: true, label: 'Số tiền' }),
-      due_date: v.string({ label: 'Hạn nộp' }),
+      due_date: v.date({ label: 'Hạn nộp' }),
       note: v.string({ max: 500, label: 'Ghi chú' }),
     });
     const created = await invoiceService.createInvoice(
@@ -82,7 +82,7 @@ router.put(
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const input = validate(req.body, {
       amount: v.number({ required: true, label: 'Số tiền' }),
-      due_date: v.string({ label: 'Hạn nộp' }),
+      due_date: v.date({ label: 'Hạn nộp' }),
       note: v.string({ max: 500, label: 'Ghi chú' }),
     });
     res.json(
