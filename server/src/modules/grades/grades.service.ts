@@ -158,7 +158,7 @@ export async function createGrade(input: GradeCreateInput): Promise<GradeRow> {
   const row = (await db
     .prepare('SELECT * FROM grades WHERE id = ?')
     .get(Number(r.lastInsertRowid))) as GradeRow;
-  void audit({
+  await audit({
     centerId: input.centerId,
     actor: { id: input.created_by, role: input.role } as AuditActor,
     action: 'create',
@@ -203,7 +203,7 @@ export async function deleteGrade(
     throw AppError.forbidden('Bạn chỉ được xóa điểm của lớp mình');
   }
   await db.prepare('DELETE FROM grades WHERE id = ?').run(id);
-  void audit({
+  await audit({
     centerId,
     actor,
     action: 'delete',
