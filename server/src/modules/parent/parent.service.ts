@@ -1,6 +1,7 @@
 import bcrypt from 'bcryptjs';
 import { assertStrongPassword } from '../../shared/password';
 import { db, toISODate, confirmedPaid, getCenterSettings, formatSchedule } from '../../db';
+import { withAdvisoryLock } from '../../shared/advisoryLock';
 import { AuthUser, DUMMY_PASSWORD_HASH } from '../../middleware/auth';
 import { issueTokenPair, TokenPair } from '../auth/refresh.service';
 import { ensureParentReferralCode } from '../../services/referrals';
@@ -399,15 +400,9 @@ export async function createVnpayPayment(
   // Chống double-click: nếu đã có pending txn cho hóa đơn này (tạo trong 15 phút),
   // tái sử dụng thay vì tạo mới (tránh 2 URL thanh toán → trừ tiền 2 lần)
   // Chống race tạo 2 pending txn đồng thời (phụ huynh bị trừ tiền 2 lần)
-  // Dùng advisory lock theo invoice_id
+  // Dùng advisory lock theo invoice_id (dedicated client, không leak)
   const lockKey = `vnpay-create:${invoiceId}`;
-  const lockRes = (await db.query('SELECT pg_try_advisory_lock(hashtext($1)) as locked', [lockKey])) as {
-    rows: { locked: boolean }[];
-  };
-  if (!lockRes.rows[0]?.locked) {
-    throw AppError.conflict('Đang có yêu cầu thanh toán khác cho hóa đơn này, vui lòng thử lại');
-  }
-  try {
+  const lockOutcome = await withAdvisoryLock(lockKey, async () => {
     const existing = (await db
       .prepare(
         `SELECT ref, amount FROM payment_txns
@@ -426,14 +421,21 @@ export async function createVnpayPayment(
           ipAddr,
         }
       );
-      return { pay_url: payUrl };
+      return { pay_url: payUrl, reused: true as const };
     }
     await db
       .prepare("INSERT INTO payment_txns (ref, invoice_id, amount, status) VALUES (?, ?, ?, 'pending')")
       .run(ref, invoiceId, remaining);
-  } finally {
-    await db.query('SELECT pg_advisory_unlock(hashtext($1))', [lockKey]).catch(() => {});
+    return { pay_url: null as string | null, reused: false as const };
+  });
+  if (lockOutcome.status === 'locked') {
+    throw AppError.conflict('Đang có yêu cầu thanh toán khác cho hóa đơn này, vui lòng thử lại');
   }
+  if (lockOutcome.status === 'error') throw lockOutcome.error;
+  if (lockOutcome.result?.reused) {
+    return { pay_url: lockOutcome.result.pay_url! };
+  }
+  // Tạo URL cho txn mới
   const payUrl = buildVnpayUrl(
     { tmnCode, hashSecret, returnUrl: `${baseUrl}/api/v1/payments/vnpay-return` },
     { amountVnd: remaining, txnRef: ref, orderInfo: 'Thanh toan hoc phi HD' + invoiceId, ipAddr }
