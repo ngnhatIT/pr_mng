@@ -14,6 +14,7 @@ import { apiRateLimit, writeRateLimit, parentRateLimit, fileServeRateLimit } fro
 import { db } from './db';
 import { env } from './config/env';
 import { setupSwagger } from './docs/swagger';
+import { logger } from './shared/logger';
 
 /* Modules theo domain */
 import authRoutes from './modules/auth/auth.routes';
@@ -124,6 +125,21 @@ export function createApp(): Express {
   v1.use('/public', publicRoutes); // API công khai cho landing (rate-limit bên trong)
   // vnpay-return public, còn lại requireAuth bên trong — PHẢI đứng trước các mount '/' có requireAuth
   v1.use('/payments', paymentRoutes);
+
+  // Client error reporting (public, rate-limited): nhận lỗi crash từ ErrorBoundary
+  v1.post('/client-errors', async (req: express.Request, res: express.Response) => {
+    const { scope, message, stack, url } = (req.body ?? {}) as Record<string, string>;
+    logger.warn('Client error', {
+      scope: String(scope || 'unknown').slice(0, 50),
+      message: String(message || '').slice(0, 500),
+      stack: String(stack || '').slice(0, 2000),
+      url: String(url || '').slice(0, 500),
+      ip: req.ip,
+    });
+    // Trả request_id để UI hiển thị cho user báo support
+    const requestId = (req as { requestId?: string }).requestId;
+    res.json({ ok: true, request_id: requestId });
+  });
 
   // Health check CÔNG KHAI — M11: chỉ trả {ok, time}, KHÔNG lộ version PG/heap.
   // PHẢI đứng trước mọi mount có requireAuth.

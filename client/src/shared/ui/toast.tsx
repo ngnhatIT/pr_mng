@@ -1,4 +1,5 @@
 import { createContext, useCallback, useContext, useState, ReactNode } from 'react';
+import i18n from '../../i18n';
 import { Icon } from '../../shared/components/icons';
 
 type ToastType = 'success' | 'error' | 'info';
@@ -26,7 +27,7 @@ export function toastApiError(
 ): void {
   const e = err as Error & { requestId?: string };
   const msg = e instanceof Error ? e.message : fallback;
-  const suffix = e?.requestId ? ` (Mã lỗi: ${e.requestId})` : '';
+  const suffix = e?.requestId ? ` (${i18n.t('errorCode', { ns: 'common' })}: ${e.requestId})` : '';
   toast(`${msg}${suffix}`, 'error');
 }
 

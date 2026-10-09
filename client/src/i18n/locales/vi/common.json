@@ -125,5 +125,6 @@
   "network": {
     "offline": "Mất kết nối mạng. Kiểm tra Wi-Fi/4G của bạn.",
     "backOnline": "Đã kết nối lại."
-  }
+  },
+  "errorCode": "Mã lỗi"
 }

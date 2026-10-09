@@ -10,10 +10,11 @@ interface ErrorBoundaryProps {
 
 interface ErrorBoundaryState {
   hasError: boolean;
+  requestId?: string;
 }
 
 /** Fallback UI đẹp khi một subtree React crash. */
-function ErrorFallback({ onRetry }: { name?: string; onRetry: () => void }) {
+function ErrorFallback({ onRetry, requestId }: { name?: string; onRetry: () => void; requestId?: string }) {
   const { t } = useTranslation('common');
   return (
     <div className="error-fallback" role="alert">
@@ -23,6 +24,11 @@ function ErrorFallback({ onRetry }: { name?: string; onRetry: () => void }) {
         </div>
         <h2>{t('error.title')}</h2>
         <p>{t('error.message')}</p>
+        {requestId && (
+          <p className="error-fallback-code">
+            {t('errorCode')}: {requestId}
+          </p>
+        )}
         <div className="error-fallback-actions">
           <button type="button" className="btn btn-primary" onClick={onRetry}>
             <Icon name="rotate" size={16} />
@@ -63,21 +69,28 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
           stack: error.stack?.slice(0, 2000),
           url: window.location.href,
         }),
-      }).catch(() => {
-        /* bỏ qua: log best-effort */
-      });
+      })
+        .then((r) => r.json())
+        .then((data) => {
+          if (data?.request_id) this.setState({ requestId: data.request_id });
+        })
+        .catch(() => {
+          /* bỏ qua: log best-effort */
+        });
     } catch {
       /* bỏ qua */
     }
   }
 
   private handleRetry = () => {
-    this.setState({ hasError: false });
+    this.setState({ hasError: false, requestId: undefined });
   };
 
   render(): ReactNode {
     if (this.state.hasError) {
-      return <ErrorFallback name={this.props.name} onRetry={this.handleRetry} />;
+      return (
+        <ErrorFallback name={this.props.name} onRetry={this.handleRetry} requestId={this.state.requestId} />
+      );
     }
     return this.props.children;
   }

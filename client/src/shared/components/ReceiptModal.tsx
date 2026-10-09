@@ -16,8 +16,8 @@ export function ReceiptModal({
   centerName: string;
   onClose: () => void;
 }) {
-  const { t } = useTranslation('tuition');
-  const today = new Date().toLocaleDateString('vi-VN');
+  const { t, i18n } = useTranslation('tuition');
+  const today = new Date().toLocaleDateString(i18n.language === 'vi' ? 'vi-VN' : 'en-US');
 
   return (
     <Modal title={t('receipt.title')} onClose={onClose}>

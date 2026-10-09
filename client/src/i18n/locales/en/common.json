@@ -125,5 +125,6 @@
   "network": {
     "offline": "No internet connection. Check your Wi-Fi/4G.",
     "backOnline": "Back online."
-  }
+  },
+  "errorCode": "Error code"
 }
