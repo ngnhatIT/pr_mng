@@ -21,7 +21,7 @@ Quy ước chung:
 
 ## Phân quyền (RBAC)
 
-61 permissions theo module, gán cho role với scope `own` / `center` / `all` (scope mạnh nhất thắng).
+67 permissions theo module, gán cho role với scope `own` / `center` / `all` (scope mạnh nhất thắng).
 
 - `superadmin`: toàn hệ thống. `admin`: toàn trung tâm. `staff`: vận hành (không xóa hệ thống). `teacher`: scope `own`.
 - API: `GET /roles`, `POST /roles`, `PUT /roles/:id/permissions`, `POST /roles/assign`, `GET /roles/me/permissions` (client dùng để ẩn/hiện menu).
@@ -89,3 +89,9 @@ Quy ước chung:
 
 - `/auth/login`, `/parent/login`, `/parent/register`: 10 req / 60s / IP → `429`.
 - Ghi (POST/PUT/DELETE) staff: 120 req / 60s / IP.
+
+## Idempotency (chống double-submit)
+
+- POST tạo phiếu thu (`/invoices/:id/payments`) hỗ trợ header `Idempotency-Key: <uuid>`.
+- Client giữ nguyên key cho cùng một ý định thanh toán (không sinh mới khi retry).
+- Server trả lại response đã lưu nếu key trùng (không tạo payment mới).
