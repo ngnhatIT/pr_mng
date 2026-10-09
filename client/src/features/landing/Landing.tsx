@@ -251,6 +251,7 @@ function LeadForm() {
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (busy) return;
     setBusy(true);
     try {
       await http.post('/public/leads', { name, phone, note: note || undefined });
@@ -307,6 +308,7 @@ function TrialForm({ refCode, courses }: { refCode: string; courses: PublicClass
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (busy) return;
     setBusy(true);
     try {
       await http.post('/public/trials', {

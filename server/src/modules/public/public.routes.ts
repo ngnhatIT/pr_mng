@@ -4,6 +4,7 @@ import { publicRateLimit } from '../../middleware/rateLimit';
 import { resolvePublicCenter, hasFeature, effectivePlan, Center } from '../../utils/plans';
 import { normalizePhone } from '../../services/zalo';
 import { asyncHandler } from '../../shared/http';
+import { v } from '../../shared/validate';
 
 const router = Router();
 
@@ -201,7 +202,9 @@ router.post(
         return;
       }
     }
-    const desiredDate = body?.desired_date ? String(body.desired_date).trim() : null;
+    const desiredDateRaw = body?.desired_date ? String(body.desired_date).trim() : null;
+    // Validate ngày thật (tránh "2026-13-99" lọt vào DB)
+    const desiredDate = desiredDateRaw ? v.date({ label: 'Ngày mong muốn' }).parse(desiredDateRaw) : null;
     const note = body?.note ? String(body.note).trim() : null;
     await db
       .prepare(
