@@ -148,6 +148,7 @@ export function createApp(): Express {
   // PHẢI đứng trước mọi mount có requireAuth.
   app.get(
     '/api/health',
+    apiRateLimit,
     asyncHandler(async (_req: express.Request, res: express.Response) => {
       // Public nhưng có ping DB để LB dùng làm readiness probe (không lộ chi tiết)
       let dbOk = true;

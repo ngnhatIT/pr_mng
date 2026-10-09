@@ -169,7 +169,9 @@ const loginHits = new Map<string, number[]>();
 export function loginRateLimit(req: Request, res: Response, next: NextFunction): void {
   const now = Date.now();
   const ip = trustedClientIp(req);
-  const key = `${ip}:${req.path}`;
+  // Normalize path: /api/auth/login và /api/v1/auth/login dùng chung key (chống bypass qua legacy alias)
+  const normalizedPath = req.path.replace(/^\/api\/v1\//, '/api/');
+  const key = `${ip}:${normalizedPath}`;
   const prev = loginHits.get(key) || [];
   const recent = prev.filter((t) => now - t < LOGIN_WINDOW_MS);
 
