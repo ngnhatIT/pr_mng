@@ -40,6 +40,7 @@ router.get(
 // POST /api/centers
 router.post(
   '/',
+  superadminOnly,
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const input = validate(req.body, {
       name: v.string({ required: true, label: 'Tên trung tâm' }),
