@@ -178,11 +178,14 @@ export async function applyCreditToInvoice(
     | undefined;
   if (!credit) throw AppError.notFound('Không tìm thấy credits');
 
-  // Chặn áp credits chéo trung tâm
+  // Chặn áp credits chéo trung tâm (kể cả credit legacy center_id NULL — phải gán center trước)
   const studentCenter = (await db
     .prepare('SELECT center_id FROM students WHERE id = ?')
     .get(inv.student_id)) as { center_id: number | null } | undefined;
-  if (credit.center_id && studentCenter?.center_id && credit.center_id !== studentCenter.center_id) {
+  if (credit.center_id === null) {
+    throw AppError.badRequest('Credits chưa gán trung tâm, vui lòng liên hệ quản trị viên');
+  }
+  if (studentCenter?.center_id && credit.center_id !== studentCenter.center_id) {
     throw AppError.badRequest('Credits này không áp dụng cho trung tâm của hóa đơn');
   }
 
