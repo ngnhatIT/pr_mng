@@ -19,6 +19,7 @@ export function Rooms() {
   const [deleting, setDeleting] = useState<Room | null>(null);
   const [page, setPage] = useState(1);
   const [pagination, setPagination] = useState<PaginationMeta | null>(null);
+  const [busy, setBusy] = useState(false);
   const toast = useToast();
 
   const load = useCallback(async () => {
@@ -174,7 +175,6 @@ function RoomFormModal({
   const { t } = useTranslation(['classes', 'common']);
   const [name, setName] = useState(initial?.name || '');
   const [capacity, setCapacity] = useState(initial?.capacity ? String(initial.capacity) : '');
-  const [busy, setBusy] = useState(false);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
