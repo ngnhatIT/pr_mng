@@ -175,6 +175,7 @@ function RoomFormModal({
   const { t } = useTranslation(['classes', 'common']);
   const [name, setName] = useState(initial?.name || '');
   const [capacity, setCapacity] = useState(initial?.capacity ? String(initial.capacity) : '');
+  const [busy, setBusy] = useState(false);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
