@@ -34,7 +34,7 @@ export function ParentRegister() {
       toast(msg, 'error');
       return;
     }
-    if (password.length < 6) {
+    if (password.length < 8) {
       const msg = t('auth.passwordTooShort');
       setError(msg);
       toast(msg, 'error');

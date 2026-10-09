@@ -12,7 +12,7 @@
     "namePlaceholder": "Nguyễn Văn A",
     "noAccount": "Chưa có tài khoản?",
     "password": "Mật khẩu",
-    "passwordHint": "Ít nhất 6 ký tự",
+    "passwordHint": "Ít nhất 8 ký tự",
     "passwordMismatch": "Mật khẩu nhập lại không khớp",
     "passwordPlaceholder": "Nhập mật khẩu",
     "passwordRequired": "Mật khẩu *",

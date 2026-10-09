@@ -12,7 +12,7 @@
     "namePlaceholder": "Jane Smith",
     "noAccount": "Don't have an account?",
     "password": "Password",
-    "passwordHint": "At least 6 characters",
+    "passwordHint": "At least 8 characters",
     "passwordMismatch": "Passwords do not match",
     "passwordPlaceholder": "Enter your password",
     "passwordRequired": "Password *",
