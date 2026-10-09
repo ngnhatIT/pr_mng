@@ -218,7 +218,7 @@ async function seedExtraAccounts(): Promise<void> {
         "INSERT INTO users (username, password_hash, role, name, center_id) VALUES ('root', ?, 'superadmin', 'Quản trị hệ thống', NULL)"
       )
       .run(hash);
-    console.log('Đã tạo tài khoản superadmin: root / 123456');
+    console.log('Đã tạo tài khoản superadmin (xem README để lấy credential mặc định)');
   }
 
   const hasTeacher = await db.prepare("SELECT 1 FROM users WHERE username = 'teacher1'").get();
@@ -232,7 +232,7 @@ async function seedExtraAccounts(): Promise<void> {
         'INSERT INTO users (username, password_hash, role, name, center_id, teacher_id) VALUES (?, ?, ?, ?, ?, ?)'
       )
       .run('teacher1', hash, 'teacher', t ? 'Giáo viên demo' : 'teacher1', demoId, t ? t.id : null);
-    console.log('Đã tạo tài khoản giáo viên demo: teacher1 / 123456');
+    console.log('Đã tạo tài khoản giáo viên demo: teacher1 / ***');
   }
 
   const hasParent = await db
@@ -254,7 +254,7 @@ async function seedExtraAccounts(): Promise<void> {
       .get('HV002', demoId)) as { id: number } | undefined;
     if (s1) await link.run(pid, s1.id);
     if (s2) await link.run(pid, s2.id);
-    console.log('Đã tạo tài khoản phụ huynh demo: 0900000001 / 123456 (liên kết HV001, HV002)');
+    console.log('Đã tạo tài khoản phụ huynh demo: 0900000001 / *** (liên kết HV001, HV002)');
   }
 
   // Vài phòng học mẫu
