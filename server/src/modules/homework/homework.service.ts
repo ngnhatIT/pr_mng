@@ -6,6 +6,7 @@ import { nowVNMinute, assignedCountExpr, assertValidDates } from './homework.hel
 import { todayVN } from '../../shared/vnTime';
 import { homeworkRepo, deleteHomeworkCascade } from './homework.repo';
 import { eventBus } from '../../shared/events/eventBus';
+import { escapeLike } from '../../shared/like';
 
 /** Chuyển thành ID hợp lệ, throw 400 nếu không phải số nguyên dương. */
 function toValidId(v: unknown): number {
@@ -134,8 +135,9 @@ export async function listHomework(
     params.push(Number(class_id));
   }
   if (search.trim()) {
+    const term = escapeLike(search.trim());
     conds.push("(h.title LIKE ? ESCAPE '\\' OR h.content LIKE ? ESCAPE '\\')");
-    params.push(`%${search.trim()}%`, `%${search.trim()}%`);
+    params.push(`%${term}%`, `%${term}%`);
   }
   if (due) dueCond(due, conds, params);
   if (status) {
