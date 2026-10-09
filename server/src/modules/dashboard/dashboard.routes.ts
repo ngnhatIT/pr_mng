@@ -2,6 +2,7 @@ import { Router, Response } from 'express';
 import { db, toISODate, formatSchedule } from '../../db';
 import { AuthRequest, reqCenterId } from '../../middleware/auth';
 import { requirePermission } from '../authorization/authorization.middleware';
+import { getPermissionScope } from '../authorization/authorization.service';
 import { asyncHandler } from '../../shared/http';
 
 const router = Router();
@@ -86,15 +87,17 @@ router.get(
       >,
     ]);
 
-    const isTeacher = !!req.user?.teacher_id;
+    const scope = await getPermissionScope(req.user!.id, 'reports.view');
+    // Scope 'own' (giáo viên hoặc custom role) không xem tài chính trung tâm
+    const hideFinance = scope === 'own';
     res.json({
       totalStudents,
       studyingStudents,
       totalTeachers,
       activeClasses,
-      // Giáo viên không xem tài chính trung tâm (scope 'own')
-      revenueThisMonth: isTeacher ? 0 : revenueThisMonth,
-      unpaidTotal: isTeacher ? 0 : unpaidTotal,
+      // Scope 'own' không xem tài chính trung tâm
+      revenueThisMonth: hideFinance ? 0 : revenueThisMonth,
+      unpaidTotal: hideFinance ? 0 : unpaidTotal,
       todaySessions: todaySessions.map((s) => ({ ...s, scheduleText: formatSchedule(s.schedule) })),
     });
   })
