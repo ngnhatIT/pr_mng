@@ -729,9 +729,8 @@ export async function changePassword(parentId: number, oldPassword: string, newP
     password_hash: string;
   } | undefined;
   if (!row) throw AppError.notFound('Không tìm thấy tài khoản');
-  const bcrypt = await import('bcryptjs');
   const ok = await bcrypt.compare(oldPassword, row.password_hash);
   if (!ok) throw AppError.badRequest('Mật khẩu cũ không đúng');
-  const hash = await bcrypt.hash(newPassword, 12);
+  const hash = await bcrypt.hash(newPassword, 10);
   await db.prepare('UPDATE parents SET password_hash = ? WHERE id = ?').run(hash, parentId);
 }
