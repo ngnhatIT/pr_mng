@@ -52,13 +52,15 @@ export function createApp(): Express {
 
   app.use(requestId); // Gán X-Request-Id cho mọi request (trace logs)
   app.use(requestLogger); // Log method/path/status/duration + đếm metrics
-  // M5: CORS allowlist + credentials (thay vì cors() mở toàn bộ) + security headers
+  // M5: CORS allowlist + security headers
+  // Lưu ý: credentials=false vì auth dùng Bearer token (localStorage), không dùng cookie.
+  // Nếu chuyển sang httpOnly cookie trong tương lai, PHẢI thêm CSRF protection.
   app.use(
     cors({
       origin: env.CORS_ORIGIN.split(',')
         .map((o) => o.trim())
         .filter(Boolean),
-      credentials: true,
+      credentials: false,
     })
   );
   app.use(
