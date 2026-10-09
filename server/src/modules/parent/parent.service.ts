@@ -552,8 +552,11 @@ export async function createReview(
        RETURNING id`
     )
     .run(centerId, parentId, r, input.comment || null);
-  const row = ins.rows?.[0] as { id: number } | undefined;
-  return { id: row?.id ?? Number(ins.lastInsertRowid), status: 'pending' };
+  // ON CONFLICT ... RETURNING không trả rows qua pg-compat run(); query lại id
+  const row = (await db
+    .prepare('SELECT id FROM reviews WHERE parent_id = ? AND ' + (centerId === null ? 'center_id IS NULL' : 'center_id = ?'))
+    .get(...(centerId === null ? [parentId] : [parentId, centerId]))) as { id: number } | undefined;
+  return { id: row?.id ?? 0, status: 'pending' };
 }
 
 export async function listMyReviews(parentId: number): Promise<unknown[]> {
