@@ -3590,3 +3590,14 @@ a:focus-visible,
   background: #b91c1c;
   border-color: #b91c1c;
 }
+
+@media (max-width: 768px) {
+  .btn-sm {
+    height: 40px;
+    padding: 0 var(--sp-4);
+  }
+  .btn-icon.btn-sm {
+    width: 40px;
+    height: 40px;
+  }
+}
