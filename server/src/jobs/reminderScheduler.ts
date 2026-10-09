@@ -79,12 +79,16 @@ async function findDueInvoices(centerId: number): Promise<{ overdue: DueInvoice[
 
 /** Chống spam: bỏ qua hóa đơn đã được nhắc cùng loại trong 3 ngày gần nhất */
 async function wasRemindedRecently(invoiceId: number, kind: 'overdue' | 'upcoming'): Promise<boolean> {
-  // Chỉ tính 'sent'/'demo' — 'failed' không suppress để lần chạy sau retry lại
+  // Chỉ tính 'sent'/'demo' — 'failed' không suppress để lần chạy sau retry lại.
+  // 'sending' quá 30 phút coi như kẹt do crash → cho phép gửi lại (tránh mất nhắc 3 ngày).
   const row = await db
     .prepare(
       `SELECT 1 FROM reminders
-       WHERE invoice_id = ? AND kind = ? AND status IN ('sent', 'demo', 'sending')
-       AND created_at >= datetime('now', '-3 days')
+       WHERE invoice_id = ? AND kind = ?
+       AND (
+         (status IN ('sent', 'demo') AND created_at >= datetime('now', '-3 days'))
+         OR (status = 'sending' AND created_at >= datetime('now', '-30 minutes'))
+       )
        LIMIT 1`
     )
     .get(invoiceId, kind);
