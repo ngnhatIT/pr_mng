@@ -42,13 +42,24 @@ export function assertValidDates(
   dueDate: string | null | undefined,
   closeDate: string | null | undefined
 ): void {
-  if (dueDate && !/^\d{4}-\d{2}-\d{2}$/.test(dueDate)) {
-    throw AppError.badRequest('Hạn nộp không hợp lệ (YYYY-MM-DD)');
+  if (dueDate && !isRealDate(dueDate)) {
+    throw AppError.badRequest('Hạn nộp không hợp lệ (YYYY-MM-DD, ngày phải có thật)');
   }
-  if (closeDate && !/^\d{4}-\d{2}-\d{2}$/.test(closeDate)) {
-    throw AppError.badRequest('Hạn chót không hợp lệ (YYYY-MM-DD)');
+  if (closeDate && !isRealDate(closeDate)) {
+    throw AppError.badRequest('Hạn chót không hợp lệ (YYYY-MM-DD, ngày phải có thật)');
   }
   if (dueDate && closeDate && closeDate < dueDate) {
     throw AppError.badRequest('Hạn chót cứng phải sau hạn nộp');
   }
+}
+
+function isRealDate(s: string): boolean {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s);
+  if (!m) return false;
+  const y = Number(m[1]);
+  const mo = Number(m[2]);
+  const d = Number(m[3]);
+  if (mo < 1 || mo > 12 || d < 1 || d > 31) return false;
+  const dt = new Date(Date.UTC(y, mo - 1, d));
+  return dt.getUTCFullYear() === y && dt.getUTCMonth() === mo - 1 && dt.getUTCDate() === d;
 }

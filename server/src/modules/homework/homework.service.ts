@@ -7,6 +7,13 @@ import { nowVNMinute, assignedCountExpr, assertValidDates } from './homework.hel
 import { todayVN } from '../../shared/vnTime';
 import { homeworkRepo, deleteHomeworkCascade } from './homework.repo';
 import { eventBus } from '../../shared/events/eventBus';
+
+/** Chuyển thành ID hợp lệ, throw 400 nếu không phải số nguyên dương. */
+function toValidId(v: unknown): number {
+  const n = Number(v);
+  if (!Number.isInteger(n) || n <= 0) throw AppError.badRequest('ID không hợp lệ');
+  return n;
+}
 import {
   HomeworkCreatedEvent,
   HomeworkPublishedEvent,
@@ -266,7 +273,7 @@ export function prepareCreateInput(raw: Record<string, unknown>): PreparedHomewo
     max_score,
     close_date,
     kind,
-    rubric_id: raw.rubric_id ? Number(raw.rubric_id) : null,
+    rubric_id: raw.rubric_id ? toValidId(raw.rubric_id) : null,
     attachments,
     target_student_ids,
     questions,
