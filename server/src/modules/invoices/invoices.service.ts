@@ -83,7 +83,7 @@ export async function listInvoices(
     params.push(status);
   }
   if (search) {
-    conds.push('(s.name LIKE ? ESCAPE "\\" OR s.code LIKE ? ESCAPE "\\")');
+    conds.push("(s.name LIKE ? ESCAPE '\\' OR s.code LIKE ? ESCAPE '\\')");
     const kw = `%${escapeLike(search)}%`;
     params.push(kw, kw);
   }

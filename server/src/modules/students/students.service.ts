@@ -43,7 +43,7 @@ export async function listStudents(
   }
   const { search = '', status = '' } = query;
   if (search) {
-    conds.push('(name LIKE ? ESCAPE "\\" OR code LIKE ? ESCAPE "\\" OR phone LIKE ? ESCAPE "\\")');
+    conds.push("(name LIKE ? ESCAPE '\\' OR code LIKE ? ESCAPE '\\' OR phone LIKE ? ESCAPE '\\')");
     const kw = `%${escapeLike(search)}%`;
     params.push(kw, kw, kw);
   }

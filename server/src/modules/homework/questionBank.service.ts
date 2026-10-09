@@ -39,8 +39,8 @@ export async function listBankQuestions(
     params.push(centerId);
   }
   if (search.trim()) {
-    conds.push('question LIKE ? ESCAPE "\\"');
-    params.push(`%${search.trim()}%`);
+    conds.push("question LIKE ? ESCAPE '\\'");
+    params.push(`%${escapeLike(search.trim())}%`);
   }
   if (tag) {
     conds.push('tag = ?');
