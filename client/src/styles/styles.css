@@ -3555,3 +3555,31 @@ a:focus-visible,
 .skip-link:focus {
   top: 8px;
 }
+
+/* ---------- Dark mode: card nền trắng ---------- */
+[data-theme='dark'] .pipeline-card,
+[data-theme='dark'] .bank-item,
+[data-theme='dark'] .bank-form,
+[data-theme='dark'] .submission-item,
+[data-theme='dark'] .quiz-review-q {
+  background: var(--surface);
+  color: var(--text-strong);
+}
+
+/* ---------- Dark mode: button contrast (WCAG AA) ---------- */
+[data-theme='dark'] .btn-primary {
+  background: #3b5fd9;
+  border-color: #3b5fd9;
+}
+[data-theme='dark'] .btn-primary:hover:not(:disabled) {
+  background: #2f4fc0;
+  border-color: #2f4fc0;
+}
+[data-theme='dark'] .btn-danger {
+  background: #dc2626;
+  border-color: #dc2626;
+}
+[data-theme='dark'] .btn-danger:hover:not(:disabled) {
+  background: #b91c1c;
+  border-color: #b91c1c;
+}

@@ -373,7 +373,7 @@
   align-items: center;
   justify-content: space-between;
   gap: var(--sp-4);
-  background: var(--text);
+  background: #1e293b;
   color: #fff;
   border-radius: var(--radius-lg);
   padding: var(--sp-3) var(--sp-4);
