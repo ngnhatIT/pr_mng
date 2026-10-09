@@ -2,6 +2,7 @@ import { Router, Response } from 'express';
 import { db, setCenterSetting, toISODate, addDays } from '../../db';
 import { AuthRequest, reqCenterId } from '../../middleware/auth';
 import { withAdvisoryLock } from '../../shared/advisoryLock';
+import { paramId } from '../../shared/validate';
 import { requirePermission } from '../authorization/authorization.middleware';
 import {
   getZaloConfig,

@@ -3,6 +3,7 @@ import { db } from '../../db';
 import { AuthRequest, reqCenterId } from '../../middleware/auth';
 import { requirePermission } from '../authorization/authorization.middleware';
 import { asyncHandler } from '../../shared/http';
+import { paramId } from '../../shared/validate';
 import { listTrials, TRIAL_STATUS, convertTrial } from './trials.service';
 
 const router = Router();

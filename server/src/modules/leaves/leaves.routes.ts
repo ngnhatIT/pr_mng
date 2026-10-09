@@ -1,5 +1,6 @@
 import { Router, Response } from 'express';
 import { nowVNSql } from '../../shared/vnTime';
+import { paramId } from '../../shared/validate';
 import { db } from '../../db';
 import { AuthRequest, reqCenterId } from '../../middleware/auth';
 import { requirePermission } from '../authorization/authorization.middleware';
