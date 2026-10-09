@@ -67,3 +67,9 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run build
+      - name: Smoke test build artifact
+        run: |
+          timeout 30 node server/dist/index.js &
+          sleep 5
+          curl -f http://localhost:3001/api/live || (echo "Smoke test failed" && exit 1)
+          kill %1
