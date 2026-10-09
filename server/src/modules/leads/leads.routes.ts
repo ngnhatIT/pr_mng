@@ -182,7 +182,7 @@ router.post(
     const body = req.body as Record<string, unknown> | undefined;
     const rawClassId = body?.class_id;
     const result = await convertLeadToStudent({
-      leadId: paramId(req),
+      leadId: paramId(req.params),
       centerId: reqCenterId(req),
       classId:
         rawClassId !== undefined && rawClassId !== null && String(rawClassId).trim() !== ''
