@@ -33,6 +33,10 @@ export const env = {
   JWT_SECRET: (() => {
     const s = process.env.JWT_SECRET;
     if (!s && isProd) throw new Error('[CONFIG] Production bắt buộc đặt JWT_SECRET');
+    // Secret ngắn làm JWT brute-force khả thi — yêu cầu tối thiểu 32 ký tự ở production
+    if (s && isProd && s.length < 32) {
+      throw new Error('[CONFIG] JWT_SECRET phải từ 32 ký tự trở lên (hiện tại ' + s.length + ')');
+    }
     if (!s) {
       // eslint-disable-next-line no-console -- config bootstrap: logger gây circular dep với env
       console.warn('[CẢNH BÁO] JWT secret mặc định — hãy đặt JWT_SECRET khi chạy production!');
@@ -56,13 +60,17 @@ export const env = {
    */
   CORS_ORIGIN: optional('CORS_ORIGIN', 'http://localhost:5173,http://localhost:4000'),
 
-  /** VNPay */
+  /**
+   * VNPay / Zalo: credential thực tế lưu per-center trong DB (center_settings),
+   * KHÔNG đọc từ env. Giữ lại để tương thích nhưng đừng đặt nhầm tưởng có tác dụng.
+   */
+  /** VNPay (legacy — cấu hình trong DB per-center) */
   VNPAY_TMN_CODE: optional('VNPAY_TMN_CODE', ''),
   VNPAY_HASH_SECRET: optional('VNPAY_HASH_SECRET', ''),
   VNPAY_URL: optional('VNPAY_URL', 'https://sandbox.vnpayment.vn/paymentv2/vpcpay.html'),
   VNPAY_RETURN_URL: optional('VNPAY_RETURN_URL', ''),
 
-  /** Zalo OA */
+  /** Zalo OA (legacy — cấu hình trong DB per-center) */
   ZALO_OA_ID: optional('ZALO_OA_ID', ''),
   ZALO_ACCESS_TOKEN: optional('ZALO_ACCESS_TOKEN', ''),
 
