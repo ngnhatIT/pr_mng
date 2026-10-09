@@ -130,6 +130,14 @@ router.put(
         res.status(400).json({ error: 'Trạng thái không hợp lệ', code: 'VALIDATION_INVALID' });
         return;
       }
+      // Chặn set 'enrolled' trực tiếp (phải dùng POST /:id/convert để tạo học viên)
+      if (status === 'enrolled') {
+        res.status(400).json({
+          error: "Không thể chuyển trạng thái thành 'enrolled' trực tiếp, hãy dùng chức năng chuyển đổi",
+          code: 'VALIDATION_INVALID',
+        });
+        return;
+      }
       sets.push('status = ?');
       params.push(status);
     }
