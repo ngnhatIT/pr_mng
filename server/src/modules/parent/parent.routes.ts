@@ -8,7 +8,7 @@ import { validate, v, paramId } from '../../shared/validate';
 import { env } from '../../config/env';
 import * as parentService from './parent.service';
 import { assertStrongPassword } from '../../shared/password';
-import { rotateRefreshToken, revokeRefreshToken } from '../auth/refresh.service';
+import { rotateRefreshToken, revokeRefreshToken, revokeAllForOwner, revokeAllForOwnerExcept } from '../auth/refresh.service';
 
 const router = Router();
 
@@ -82,6 +82,34 @@ router.post(
 
 /* --------------------- Từ đây yêu cầu đăng nhập phụ huynh --------------------- */
 router.use(parentAuth);
+
+/** Đổi mật khẩu phụ huynh: yêu cầu mật khẩu cũ + thu hồi mọi session khác. */
+router.post(
+  '/change-password',
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const { parentId } = ctx(req);
+    const { old_password, new_password } = validate(req.body, {
+      old_password: v.string({ required: true, label: 'Mật khẩu cũ' }),
+      new_password: v.string({ required: true, min: 8, max: 72, label: 'Mật khẩu mới' }),
+    });
+    assertStrongPassword(new_password);
+    await parentService.changePassword(parentId, old_password, new_password);
+    // Thu hồi mọi session khác (giữ session hiện tại)
+    const { refresh_token } = (req.body ?? {}) as { refresh_token?: string };
+    await revokeAllForOwnerExcept('parent', parentId, refresh_token);
+    res.json({ ok: true });
+  })
+);
+
+/** Đăng xuất mọi thiết bị của phụ huynh. */
+router.post(
+  '/logout-all',
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const { parentId } = ctx(req);
+    await revokeAllForOwner('parent', parentId);
+    res.json({ ok: true });
+  })
+);
 
 router.post(
   '/link',

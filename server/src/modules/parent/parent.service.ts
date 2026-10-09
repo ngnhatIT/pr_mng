@@ -703,3 +703,16 @@ export async function getChildSubmissions(parentId: number, studentId: number, h
     )
     .all(homeworkId, studentId);
 }
+
+/** Đổi mật khẩu phụ huynh: verify mật khẩu cũ, hash mật khẩu mới. */
+export async function changePassword(parentId: number, oldPassword: string, newPassword: string): Promise<void> {
+  const row = (await db.prepare('SELECT password_hash FROM parents WHERE id = ?').get(parentId)) as {
+    password_hash: string;
+  } | undefined;
+  if (!row) throw AppError.notFound('Không tìm thấy tài khoản');
+  const bcrypt = await import('bcryptjs');
+  const ok = await bcrypt.compare(oldPassword, row.password_hash);
+  if (!ok) throw AppError.badRequest('Mật khẩu cũ không đúng');
+  const hash = await bcrypt.hash(newPassword, 12);
+  await db.prepare('UPDATE parents SET password_hash = ? WHERE id = ?').run(hash, parentId);
+}

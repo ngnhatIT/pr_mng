@@ -192,3 +192,23 @@ export async function revokeAllForOwner(kind: 'staff' | 'parent', ownerId: numbe
     )
     .run(kind, ownerId);
 }
+
+/** Thu hồi mọi session trừ token hiện tại (dùng khi đổi mật khẩu). */
+export async function revokeAllForOwnerExcept(
+  kind: 'staff' | 'parent',
+  ownerId: number,
+  exceptToken?: string
+): Promise<void> {
+  const col = kind === 'parent' ? 'parent_id' : 'user_id';
+  if (exceptToken) {
+    const hash = hashToken(exceptToken);
+    await db
+      .prepare(
+        `UPDATE refresh_tokens SET revoked_at = NOW()
+         WHERE kind = ? AND ${col} = ? AND revoked_at IS NULL AND token_hash != ?`
+      )
+      .run(kind, ownerId, hash);
+  } else {
+    await revokeAllForOwner(kind, ownerId);
+  }
+}
