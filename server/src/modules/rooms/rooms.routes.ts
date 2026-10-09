@@ -100,9 +100,13 @@ router.put(
       return;
     }
     const cap = Number(capacity);
+    if (!Number.isFinite(cap) || cap < 1 || cap > 10000) {
+      res.status(400).json({ error: 'Sức chứa phải từ 1 đến 10000', code: 'VALIDATION_INVALID' });
+      return;
+    }
     await db
       .prepare('UPDATE rooms SET name = ?, capacity = ? WHERE id = ?')
-      .run(String(name).trim(), Number.isFinite(cap) && cap > 0 ? Math.floor(cap) : 30, id);
+      .run(String(name).trim(), Math.floor(cap), id);
     res.json(await db.prepare('SELECT * FROM rooms WHERE id = ?').get(id));
   })
 );
