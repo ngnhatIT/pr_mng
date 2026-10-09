@@ -29,6 +29,8 @@ PORT=4000
 
 > Không đặt `JWT_SECRET` ở production: server từ chối khởi động.
 
+> **CORS:** đặt `CORS_ORIGIN` thành domain frontend production (vd: `CORS_ORIGIN=https://app.trungtam.vn`). Quên bước này, browser chặn mọi API call từ domain thật.
+
 ### 3. Chạy
 
 ```bash
