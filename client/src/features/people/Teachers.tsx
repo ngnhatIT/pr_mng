@@ -94,7 +94,7 @@ export function Teachers() {
       ) : (
         <div className="table-wrap sticky">
           <table className="table">
-            <th scope="col"ead>
+            <thead>
               <tr>
                 <th scope="col">{t('table.name')}</th>
                 <th scope="col">{t('table.subject')}</th>

@@ -103,7 +103,7 @@ function PendingPayments() {
       ) : (
         <div className="table-wrap sticky">
           <table className="table">
-            <th scope="col"ead>
+            <thead>
               <tr>
                 <th scope="col">{t('pending.table.student')}</th>
                 <th scope="col">{t('pending.table.amount')}</th>
@@ -265,7 +265,7 @@ function InvoiceList() {
       ) : (
         <div className="table-wrap sticky">
           <table className="table">
-            <th scope="col"ead>
+            <thead>
               <tr>
                 <th scope="col">{t('invoice.table.student')}</th>
                 <th scope="col">{t('invoice.table.class')}</th>
@@ -840,7 +840,7 @@ function DebtList() {
       ) : (
         <div className="table-wrap sticky">
           <table className="table">
-            <th scope="col"ead>
+            <thead>
               <tr>
                 <th scope="col">{t('debt.table.student')}</th>
                 <th scope="col">{t('debt.table.phone')}</th>

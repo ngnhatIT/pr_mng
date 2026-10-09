@@ -59,7 +59,7 @@ export function System() {
       ) : (
         <div className="table-wrap">
           <table className="table">
-            <th scope="col"ead>
+            <thead>
               <tr>
                 <th scope="col">{t('system.col.center')}</th>
                 <th scope="col">{t('system.col.phone')}</th>

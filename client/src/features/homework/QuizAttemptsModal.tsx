@@ -45,7 +45,7 @@ export function QuizAttemptsModal({ homework, onClose }: { homework: HomeworkIte
       ) : (
         <div className="table-wrap">
           <table className="table">
-            <th scope="col"ead>
+            <thead>
               <tr>
                 <th scope="col">{t('attempts.col.student')}</th>
                 <th scope="col" className="th-right">{t('attempts.col.score')}</th>

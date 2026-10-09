@@ -71,7 +71,7 @@ export function Payroll() {
       ) : (
         <div className="table-wrap sticky">
           <table className="table">
-            <th scope="col"ead>
+            <thead>
               <tr>
                 <th scope="col">{t('payroll.table.teacher')}</th>
                 <th scope="col">{t('payroll.table.sessions')}</th>

@@ -353,7 +353,7 @@ export function ZaloReminders() {
           <>
             <div className="table-wrap">
               <table className="table">
-                <th scope="col"ead>
+                <thead>
                   <tr>
                     <th scope="col">{t('zalo.col.time')}</th>
                     <th scope="col">{t('zalo.col.student')}</th>

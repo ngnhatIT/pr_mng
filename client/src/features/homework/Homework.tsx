@@ -309,7 +309,7 @@ export function Homework() {
         ) : (
           <div className="table-wrap">
             <table className="table">
-              <th scope="col"ead>
+              <thead>
                 <tr>
                   <th scope="col">{t('table.title')}</th>
                   <th scope="col">{t('table.class')}</th>

@@ -140,7 +140,7 @@ export function TeacherGrades() {
       ) : (
         <div className="table-wrap">
           <table className="table">
-            <th scope="col"ead>
+            <thead>
               <tr>
                 <th scope="col">{t('grades.thTest')}</th>
                 <th scope="col">{t('grades.thScore')}</th>

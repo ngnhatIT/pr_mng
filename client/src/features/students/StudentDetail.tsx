@@ -137,7 +137,7 @@ export function StudentDetail() {
         ) : (
           <div className="table-wrap">
             <table className="table">
-              <th scope="col"ead>
+              <thead>
                 <tr>
                   <th scope="col">{t('detail.invoiceTable.class')}</th>
                   <th scope="col">{t('detail.invoiceTable.amount')}</th>
@@ -221,7 +221,7 @@ function GradesSection({ studentId }: { studentId: number }) {
       ) : (
         <div className="table-wrap">
           <table className="table">
-            <th scope="col"ead>
+            <thead>
               <tr>
                 <th scope="col">{t('detail.grades.table.exam')}</th>
                 <th scope="col">{t('detail.grades.table.class')}</th>

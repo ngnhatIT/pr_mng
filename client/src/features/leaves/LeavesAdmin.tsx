@@ -96,7 +96,7 @@ export function LeavesAdmin() {
       ) : (
         <div className="table-wrap">
           <table className="table">
-            <th scope="col"ead>
+            <thead>
               <tr>
                 <th scope="col">{t('leaves.col.student')}</th>
                 <th scope="col">{t('leaves.col.fromDate')}</th>

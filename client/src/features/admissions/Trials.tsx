@@ -86,7 +86,7 @@ export function Trials() {
       ) : (
         <div className="table-wrap sticky">
           <table className="table">
-            <th scope="col"ead>
+            <thead>
               <tr>
                 <th scope="col">{t('trials.col.name')}</th>
                 <th scope="col">{t('trials.col.phone')}</th>
