@@ -118,8 +118,7 @@ router.put(
       const expRaw = body.plan_expires_at ? String(body.plan_expires_at).trim() : null;
       // Validate ngày thật
       if (expRaw) {
-        const { v: vv, validate: vValidate } = await import('../../shared/validate');
-        vValidate({ d: expRaw }, { d: vv.date({ label: 'Hạn gói' }) });
+        validate({ d: expRaw }, { d: v.date({ label: 'Hạn gói' }) });
       }
       params.push(expRaw);
     }
