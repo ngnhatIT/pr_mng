@@ -118,7 +118,7 @@ export async function getDebtReport(centerId: number | null, pageOpts: PageOptio
       `SELECT s.id, s.code, s.name, s.phone,
          SUM(i.amount) as total,
          COALESCE(SUM((SELECT SUM(amount) FROM payments p WHERE p.invoice_id = i.id AND p.status = 'confirmed')), 0) as paid,
-         GROUP_CONCAT(i.id || ':' || COALESCE(i.due_date, '')) as invoice_dues
+         STRING_AGG(i.id || ':' || COALESCE(i.due_date, ''), ',' ORDER BY i.id) as invoice_dues
        ${base}
        GROUP BY s.id, s.code, s.name, s.phone
        ORDER BY (SUM(i.amount) - COALESCE(SUM((SELECT SUM(amount) FROM payments p WHERE p.invoice_id = i.id AND p.status = 'confirmed')), 0)) DESC

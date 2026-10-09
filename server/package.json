@@ -33,7 +33,7 @@
     "build": "tsc && mkdir -p dist/docs && cp src/docs/openapi.yaml dist/docs/openapi.yaml",
     "dev": "tsx watch src/index.ts",
     "start": "node dist/index.js",
-    "test": "npm run build && node --test \"dist/**/*.test.js\""
+    "test": "npx tsc --project tsconfig.test.json --outDir ./test-dist && DATABASE_URL=${TEST_DATABASE_URL:-postgres://educenter:educenter123@localhost:5432/educenter_test} node --test --test-concurrency=1 \"test-dist/**/*.test.js\""
   },
   "type": "commonjs",
   "version": "1.0.0"

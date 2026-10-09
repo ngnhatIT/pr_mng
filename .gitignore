@@ -9,3 +9,4 @@ server/uploads/
 .DS_Store
 *.log
 coverage/
+test-dist/

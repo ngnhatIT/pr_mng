@@ -202,7 +202,7 @@ router.post(
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const id = Number(req.params.id);
     await requireHomework(req, id);
-    setHomeworkStatus(id, 'published', reqCenterId(req));
+    await setHomeworkStatus(id, 'published', reqCenterId(req));
     res.json({ ok: true });
   })
 );
@@ -214,7 +214,7 @@ router.post(
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const id = Number(req.params.id);
     const hw = await requireHomework(req, id);
-    setHomeworkStatus(id, 'draft', reqCenterId(req));
+    await setHomeworkStatus(id, 'draft', reqCenterId(req));
     audit({
       centerId: reqCenterId(req),
       actor: actorFromReq(req),
@@ -442,7 +442,7 @@ router.delete(
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const id = Number(req.params.id);
     const hw = await requireHomework(req, id);
-    deleteHomework(id, reqCenterId(req));
+    await deleteHomework(id, reqCenterId(req));
     audit({
       centerId: reqCenterId(req),
       actor: actorFromReq(req),

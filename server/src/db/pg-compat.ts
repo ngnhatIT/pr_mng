@@ -165,7 +165,7 @@ export interface Statement {
 type QueryFn = (text: string, params?: unknown[]) => Promise<{ rows: unknown[]; rowCount: number | null }>;
 
 /** Bảng không có cột id (khóa chính composite) — không RETURNING id được. */
-const NO_ID_TABLES = new Set(['center_settings', 'parent_students', 'homework_targets', 'quiz_answers']);
+const NO_ID_TABLES = new Set(['center_settings', 'settings', 'salary_rules', 'payment_txns', 'parent_students', 'homework_targets', 'homework_scores', 'quiz_answers']);
 
 function makeStatement(queryFn: QueryFn, sql: string): Statement {
   let pgSql = translateSqlite(sql);

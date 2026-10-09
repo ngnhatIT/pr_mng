@@ -413,15 +413,15 @@ export async function updateHomework(
   return await db.prepare('SELECT * FROM homework WHERE id = ?').get(id) as HomeworkRow;
 }
 
-export function deleteHomework(id: number, centerId: number | null = null): void {
-  homeworkRepo.deleteCascade(id);
+export async function deleteHomework(id: number, centerId: number | null = null): Promise<void> {
+  await homeworkRepo.deleteCascade(id);
   eventBus.emitSync(new HomeworkDeletedEvent(id, centerId));
 }
 
 /** Đánh dấu học viên đã hoàn thành bài tập. */
 /** Đặt trạng thái đăng/gỡ đăng cho bài tập (publish/unpublish). */
-export function setHomeworkStatus(id: number, status: 'published' | 'draft', centerId: number | null = null): void {
-  homeworkRepo.setStatus(id, status);
+export async function setHomeworkStatus(id: number, status: 'published' | 'draft', centerId: number | null = null): Promise<void> {
+  await homeworkRepo.setStatus(id, status);
   if (status === 'published') {
     eventBus.emitSync(new HomeworkPublishedEvent(id, centerId));
   } else {

@@ -467,26 +467,26 @@ async function getChildHomework(parentId: number, studentId: number, homeworkId:
 }
 
 /** Lấy đề quiz cho con (ẩn đáp án). */
-export function getQuizForChild(parentId: number, studentId: number, homeworkId: number) {
-  getChildHomework(parentId, studentId, homeworkId);
-  return getQuizForStudent(homeworkId);
+export async function getQuizForChild(parentId: number, studentId: number, homeworkId: number) {
+  await getChildHomework(parentId, studentId, homeworkId);
+  return await getQuizForStudent(homeworkId);
 }
 
 /** Con nộp bài quiz → tự chấm. */
-export function submitChildQuiz(
+export async function submitChildQuiz(
   parentId: number,
   studentId: number,
   homeworkId: number,
   answers: { question_id: number; option_id: number }[]
 ) {
-  getChildHomework(parentId, studentId, homeworkId);
-  return submitQuiz(homeworkId, studentId, answers);
+  await getChildHomework(parentId, studentId, homeworkId);
+  return await submitQuiz(homeworkId, studentId, answers);
 }
 
 /** Lịch sử làm bài của con. */
 export async function getChildQuizAttempts(parentId: number, studentId: number, homeworkId: number) {
-  getChildHomework(parentId, studentId, homeworkId);
-  return getStudentAttempts(homeworkId, studentId);
+  await getChildHomework(parentId, studentId, homeworkId);
+  return await getStudentAttempts(homeworkId, studentId);
 }
 
 /** Xem lại chi tiết 1 lượt làm (đáp án đúng/sai). */
