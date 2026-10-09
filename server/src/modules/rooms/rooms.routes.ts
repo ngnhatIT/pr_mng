@@ -4,6 +4,8 @@ import { AuthRequest, reqCenterId } from '../../middleware/auth';
 import { requirePermission } from '../authorization/authorization.middleware';
 import { getDefaultCenter } from '../../utils/plans';
 import { asyncHandler } from '../../shared/http';
+import { validate, v, paramId } from '../../shared/validate';
+import { audit, actorFromReq } from '../../shared/audit';
 import { listRooms } from './rooms.service';
 
 const router = Router();
@@ -33,16 +35,32 @@ router.post(
   requirePermission('rooms.manage'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const cid = await effCid(req);
-    const { name, capacity } = req.body as { name?: string; capacity?: number };
-    if (!name || !String(name).trim()) {
-      res.status(400).json({ error: 'Tên phòng là bắt buộc' });
+    const { name, capacity } = validate(req.body, {
+      name: v.string({ required: true, max: 100, label: 'Tên phòng' }),
+      capacity: v.number({ integer: true, min: 1, max: 10000, label: 'Sức chứa' }),
+    });
+    const trimmed = String(name).trim();
+    // Chống trùng tên phòng trong trung tâm
+    const dup = (await db
+      .prepare('SELECT id FROM rooms WHERE center_id = ? AND LOWER(name) = LOWER(?)')
+      .get(cid, trimmed)) as { id: number } | undefined;
+    if (dup) {
+      res.status(409).json({ error: 'Tên phòng đã tồn tại trong trung tâm', code: 'DUPLICATE' });
       return;
     }
-    const cap = Number(capacity);
     const r = await db
       .prepare('INSERT INTO rooms (center_id, name, capacity) VALUES (?, ?, ?)')
-      .run(cid, String(name).trim(), Number.isFinite(cap) && cap > 0 ? Math.floor(cap) : 30);
-    res.status(201).json(await db.prepare('SELECT * FROM rooms WHERE id = ?').get(Number(r.lastInsertRowid)));
+      .run(cid, trimmed, capacity ?? 30);
+    const roomId = Number(r.lastInsertRowid);
+    await audit({
+      centerId: cid,
+      action: 'create',
+      entity: 'rooms',
+      entityId: roomId,
+      summary: `Tạo phòng "${trimmed}"`,
+      actor: actorFromReq(req as AuthRequest),
+    });
+    res.status(201).json(await db.prepare('SELECT * FROM rooms WHERE id = ?').get(roomId));
   })
 );
 
