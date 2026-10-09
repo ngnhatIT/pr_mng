@@ -4,6 +4,7 @@ import { AuthRequest, reqCenterId } from '../../middleware/auth';
 import { requirePermission } from '../authorization/authorization.middleware';
 import { asyncHandler } from '../../shared/http';
 import { paramId } from '../../shared/validate';
+import { audit, actorFromReq } from '../../shared/audit';
 import { listReviews } from './reviews.service';
 
 const router = Router();
@@ -56,6 +57,14 @@ router.post(
       return;
     }
     await db.prepare("UPDATE reviews SET status = 'approved' WHERE id = ?").run(id);
+    await audit({
+      centerId: cid,
+      actor: actorFromReq(req),
+      action: 'approve',
+      entity: 'reviews',
+      entityId: id,
+      summary: `Duyệt đánh giá #${id}`,
+    });
     const row = await db.prepare('SELECT * FROM reviews WHERE id = ?').get(id);
     res.json(row);
   })
