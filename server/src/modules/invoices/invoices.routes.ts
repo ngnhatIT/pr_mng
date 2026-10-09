@@ -140,7 +140,7 @@ router.post(
       amount: v.number({ required: true, label: 'Số tiền' }),
       method: v.string({ max: 50, label: 'Hình thức' }),
       note: v.string({ max: 500, label: 'Ghi chú' }),
-      paid_at: v.string({ label: 'Ngày thu' }),
+      paid_at: v.date({ label: 'Ngày thu' }),
     });
     const { status } = await invoiceService.recordPayment(
       reqCenterId(req),
