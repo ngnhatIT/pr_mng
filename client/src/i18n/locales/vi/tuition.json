@@ -40,7 +40,7 @@
     "applying": "Đang áp dụng...",
     "applyTitle": "Áp dụng credits của phụ huynh vào hóa đơn",
     "confirmText": "{{name}} ({{code}}) - còn nợ <strong>{{amount}}</strong>",
-    "help": "Nhập <strong>ID credits</strong> của phụ huynh (xem trong trang Giới thiệu của phụ huynh hoặc trang quản lý credits). Hệ thống sẽ trừ credits khả dụng vào số tiền còn nợ của hóa đơn.",
+    "help": "Nhập <strong>ID credits</strong> của phụ huynh (xem trong trang Giới thiệu của phụ huynh). Hệ thống sẽ trừ credits khả dụng vào số tiền còn nợ của hóa đơn.",
     "idLabel": "ID credits *",
     "idPlaceholder": "VD: 12",
     "idRequired": "Vui lòng nhập ID credits",

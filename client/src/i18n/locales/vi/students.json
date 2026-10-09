@@ -49,7 +49,7 @@
       "paid": "Đã thu",
       "status": "Trạng thái"
     },
-    "invoices": "Hóa đơn học phí",
+    "invoices": "Phiếu thu học phí",
     "loadError": "Không tải được chi tiết",
     "noClasses": "Chưa ghi danh lớp nào",
     "noInvoices": "Chưa có hóa đơn nào",
@@ -75,9 +75,17 @@
     "phone": "Điện thoại",
     "status": "Trạng thái"
   },
-  "invoiceStatus": { "paid": "Đã thanh toán", "partial": "Thanh toán một phần", "unpaid": "Chưa thanh toán" },
+  "invoiceStatus": {
+    "paid": "Đã thanh toán",
+    "partial": "Thanh toán một phần",
+    "unpaid": "Chưa thanh toán"
+  },
   "searchPlaceholder": "Tìm theo tên, mã, số điện thoại...",
-  "status": { "paused": "Tạm nghỉ", "quit": "Đã nghỉ", "studying": "Đang học" },
+  "status": {
+    "paused": "Tạm nghỉ",
+    "quit": "Đã nghỉ",
+    "studying": "Đang học"
+  },
   "table": {
     "actions": "Thao tác",
     "code": "Mã",

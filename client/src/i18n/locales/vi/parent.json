@@ -111,11 +111,11 @@
     "tuition": {
       "amount": "Số tiền",
       "dueDate": "Hạn nộp",
-      "empty": "Chưa có hóa đơn nào",
+      "empty": "Chưa có phiếu thu nào",
       "paid": "Đã trả",
       "payNow": "Thanh toán {{amount}}",
       "remain": "Còn lại",
-      "title": "Hóa đơn học phí",
+      "title": "Phiếu thu học phí",
       "tuitionFallback": "Học phí"
     }
   },
@@ -146,10 +146,10 @@
     "class": "Lớp",
     "create": "Tạo đơn mới",
     "emptyDesc": "Nhấn nút Tạo đơn mới để gửi đơn xin nghỉ phép cho con.",
-    "emptyTitle": "Chưa có đơn nghỉ phép nào",
+    "emptyTitle": "Chưa có đơn xin nghỉ phép nào",
     "formTitle": "Tạo đơn xin nghỉ phép",
     "fromDate": "Từ ngày *",
-    "loadError": "Không tải được đơn nghỉ phép",
+    "loadError": "Không tải được đơn xin nghỉ phép",
     "reason": "Lý do",
     "selectChild": "- Chọn con -",
     "sendError": "Gửi thất bại",

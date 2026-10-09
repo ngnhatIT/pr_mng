@@ -121,13 +121,36 @@ export function Layout() {
     };
   }, [drawerOpen]);
 
-  // Escape đóng drawer mobile (a11y)
+  // Escape đóng drawer mobile + focus trap (WCAG 2.4.3)
   useEffect(() => {
     if (!drawerOpen) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setDrawerOpen(false);
+      if (e.key === 'Escape') {
+        setDrawerOpen(false);
+        return;
+      }
+      if (e.key !== 'Tab') return;
+      const aside = document.querySelector<HTMLElement>('.sidebar.open');
+      if (!aside) return;
+      const focusables = Array.from(
+        aside.querySelectorAll<HTMLElement>(
+          'a[href], button:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"])'
+        )
+      ).filter((el) => el.getClientRects().length > 0);
+      if (focusables.length === 0) return;
+      const first = focusables[0];
+      const last = focusables[focusables.length - 1];
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
     };
     document.addEventListener('keydown', onKey);
+    // Focus vào link đầu tiên khi mở drawer
+    document.querySelector<HTMLElement>('.sidebar.open a, .sidebar.open button')?.focus();
     return () => document.removeEventListener('keydown', onKey);
   }, [drawerOpen]);
 

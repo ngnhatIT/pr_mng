@@ -1,4 +1,7 @@
 import { db, getSetting, getCenterSetting } from '../db';
+import { logger } from '../shared/logger';
+
+const log = logger.scope('zalo');
 
 /* ------------------------------- Cấu hình ------------------------------- */
 
@@ -169,7 +172,9 @@ export async function sendZNS(params: {
     }
     return { ok: true, data };
   } catch (err) {
-    return { ok: false, error: err instanceof Error ? err.message : 'Lỗi kết nối Zalo API' };
+    // Không lọt raw error (tiếng Anh) ra UI — log server-side, trả message tiếng Việt chung
+    log.error('Lỗi kết nối Zalo API', { error: String(err) });
+    return { ok: false, error: 'Lỗi kết nối Zalo API, vui lòng thử lại' };
   }
 }
 

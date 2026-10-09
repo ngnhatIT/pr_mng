@@ -28,32 +28,34 @@ export function AnalyticsModal({ onClose }: { onClose: () => void }) {
           {data.byClass.length === 0 ? (
             <p className="muted">{t('analytics.noData')}</p>
           ) : (
-            <table className="table">
-              <thead>
-                <tr>
-                  <th>{t('analytics.col.class')}</th>
-                  <th className="th-center">{t('analytics.col.published')}</th>
-                  <th className="th-center">{t('analytics.col.avgCompletion')}</th>
-                  <th className="th-center">{t('analytics.col.avgScore')}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {data.byClass.map((c) => (
-                  <tr key={c.class_id}>
-                    <td>{c.class_name}</td>
-                    <td className="td-center">{c.total}</td>
-                    <td className="td-center">
-                      <span
-                        className={`badge ${c.avg_completion >= 0.8 ? 'badge-done' : c.avg_completion >= 0.5 ? 'badge-pending' : 'badge-overdue'}`}
-                      >
-                        {Math.round(c.avg_completion * 100)}%
-                      </span>
-                    </td>
-                    <td className="td-center">{c.avg_score !== null ? c.avg_score.toFixed(1) : '-'}</td>
+            <div className="table-wrap">
+              <table className="table">
+                <thead>
+                  <tr>
+                    <th>{t('analytics.col.class')}</th>
+                    <th className="th-center">{t('analytics.col.published')}</th>
+                    <th className="th-center">{t('analytics.col.avgCompletion')}</th>
+                    <th className="th-center">{t('analytics.col.avgScore')}</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {data.byClass.map((c) => (
+                    <tr key={c.class_id}>
+                      <td>{c.class_name}</td>
+                      <td className="td-center">{c.total}</td>
+                      <td className="td-center">
+                        <span
+                          className={`badge ${c.avg_completion >= 0.8 ? 'badge-done' : c.avg_completion >= 0.5 ? 'badge-pending' : 'badge-overdue'}`}
+                        >
+                          {Math.round(c.avg_completion * 100)}%
+                        </span>
+                      </td>
+                      <td className="td-center">{c.avg_score !== null ? c.avg_score.toFixed(1) : '-'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
           <h4 className="section-title hw-action-icon analytics-recent-head">
             <Icon name="clock" size={15} /> {t('analytics.recent')}

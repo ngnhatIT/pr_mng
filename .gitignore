@@ -10,3 +10,7 @@ server/uploads/
 *.log
 coverage/
 test-dist/
+# Backup dumps chứa PII — KHÔNG BAO GIỜ commit
+backups/
+*.dump
+*.sql.gz

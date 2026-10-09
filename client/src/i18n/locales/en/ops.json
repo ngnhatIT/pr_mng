@@ -37,7 +37,8 @@
       "loadFail": "Could not load the activity log"
     },
     "totalCount_one": "{{total}} log entry total",
-    "totalCount_other": "{{total}} log entries total"
+    "totalCount_other": "{{total}} log entries total",
+    "totalCount": "Total {{total}} log entries"
   },
   "leads": {
     "add": "Add lead",
@@ -87,7 +88,8 @@
       "saveFail": "Save failed",
       "saved": "Lead saved",
       "updateFail": "Update failed"
-    }
+    },
+    "countTitle": "{{count}} leads"
   },
   "leaves": {
     "allStatuses": "All statuses",
@@ -127,7 +129,8 @@
       "rejected": "Leave request rejected"
     },
     "totalCount_one": "{{total}} request total",
-    "totalCount_other": "{{total}} requests total"
+    "totalCount_other": "{{total}} requests total",
+    "totalCount": "Total {{total}} requests"
   },
   "referrals": {
     "allStatuses": "All statuses",

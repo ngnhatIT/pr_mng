@@ -3382,3 +3382,17 @@ a:focus-visible,
     scroll-behavior: auto !important;
   }
 }
+
+/* ---------- Mobile: input 16px chống iOS auto-zoom ---------- */
+@media (max-width: 600px) {
+  .text-input,
+  select.text-input,
+  textarea.text-input {
+    font-size: 16px;
+  }
+  /* stat grid về 1 cột trên màn hình rất nhỏ */
+  .stat-grid-2,
+  .stat-grid-3 {
+    grid-template-columns: 1fr;
+  }
+}

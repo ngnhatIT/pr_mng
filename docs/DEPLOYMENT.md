@@ -62,15 +62,24 @@ server {
 ### 5. Sau khi lên production
 
 1. **Đổi mật khẩu** các tài khoản khởi tạo ngay.
-2. **Backup DB**: app đã có backup tự động (`BACKUP_CRON`, mặc định 2h sáng, giữ `BACKUP_KEEP` bản).
+2. **Backup DB**: app đã có backup tự động (`BACKUP_CRON`, mặc định 2h sáng, giữ `BACKUP_KEEP` bản,
+   có advisory lock + verify file dump sau mỗi lần backup).
+   **Quan trọng**: backup mặc định nằm cùng disk với server (`./backups`, đã gitignored).
+   Production PHẢI có bản offsite — đồng bộ thư mục backups ra S3/rclone mỗi đêm:
+   ```bash
+   0 4 * * * rclone sync /opt/educenter/backups s3:/my-bucket/educenter-backups --min-age 1d
+   ```
    Ngoài ra nên có pg_dump ra nơi khác:
    ```bash
    0 3 * * * pg_dump -Fc $DATABASE_URL -f /backup/educenter-$(date +\%F).dump
    ```
-3. **VNPay production**: đặt `VNPAY_URL=https://www.vnpayment.vn/paymentv2/vpcpay.html`,
+   Drill restore hàng quý: `pg_restore --clean -d educenter_restore <file>` (xem `ops/GO-LIVE.md`).
+3. **Giám sát nhất quán tài chính**: app tự chạy `checkFinancialConsistency()` mỗi giờ,
+   có lệch thì log ERROR — đấu nối log này vào hệ cảnh báo (vd: Telegram/Slack webhook).
+4. **VNPay production**: đặt `VNPAY_URL=https://www.vnpayment.vn/paymentv2/vpcpay.html`,
    `VNPAY_TMN_CODE`, `VNPAY_HASH_SECRET`, `VNPAY_RETURN_URL` thật (env hoặc
    trang `/app/cau-hinh-thanh-toan`).
-4. **Zalo OA**: nhập `ZALO_OA_ID` + `ZALO_ACCESS_TOKEN` thật; template ZNS mới cần
+5. **Zalo OA**: nhập `ZALO_OA_ID` + `ZALO_ACCESS_TOKEN` thật; template ZNS mới cần
    được Zalo duyệt trước khi gửi thật (để trống = chế độ demo, chỉ ghi log).
 
 ## Tính năng vận hành đã có

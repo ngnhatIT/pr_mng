@@ -37,7 +37,8 @@
       "submittedAt": "Submitted at"
     },
     "empty": "No attempts yet",
-    "title": "Quiz results: {{title}}"
+    "title": "Quiz results: {{title}}",
+    "attempts": "Attempts"
   },
   "bank": {
     "add": "Add question",
@@ -71,7 +72,9 @@
       "loadFail": "Could not load the bank",
       "staleSelection_one": "{{count}} selected question is no longer in the list",
       "staleSelection_other": "{{count}} selected questions are no longer in the list"
-    }
+    },
+    "import": "Add {{count}} questions to quiz",
+    "selected": "{{count}} selected"
   },
   "delete": {
     "message": "Delete \"{{title}}\"?",

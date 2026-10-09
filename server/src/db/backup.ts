@@ -46,6 +46,21 @@ export async function backupDatabase(backupDir: string, keep = 7): Promise<Backu
   });
 
   const sizeBytes = fs.statSync(filePath).size;
+  if (sizeBytes === 0) {
+    fs.unlinkSync(filePath);
+    throw new Error('Backup thất bại: file dump rỗng');
+  }
+
+  // Verify: file dump phải đọc được bằng pg_restore --list (phát hiện file hỏng ngay)
+  try {
+    await execFileAsync('pg_restore', ['--list', filePath], {
+      timeout: 60 * 1000,
+      maxBuffer: 64 * 1024 * 1024,
+    });
+  } catch (err) {
+    fs.unlinkSync(filePath);
+    throw new Error(`Backup thất bại: file dump không đọc được (${String(err)})`);
+  }
 
   // Xoay vòng: giữ N bản mới nhất
   const backups = fs

@@ -102,27 +102,27 @@
     "desc": "Duyệt đơn xin nghỉ phép của học viên",
     "empty": {
       "desc": "Chưa có đơn xin nghỉ phép nào cần xử lý.",
-      "title": "Không có đơn nghỉ phép nào"
+      "title": "Không có đơn xin nghỉ phép nào"
     },
     "filterLabel": "Lọc theo trạng thái đơn",
     "makeupHint": "Gợi ý các buổi học bù phù hợp:",
     "noMakeup": "Không có buổi học bù nào phù hợp.",
     "reject": "Từ chối",
     "rejectDialog": {
-      "message": "Từ chối đơn nghỉ phép của \"{{name}}\" ({{from}} đến {{to}})?",
-      "title": "Từ chối đơn nghỉ phép"
+      "message": "Từ chối đơn xin nghỉ phép của \"{{name}}\" ({{from}} đến {{to}})?",
+      "title": "Từ chối đơn xin nghỉ phép"
     },
     "status": {
       "approved": "Đã duyệt",
       "pending": "Chờ duyệt",
       "rejected": "Từ chối"
     },
-    "title": "Quản lý đơn nghỉ phép",
+    "title": "Quản lý đơn xin nghỉ phép",
     "toast": {
       "approveFail": "Duyệt thất bại",
-      "loadFail": "Không tải được đơn nghỉ phép",
+      "loadFail": "Không tải được đơn xin nghỉ phép",
       "rejectFail": "Thất bại",
-      "rejected": "Đã từ chối đơn nghỉ phép"
+      "rejected": "Đã từ chối đơn xin nghỉ phép"
     },
     "totalCount": "Tổng {{total}} đơn"
   },

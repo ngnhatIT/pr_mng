@@ -23,6 +23,9 @@ export function Modal({
     previouslyFocused.current = document.activeElement as HTMLElement | null;
     // Chuyển focus vào modal khi mở.
     dialogRef.current?.focus();
+    // Khóa scroll nền khi modal mở (đặc biệt quan trọng trên mobile).
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
 
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
@@ -55,6 +58,7 @@ export function Modal({
     window.addEventListener('keydown', onKey);
     return () => {
       window.removeEventListener('keydown', onKey);
+      document.body.style.overflow = prevOverflow;
       // Trả focus về nút đã mở modal.
       try {
         previouslyFocused.current?.focus?.();

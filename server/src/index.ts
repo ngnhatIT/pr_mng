@@ -5,7 +5,7 @@ import { env } from './config/env';
 import { logger } from './shared/logger';
 import { createApp } from './app';
 import { startReminderScheduler } from './jobs/reminderScheduler';
-import { initDatabase, closePool } from './db';
+import { initDatabase, closePool, db } from './db';
 import { backupDatabase } from './db/backup';
 
 /**
@@ -51,11 +51,29 @@ function startBackupScheduler(): void {
   cron.schedule(
     env.BACKUP_CRON,
     async () => {
+      // Advisory lock: 2 instance không backup đè nhau
+      let locked = false;
+      try {
+        const r = await db.query('SELECT pg_try_advisory_lock(hashtext($1)) as locked', ['educenter-backup']);
+        locked = (r.rows[0] as { locked: boolean } | undefined)?.locked === true;
+      } catch {
+        locked = true; // fail-open
+      }
+      if (!locked) {
+        logger.info('Bỏ qua backup: instance khác đang chạy');
+        return;
+      }
       try {
         const r = await backupDatabase(dir, env.BACKUP_KEEP);
         logger.info('Backup định kỳ hoàn tất', { path: r.path, sizeBytes: r.sizeBytes, kept: r.kept });
       } catch (err: unknown) {
         logger.error('Backup định kỳ THẤT BẠI', { error: String(err) });
+      } finally {
+        try {
+          await db.query('SELECT pg_advisory_unlock(hashtext($1))', ['educenter-backup']);
+        } catch {
+          /* bỏ qua */
+        }
       }
     },
     { timezone: 'Asia/Ho_Chi_Minh' }
@@ -63,6 +81,29 @@ function startBackupScheduler(): void {
   logger.info(
     `Đã lên lịch backup tự động: "${env.BACKUP_CRON}" (Asia/Ho_Chi_Minh), giữ ${env.BACKUP_KEEP} bản tại ${dir}`
   );
+}
+
+/**
+ * Kiểm tra nhất quán tài chính định kỳ (phát hiện lệch công nợ ở production).
+ * Chạy mỗi giờ; có vấn đề thì log ERROR để hệ giám sát bắt được.
+ */
+function startConsistencyScheduler(): void {
+  cron.schedule(
+    '0 * * * *',
+    async () => {
+      try {
+        const { checkFinancialConsistency } = await import('./db/consistency.js');
+        const issues = await checkFinancialConsistency(db);
+        if (issues.length > 0) {
+          logger.error('Phát hiện lệch dữ liệu tài chính', { count: issues.length, issues });
+        }
+      } catch (err: unknown) {
+        logger.error('Kiểm tra nhất quán tài chính thất bại', { error: String(err) });
+      }
+    },
+    { timezone: 'Asia/Ho_Chi_Minh' }
+  );
+  logger.info('Đã lên lịch kiểm tra nhất quán tài chính mỗi giờ');
 }
 
 /** Entry point: khởi tạo DB -> HTTP server + scheduler nhắc học phí. */
@@ -76,6 +117,7 @@ async function main(): Promise<void> {
     logger.info(`EduCenter Pro API đang chạy tại http://localhost:${env.PORT} (${env.NODE_ENV})`);
     startReminderScheduler();
     startBackupScheduler();
+    startConsistencyScheduler();
   });
 
   /**
