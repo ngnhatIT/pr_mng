@@ -266,11 +266,30 @@ export interface Db {
   query(text: string, params?: unknown[]): Promise<{ rows: unknown[]; rowCount: number | null }>;
 }
 
+/** Mã lỗi PG transient — đáng thử lại (failover, restart, quá tải tạm thời). */
+const TRANSIENT_PG_CODES = new Set(['53300', '53400', '57P03', '57P01', '08006', '08001', '08004']);
+
+function isTransientDbError(err: unknown): boolean {
+  const e = err as { code?: string; message?: string };
+  if (e?.code && TRANSIENT_PG_CODES.has(e.code)) return true;
+  const msg = e?.message || '';
+  return /ECONNRESET|ECONNREFUSED|ETIMEDOUT|terminating connection/i.test(msg);
+}
+
 async function poolQuery(text: string, params?: unknown[]) {
   const sql = translateSqlite(text);
   const actor = requestActor.getStore();
   // Không có actor (boot, scheduler, health check, test): đường nhanh như cũ.
-  if (!actor) return pool.query(sql, params as unknown[]);
+  // Retry 1 lần cho lỗi transient (PG restart/failover vài giây).
+  if (!actor) {
+    try {
+      return await pool.query(sql, params as unknown[]);
+    } catch (err) {
+      if (!isTransientDbError(err)) throw err;
+      await new Promise((r) => setTimeout(r, 300));
+      return await pool.query(sql, params as unknown[]);
+    }
+  }
   // Có actor (request đã đăng nhập): giữ 1 connection riêng, mở transaction,
   // gắn SET LOCAL app.user_id rồi mới chạy query — đảm bảo trigger audit đọc
   // được actor trên ĐÚNG connection ghi. SET LOCAL tự hết hiệu lực khi

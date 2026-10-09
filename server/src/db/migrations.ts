@@ -198,9 +198,16 @@ export async function runMigrations(db: Db): Promise<void> {
 
   for (const m of [...MIGRATIONS].sort((a, b) => a.version - b.version)) {
     if (applied.has(m.version)) continue;
+    // Advisory lock chống 2 instance chạy migration song song (rolling deploy).
+    // Lock giữ trong transaction → tự release khi commit/rollback.
     await db.transaction(async (tx) => {
+      await tx.prepare("SELECT pg_advisory_xact_lock(hashtext('educenter-migrations'))").get();
       await m.up(tx);
-      await tx.prepare('INSERT INTO schema_migrations (version, name) VALUES (?, ?)').run(m.version, m.name);
+      await tx
+        .prepare(
+          'INSERT INTO schema_migrations (version, name) VALUES (?, ?) ON CONFLICT (version) DO NOTHING'
+        )
+        .run(m.version, m.name);
     });
     applied.add(m.version);
   }
