@@ -38,6 +38,14 @@ router.put(
       res.status(400).json({ error: 'Trạng thái không hợp lệ', code: 'VALIDATION_INVALID' });
       return;
     }
+    // Chặn set 'converted' trực tiếp qua PUT (phải dùng POST /:id/convert để tạo học viên)
+    if (status === 'converted') {
+      res.status(400).json({
+        error: "Không thể chuyển trạng thái thành 'converted' trực tiếp, hãy dùng chức năng chuyển đổi",
+        code: 'VALIDATION_INVALID',
+      });
+      return;
+    }
     const trial = (await db.prepare('SELECT id, center_id FROM trial_registrations WHERE id = ?').get(id)) as
       { id: number; center_id: number | null } | undefined;
     if (!trial || (cid !== null && trial.center_id !== cid)) {
