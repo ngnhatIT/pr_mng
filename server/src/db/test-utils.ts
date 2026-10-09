@@ -28,7 +28,13 @@ export const TEST_URL =
 let pool: Pool | null = null;
 
 function getPool(): Pool {
-  if (!pool) pool = new Pool({ connectionString: TEST_URL, max: 5 });
+  if (!pool)
+    pool = new Pool({
+      connectionString: TEST_URL,
+      max: 5,
+      // Đồng nhất timezone với production (Asia/Ho_Chi_Minh)
+      options: '-c timezone=Asia/Ho_Chi_Minh',
+    });
   return pool;
 }
 
