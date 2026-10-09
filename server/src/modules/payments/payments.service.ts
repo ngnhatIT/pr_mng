@@ -104,6 +104,13 @@ async function confirmVnpayTxn(
     if (locked.status !== 'pending')
       return { kind: 'failed', reason: 'invalid_status' } as VnpayConfirmResult;
 
+    // Lock hóa đơn: 2 callback VNPay đồng thời cho 2 txn khác nhau của cùng 1 hóa đơn
+    // sẽ serialize tại đây, tránh cả hai cùng đọc paidSoFar=0 và overpay
+    const inv = (await tx
+      .prepare('SELECT id, amount FROM invoices WHERE id = ? FOR UPDATE')
+      .get(txn.invoice_id)) as { id: number; amount: number } | undefined;
+    if (!inv) return { kind: 'failed', reason: 'notfound' } as VnpayConfirmResult;
+
     await tx
       .prepare("UPDATE payment_txns SET status = 'confirmed' WHERE ref = ? AND status = 'pending'")
       .run(txnRef);
