@@ -151,6 +151,17 @@ function startConsistencyScheduler(): void {
       } catch {
         /* bỏ qua */
       }
+      // Dọn audit_logs cũ hơn 1 năm (chống phình bảng — log forensic giữ 12 tháng)
+      try {
+        const r = await db
+          .prepare(
+            "DELETE FROM audit_logs WHERE created_at < to_char(NOW() - INTERVAL '1 year', 'YYYY-MM-DD HH24:MI:SS')"
+          )
+          .run();
+        if ((r.changes ?? 0) > 0) logger.info('Đã dọn audit_logs cũ', { count: r.changes });
+      } catch {
+        /* bỏ qua */
+      }
     },
     { timezone: 'Asia/Ho_Chi_Minh' }
   );
