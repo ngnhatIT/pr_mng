@@ -1,6 +1,6 @@
 import { Router, Response } from 'express';
 import { db, toISODate } from '../../db';
-import { AuthRequest } from '../../middleware/auth';
+import { AuthRequest, reqCenterId } from '../../middleware/auth';
 import { requirePermission } from '../authorization/authorization.middleware';
 import { hasPermission } from '../authorization/authorization.service';
 import { calcPayroll, currentMonth, MONTH_RE } from '../payroll/payroll.service';
@@ -17,7 +17,15 @@ async function effTeacherId(req: AuthRequest): Promise<number | null> {
   if ((role === 'superadmin' || role === 'admin') && req.user?.id) {
     if (await hasPermission(req.user.id, 'sessions.manage')) {
       const q = Number((req.query as { teacher_id?: string }).teacher_id);
-      return Number.isFinite(q) && q > 0 ? q : null;
+      if (!Number.isFinite(q) || q <= 0) return null;
+      // Chặn cross-center: admin chỉ xem được giáo viên cùng trung tâm
+      const cid = reqCenterId(req);
+      if (cid !== null) {
+        const t = (await db.prepare('SELECT id FROM teachers WHERE id = ? AND center_id = ?').get(q, cid)) as
+          { id: number } | undefined;
+        if (!t) return null;
+      }
+      return q;
     }
   }
   return null;

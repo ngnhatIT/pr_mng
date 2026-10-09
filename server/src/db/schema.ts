@@ -983,6 +983,8 @@ CREATE TABLE IF NOT EXISTS credits (
     CONSTRAINT chk_credits_used CHECK (used_amount >= 0),
   created_at TEXT NOT NULL DEFAULT (to_char(NOW(), 'YYYY-MM-DD HH24:MI:SS')),
   updated_at TEXT NOT NULL DEFAULT (to_char(NOW(), 'YYYY-MM-DD HH24:MI:SS')),
+  center_id INTEGER
+    CONSTRAINT fk_credits_center REFERENCES centers(id) ON DELETE CASCADE,
   CONSTRAINT chk_credits_used_lte CHECK (used_amount <= amount)
 );
 

@@ -233,6 +233,23 @@ const MIGRATIONS: Migration[] = [
       for (const sql of idx) await tx.exec(sql);
     },
   },
+  {
+    version: 12,
+    name: 'credits_center_id',
+    up: async (tx) => {
+      // Credits phải gắn với center để không áp chéo trung tâm
+      await tx.exec('ALTER TABLE credits ADD COLUMN IF NOT EXISTS center_id INTEGER');
+      // Backfill: lấy center từ referral đầu tiên của parent (nếu có)
+      await tx.exec(`
+        UPDATE credits c SET center_id = (
+          SELECT s.center_id FROM referrals r
+          JOIN students s ON s.id = r.referred_student_id
+          WHERE r.referrer_parent_id = c.parent_id AND r.status = 'rewarded'
+          ORDER BY r.id ASC LIMIT 1
+        ) WHERE c.center_id IS NULL
+      `);
+    },
+  },
 ];
 
 /** Version migration cao nhất mà code hiện tại biết (để test đối chiếu). */

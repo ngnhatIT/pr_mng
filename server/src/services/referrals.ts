@@ -109,19 +109,23 @@ export async function afterInvoicePaid(invoiceId: number): Promise<void> {
         .prepare("UPDATE referrals SET status = 'rewarded' WHERE id = ? AND status = 'pending'")
         .run(refId);
       if ((claimed.changes ?? 0) !== 1) return false; // đã có luồng khác thưởng rồi
-      const addCredit = await tx.prepare('INSERT INTO credits (parent_id, amount, reason) VALUES (?, ?, ?)');
+      const addCredit = await tx.prepare(
+        'INSERT INTO credits (parent_id, amount, reason, center_id) VALUES (?, ?, ?, ?)'
+      );
       if (amtReferrer > 0) {
         await addCredit.run(
           referrerParentId,
           Math.round(amtReferrer),
-          `Thưởng giới thiệu học viên mới (HD${invoiceId})`
+          `Thưởng giới thiệu học viên mới (HD${invoiceId})`,
+          centerId
         );
       }
       if (amtReferred > 0 && childParent) {
         await addCredit.run(
           childParent.parent_id,
           Math.round(amtReferred),
-          `Ưu đãi học viên được giới thiệu (HD${invoiceId})`
+          `Ưu đãi học viên được giới thiệu (HD${invoiceId})`,
+          centerId
         );
       }
       return true;
@@ -146,8 +150,17 @@ export async function applyCreditToInvoice(
   if (!inv) throw AppError.notFound('Không tìm thấy hóa đơn');
 
   const credit = (await db.prepare('SELECT * FROM credits WHERE id = ?').get(creditId)) as
-    { id: number; parent_id: number; amount: number; used_amount: number } | undefined;
+    | { id: number; parent_id: number; amount: number; used_amount: number; center_id: number | null }
+    | undefined;
   if (!credit) throw AppError.notFound('Không tìm thấy credits');
+
+  // Chặn áp credits chéo trung tâm
+  const studentCenter = (await db
+    .prepare('SELECT center_id FROM students WHERE id = ?')
+    .get(inv.student_id)) as { center_id: number | null } | undefined;
+  if (credit.center_id && studentCenter?.center_id && credit.center_id !== studentCenter.center_id) {
+    throw AppError.badRequest('Credits này không áp dụng cho trung tâm của hóa đơn');
+  }
 
   // Credits phải thuộc về phụ huynh đã liên kết với học viên của hóa đơn
   const owner = await db
