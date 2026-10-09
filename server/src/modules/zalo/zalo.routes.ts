@@ -49,9 +49,14 @@ router.put(
     for (const k of ZALO_CONFIG_KEYS) {
       if (body[k] === undefined) continue;
       let v = String(body[k] ?? '');
-      if (k === 'reminder_hour' && v && !/^\d{2}:\d{2}$/.test(v)) {
-        res.status(400).json({ error: 'Giờ nhắc phải có dạng HH:MM', code: 'BAD_REQUEST' });
-        return;
+      if (k === 'reminder_hour' && v) {
+        const m = /^(\d{2}):(\d{2})$/.exec(v);
+        const hh = m ? Number(m[1]) : -1;
+        const mm = m ? Number(m[2]) : -1;
+        if (!m || hh < 0 || hh > 23 || mm < 0 || mm > 59) {
+          res.status(400).json({ error: 'Giờ nhắc phải có dạng HH:MM (00:00-23:59)', code: 'BAD_REQUEST' });
+          return;
+        }
       }
       if ((k === 'reminder_overdue_days' || k === 'reminder_upcoming_days') && v) {
         const n = Number(v);
