@@ -83,7 +83,7 @@ router.delete(
     }
     // Chặn xóa giáo viên đã có lịch sử lương (mất cấu hình tính lương, không đối chiếu được)
     const payrollRow = (await db
-      .prepare('SELECT COUNT(*) as c FROM payroll_records WHERE teacher_id = ?')
+      .prepare('SELECT COUNT(*) as c FROM salary_rules WHERE teacher_id = ?')
       .get(id)) as { c: string } | undefined;
     if (payrollRow && (Number(payrollRow.c) || 0) > 0) {
       res.status(400).json({
