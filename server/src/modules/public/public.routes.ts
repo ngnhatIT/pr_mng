@@ -195,7 +195,7 @@ router.post(
         return;
       }
     }
-    const referralCode = body?.referral_code ? String(body.referral_code).trim() : '';
+    const referralCode = body?.referral_code ? String(body.referral_code).trim().slice(0, 32) : '';
     let referrer: { id: number; phone: string | null } | undefined;
     if (referralCode) {
       referrer = (await db
