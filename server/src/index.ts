@@ -8,6 +8,7 @@ import { startReminderScheduler, stopReminderScheduler } from './jobs/reminderSc
 import { initDatabase, closePool, db } from './db';
 import { sendAlert } from './shared/alert';
 import { backupDatabase } from './db/backup';
+import { withAdvisoryLock } from './shared/advisoryLock';
 
 /**
  * Bẫy lỗi toàn cục — chuẩn production:
@@ -63,47 +64,32 @@ function startBackupScheduler(): void {
   backupTask = cron.schedule(
     env.BACKUP_CRON,
     async () => {
-      // Advisory lock: 2 instance không backup đè nhau
-      let locked = false;
-      try {
-        const r = await db.query('SELECT pg_try_advisory_lock(hashtext($1)) as locked', ['educenter-backup']);
-        locked = (r.rows[0] as { locked: boolean } | undefined)?.locked === true;
-      } catch {
-        locked = true; // fail-open
-      }
-      if (!locked) {
-        logger.info('Bỏ qua backup: instance khác đang chạy');
-        return;
-      }
-      try {
-        const r = await backupDatabase(dir, env.BACKUP_KEEP);
-        logger.info('Backup định kỳ hoàn tất', { path: r.path, sizeBytes: r.sizeBytes, kept: r.kept });
-      } catch (err: unknown) {
-        // Retry 2 lần cách nhau 15 phút (backup fail một đêm = mất cả chu kỳ 24h)
-        // Chạy async không block cron thread (dùng setTimeout thay vì await)
-        logger.error('Backup định kỳ THẤT BẠI, thử lại sau 15 phút', { error: String(err) });
-        void (async () => {
+      // Advisory lock đúng cách: dedicated client giữ lock suốt quá trình (kể cả retry)
+      const outcome = await withAdvisoryLock('educenter-backup', async () => {
+        try {
+          const r = await backupDatabase(dir, env.BACKUP_KEEP);
+          logger.info('Backup định kỳ hoàn tất', { path: r.path, sizeBytes: r.sizeBytes, kept: r.kept });
+        } catch (err: unknown) {
+          // Retry 2 lần cách nhau 15 phút — vẫn giữ lock để instance khác không xen vào
+          logger.error('Backup định kỳ THẤT BẠI, thử lại sau 15 phút', { error: String(err) });
           for (let attempt = 1; attempt <= 2; attempt++) {
             await new Promise((resolve) => setTimeout(resolve, 15 * 60 * 1000));
             try {
               const r = await backupDatabase(dir, env.BACKUP_KEEP);
               logger.info('Backup retry thành công', { attempt, path: r.path });
-              break;
+              return;
             } catch (retryErr: unknown) {
               logger.error('Backup retry THẤT BẠI', { attempt, error: String(retryErr) });
               if (attempt === 2) {
-                // Hết retry: gửi cảnh báo webhook (nếu cấu hình) — backup chết lặng rất nguy hiểm
                 await sendAlert('Backup DB thất bại sau 3 lần thử', String(retryErr));
+                throw retryErr;
               }
             }
           }
-        })();
-      } finally {
-        try {
-          await db.query('SELECT pg_advisory_unlock(hashtext($1))', ['educenter-backup']);
-        } catch {
-          /* bỏ qua */
         }
+      });
+      if (outcome.status === 'error') {
+        logger.error('Backup thất bại hoàn toàn', { error: String(outcome.error) });
       }
     },
     { timezone: 'Asia/Ho_Chi_Minh' }

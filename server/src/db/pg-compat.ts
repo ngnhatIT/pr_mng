@@ -267,6 +267,14 @@ export interface Db {
   transaction<T>(fn: (tx: Tx) => Promise<T>): Promise<T>;
   /** Truy vấn thô khi cần (vd: health check). */
   query(text: string, params?: unknown[]): Promise<{ rows: unknown[]; rowCount: number | null }>;
+  /**
+   * Lấy dedicated client từ pool (dùng cho advisory lock — lock/unlock phải cùng session).
+   * Caller phải gọi client.release() trong finally.
+   */
+  connect(): Promise<{
+    query(text: string, params?: unknown[]): Promise<{ rows: unknown[]; rowCount: number | null }>;
+    release(): void;
+  }>;
 }
 
 /** Mã lỗi PG transient — đáng thử lại (failover, restart, quá tải tạm thời). */
@@ -354,6 +362,16 @@ export const db: Db = {
     } finally {
       client.release();
     }
+  },
+  async connect() {
+    const client = await pool.connect();
+    return {
+      query: async (text: string, params?: unknown[]) => {
+        const r = await client.query(text, params as unknown[]);
+        return { rows: r.rows, rowCount: r.rowCount };
+      },
+      release: () => client.release(),
+    };
   },
 };
 
