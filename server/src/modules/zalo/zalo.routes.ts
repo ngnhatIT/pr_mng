@@ -210,22 +210,38 @@ router.post(
     }
     const kind = req.body?.kind === 'upcoming' ? 'upcoming' : 'overdue';
     // Anti-spam: không gửi lại cùng loại trong 1 giờ (endpoint thủ công bypass dedupe 3 ngày của scheduler)
-    const recent = (await db
-      .prepare(
-        `SELECT 1 FROM reminders
-         WHERE invoice_id = ? AND kind = ? AND created_at >= datetime('now', '-1 hour')
-         LIMIT 1`
-      )
-      .get(id, kind)) as { '1'?: number } | undefined;
-    if (recent) {
+    // Dùng advisory lock để chống race: 2 request đồng thời chỉ 1 được gửi
+    const lockKey = `remind:${id}:${kind}`;
+    const lockRes = (await db.query('SELECT pg_try_advisory_lock(hashtext($1)) as locked', [lockKey])) as {
+      rows: { locked: boolean }[];
+    };
+    if (!lockRes.rows[0]?.locked) {
       res.status(429).json({
-        error: 'Hóa đơn này vừa được nhắc trong 1 giờ qua. Vui lòng thử lại sau.',
-        code: 'REMINDER_COOLDOWN',
+        error: 'Đang có yêu cầu nhắc khác cho hóa đơn này. Vui lòng thử lại sau.',
+        code: 'REMINDER_IN_PROGRESS',
       });
       return;
     }
-    const r = await sendTuitionReminder(id, kind, cid ?? undefined);
-    res.json(r);
+    try {
+      const recent = (await db
+        .prepare(
+          `SELECT 1 FROM reminders
+           WHERE invoice_id = ? AND kind = ? AND created_at >= datetime('now', '-1 hour')
+           LIMIT 1`
+        )
+        .get(id, kind)) as { '1'?: number } | undefined;
+      if (recent) {
+        res.status(429).json({
+          error: 'Hóa đơn này vừa được nhắc trong 1 giờ qua. Vui lòng thử lại sau.',
+          code: 'REMINDER_COOLDOWN',
+        });
+        return;
+      }
+      const r = await sendTuitionReminder(id, kind, cid ?? undefined);
+      res.json(r);
+    } finally {
+      await db.query('SELECT pg_advisory_unlock(hashtext($1))', [lockKey]).catch(() => {});
+    }
   })
 );
 export default router;

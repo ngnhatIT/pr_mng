@@ -94,10 +94,12 @@ async function findDueInvoices(centerId: number): Promise<{ overdue: DueInvoice[
 
 /** Chống spam: bỏ qua hóa đơn đã được nhắc cùng loại trong 3 ngày gần nhất */
 async function wasRemindedRecently(invoiceId: number, kind: 'overdue' | 'upcoming'): Promise<boolean> {
+  // Chỉ tính 'sent'/'demo' — 'failed' không suppress để lần chạy sau retry lại
   const row = await db
     .prepare(
       `SELECT 1 FROM reminders
-       WHERE invoice_id = ? AND kind = ? AND created_at >= datetime('now', '-3 days')
+       WHERE invoice_id = ? AND kind = ? AND status IN ('sent', 'demo', 'sending')
+       AND created_at >= datetime('now', '-3 days')
        LIMIT 1`
     )
     .get(invoiceId, kind);
@@ -131,10 +133,19 @@ export async function runReminderOnce(centerId?: number): Promise<RunOnceResult>
     return result;
   }
   try {
+    // Giới hạn số ZNS mỗi lần chạy để kiểm soát chi phí (500 hóa đơn = 500 tin tính tiền)
+    const MAX_PER_RUN = 100;
+    let sentCount = 0;
     for (const center of centers) {
       const { overdue, upcoming } = await findDueInvoices(center.id);
       const process = async (list: DueInvoice[], kind: 'overdue' | 'upcoming') => {
         for (const inv of list) {
+          if (sentCount >= MAX_PER_RUN) {
+            log.warn(`Đạt giới hạn ${MAX_PER_RUN} tin/lần chạy, bỏ qua phần còn lại`, {
+              center: center.name,
+            });
+            break;
+          }
           try {
             // wasRemindedRecently nằm TRONG try/catch: lỗi DB transient
             // không abort cả vòng chạy, chỉ ghi failed cho hóa đơn này
@@ -143,6 +154,7 @@ export async function runReminderOnce(centerId?: number): Promise<RunOnceResult>
               continue;
             }
             const r = await sendTuitionReminder(inv.id, kind, center.id);
+            if (r.status === 'sent') sentCount++;
             if (kind === 'overdue') result.overdue++;
             else result.upcoming++;
             result.details.push({ invoiceId: inv.id, kind, status: r.status, message: r.message });
