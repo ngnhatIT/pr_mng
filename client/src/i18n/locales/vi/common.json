@@ -137,6 +137,9 @@
     "success": "Đổi mật khẩu thành công",
     "fail": "Đổi mật khẩu thất bại",
     "mismatch": "Mật khẩu mới không khớp",
-    "tooShort": "Mật khẩu phải từ 8 ký tự"
+    "tooShort": "Mật khẩu phải từ 8 ký tự",
+    "logoutAll": "Đăng xuất mọi thiết bị",
+    "logoutAllConfirm": "Đăng xuất khỏi tất cả thiết bị khác?",
+    "logoutAllSuccess": "Đã đăng xuất khỏi tất cả thiết bị"
   }
 }

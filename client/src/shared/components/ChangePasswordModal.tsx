@@ -15,14 +15,14 @@ export function ChangePasswordModal({ onClose }: Props) {
   const toast = useToast();
   const [oldPassword, setOldPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
-  const [confirm, setConfirm] = useState('');
+  const [confirmPw, setConfirmPw] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    if (newPassword !== confirm) {
+    if (newPassword !== confirmPw) {
       setError(t('changePassword.mismatch', 'Mật khẩu mới không khớp'));
       return;
     }
@@ -43,6 +43,20 @@ export function ChangePasswordModal({ onClose }: Props) {
       onClose();
     } catch (err) {
       setError(err instanceof Error ? err.message : t('changePassword.fail', 'Đổi mật khẩu thất bại'));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const logoutAll = async () => {
+    if (!confirm(t('changePassword.logoutAllConfirm', 'Đăng xuất khỏi tất cả thiết bị khác?'))) return;
+    setBusy(true);
+    try {
+      await api('/auth/logout-all', { method: 'POST' });
+      toast(t('changePassword.logoutAllSuccess', 'Đã đăng xuất khỏi tất cả thiết bị'), 'success');
+      onClose();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t('changePassword.fail', 'Thất bại'));
     } finally {
       setBusy(false);
     }
@@ -81,8 +95,8 @@ export function ChangePasswordModal({ onClose }: Props) {
           <input
             type="password"
             className="text-input"
-            value={confirm}
-            onChange={(e) => setConfirm(e.target.value)}
+            value={confirmPw}
+            onChange={(e) => setConfirmPw(e.target.value)}
             required
             autoComplete="new-password"
           />
@@ -90,6 +104,9 @@ export function ChangePasswordModal({ onClose }: Props) {
         <div className="form-actions">
           <button type="button" className="btn" onClick={onClose} disabled={busy}>
             {t('actions.cancel', 'Hủy')}
+          </button>
+          <button type="button" className="btn btn-danger" onClick={logoutAll} disabled={busy}>
+            {t('changePassword.logoutAll', 'Đăng xuất mọi thiết bị')}
           </button>
           <button type="submit" className="btn btn-primary" disabled={busy}>
             {busy ? t('actions.saving', 'Đang lưu...') : t('changePassword.submit', 'Đổi mật khẩu')}

@@ -137,6 +137,9 @@
     "success": "Password changed successfully",
     "fail": "Failed to change password",
     "mismatch": "New passwords do not match",
-    "tooShort": "Password must be at least 8 characters"
+    "tooShort": "Password must be at least 8 characters",
+    "logoutAll": "Log out all devices",
+    "logoutAllConfirm": "Log out from all other devices?",
+    "logoutAllSuccess": "Logged out from all devices"
   }
 }
