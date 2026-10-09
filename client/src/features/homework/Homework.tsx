@@ -309,14 +309,14 @@ export function Homework() {
         ) : (
           <div className="table-wrap">
             <table className="table">
-              <thead>
+              <th scope="col"ead>
                 <tr>
-                  <th>{t('table.title')}</th>
-                  <th>{t('table.class')}</th>
-                  <th>{t('table.status')}</th>
-                  <th>{t('table.due')}</th>
-                  <th className="th-right">{t('table.progress')}</th>
-                  <th className="th-right">{t('table.actions')}</th>
+                  <th scope="col">{t('table.title')}</th>
+                  <th scope="col">{t('table.class')}</th>
+                  <th scope="col">{t('table.status')}</th>
+                  <th scope="col">{t('table.due')}</th>
+                  <th scope="col" className="th-right">{t('table.progress')}</th>
+                  <th scope="col" className="th-right">{t('table.actions')}</th>
                 </tr>
               </thead>
               <tbody>

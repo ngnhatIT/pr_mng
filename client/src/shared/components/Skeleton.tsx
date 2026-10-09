@@ -22,10 +22,10 @@ export function TableSkeleton({ rows = 5, cols = 4 }: { rows?: number; cols?: nu
   return (
     <div className="table-wrap" aria-hidden="true">
       <table className="table">
-        <thead>
+        <th scope="col"ead>
           <tr>
             {Array.from({ length: cols }).map((_, i) => (
-              <th key={i}>
+              <th scope="col" key={i}>
                 <Skeleton width={`${60 + ((i * 37) % 30)}%`} height={12} />
               </th>
             ))}

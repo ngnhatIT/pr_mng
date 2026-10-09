@@ -137,13 +137,13 @@ export function StudentDetail() {
         ) : (
           <div className="table-wrap">
             <table className="table">
-              <thead>
+              <th scope="col"ead>
                 <tr>
-                  <th>{t('detail.invoiceTable.class')}</th>
-                  <th>{t('detail.invoiceTable.amount')}</th>
-                  <th>{t('detail.invoiceTable.paid')}</th>
-                  <th>{t('detail.invoiceTable.dueDate')}</th>
-                  <th>{t('detail.invoiceTable.status')}</th>
+                  <th scope="col">{t('detail.invoiceTable.class')}</th>
+                  <th scope="col">{t('detail.invoiceTable.amount')}</th>
+                  <th scope="col">{t('detail.invoiceTable.paid')}</th>
+                  <th scope="col">{t('detail.invoiceTable.dueDate')}</th>
+                  <th scope="col">{t('detail.invoiceTable.status')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -221,14 +221,14 @@ function GradesSection({ studentId }: { studentId: number }) {
       ) : (
         <div className="table-wrap">
           <table className="table">
-            <thead>
+            <th scope="col"ead>
               <tr>
-                <th>{t('detail.grades.table.exam')}</th>
-                <th>{t('detail.grades.table.class')}</th>
-                <th>{t('detail.grades.table.score')}</th>
-                <th>{t('detail.grades.table.comment')}</th>
-                <th>{t('detail.grades.table.date')}</th>
-                <th className="th-right">{t('detail.grades.table.actions')}</th>
+                <th scope="col">{t('detail.grades.table.exam')}</th>
+                <th scope="col">{t('detail.grades.table.class')}</th>
+                <th scope="col">{t('detail.grades.table.score')}</th>
+                <th scope="col">{t('detail.grades.table.comment')}</th>
+                <th scope="col">{t('detail.grades.table.date')}</th>
+                <th scope="col" className="th-right">{t('detail.grades.table.actions')}</th>
               </tr>
             </thead>
             <tbody>

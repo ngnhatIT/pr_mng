@@ -59,14 +59,14 @@ export function System() {
       ) : (
         <div className="table-wrap">
           <table className="table">
-            <thead>
+            <th scope="col"ead>
               <tr>
-                <th>{t('system.col.center')}</th>
-                <th>{t('system.col.phone')}</th>
-                <th>{t('system.col.plan')}</th>
-                <th>{t('system.col.planExpiry')}</th>
-                <th>{t('system.col.counts')}</th>
-                <th className="th-right">{t('system.col.actions')}</th>
+                <th scope="col">{t('system.col.center')}</th>
+                <th scope="col">{t('system.col.phone')}</th>
+                <th scope="col">{t('system.col.plan')}</th>
+                <th scope="col">{t('system.col.planExpiry')}</th>
+                <th scope="col">{t('system.col.counts')}</th>
+                <th scope="col" className="th-right">{t('system.col.actions')}</th>
               </tr>
             </thead>
             <tbody>

@@ -103,14 +103,14 @@ function PendingPayments() {
       ) : (
         <div className="table-wrap sticky">
           <table className="table">
-            <thead>
+            <th scope="col"ead>
               <tr>
-                <th>{t('pending.table.student')}</th>
-                <th>{t('pending.table.amount')}</th>
-                <th>{t('pending.table.method')}</th>
-                <th>{t('pending.table.reportedAt')}</th>
-                <th>{t('pending.table.note')}</th>
-                <th className="th-right">{t('pending.table.actions')}</th>
+                <th scope="col">{t('pending.table.student')}</th>
+                <th scope="col">{t('pending.table.amount')}</th>
+                <th scope="col">{t('pending.table.method')}</th>
+                <th scope="col">{t('pending.table.reportedAt')}</th>
+                <th scope="col">{t('pending.table.note')}</th>
+                <th scope="col" className="th-right">{t('pending.table.actions')}</th>
               </tr>
             </thead>
             <tbody>
@@ -265,16 +265,16 @@ function InvoiceList() {
       ) : (
         <div className="table-wrap sticky">
           <table className="table">
-            <thead>
+            <th scope="col"ead>
               <tr>
-                <th>{t('invoice.table.student')}</th>
-                <th>{t('invoice.table.class')}</th>
-                <th className="th-right">{t('invoice.table.amount')}</th>
-                <th className="th-right">{t('invoice.table.paid')}</th>
-                <th className="th-right">{t('invoice.table.debt')}</th>
-                <th>{t('invoice.table.dueDate')}</th>
-                <th>{t('invoice.table.status')}</th>
-                <th className="th-right">{t('invoice.table.actions')}</th>
+                <th scope="col">{t('invoice.table.student')}</th>
+                <th scope="col">{t('invoice.table.class')}</th>
+                <th scope="col" className="th-right">{t('invoice.table.amount')}</th>
+                <th scope="col" className="th-right">{t('invoice.table.paid')}</th>
+                <th scope="col" className="th-right">{t('invoice.table.debt')}</th>
+                <th scope="col">{t('invoice.table.dueDate')}</th>
+                <th scope="col">{t('invoice.table.status')}</th>
+                <th scope="col" className="th-right">{t('invoice.table.actions')}</th>
               </tr>
             </thead>
             <tbody>
@@ -838,14 +838,14 @@ function DebtList() {
       ) : (
         <div className="table-wrap sticky">
           <table className="table">
-            <thead>
+            <th scope="col"ead>
               <tr>
-                <th>{t('debt.table.student')}</th>
-                <th>{t('debt.table.phone')}</th>
-                <th className="th-right">{t('debt.table.total')}</th>
-                <th className="th-right">{t('debt.table.paid')}</th>
-                <th className="th-right">{t('debt.table.debt')}</th>
-                <th className="th-right">{t('debt.table.actions')}</th>
+                <th scope="col">{t('debt.table.student')}</th>
+                <th scope="col">{t('debt.table.phone')}</th>
+                <th scope="col" className="th-right">{t('debt.table.total')}</th>
+                <th scope="col" className="th-right">{t('debt.table.paid')}</th>
+                <th scope="col" className="th-right">{t('debt.table.debt')}</th>
+                <th scope="col" className="th-right">{t('debt.table.actions')}</th>
               </tr>
             </thead>
             <tbody>

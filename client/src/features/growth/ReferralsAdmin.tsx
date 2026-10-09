@@ -89,13 +89,13 @@ export function ReferralsAdmin() {
           ) : (
             <div className="table-wrap">
               <table className="table">
-                <thead>
+                <th scope="col"ead>
                   <tr>
-                    <th>{t('referrals.col.referrer')}</th>
-                    <th>{t('referrals.col.referred')}</th>
-                    <th>{t('referrals.col.status')}</th>
-                    <th>{t('referrals.col.reward')}</th>
-                    <th>{t('referrals.col.createdAt')}</th>
+                    <th scope="col">{t('referrals.col.referrer')}</th>
+                    <th scope="col">{t('referrals.col.referred')}</th>
+                    <th scope="col">{t('referrals.col.status')}</th>
+                    <th scope="col">{t('referrals.col.reward')}</th>
+                    <th scope="col">{t('referrals.col.createdAt')}</th>
                   </tr>
                 </thead>
                 <tbody>

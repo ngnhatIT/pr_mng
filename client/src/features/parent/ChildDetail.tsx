@@ -375,12 +375,12 @@ function GradesTab({ data }: { data: ChildOverview }) {
           </div>
           <div className="table-wrap">
             <table className="table">
-              <thead>
+              <th scope="col"ead>
                 <tr>
-                  <th>{t('child.grades.test')}</th>
-                  <th>{t('child.grades.class')}</th>
-                  <th>{t('child.grades.score')}</th>
-                  <th>{t('child.grades.comment')}</th>
+                  <th scope="col">{t('child.grades.test')}</th>
+                  <th scope="col">{t('child.grades.class')}</th>
+                  <th scope="col">{t('child.grades.score')}</th>
+                  <th scope="col">{t('child.grades.comment')}</th>
                 </tr>
               </thead>
               <tbody>

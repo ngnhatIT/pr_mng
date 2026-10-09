@@ -113,12 +113,12 @@ export function AuditLogs() {
       ) : (
         <div className="table-wrap sticky">
           <table className="table">
-            <thead>
+            <th scope="col"ead>
               <tr>
-                <th>{t('audit.col.time')}</th>
-                <th>{t('audit.col.actor')}</th>
-                <th>{t('audit.col.action')}</th>
-                <th>{t('audit.col.detail')}</th>
+                <th scope="col">{t('audit.col.time')}</th>
+                <th scope="col">{t('audit.col.actor')}</th>
+                <th scope="col">{t('audit.col.action')}</th>
+                <th scope="col">{t('audit.col.detail')}</th>
               </tr>
             </thead>
             <tbody>

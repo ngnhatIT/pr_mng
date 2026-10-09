@@ -96,14 +96,14 @@ export function LeavesAdmin() {
       ) : (
         <div className="table-wrap">
           <table className="table">
-            <thead>
+            <th scope="col"ead>
               <tr>
-                <th>{t('leaves.col.student')}</th>
-                <th>{t('leaves.col.fromDate')}</th>
-                <th>{t('leaves.col.toDate')}</th>
-                <th>{t('leaves.col.reason')}</th>
-                <th>{t('leaves.col.status')}</th>
-                <th className="th-right">{t('leaves.col.actions')}</th>
+                <th scope="col">{t('leaves.col.student')}</th>
+                <th scope="col">{t('leaves.col.fromDate')}</th>
+                <th scope="col">{t('leaves.col.toDate')}</th>
+                <th scope="col">{t('leaves.col.reason')}</th>
+                <th scope="col">{t('leaves.col.status')}</th>
+                <th scope="col" className="th-right">{t('leaves.col.actions')}</th>
               </tr>
             </thead>
             <tbody>

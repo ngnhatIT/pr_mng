@@ -71,13 +71,13 @@ export function Payroll() {
       ) : (
         <div className="table-wrap sticky">
           <table className="table">
-            <thead>
+            <th scope="col"ead>
               <tr>
-                <th>{t('payroll.table.teacher')}</th>
-                <th>{t('payroll.table.sessions')}</th>
-                <th>{t('payroll.table.perSession')}</th>
-                <th>{t('payroll.table.total')}</th>
-                <th className="th-right">{t('payroll.table.actions')}</th>
+                <th scope="col">{t('payroll.table.teacher')}</th>
+                <th scope="col">{t('payroll.table.sessions')}</th>
+                <th scope="col">{t('payroll.table.perSession')}</th>
+                <th scope="col">{t('payroll.table.total')}</th>
+                <th scope="col" className="th-right">{t('payroll.table.actions')}</th>
               </tr>
             </thead>
             <tbody>

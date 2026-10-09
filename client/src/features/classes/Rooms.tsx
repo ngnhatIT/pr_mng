@@ -93,13 +93,13 @@ export function Rooms() {
       ) : (
         <div className="table-wrap sticky">
           <table className="table">
-            <thead>
+            <th scope="col"ead>
               <tr>
-                <th>{t('rooms.table.name')}</th>
-                <th>{t('rooms.table.capacity')}</th>
-                <th>{t('rooms.table.classesUsing')}</th>
-                <th>{t('rooms.table.status')}</th>
-                <th className="th-right">{t('rooms.table.actions')}</th>
+                <th scope="col">{t('rooms.table.name')}</th>
+                <th scope="col">{t('rooms.table.capacity')}</th>
+                <th scope="col">{t('rooms.table.classesUsing')}</th>
+                <th scope="col">{t('rooms.table.status')}</th>
+                <th scope="col" className="th-right">{t('rooms.table.actions')}</th>
               </tr>
             </thead>
             <tbody>

@@ -35,7 +35,7 @@ export function ReceiptModal({
           </div>
           <div className="kv">
             <span>{t('receipt.class')}</span>
-            <strong>{invoice.class_name || '—'}</strong>
+            <strong>{invoice.class_name || '-'}</strong>
           </div>
           <div className="kv">
             <span>{t('receipt.amount')}</span>

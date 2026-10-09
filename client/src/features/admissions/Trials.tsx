@@ -86,15 +86,15 @@ export function Trials() {
       ) : (
         <div className="table-wrap sticky">
           <table className="table">
-            <thead>
+            <th scope="col"ead>
               <tr>
-                <th>{t('trials.col.name')}</th>
-                <th>{t('trials.col.phone')}</th>
-                <th>{t('trials.col.desiredClass')}</th>
-                <th>{t('trials.col.desiredDate')}</th>
-                <th>{t('trials.col.referral')}</th>
-                <th>{t('trials.col.status')}</th>
-                <th className="th-right">{t('trials.col.actions')}</th>
+                <th scope="col">{t('trials.col.name')}</th>
+                <th scope="col">{t('trials.col.phone')}</th>
+                <th scope="col">{t('trials.col.desiredClass')}</th>
+                <th scope="col">{t('trials.col.desiredDate')}</th>
+                <th scope="col">{t('trials.col.referral')}</th>
+                <th scope="col">{t('trials.col.status')}</th>
+                <th scope="col" className="th-right">{t('trials.col.actions')}</th>
               </tr>
             </thead>
             <tbody>

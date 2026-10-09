@@ -353,15 +353,15 @@ export function ZaloReminders() {
           <>
             <div className="table-wrap">
               <table className="table">
-                <thead>
+                <th scope="col"ead>
                   <tr>
-                    <th>{t('zalo.col.time')}</th>
-                    <th>{t('zalo.col.student')}</th>
-                    <th>{t('zalo.col.phone')}</th>
-                    <th>{t('zalo.col.amount')}</th>
-                    <th>{t('zalo.col.kind')}</th>
-                    <th>{t('zalo.col.status')}</th>
-                    <th className="th-right">{t('zalo.col.actions')}</th>
+                    <th scope="col">{t('zalo.col.time')}</th>
+                    <th scope="col">{t('zalo.col.student')}</th>
+                    <th scope="col">{t('zalo.col.phone')}</th>
+                    <th scope="col">{t('zalo.col.amount')}</th>
+                    <th scope="col">{t('zalo.col.kind')}</th>
+                    <th scope="col">{t('zalo.col.status')}</th>
+                    <th scope="col" className="th-right">{t('zalo.col.actions')}</th>
                   </tr>
                 </thead>
                 <tbody>
