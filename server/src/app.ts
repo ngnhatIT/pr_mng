@@ -243,12 +243,13 @@ export function createApp(): Express {
   v1.use('/roles', requireAuth, denyParents, rolesRoutes); // quản trị phân quyền
 
   // Mount versioned API + legacy alias (backward compat với client cũ)
+  const LEGACY_SUNSET = 'Sat, 01 Jan 2028 00:00:00 GMT';
   app.use('/api/v1', v1);
   app.use(
     '/api',
     (req, res, next) => {
       res.setHeader('Deprecation', 'true');
-      res.setHeader('Sunset', 'Sat, 01 Jan 2028 00:00:00 GMT');
+      res.setHeader('Sunset', LEGACY_SUNSET);
       next();
     },
     v1
@@ -269,7 +270,7 @@ export function createApp(): Express {
       // 404 trên legacy prefix cũng cần biết prefix đã deprecated
       if (!req.path.startsWith('/v1/') && req.path !== '/v1') {
         res.setHeader('Deprecation', 'true');
-        res.setHeader('Sunset', 'Sat, 01 Jan 2028 00:00:00 GMT');
+        res.setHeader('Sunset', LEGACY_SUNSET);
       }
       next();
     },
