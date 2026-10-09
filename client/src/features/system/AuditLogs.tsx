@@ -6,6 +6,7 @@ import { TableSkeleton } from '../../shared/components/Skeleton';
 import { Pagination, type PaginationMeta } from '../../shared/components/Pagination';
 import { auditApi, ACTION_LABEL, ENTITY_LABEL, type AuditLog } from './audit.api';
 import { formatDateTime } from '../../shared/types';
+import './SystemAdmin.css';
 
 const ACTIONS = Object.keys(ACTION_LABEL);
 const ENTITIES = Object.keys(ENTITY_LABEL);
@@ -54,7 +55,7 @@ export function AuditLogs() {
     <div className="page">
       <PageHeader
         title="Nhật ký hoạt động"
-        desc="Ai đã làm gì — đặc biệt các thao tác tiền bạc và xóa dữ liệu"
+        desc="Ai đã làm gì - đặc biệt các thao tác tiền bạc và xóa dữ liệu"
       />
 
       <div className="toolbar">
@@ -65,6 +66,7 @@ export function AuditLogs() {
             setAction(e.target.value);
             setPage(1);
           }}
+          aria-label="Lọc theo hành động"
         >
           <option value="">Tất cả hành động</option>
           {ACTIONS.map((a) => (
@@ -80,6 +82,7 @@ export function AuditLogs() {
             setEntity(e.target.value);
             setPage(1);
           }}
+          aria-label="Lọc theo đối tượng"
         >
           <option value="">Tất cả đối tượng</option>
           {ENTITIES.map((e) => (
@@ -88,6 +91,11 @@ export function AuditLogs() {
             </option>
           ))}
         </select>
+        {pagination && (
+          <span className="audit-summary">
+            Tổng <strong>{pagination.total}</strong> dòng nhật ký
+          </span>
+        )}
       </div>
 
       {loading ? (
@@ -114,7 +122,7 @@ export function AuditLogs() {
                 <tr key={l.id}>
                   <td className="mono nowrap">{formatDateTime(l.created_at)}</td>
                   <td>
-                    {l.actor_name || '—'}
+                    <span className="audit-actor">{l.actor_name || '-'}</span>
                     {l.actor_role && <span className="muted"> ({l.actor_role})</span>}
                   </td>
                   <td>
@@ -122,7 +130,9 @@ export function AuditLogs() {
                       {ACTION_LABEL[l.action] || l.action}
                     </span>
                   </td>
-                  <td>{l.summary}</td>
+                  <td className="audit-detail" title={l.summary}>
+                    {l.summary}
+                  </td>
                 </tr>
               ))}
             </tbody>

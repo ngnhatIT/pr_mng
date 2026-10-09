@@ -1,0 +1,58 @@
+/* Classes - danh sách lớp học.
+ * Card giữ cấu trúc quen thuộc; thêm thanh sĩ số để nhìn là biết lớp đầy hay còn chỗ.
+ */
+
+.class-card .dl dd.num {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Badge cảnh báo lớp đã đầy */
+.badge-danger {
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+
+/* Thanh sĩ số: mỏng, calm; đầy thì chuyển đỏ cảnh báo */
+.capacity-meter {
+  margin-top: 6px;
+  height: 4px;
+  border-radius: 999px;
+  background: var(--border-soft, #eef1f6);
+  overflow: hidden;
+}
+
+.capacity-meter > span {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--primary);
+  transition: width 0.25s ease-out;
+}
+
+.capacity-meter.is-full > span {
+  background: var(--danger);
+}
+
+.capacity-label {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+}
+
+/* Schedule editor trong modal: mobile xếp chồng, không tràn ngang */
+@media (max-width: 640px) {
+  .schedule-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+  .schedule-row .text-input {
+    width: 100%;
+  }
+  .schedule-row > .muted {
+    display: none;
+  }
+  .schedule-row > .btn {
+    grid-column: 1 / -1;
+  }
+}

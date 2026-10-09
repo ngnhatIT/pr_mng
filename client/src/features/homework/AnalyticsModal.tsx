@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { homeworkApi, type HomeworkAnalytics } from './homework.api';
 import { Modal } from '../../shared/components/Modal';
+import { Icon } from '../../shared/components/icons';
 
 /** Phân tích bài tập: tỷ lệ hoàn thành & điểm TB theo lớp. */
 export function AnalyticsModal({ onClose }: { onClose: () => void }) {
@@ -15,8 +16,10 @@ export function AnalyticsModal({ onClose }: { onClose: () => void }) {
       {!data ? (
         <p className="muted">Đang tải...</p>
       ) : (
-        <>
-          <h4 className="section-title">Theo lớp</h4>
+        <div className="hw-analytics">
+          <h4 className="section-title hw-action-icon">
+            <Icon name="users" size={15} /> Theo lớp
+          </h4>
           {data.byClass.length === 0 ? (
             <p className="muted">Chưa có dữ liệu.</p>
           ) : (
@@ -40,14 +43,16 @@ export function AnalyticsModal({ onClose }: { onClose: () => void }) {
                       </span>
                     </td>
                     <td style={{ textAlign: 'center' }}>
-                      {c.avg_score !== null ? c.avg_score.toFixed(1) : '—'}
+                      {c.avg_score !== null ? c.avg_score.toFixed(1) : '-'}
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
           )}
-          <h4 className="section-title">Bài mới nhất</h4>
+          <h4 className="section-title hw-action-icon" style={{ marginTop: 20 }}>
+            <Icon name="clock" size={15} /> Bài mới nhất
+          </h4>
           {data.recent.length === 0 ? (
             <p className="muted">Chưa có bài nào.</p>
           ) : (
@@ -68,7 +73,7 @@ export function AnalyticsModal({ onClose }: { onClose: () => void }) {
               ))}
             </div>
           )}
-        </>
+        </div>
       )}
     </Modal>
   );

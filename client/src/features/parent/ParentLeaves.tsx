@@ -6,6 +6,8 @@ import { Field } from '../../shared/components/Form';
 import { EmptyState } from '../../shared/components/EmptyState';
 import { Skeleton } from '../../shared/components/Skeleton';
 import { LeaveRequest, ParentChild, LEAVE_STATUS_LABEL, labelOf, formatDate } from '../../shared/types';
+import { Icon } from '../../shared/components/icons';
+import './parent.css';
 
 export function ParentLeaves() {
   const [leaves, setLeaves] = useState<LeaveRequest[]>([]);
@@ -33,8 +35,9 @@ export function ParentLeaves() {
     <div className="parent-page">
       <div className="page-head">
         <h1 className="parent-title">Xin nghỉ phép</h1>
-        <button className="btn btn-primary btn-sm" onClick={() => setShowForm(true)}>
-          + Tạo đơn mới
+        <button className="btn btn-primary btn-sm create-leave-btn" onClick={() => setShowForm(true)}>
+          <Icon name="plus" size={15} />
+          Tạo đơn mới
         </button>
       </div>
 
@@ -61,7 +64,7 @@ export function ParentLeaves() {
             <div key={l.id} className="card leave-card">
               <div className="leave-card-head">
                 <strong>
-                  {l.student_name} <span className="muted">· {l.class_name || '—'}</span>
+                  {l.student_name} <span className="muted">· {l.class_name || '-'}</span>
                 </strong>
                 <span className={`badge badge-${l.status}`}>{labelOf(LEAVE_STATUS_LABEL, l.status)}</span>
               </div>
@@ -145,7 +148,7 @@ function LeaveFormModal({ onClose, onDone }: { onClose: () => void; onDone: () =
               }}
               required
             >
-              <option value="">— Chọn con —</option>
+              <option value="">- Chọn con -</option>
               {children.map((c) => (
                 <option key={c.id} value={c.id}>
                   {c.name} ({c.code})
@@ -155,7 +158,7 @@ function LeaveFormModal({ onClose, onDone }: { onClose: () => void; onDone: () =
           </Field>
           <Field label="Lớp" span>
             <select className="text-input" value={classId} onChange={(e) => setClassId(e.target.value)}>
-              <option value="">— Tất cả các lớp —</option>
+              <option value="">- Tất cả các lớp -</option>
               {classes.map((c) => (
                 <option key={c.id} value={c.id}>
                   {c.name}

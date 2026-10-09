@@ -7,6 +7,8 @@ import { PageHeader } from '../../shared/components/PageHeader';
 import { EmptyState } from '../../shared/components/EmptyState';
 import { TableSkeleton } from '../../shared/components/Skeleton';
 import { Pagination, type PaginationMeta } from '../../shared/components/Pagination';
+import { Icon } from '../../shared/components/icons';
+import './Rooms.css';
 
 export function Rooms() {
   const [rooms, setRooms] = useState<Room[]>([]);
@@ -63,10 +65,11 @@ export function Rooms() {
     <div className="page">
       <PageHeader
         title="Phòng học"
-        desc="Xếp phòng cho các lớp — hệ thống tự cảnh báo khi trùng lịch"
+        desc="Xếp phòng cho các lớp - hệ thống tự cảnh báo khi trùng lịch"
         actions={
           <button className="btn btn-primary" onClick={() => setEditing('new')}>
-            + Thêm phòng
+            <Icon name="plus" size={14} />
+            Thêm phòng
           </button>
         }
       />
@@ -80,7 +83,8 @@ export function Rooms() {
           desc="Thêm phòng học để xếp lịch cho các lớp."
           action={
             <button className="btn btn-primary" onClick={() => setEditing('new')}>
-              + Thêm phòng
+              <Icon name="plus" size={14} />
+              Thêm phòng
             </button>
           }
         />
@@ -92,15 +96,23 @@ export function Rooms() {
                 <th>Tên phòng</th>
                 <th>Sức chứa</th>
                 <th>Số lớp đang dùng</th>
+                <th>Tình trạng</th>
                 <th className="th-right">Thao tác</th>
               </tr>
             </thead>
             <tbody>
               {rooms.map((r) => (
                 <tr key={r.id}>
-                  <td>{r.name}</td>
-                  <td className="num">{r.capacity ?? '—'}</td>
+                  <td className="room-name">{r.name}</td>
+                  <td className="num">{r.capacity ?? '-'}</td>
                   <td className="num">{r.class_count ?? 0}</td>
+                  <td>
+                    {(r.class_count ?? 0) > 0 ? (
+                      <span className="badge badge-active">Đang dùng</span>
+                    ) : (
+                      <span className="badge badge-idle">Trống</span>
+                    )}
+                  </td>
                   <td className="td-right">
                     <button className="btn btn-sm" onClick={() => setEditing(r)}>
                       Sửa

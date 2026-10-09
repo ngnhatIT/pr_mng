@@ -10,6 +10,8 @@ import { EmptyState } from '../../shared/components/EmptyState';
 import { CardGridSkeleton } from '../../shared/components/Skeleton';
 import { Pagination, type PaginationMeta } from '../../shared/components/Pagination';
 import { Teacher, ScheduleEntry, DAY_NAMES, formatVND, formatScheduleText } from '../../shared/types';
+import { Icon } from '../../shared/components/icons';
+import './Classes.css';
 
 interface ClassForm {
   name: string;
@@ -87,7 +89,8 @@ export function Classes() {
         desc="Tạo lớp, xếp lịch, phân công giáo viên và ghi danh"
         actions={
           <button className="btn btn-primary" onClick={() => setEditing('new')}>
-            + Thêm lớp học
+            <Icon name="plus" size={14} />
+            Thêm lớp học
           </button>
         }
       />
@@ -101,49 +104,71 @@ export function Classes() {
           desc="Tạo lớp học đầu tiên với lịch học, giáo viên và học phí."
           action={
             <button className="btn btn-primary" onClick={() => setEditing('new')}>
-              + Thêm lớp học
+              <Icon name="plus" size={14} />
+              Thêm lớp học
             </button>
           }
         />
       ) : (
         <div className="card-grid">
-          {classes.map((c) => (
-            <div key={c.id} className="card class-card card-hover">
-              <div className="card-head">
-                <h2>
-                  <Link className="link" to={`/app/classes/${c.id}`}>
-                    {c.name}
+          {classes.map((c) => {
+            const pct = c.max_students > 0 ? Math.min(100, Math.round((c.student_count / c.max_students) * 100)) : 0;
+            const isFull = c.max_students > 0 && c.student_count >= c.max_students;
+            return (
+              <div key={c.id} className="card class-card card-hover">
+                <div className="card-head">
+                  <h2>
+                    <Link className="link" to={`/app/classes/${c.id}`}>
+                      {c.name}
+                    </Link>
+                  </h2>
+                  <span className={`badge badge-${c.status}`}>
+                    {c.status === 'active' ? 'Đang mở' : 'Đã đóng'}
+                  </span>
+                </div>
+                <dl className="dl dl-compact">
+                  <dt>Giáo viên</dt>
+                  <dd>{c.teacher_name || 'Chưa phân công'}</dd>
+                  <dt>Lịch học</dt>
+                  <dd>{formatScheduleText(c.schedule || '') || '-'}</dd>
+                  <dt>Học phí</dt>
+                  <dd className="num">{formatVND(c.tuition_fee)}</dd>
+                  <dt>Sĩ số</dt>
+                  <dd>
+                    <span className="capacity-label">
+                      <span className="num">
+                        {c.student_count}/{c.max_students}
+                      </span>
+                      {isFull && (
+                        <span className="badge badge-danger">Đã đầy</span>
+                      )}
+                    </span>
+                    <div
+                      className={`capacity-meter${isFull ? ' is-full' : ''}`}
+                      role="progressbar"
+                      aria-valuenow={pct}
+                      aria-valuemin={0}
+                      aria-valuemax={100}
+                      aria-label={`Sĩ số lớp ${c.name}: ${pct}%`}
+                    >
+                      <span style={{ width: `${pct}%` }} />
+                    </div>
+                  </dd>
+                </dl>
+                <div className="card-foot">
+                  <Link className="btn btn-sm" to={`/app/classes/${c.id}`}>
+                    Chi tiết
                   </Link>
-                </h2>
-                <span className={`badge badge-${c.status}`}>
-                  {c.status === 'active' ? 'Đang mở' : 'Đã đóng'}
-                </span>
+                  <button className="btn btn-sm" onClick={() => setEditing(c)}>
+                    Sửa
+                  </button>
+                  <button className="btn btn-sm btn-danger-ghost" onClick={() => setDeleting(c)}>
+                    Xóa
+                  </button>
+                </div>
               </div>
-              <dl className="dl dl-compact">
-                <dt>Giáo viên</dt>
-                <dd>{c.teacher_name || 'Chưa phân công'}</dd>
-                <dt>Lịch học</dt>
-                <dd>{formatScheduleText(c.schedule || '') || '—'}</dd>
-                <dt>Học phí</dt>
-                <dd>{formatVND(c.tuition_fee)}</dd>
-                <dt>Sĩ số</dt>
-                <dd>
-                  {c.student_count}/{c.max_students}
-                </dd>
-              </dl>
-              <div className="card-foot">
-                <Link className="btn btn-sm" to={`/app/classes/${c.id}`}>
-                  Chi tiết
-                </Link>
-                <button className="btn btn-sm" onClick={() => setEditing(c)}>
-                  Sửa
-                </button>
-                <button className="btn btn-sm btn-danger-ghost" onClick={() => setDeleting(c)}>
-                  Xóa
-                </button>
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 
@@ -298,7 +323,8 @@ function ClassFormModal({
           <div className="schedule-head">
             <span className="field-label">Lịch học hàng tuần</span>
             <button type="button" className="btn btn-sm" onClick={addSlot}>
-              + Thêm buổi
+              <Icon name="plus" size={13} />
+              Thêm buổi
             </button>
           </div>
           {form.schedule.map((s, i) => (
@@ -320,7 +346,7 @@ function ClassFormModal({
                 value={s.start}
                 onChange={(e) => updateSlot(i, { start: e.target.value })}
               />
-              <span className="muted">→</span>
+              <span className="muted">-</span>
               <input
                 className="text-input"
                 type="time"

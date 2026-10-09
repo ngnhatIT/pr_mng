@@ -9,6 +9,8 @@ import { Field } from '../../shared/components/Form';
 import { EmptyState } from '../../shared/components/EmptyState';
 import { Skeleton } from '../../shared/components/Skeleton';
 import { formatVND, formatDate, formatScheduleText } from '../../shared/types';
+import { Icon } from '../../shared/components/icons';
+import './ClassDetail.css';
 
 export function ClassDetail() {
   const { id } = useParams<{ id: string }>();
@@ -88,7 +90,8 @@ export function ClassDetail() {
   return (
     <div className="page">
       <Link className="link back-link" to="/app/classes">
-        ← Danh sách lớp học
+        <Icon name="arrow-right" size={14} className="flip-x" />
+        Danh sách lớp học
       </Link>
       <div className="profile-head">
         <div className="profile-avatar">{cls.name.charAt(0).toUpperCase()}</div>
@@ -112,13 +115,13 @@ export function ClassDetail() {
           <dt>Phòng học</dt>
           <dd>{cls.room_name || 'Chưa gán phòng'}</dd>
           <dt>Lịch học</dt>
-          <dd>{formatScheduleText(cls.schedule || '') || '—'}</dd>
+          <dd>{formatScheduleText(cls.schedule || '') || '-'}</dd>
           <dt>Thời gian</dt>
-          <dd>
-            {formatDate(cls.start_date)} → {formatDate(cls.end_date)}
+          <dd className="num">
+            {formatDate(cls.start_date)} - {formatDate(cls.end_date)}
           </dd>
           <dt>Học phí</dt>
-          <dd>{formatVND(cls.tuition_fee)}</dd>
+          <dd className="num">{formatVND(cls.tuition_fee)}</dd>
           <dt>Sĩ số</dt>
           <dd>
             {data.students.length}/{cls.max_students}
@@ -133,7 +136,8 @@ export function ClassDetail() {
           <div className="card-head">
             <h2>Học viên ({data.students.length})</h2>
             <button className="btn btn-sm btn-primary" onClick={() => setShowEnroll(true)}>
-              + Thêm học viên
+              <Icon name="plus" size={13} />
+              Thêm học viên
             </button>
           </div>
           {data.students.length === 0 ? (
@@ -165,8 +169,9 @@ export function ClassDetail() {
         <section className="card">
           <div className="card-head">
             <h2>Buổi học gần đây</h2>
-            <Link className="link" to={`/app/attendance?class=${cls.id}`}>
-              Điểm danh →
+            <Link className="link link-arrow" to={`/app/attendance?class=${cls.id}`}>
+              Điểm danh
+              <Icon name="arrow-right" size={14} />
             </Link>
           </div>
           {sessions.length === 0 ? (

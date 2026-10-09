@@ -1,0 +1,74 @@
+/* System admin: audit log + quản lý trung tâm. */
+
+.audit-summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.audit-summary strong {
+  color: var(--text-strong);
+  font-variant-numeric: tabular-nums;
+}
+
+.audit-detail {
+  max-width: 420px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.audit-actor {
+  font-weight: 500;
+  color: var(--text-strong);
+}
+
+/* Bảng trung tâm: tên + subdomain rõ hierarchy */
+.center-name {
+  font-weight: 600;
+  color: var(--text-strong);
+}
+
+.center-sub {
+  font-size: 12.5px;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+.plan-expiry {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Form tạo trung tâm: nhóm theo section */
+.center-form-section {
+  margin-bottom: 18px;
+}
+
+.center-form-section:last-of-type {
+  margin-bottom: 4px;
+}
+
+.center-form-section > h3 {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-strong);
+  margin: 0 0 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.center-form-section > h3::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+
+@media (max-width: 640px) {
+  .audit-detail {
+    max-width: 180px;
+  }
+}

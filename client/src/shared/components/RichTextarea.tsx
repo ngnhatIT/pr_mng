@@ -1,8 +1,8 @@
-import { useRef } from 'react';
+import { useRef, type ReactNode } from 'react';
 
 /**
  * Editor nội dung bài tập với thanh công cụ markdown:
- * in đậm, in nghiêng, danh sách, tiêu đề — giáo viên soạn đề đẹp như Classroom.
+ * in đậm, in nghiêng, danh sách, tiêu đề - giáo viên soạn đề đẹp như Classroom.
  */
 export function RichTextarea({
   value,
@@ -44,13 +44,21 @@ export function RichTextarea({
     });
   };
 
-  const tools: { label: string; title: string; fn: () => void }[] = [
+  const tools: { label: ReactNode; title: string; fn: () => void }[] = [
     { label: 'B', title: 'In đậm', fn: () => wrap('**', '**') },
     { label: 'I', title: 'In nghiêng', fn: () => wrap('*', '*') },
     { label: 'H', title: 'Tiêu đề', fn: () => linePrefix('## ') },
     { label: '•', title: 'Danh sách', fn: () => linePrefix('- ') },
     { label: '1.', title: 'Danh sách số', fn: () => linePrefix('1. ') },
-    { label: '❝', title: 'Trích dẫn', fn: () => linePrefix('> ') },
+    {
+      label: (
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+          <path d="M7 7h4v4c0 2.8-1.8 3.9-3 4.6l-1.2-1.4c.7-.4 1.2-.9 1.2-1.7H7V7zm9 0h4v4c0 2.8-1.8 3.9-3 4.6l-1.2-1.4c.7-.4 1.2-.9 1.2-1.7h-1V7z" />
+        </svg>
+      ),
+      title: 'Trích dẫn',
+      fn: () => linePrefix('> '),
+    },
   ];
 
   return (

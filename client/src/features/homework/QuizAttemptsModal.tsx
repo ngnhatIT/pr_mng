@@ -5,6 +5,7 @@ import { useToast } from '../../shared/ui/toast';
 import { Modal } from '../../shared/components/Modal';
 import { TableSkeleton } from '../../shared/components/Skeleton';
 import { EmptyState } from '../../shared/components/EmptyState';
+import { Icon } from '../../shared/components/icons';
 
 export function QuizAttemptsModal({ homework, onClose }: { homework: HomeworkItem; onClose: () => void }) {
   const toast = useToast();
@@ -26,8 +27,12 @@ export function QuizAttemptsModal({ homework, onClose }: { homework: HomeworkIte
 
   return (
     <Modal title={`Kết quả quiz: ${homework.title}`} onClose={onClose} wide>
-      <div className="muted" style={{ marginBottom: 12 }}>
-        {rows.length} lượt làm bài · Điểm trung bình {avg.toFixed(1)}%
+      <div className="muted hw-action-icon" style={{ marginBottom: 12, fontSize: 13 }}>
+        <Icon name="users" size={14} />
+        <span><strong className="num">{rows.length}</strong> lượt làm bài</span>
+        <span aria-hidden="true">·</span>
+        <Icon name="star" size={14} />
+        <span>Điểm trung bình <strong className="num">{avg.toFixed(1)}%</strong></span>
       </div>
       {loading ? (
         <TableSkeleton rows={5} cols={4} />

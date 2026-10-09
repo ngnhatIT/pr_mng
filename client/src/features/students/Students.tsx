@@ -8,7 +8,9 @@ import { PageHeader } from '../../shared/components/PageHeader';
 import { EmptyState } from '../../shared/components/EmptyState';
 import { TableSkeleton } from '../../shared/components/Skeleton';
 import { Pagination, type PaginationMeta } from '../../shared/components/Pagination';
+import { Icon } from '../../shared/components/icons';
 import { STUDENT_STATUS_LABEL } from '../../shared/types';
+import './Students.css';
 
 const emptyForm = {
   code: '',
@@ -88,19 +90,25 @@ export function Students() {
         title="Học viên"
         desc="Quản lý hồ sơ và trạng thái học viên"
         actions={
-          <button className="btn btn-primary" onClick={() => setEditing('new')}>
-            + Thêm học viên
+          <button className="btn btn-primary btn-inline" onClick={() => setEditing('new')}>
+            <Icon name="plus" size={14} />
+            Thêm học viên
           </button>
         }
       />
 
       <div className="toolbar">
-        <input
-          className="text-input search-input"
-          placeholder="Tìm theo tên, mã, số điện thoại..."
-          value={search}
-          onChange={(e) => setSearchReset(e.target.value)}
-        />
+        <span className="search-wrap">
+          <span className="search-icon">
+            <Icon name="search" size={15} />
+          </span>
+          <input
+            className="text-input search-input"
+            placeholder="Tìm theo tên, mã, số điện thoại..."
+            value={search}
+            onChange={(e) => setSearchReset(e.target.value)}
+          />
+        </span>
         <select className="text-input" value={status} onChange={(e) => setStatusReset(e.target.value)}>
           <option value="">Tất cả trạng thái</option>
           <option value="studying">Đang học</option>
@@ -117,8 +125,9 @@ export function Students() {
           title="Chưa có học viên nào"
           desc="Thêm học viên đầu tiên để bắt đầu quản lý danh sách."
           action={
-            <button className="btn btn-primary" onClick={() => setEditing('new')}>
-              + Thêm học viên
+            <button className="btn btn-primary btn-inline" onClick={() => setEditing('new')}>
+              <Icon name="plus" size={14} />
+              Thêm học viên
             </button>
           }
         />
@@ -139,19 +148,29 @@ export function Students() {
                 <tr key={s.id}>
                   <td className="mono">{s.code}</td>
                   <td>
-                    <Link className="link" to={`/app/students/${s.id}`}>
-                      {s.name}
-                    </Link>
+                    <span className="name-cell">
+                      <span className="avatar avatar-sm" aria-hidden="true">
+                        {s.name.charAt(0).toUpperCase()}
+                      </span>
+                      <Link className="link" to={`/app/students/${s.id}`}>
+                        {s.name}
+                      </Link>
+                    </span>
                   </td>
-                  <td>{s.phone || '—'}</td>
+                  <td>{s.phone || '-'}</td>
                   <td>
                     <span className={`badge badge-${s.status}`}>{STUDENT_STATUS_LABEL[s.status]}</span>
                   </td>
                   <td className="td-right">
-                    <button className="btn btn-sm" onClick={() => setEditing(s)}>
+                    <button className="btn btn-sm btn-inline" onClick={() => setEditing(s)}>
+                      <Icon name="pencil" size={13} />
                       Sửa
                     </button>{' '}
-                    <button className="btn btn-sm btn-danger-ghost" onClick={() => setDeleting(s)}>
+                    <button
+                      className="btn btn-sm btn-inline btn-danger-ghost"
+                      onClick={() => setDeleting(s)}
+                    >
+                      <Icon name="trash" size={13} />
                       Xóa
                     </button>
                   </td>

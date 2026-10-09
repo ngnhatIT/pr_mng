@@ -1,0 +1,95 @@
+/* Landing: hierarchy rõ, không màu mè. Bổ sung cho styles.css. */
+
+/* Sao đánh giá dùng SVG: sao đầy màu hổ phách, sao trống màu xám nhạt.
+   (CSS ghi đè presentation attribute của Icon, không cần sửa shared/icons.tsx) */
+.landing .stars {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  letter-spacing: 0;
+  font-size: 0;
+}
+
+.landing .star {
+  opacity: 1;
+  color: #d7dee9;
+  display: inline-flex;
+  line-height: 1;
+}
+
+.landing .star svg {
+  fill: currentColor;
+  stroke: none;
+}
+
+.landing .star.on {
+  color: #f59e0b;
+}
+
+/* Hero: tăng nhịp chữ, giữ nền sáng sạch */
+.landing-hero h1 {
+  max-width: 760px;
+}
+
+.landing-hero-sub {
+  max-width: 600px;
+}
+
+/* Form đăng ký: tiêu đề section rõ hierarchy */
+.landing-alt h2 {
+  text-align: center;
+  margin: 0 auto 24px;
+  max-width: 640px;
+}
+
+/* Card khóa học: thông tin gọn, CTA rõ */
+.course-card {
+  border-radius: var(--radius-lg);
+}
+
+.course-card .btn {
+  margin-top: 14px;
+}
+
+/* Testimonial gọn sau khi bỏ dấu ngoặc kép trang trí */
+.testimonial {
+  padding: 20px;
+}
+
+.testimonial .review-comment {
+  margin: 12px 0;
+  font-size: 14.5px;
+  line-height: 1.65;
+  color: var(--text-strong);
+}
+
+/* Mobile: ẩn anchor nav, giữ 2 CTA; stats gọn */
+@media (max-width: 640px) {
+  .landing-nav {
+    padding: 12px 16px;
+  }
+
+  .landing-nav-anchor {
+    display: none;
+  }
+
+  .landing-nav-links {
+    gap: 6px;
+  }
+
+  .landing-hero {
+    padding: 64px 16px 48px;
+  }
+
+  .landing-stats {
+    gap: 20px;
+  }
+
+  .landing-stat-value {
+    font-size: 26px;
+  }
+
+  .course-grid {
+    grid-template-columns: 1fr;
+  }
+}

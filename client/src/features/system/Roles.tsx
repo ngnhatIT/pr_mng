@@ -1,7 +1,7 @@
 /**
  * Trang quản trị Phân quyền (RBAC).
  *
- * Design read: công cụ cho admin trung tâm — calm, rõ ràng, mật độ trung bình-cao.
+ * Design read: công cụ cho admin trung tâm - calm, rõ ràng, mật độ trung bình-cao.
  * Cột trái: danh sách vai trò (tìm kiếm + chọn). Cột phải: ma trận quyền nhóm theo
  * module, mỗi quyền chọn phạm vi qua segmented control. System role chỉ xem.
  */

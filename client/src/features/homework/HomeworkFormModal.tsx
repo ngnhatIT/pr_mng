@@ -11,6 +11,7 @@ import type { Student } from '../students/students.api';
 import { useToast } from '../../shared/ui/toast';
 import { Modal } from '../../shared/components/Modal';
 import { Field } from '../../shared/components/Form';
+import { Icon } from '../../shared/components/icons';
 import { RichTextarea } from '../../shared/components/RichTextarea';
 import { QuestionBank } from './QuestionBank';
 import type { BankQuestion } from './homework.api';
@@ -265,14 +266,14 @@ export function HomeworkFormModal({
             className={`kind-btn ${kind === 'homework' ? 'kind-active' : ''}`}
             onClick={() => setKind('homework')}
           >
-            📝 Bài tập thường
+            <Icon name="clipboard" size={17} /> Bài tập thường
           </button>
           <button
             type="button"
             className={`kind-btn ${kind === 'quiz' ? 'kind-active' : ''}`}
             onClick={() => setKind('quiz')}
           >
-            ✅ Quiz trắc nghiệm
+            <Icon name="check-circle" size={17} /> Quiz trắc nghiệm
           </button>
         </div>
       )}
@@ -289,7 +290,7 @@ export function HomeworkFormModal({
                 return (
                   <button key={c.id} type="button" className={`chip ${active ? 'chip-active' : ''}`}
                     onClick={() => toggleClass(c.id)}>
-                    {active ? '✓ ' : ''}{c.name}
+                    {active && <Icon name="check" size={12} />}{c.name}
                   </button>
                 );
               })}
@@ -320,7 +321,7 @@ export function HomeworkFormModal({
                     return (
                       <button key={s.id} type="button" className={`chip ${active ? 'chip-active' : ''}`}
                         onClick={() => toggleStudent(s.id)}>
-                        {active ? '✓ ' : ''}{s.name}
+                        {active && <Icon name="check" size={12} />}{s.name}
                       </button>
                     );
                   })}
@@ -392,7 +393,8 @@ export function HomeworkFormModal({
           <Field label="Đính kèm (link tài liệu, audio, video)">
             {attachments.map((a, i) => (
               <div key={i} className="att-row">
-                <span>📎 {a.name}</span>
+                <Icon name="paperclip" size={14} />
+                <span>{a.name}</span>
                 <span className="muted" style={{ fontSize: 12 }}>{a.url.slice(0, 40)}...</span>
                 <button type="button" className="btn btn-sm btn-danger-ghost"
                   onClick={() => setAttachments((x) => x.filter((_, j) => j !== i))}>Xóa</button>
@@ -455,8 +457,9 @@ export function HomeworkFormModal({
         {kind === 'quiz' && (
           <Field label={`Câu hỏi trắc nghiệm (${questions.length} câu, tổng ${quizTotal}đ)`}>
             {quizLocked && (
-              <div className="alert alert-warning" style={{ marginBottom: 12 }}>
-                ⚠️ Đã có học viên làm bài — không thể sửa đề. Hãy tạo quiz mới nếu cần thay đổi.
+              <div className="alert alert-warning alert-with-icon" style={{ marginBottom: 12 }}>
+                <Icon name="alert" size={16} />
+                <span>Đã có học viên làm bài - không thể sửa đề. Hãy tạo quiz mới nếu cần thay đổi.</span>
               </div>
             )}
             {questions.map((q, qi) => (
@@ -495,8 +498,8 @@ export function HomeworkFormModal({
             ))}
             <div style={{ display: 'flex', gap: 8 }}>
               <button type="button" className="btn" onClick={addQuestion}>+ Thêm câu hỏi</button>
-              <button type="button" className="btn" onClick={() => setShowBankPicker(true)}>
-                🏦 Lấy từ ngân hàng
+              <button type="button" className="btn hw-action-icon" onClick={() => setShowBankPicker(true)}>
+                <Icon name="book" size={15} /> Lấy từ ngân hàng
               </button>
             </div>
           </Field>

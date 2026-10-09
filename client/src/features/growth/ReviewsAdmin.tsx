@@ -6,15 +6,15 @@ import { PageHeader } from '../../shared/components/PageHeader';
 import { EmptyState } from '../../shared/components/EmptyState';
 import { CardGridSkeleton } from '../../shared/components/Skeleton';
 import { Pagination, type PaginationMeta } from '../../shared/components/Pagination';
+import { Icon } from '../../shared/components/icons';
 import { ReviewItem, REVIEW_STATUS_LABEL, labelOf, formatDate } from '../../shared/types';
+import './Growth.css';
 
 function Stars({ rating }: { rating: number }) {
   return (
-    <span className="stars">
+    <span className="stars-svg" role="img" aria-label={`Đánh giá ${rating} trên 5 sao`}>
       {[1, 2, 3, 4, 5].map((i) => (
-        <span key={i} className={i <= rating ? 'star on' : 'star'}>
-          ★
-        </span>
+        <Icon key={i} name="star" size={15} className={i <= rating ? 'star-svg on' : 'star-svg'} />
       ))}
     </span>
   );
@@ -84,9 +84,15 @@ export function ReviewsAdmin() {
       <div className="tabs">
         <button className={`tab${tab === 'pending' ? ' active' : ''}`} onClick={() => switchTab('pending')}>
           Chờ duyệt
+          {tab === 'pending' && pagination && pagination.total > 0 && (
+            <span className="tab-count">{pagination.total}</span>
+          )}
         </button>
         <button className={`tab${tab === 'approved' ? ' active' : ''}`} onClick={() => switchTab('approved')}>
           Đã duyệt
+          {tab === 'approved' && pagination && pagination.total > 0 && (
+            <span className="tab-count">{pagination.total}</span>
+          )}
         </button>
       </div>
 
@@ -104,29 +110,35 @@ export function ReviewsAdmin() {
         <div className="card-grid">
           {reviews.map((r) => (
             <div key={r.id} className="card review-card">
-              <div className="card-head">
+              <div className="review-head">
                 <Stars rating={r.rating} />
                 <span className={`badge badge-${r.status}`}>{labelOf(REVIEW_STATUS_LABEL, r.status)}</span>
               </div>
-              <p className="review-comment">{r.comment || '—'}</p>
-              <p className="muted">
-                — {r.parent_name || 'Phụ huynh'} · {formatDate(r.created_at)}
-              </p>
-              <div className="card-foot">
+              <p className="review-comment">{r.comment || '-'}</p>
+              <div className="review-meta">
+                <Icon name="user" size={13} />
+                <span>{r.parent_name || 'Phụ huynh'}</span>
+                <span aria-hidden="true">·</span>
+                <span>{formatDate(r.created_at)}</span>
+              </div>
+              <div className="review-foot">
                 {tab === 'pending' ? (
                   <>
                     <button className="btn btn-sm btn-primary" onClick={() => void moderate(r, 'approve')}>
+                      <Icon name="check" size={14} />
                       Duyệt
                     </button>
                     <button
                       className="btn btn-sm btn-danger-ghost"
                       onClick={() => void moderate(r, 'reject')}
                     >
+                      <Icon name="x" size={14} />
                       Từ chối
                     </button>
                   </>
                 ) : (
                   <button className="btn btn-sm btn-danger-ghost" onClick={() => setDeleting(r)}>
+                    <Icon name="trash" size={14} />
                     Xóa
                   </button>
                 )}

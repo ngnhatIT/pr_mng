@@ -1,0 +1,71 @@
+/* LeavesAdmin: bảng đơn nghỉ gọn, badge trạng thái rõ. */
+
+.toolbar-summary {
+  margin-left: auto;
+  font-size: 13px;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.leave-student {
+  font-weight: 600;
+  color: var(--text-strong);
+}
+
+.leave-code {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-left: 6px;
+}
+
+.leave-reason {
+  max-width: 260px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.leave-actions {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.leave-actions .btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+/* Gợi ý buổi học bù trong modal */
+.makeup-list {
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.makeup-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 12px;
+  background: var(--bg-muted);
+  font-size: 14px;
+}
+
+.makeup-item svg {
+  color: var(--primary-strong);
+  flex: none;
+}
+
+@media (max-width: 640px) {
+  .leave-reason {
+    max-width: 140px;
+  }
+}

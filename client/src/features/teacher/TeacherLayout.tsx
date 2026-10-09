@@ -1,6 +1,7 @@
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { getUser, clearAuth } from '../../shared/api/client';
 import { Icon, IconName } from '../../shared/components/icons';
+import './TeacherLayout.css';
 
 const TABS: { to: string; label: string; end?: boolean; icon: IconName }[] = [
   { to: '/teacher', label: 'Buổi dạy', end: true, icon: 'home' },

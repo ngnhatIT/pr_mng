@@ -7,7 +7,8 @@ import { PageHeader } from '../../shared/components/PageHeader';
 import { EmptyState } from '../../shared/components/EmptyState';
 import { Skeleton } from '../../shared/components/Skeleton';
 import { Icon } from '../../shared/components/icons';
-import { TeacherTodayItem, formatDate } from '../../shared/types';
+import { TeacherTodayItem, formatDate, formatDateTime } from '../../shared/types';
+import './TeacherToday.css';
 
 export function TeacherToday() {
   const [sessions, setSessions] = useState<TeacherTodayItem[]>([]);
@@ -41,7 +42,7 @@ export function TeacherToday() {
     setCheckingIn(true);
     try {
       const r = await teacherApi.checkin(code.trim());
-      toast(`Chấm công thành công: ${r.class_name} — ${formatDate(r.date)}`, 'success');
+      toast(`Chấm công thành công: ${r.class_name} - ${formatDate(r.date)}`, 'success');
       setCode('');
       void load();
     } catch (err) {
@@ -82,26 +83,33 @@ export function TeacherToday() {
               <div className={`timeline-dot${s.checked_in ? ' done' : ''}`}>
                 {s.checked_in && <Icon name="check" size={12} />}
               </div>
-              <div className="timeline-card card">
+              <div className={`timeline-card card${s.checked_in ? ' is-done' : ''}`}>
                 <div className="timeline-card-head">
                   <strong>{s.class_name}</strong>
                   <span className={`badge ${s.checked_in ? 'badge-present' : 'badge-pending'}`}>
                     {s.checked_in ? 'Đã chấm công' : 'Chưa chấm công'}
                   </span>
                 </div>
-                <div className="muted">
-                  {formatDate(s.date)}
+                <div className="today-time-chip">
+                  <Icon name="clock" size={15} />
+                  {s.date.slice(11, 16) || formatDate(s.date)}
+                </div>
+                <div className="muted today-topic">
+                  {formatDateTime(s.date)}
                   {s.topic ? ` · ${s.topic}` : ''}
                 </div>
-                <div className="muted" style={{ marginTop: 4 }}>
+                <div className="today-attendance">
+                  <Icon name="users" size={14} />
                   {s.attendance_count} học viên đã điểm danh
                 </div>
-                <div style={{ marginTop: 10 }}>
+                <div>
                   <Link
-                    className="btn btn-sm btn-primary"
+                    className="btn btn-primary btn-block today-attend-btn"
                     to={`/teacher/diem-danh?class=${s.class_id}&session=${s.session_id}`}
                   >
+                    <Icon name="clipboard" size={18} />
                     Điểm danh lớp
+                    <Icon name="arrow-right" size={16} />
                   </Link>
                 </div>
               </div>
@@ -125,10 +133,9 @@ export function TeacherToday() {
             />
           </Field>
           <button
-            className="btn btn-block btn-lg"
+            className="btn btn-block btn-lg checkin-submit"
             type="submit"
             disabled={checkingIn}
-            style={{ background: '#fff', color: '#1d4ed8', borderColor: '#fff', fontWeight: 700 }}
           >
             {checkingIn ? 'Đang chấm công...' : 'Chấm công ngay'}
           </button>

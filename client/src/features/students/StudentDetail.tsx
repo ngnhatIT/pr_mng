@@ -17,6 +17,8 @@ import { Modal, ConfirmDialog } from '../../shared/components/Modal';
 import { Field } from '../../shared/components/Form';
 import { EmptyState } from '../../shared/components/EmptyState';
 import { Skeleton, TableSkeleton } from '../../shared/components/Skeleton';
+import { Icon } from '../../shared/components/icons';
+import './Students.css';
 
 interface Detail {
   student: Student;
@@ -81,7 +83,8 @@ export function StudentDetail() {
   return (
     <div className="page">
       <Link className="link back-link" to="/app/students">
-        ← Danh sách học viên
+        <Icon name="arrow-right" size={14} className="flip-x" />
+        Danh sách học viên
       </Link>
       <div className="profile-head">
         <div className="profile-avatar">{student.name.charAt(0).toUpperCase()}</div>
@@ -97,26 +100,26 @@ export function StudentDetail() {
 
       <div className="two-col">
         <section className="card">
-          <div className="card-head">
-            <h2>Thông tin cá nhân</h2>
+          <div className="section-head">
+            <h3>Thông tin cá nhân</h3>
           </div>
-          <dl className="dl">
+          <dl className="kv">
             <dt>Điện thoại</dt>
-            <dd>{student.phone || '—'}</dd>
+            <dd>{student.phone || '-'}</dd>
             <dt>Email</dt>
-            <dd>{student.email || '—'}</dd>
+            <dd>{student.email || '-'}</dd>
             <dt>Ngày sinh</dt>
             <dd>{formatDate(student.dob)}</dd>
             <dt>Địa chỉ</dt>
-            <dd>{student.address || '—'}</dd>
+            <dd>{student.address || '-'}</dd>
             <dt>Ghi chú</dt>
-            <dd>{student.note || '—'}</dd>
+            <dd>{student.note || '-'}</dd>
           </dl>
         </section>
 
         <section className="card">
-          <div className="card-head">
-            <h2>Lớp đang theo học</h2>
+          <div className="section-head">
+            <h3>Lớp đang theo học</h3>
           </div>
           {data.classes.length === 0 ? (
             <EmptyState icon="book" title="Chưa ghi danh lớp nào" />
@@ -136,8 +139,8 @@ export function StudentDetail() {
       </div>
 
       <section className="card">
-        <div className="card-head">
-          <h2>Hóa đơn học phí</h2>
+        <div className="section-head">
+          <h3>Hóa đơn học phí</h3>
         </div>
         {data.invoices.length === 0 ? (
           <EmptyState icon="banknote" title="Chưa có hóa đơn nào" />
@@ -156,7 +159,7 @@ export function StudentDetail() {
               <tbody>
                 {data.invoices.map((inv) => (
                   <tr key={inv.id}>
-                    <td>{inv.class_name || '—'}</td>
+                    <td>{inv.class_name || '-'}</td>
                     <td className="num">{formatVND(inv.amount)}</td>
                     <td className="num">{formatVND(inv.paid || 0)}</td>
                     <td>{formatDate(inv.due_date)}</td>
@@ -213,10 +216,11 @@ function GradesSection({ studentId }: { studentId: number }) {
 
   return (
     <section className="card">
-      <div className="card-head">
-        <h2>Điểm số</h2>
-        <button className="btn btn-sm btn-primary" onClick={() => setShowForm(true)}>
-          + Nhập điểm
+      <div className="section-head">
+        <h3>Điểm số</h3>
+        <button className="btn btn-sm btn-primary btn-inline" onClick={() => setShowForm(true)}>
+          <Icon name="plus" size={13} />
+          Nhập điểm
         </button>
       </div>
       {loading ? (
@@ -225,7 +229,7 @@ function GradesSection({ studentId }: { studentId: number }) {
         <EmptyState
           icon="cap"
           title="Chưa có điểm số nào"
-          desc="Nhấn “+ Nhập điểm” để thêm điểm cho học viên."
+          desc="Nhấn nút Nhập điểm ở trên để thêm điểm cho học viên."
         />
       ) : (
         <div className="table-wrap">
@@ -244,16 +248,20 @@ function GradesSection({ studentId }: { studentId: number }) {
               {grades.map((g) => (
                 <tr key={g.id}>
                   <td>{g.title}</td>
-                  <td>{g.class_name || '—'}</td>
+                  <td>{g.class_name || '-'}</td>
                   <td className="num">
                     <strong>
                       {g.score}/{g.max_score}
                     </strong>
                   </td>
-                  <td>{g.comment || '—'}</td>
+                  <td>{g.comment || '-'}</td>
                   <td>{formatDate(g.created_at)}</td>
                   <td className="td-right">
-                    <button className="btn btn-sm btn-danger-ghost" onClick={() => setDeleting(g)}>
+                    <button
+                      className="btn btn-sm btn-inline btn-danger-ghost"
+                      onClick={() => setDeleting(g)}
+                    >
+                      <Icon name="trash" size={13} />
                       Xóa
                     </button>
                   </td>
@@ -339,7 +347,7 @@ function StudentGradeFormModal({
         <div className="form-grid">
           <Field label="Lớp">
             <select className="text-input" value={classId} onChange={(e) => setClassId(e.target.value)}>
-              <option value="">— Không gắn lớp —</option>
+              <option value="">- Không gắn lớp -</option>
               {classes.map((c) => (
                 <option key={c.id} value={c.id}>
                   {c.name}

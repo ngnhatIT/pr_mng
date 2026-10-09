@@ -5,6 +5,7 @@ import { Field } from '../../shared/components/Form';
 import { Icon } from '../../shared/components/icons';
 import { http } from '../../shared/api/client';
 import { PublicCenter, PublicClassItem, PublicTeacher, PublicReview, formatVND } from '../../shared/types';
+import './Landing.css';
 
 async function getJSON<T>(path: string): Promise<T> {
   try {
@@ -19,9 +20,7 @@ function Stars({ rating }: { rating: number }) {
   return (
     <span className="stars" aria-label={`${rating}/5 sao`}>
       {[1, 2, 3, 4, 5].map((i) => (
-        <span key={i} className={i <= full ? 'star on' : 'star'}>
-          ★
-        </span>
+        <Icon key={i} name="star" size={16} filled className={i <= full ? 'star on' : 'star'} />
       ))}
     </span>
   );
@@ -85,11 +84,11 @@ export function Landing() {
       <section className="landing-hero">
         <div className="landing-badge">
           <span className="landing-badge-dot" />
-          Đang tuyển sinh — đăng ký học thử miễn phí
+          Đang tuyển sinh - đăng ký học thử miễn phí
         </div>
         <h1>{center?.name || 'Trung tâm của bạn'}</h1>
         <p className="landing-hero-sub">
-          Nền tảng quản lý lớp học, học viên và học phí hiện đại — đồng hành cùng con bạn trên mỗi bước tiến.
+          Nền tảng quản lý lớp học, học viên và học phí hiện đại - đồng hành cùng con bạn trên mỗi bước tiến.
         </p>
         <div className="landing-hero-cta">
           <button className="btn btn-primary btn-lg" onClick={scrollToForm}>
@@ -110,7 +109,7 @@ export function Landing() {
           </div>
           <div className="landing-stat">
             <div className="landing-stat-value">
-              {reviews && reviews.total > 0 ? reviews.avg.toFixed(1) : '—'}/5
+              {reviews && reviews.total > 0 ? reviews.avg.toFixed(1) : '-'}/5
             </div>
             <div className="landing-stat-label">Đánh giá phụ huynh</div>
           </div>
@@ -145,9 +144,9 @@ export function Landing() {
                 <h3>{c.name}</h3>
                 <dl className="dl dl-compact">
                   <dt>Giáo viên</dt>
-                  <dd>{c.teacher_name || '—'}</dd>
+                  <dd>{c.teacher_name || '-'}</dd>
                   <dt>Lịch học</dt>
-                  <dd>{c.schedule_text || '—'}</dd>
+                  <dd>{c.schedule_text || '-'}</dd>
                   <dt>Học phí</dt>
                   <dd>
                     <strong className="text-primary">{formatVND(c.tuition_fee)}</strong>
@@ -200,9 +199,8 @@ export function Landing() {
         <div className="course-grid">
           {(reviews?.items || []).map((r, i) => (
             <div key={i} className="card review-card testimonial card-hover">
-              <div className="testimonial-quote">&ldquo;</div>
               <Stars rating={r.rating} />
-              <p className="review-comment">{r.comment || '—'}</p>
+              <p className="review-comment">{r.comment || '-'}</p>
               <div className="testimonial-foot">
                 <div className="testimonial-avatar">{(r.parent_name || 'P').charAt(0).toUpperCase()}</div>
                 <div className="muted">{r.parent_name || 'Phụ huynh'}</div>
@@ -356,7 +354,7 @@ function TrialForm({ refCode, courses }: { refCode: string; courses: PublicClass
           </Field>
           <Field label="Lớp muốn học thử">
             <select className="text-input" value={classId} onChange={(e) => setClassId(e.target.value)}>
-              <option value="">— Chưa chọn —</option>
+              <option value="">- Chưa chọn -</option>
               {courses.map((c) => (
                 <option key={c.id} value={c.id}>
                   {c.name}

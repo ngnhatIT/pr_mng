@@ -8,7 +8,9 @@ import { EmptyState } from '../../shared/components/EmptyState';
 import { Skeleton } from '../../shared/components/Skeleton';
 import { Pagination, type PaginationMeta } from '../../shared/components/Pagination';
 import { LeadItem, LEAD_STATUS_LABEL, labelOf, formatDate } from '../../shared/types';
+import { Icon } from '../../shared/components/icons';
 import { ConvertModal } from './Trials';
+import './Admissions.css';
 
 const COLUMNS = ['new', 'contacted', 'trial', 'enrolled', 'lost'] as const;
 
@@ -72,7 +74,7 @@ export function Leads() {
   const moveStatus = async (l: LeadItem, next: string) => {
     try {
       await leadsApi.setStatus(l.id, next);
-      toast(`Đã chuyển "${l.name}" → ${labelOf(LEAD_STATUS_LABEL, next)}`, 'success');
+      toast(`Đã chuyển "${l.name}" sang ${labelOf(LEAD_STATUS_LABEL, next)}`, 'success');
       void load();
     } catch (err) {
       toast(err instanceof Error ? err.message : 'Cập nhật thất bại', 'error');
@@ -86,7 +88,8 @@ export function Leads() {
         desc="Theo dõi khách hàng tiềm năng từ lúc liên hệ đến khi đăng ký"
         actions={
           <button className="btn btn-primary" onClick={() => setEditing('new')}>
-            + Thêm lead
+            <Icon name="plus" size={15} />
+            Thêm lead
           </button>
         }
       />
@@ -112,52 +115,82 @@ export function Leads() {
           desc="Lead từ form đăng ký trên landing page sẽ tự động chảy vào đây."
           action={
             <button className="btn btn-primary" onClick={() => setEditing('new')}>
-              + Thêm lead
+              <Icon name="plus" size={15} />
+              Thêm lead
             </button>
           }
         />
       ) : (
-        <div className="pipeline">
-          {COLUMNS.map((col) => {
-            const items = leads.filter((l) => l.status === col);
-            return (
-              <div key={col} className="pipeline-col">
-                <div className="pipeline-head">
-                  <span className={`badge badge-${col}`}>{labelOf(LEAD_STATUS_LABEL, col)}</span>
-                  <span className="muted">{items.length}</span>
-                </div>
-                {items.map((l) => (
-                  <div key={l.id} className="pipeline-card">
-                    <strong>{l.name}</strong>
-                    <div className="muted mono">{l.phone}</div>
-                    {l.note && <p className="pipeline-note">{l.note}</p>}
-                    <div className="muted">{formatDate(l.created_at)}</div>
-                    <div className="pipeline-actions">
-                      {NEXT_STATUS[col] && (
-                        <button className="btn btn-sm" onClick={() => void moveStatus(l, NEXT_STATUS[col])}>
-                          →
-                        </button>
-                      )}
-                      {col === 'lost' && (
-                        <button className="btn btn-sm" onClick={() => void moveStatus(l, 'new')}>
-                          ↺ Mở lại
-                        </button>
-                      )}
-                      <button className="btn btn-sm btn-primary" onClick={() => setConverting(l)}>
-                        Thành HV
-                      </button>
-                      <button className="btn btn-sm" onClick={() => setEditing(l)}>
-                        Sửa
-                      </button>
-                      <button className="btn btn-sm btn-danger-ghost" onClick={() => setDeleting(l)}>
-                        Xóa
-                      </button>
-                    </div>
+        <div className="lead-pipeline">
+          <div className="pipeline" role="list" aria-label="Pipeline tuyển sinh">
+            {COLUMNS.map((col) => {
+              const items = leads.filter((l) => l.status === col);
+              return (
+                <div key={col} className="pipeline-col" role="listitem">
+                  <div className="pipeline-head">
+                    <span className={`badge badge-${col}`}>{labelOf(LEAD_STATUS_LABEL, col)}</span>
+                    <span className="pipeline-count" title={`${items.length} lead`}>
+                      {items.length}
+                    </span>
                   </div>
-                ))}
-              </div>
-            );
-          })}
+                  {items.length === 0 && <p className="muted pipeline-empty">Chưa có lead</p>}
+                  {items.map((l) => (
+                    <div key={l.id} className="pipeline-card">
+                      <div className="lead-name" title={l.name}>
+                        {l.name}
+                      </div>
+                      <div className="lead-phone mono">{l.phone}</div>
+                      {l.note && <p className="pipeline-note">{l.note}</p>}
+                      <div className="muted">{formatDate(l.created_at)}</div>
+                      <div className="pipeline-actions">
+                        <button
+                          className="btn btn-sm btn-primary"
+                          onClick={() => setConverting(l)}
+                          title="Chuyển thành học viên"
+                        >
+                          Thành HV
+                        </button>
+                        <button
+                          className="btn btn-sm"
+                          onClick={() => setEditing(l)}
+                          title="Sửa lead"
+                        >
+                          <Icon name="pencil" size={14} />
+                        </button>
+                        <button
+                          className="btn btn-sm btn-danger-ghost"
+                          onClick={() => setDeleting(l)}
+                          title="Xóa lead"
+                        >
+                          <Icon name="trash" size={14} />
+                        </button>
+                        {NEXT_STATUS[col] && (
+                          <button
+                            className="btn btn-sm btn-icon"
+                            onClick={() => void moveStatus(l, NEXT_STATUS[col])}
+                            title={`Chuyển sang ${labelOf(LEAD_STATUS_LABEL, NEXT_STATUS[col])}`}
+                            aria-label={`Chuyển ${l.name} sang ${labelOf(LEAD_STATUS_LABEL, NEXT_STATUS[col])}`}
+                          >
+                            <Icon name="arrow-right" size={15} />
+                          </button>
+                        )}
+                        {col === 'lost' && (
+                          <button
+                            className="btn btn-sm btn-icon"
+                            onClick={() => void moveStatus(l, 'new')}
+                            title="Mở lại lead"
+                            aria-label={`Mở lại lead ${l.name}`}
+                          >
+                            <Icon name="rotate" size={15} />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              );
+            })}
+          </div>
         </div>
       )}
 

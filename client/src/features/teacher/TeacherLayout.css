@@ -1,0 +1,39 @@
+/* Layout portal giáo viên: nav dưới gọn, rõ trạng thái active. */
+
+.parent-bottomnav .pnav-link {
+  position: relative;
+  transition: color 150ms ease-out;
+}
+
+.parent-bottomnav .pnav-link.active {
+  color: var(--primary);
+}
+
+.parent-bottomnav .pnav-link.active::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 32px;
+  height: 3px;
+  border-radius: 0 0 4px 4px;
+  background: var(--primary);
+}
+
+.parent-bottomnav .pnav-icon {
+  display: flex;
+  line-height: 1;
+}
+
+.parent-topbar {
+  padding: 10px 16px;
+}
+
+@media (max-width: 380px) {
+  .parent-bottomnav .pnav-link {
+    font-size: 11px;
+    padding-left: 2px;
+    padding-right: 2px;
+  }
+}

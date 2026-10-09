@@ -5,7 +5,9 @@ import { PageHeader } from '../../shared/components/PageHeader';
 import { EmptyState } from '../../shared/components/EmptyState';
 import { TableSkeleton, StatGridSkeleton } from '../../shared/components/Skeleton';
 import { Pagination, type PaginationMeta } from '../../shared/components/Pagination';
+import { StatCard } from '../../shared/components/StatCard';
 import { ReferralItem, formatDate } from '../../shared/types';
+import './Growth.css';
 
 export function ReferralsAdmin() {
   const [referrals, setReferrals] = useState<ReferralItem[]>([]);
@@ -48,18 +50,9 @@ export function ReferralsAdmin() {
         <>
           {stats && (
             <div className="stat-grid stat-grid-3">
-              <div className="stat-card">
-                <div className="stat-value">{stats.total}</div>
-                <div className="stat-label">Tổng lượt giới thiệu</div>
-              </div>
-              <div className="stat-card">
-                <div className="stat-value">{stats.pending}</div>
-                <div className="stat-label">Đang chờ thưởng</div>
-              </div>
-              <div className="stat-card stat-card-highlight">
-                <div className="stat-value">{stats.rewarded}</div>
-                <div className="stat-label">Đã thưởng</div>
-              </div>
+              <StatCard icon="users" tone="blue" value={stats.total} label="Tổng lượt giới thiệu" />
+              <StatCard icon="clock" tone="amber" value={stats.pending} label="Đang chờ thưởng" />
+              <StatCard icon="gift" tone="green" value={stats.rewarded} label="Đã thưởng" />
             </div>
           )}
 
@@ -89,7 +82,7 @@ export function ReferralsAdmin() {
               <table className="table">
                 <thead>
                   <tr>
-                    <th>SĐT được giới thiệu</th>
+                    <th>Người được giới thiệu</th>
                     <th>Trạng thái</th>
                     <th>Thưởng</th>
                     <th>Ngày tạo</th>
@@ -98,13 +91,16 @@ export function ReferralsAdmin() {
                 <tbody>
                   {referrals.map((r) => (
                     <tr key={r.id}>
-                      <td className="mono">{r.referred_phone}</td>
+                      <td>
+                        {r.referred_name || <span className="muted">Chưa có tên</span>}
+                        <div className="muted mono">{r.referred_phone}</div>
+                      </td>
                       <td>
                         <span className={`badge badge-${r.status === 'rewarded' ? 'rewarded' : 'pending'}`}>
                           {r.status === 'rewarded' ? 'Đã thưởng' : 'Đang chờ'}
                         </span>
                       </td>
-                      <td className="num">{r.reward_amount != null ? r.reward_amount : '—'}</td>
+                      <td className="num">{r.reward_amount != null ? r.reward_amount : '-'}</td>
                       <td>{formatDate(r.created_at)}</td>
                     </tr>
                   ))}

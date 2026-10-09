@@ -5,6 +5,8 @@ import { Field } from '../../shared/components/Form';
 import { PageHeader } from '../../shared/components/PageHeader';
 import { EmptyState } from '../../shared/components/EmptyState';
 import { Skeleton } from '../../shared/components/Skeleton';
+import { Icon } from '../../shared/components/icons';
+import './PaymentConfig.css';
 
 const BANKS = [
   { code: 'vietcombank', label: 'Vietcombank' },
@@ -96,12 +98,15 @@ export function PaymentConfig() {
       />
       <form onSubmit={submit}>
         <section className="card">
-          <h2 className="card-title">Tài khoản ngân hàng nhận tiền</h2>
+          <h2 className="card-title">
+            <Icon name="banknote" size={18} className="title-icon" />
+            Tài khoản ngân hàng nhận tiền
+          </h2>
           <p className="card-desc">Dùng để tạo mã VietQR cho phụ huynh quét thanh toán.</p>
           <div className="form-grid">
             <Field label="Ngân hàng">
               <select className="text-input" value={form.pay_bank_code} onChange={set('pay_bank_code')}>
-                <option value="">— Chọn ngân hàng —</option>
+                <option value="">- Chọn ngân hàng -</option>
                 {BANKS.map((b) => (
                   <option key={b.code} value={b.code}>
                     {b.label}
@@ -127,7 +132,10 @@ export function PaymentConfig() {
         </section>
 
         <section className="card">
-          <h2 className="card-title">VNPay</h2>
+          <h2 className="card-title">
+            <Icon name="card" size={18} className="title-icon" />
+            VNPay
+          </h2>
           <p className="card-desc">Cổng thanh toán online cho phụ huynh.</p>
           <div className="form-grid">
             <Field label="Mã website (TMN Code)">
@@ -156,7 +164,10 @@ export function PaymentConfig() {
         </section>
 
         <section className="card">
-          <h2 className="card-title">Thưởng giới thiệu</h2>
+          <h2 className="card-title">
+            <Icon name="gift" size={18} className="title-icon" />
+            Thưởng giới thiệu
+          </h2>
           <p className="card-desc">Credits tặng khi giới thiệu thành công.</p>
           <div className="form-grid">
             <Field label="Thưởng cho người giới thiệu">
@@ -180,7 +191,7 @@ export function PaymentConfig() {
           </div>
         </section>
 
-        <div className="toolbar">
+        <div className="toolbar payment-savebar">
           <span className="spacer" />
           <button type="submit" className="btn btn-primary btn-lg" disabled={busy}>
             {busy ? 'Đang lưu...' : 'Lưu cấu hình'}

@@ -201,7 +201,7 @@ export function formatVND(n: number): string {
 }
 
 export function formatDate(iso: string | null): string {
-  if (!iso) return '—';
+  if (!iso) return '-';
   const d = iso.slice(0, 10);
   const [y, m, day] = d.split('-');
   return `${day}/${m}/${y}`;
@@ -209,7 +209,7 @@ export function formatDate(iso: string | null): string {
 
 /** Định dạng ngày giờ đầy đủ: "08/10/2026 14:30" */
 export function formatDateTime(iso: string | null): string {
-  if (!iso) return '—';
+  if (!iso) return '-';
   const time = iso.slice(11, 16);
   return `${formatDate(iso)}${time ? ` ${time}` : ''}`;
 }

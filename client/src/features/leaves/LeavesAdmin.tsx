@@ -7,6 +7,8 @@ import { EmptyState } from '../../shared/components/EmptyState';
 import { TableSkeleton } from '../../shared/components/Skeleton';
 import { Pagination, type PaginationMeta } from '../../shared/components/Pagination';
 import { LeaveRequest, LEAVE_STATUS_LABEL, labelOf, formatDate } from '../../shared/types';
+import { Icon } from '../../shared/components/icons';
+import './LeavesAdmin.css';
 
 export function LeavesAdmin() {
   const [leaves, setLeaves] = useState<LeaveRequest[]>([]);
@@ -71,16 +73,22 @@ export function LeavesAdmin() {
             setStatus(e.target.value);
             setPage(1);
           }}
+          aria-label="Lọc theo trạng thái đơn"
         >
           <option value="">Tất cả trạng thái</option>
           <option value="pending">Chờ duyệt</option>
           <option value="approved">Đã duyệt</option>
           <option value="rejected">Từ chối</option>
         </select>
+        {pagination && (
+          <span className="toolbar-summary">
+            Tổng <strong>{pagination.total}</strong> đơn
+          </span>
+        )}
       </div>
 
       {loading ? (
-        <TableSkeleton cols={7} />
+        <TableSkeleton cols={6} />
       ) : leaves.length === 0 ? (
         <EmptyState
           icon="calendar-x"
@@ -93,7 +101,6 @@ export function LeavesAdmin() {
             <thead>
               <tr>
                 <th>Học viên</th>
-                <th>Lớp</th>
                 <th>Từ ngày</th>
                 <th>Đến ngày</th>
                 <th>Lý do</th>
@@ -105,22 +112,27 @@ export function LeavesAdmin() {
               {leaves.map((l) => (
                 <tr key={l.id}>
                   <td>
-                    {l.student_name} <span className="muted mono">({l.student_code})</span>
+                    <span className="leave-student">{l.student_name}</span>
+                    <span className="leave-code mono">({l.student_code})</span>
+                    <div className="muted">{l.class_name || '-'}</div>
                   </td>
-                  <td>{l.class_name || '—'}</td>
-                  <td>{formatDate(l.from_date)}</td>
-                  <td>{formatDate(l.to_date)}</td>
-                  <td>{l.reason || '—'}</td>
+                  <td className="nowrap">{formatDate(l.from_date)}</td>
+                  <td className="nowrap">{formatDate(l.to_date)}</td>
+                  <td className="leave-reason" title={l.reason || undefined}>
+                    {l.reason || '-'}
+                  </td>
                   <td>
                     <span className={`badge badge-${l.status}`}>{labelOf(LEAVE_STATUS_LABEL, l.status)}</span>
                   </td>
                   <td className="td-right">
                     {l.status === 'pending' && (
-                      <span style={{ display: 'inline-flex', gap: 6 }}>
+                      <span className="leave-actions">
                         <button className="btn btn-sm btn-primary" onClick={() => void approve(l)}>
+                          <Icon name="check" size={14} />
                           Duyệt
                         </button>
                         <button className="btn btn-sm btn-danger-ghost" onClick={() => setRejecting(l)}>
+                          <Icon name="x" size={14} />
                           Từ chối
                         </button>
                       </span>
@@ -136,12 +148,13 @@ export function LeavesAdmin() {
       {pagination && <Pagination pagination={pagination} onChange={(p) => setPage(p)} />}
 
       {approving && (
-        <Modal title={`Đã duyệt đơn — ${approving.student_name}`} onClose={() => setApproving(null)}>
+        <Modal title={`Đã duyệt đơn - ${approving.student_name}`} onClose={() => setApproving(null)}>
           <p className="confirm-text">Gợi ý các buổi học bù phù hợp:</p>
           {suggestions && suggestions.length > 0 ? (
-            <ul className="list">
+            <ul className="makeup-list">
               {suggestions.map((s) => (
-                <li key={s.session_id} className="list-item">
+                <li key={s.session_id} className="makeup-item">
+                  <Icon name="calendar" size={16} />
                   <div>
                     <strong>{formatDate(s.date)}</strong>
                     {s.topic && <span className="muted"> · {s.topic}</span>}
@@ -162,7 +175,7 @@ export function LeavesAdmin() {
       {rejecting && (
         <ConfirmDialog
           title="Từ chối đơn nghỉ phép"
-          message={`Từ chối đơn nghỉ phép của "${rejecting.student_name}" (${formatDate(rejecting.from_date)} → ${formatDate(rejecting.to_date)})?`}
+          message={`Từ chối đơn nghỉ phép của "${rejecting.student_name}" (${formatDate(rejecting.from_date)} đến ${formatDate(rejecting.to_date)})?`}
           onClose={() => setRejecting(null)}
           onConfirm={reject}
           danger

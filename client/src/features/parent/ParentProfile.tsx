@@ -4,6 +4,7 @@ import { getUser, clearAuth } from '../../shared/api/client';
 import { parentApi } from './parent.api';
 import { useToast } from '../../shared/ui/toast';
 import { Icon } from '../../shared/components/icons';
+import './parent.css';
 
 export function ParentProfile() {
   const navigate = useNavigate();

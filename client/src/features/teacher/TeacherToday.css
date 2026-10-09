@@ -1,0 +1,64 @@
+/* Buổi dạy hôm nay - portal giáo viên: calm, nút to rõ, ít chữ. */
+
+.today-time-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 700;
+  font-size: 15px;
+  color: var(--primary-700);
+  background: var(--primary-soft);
+  border-radius: 8px;
+  padding: 4px 10px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.timeline-card .timeline-card-head {
+  flex-wrap: wrap;
+}
+
+.today-topic {
+  margin-top: 4px;
+}
+
+.today-attendance {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+  font-size: 13px;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Buổi đã xong: mờ đi */
+.timeline-card.is-done {
+  opacity: 0.62;
+}
+
+.today-attend-btn {
+  margin-top: 12px;
+  min-height: 44px;
+  font-size: 15px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+/* Nút chấm công trắng trên nền primary */
+.checkin-submit {
+  background: #fff;
+  color: #1d4ed8;
+  border: 1px solid #fff;
+  font-weight: 700;
+  min-height: 48px;
+}
+
+.checkin-submit:hover:not(:disabled) {
+  background: #f3f6ff;
+  border-color: #f3f6ff;
+  color: #1d4ed8;
+}

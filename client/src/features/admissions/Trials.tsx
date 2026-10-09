@@ -9,6 +9,7 @@ import { EmptyState } from '../../shared/components/EmptyState';
 import { TableSkeleton } from '../../shared/components/Skeleton';
 import { Pagination, type PaginationMeta } from '../../shared/components/Pagination';
 import { TrialItem, TRIAL_STATUS_LABEL, labelOf, formatDate } from '../../shared/types';
+import './Admissions.css';
 
 const STATUSES = ['new', 'contacted', 'trialed', 'enrolled', 'lost'] as const;
 
@@ -50,7 +51,7 @@ export function Trials() {
 
   return (
     <div className="page">
-      <PageHeader title="Học thử" desc="Đăng ký học thử từ landing page — duyệt và chuyển thành học viên" />
+      <PageHeader title="Học thử" desc="Đăng ký học thử từ landing page - duyệt và chuyển thành học viên" />
 
       <div className="toolbar">
         <select
@@ -60,6 +61,7 @@ export function Trials() {
             setStatus(e.target.value);
             setPage(1);
           }}
+          aria-label="Lọc theo trạng thái"
         >
           <option value="">Tất cả trạng thái</option>
           {STATUSES.map((s) => (
@@ -68,6 +70,11 @@ export function Trials() {
             </option>
           ))}
         </select>
+        {pagination && (
+          <span className="toolbar-summary">
+            Tổng <strong>{pagination.total}</strong> đăng ký
+          </span>
+        )}
       </div>
 
       {loading ? (
@@ -97,26 +104,33 @@ export function Trials() {
                 <tr key={t.id}>
                   <td>{t.name}</td>
                   <td>{t.phone}</td>
-                  <td>{t.class_name || '—'}</td>
+                  <td>{t.class_name || '-'}</td>
                   <td>{formatDate(t.desired_date)}</td>
-                  <td className="mono">{t.referral_code || '—'}</td>
+                  <td className="mono">{t.referral_code || '-'}</td>
                   <td>
-                    <select
-                      className="text-input input-sm"
-                      value={t.status}
-                      onChange={(e) => void changeStatus(t, e.target.value)}
-                    >
-                      {STATUSES.map((s) => (
-                        <option key={s} value={s}>
-                          {labelOf(TRIAL_STATUS_LABEL, s)}
-                        </option>
-                      ))}
-                    </select>
+                    <span className={`badge badge-${t.status} trial-badge`}>
+                      {labelOf(TRIAL_STATUS_LABEL, t.status)}
+                    </span>
                   </td>
                   <td className="td-right">
-                    <button className="btn btn-sm btn-primary" onClick={() => setConverting(t)}>
-                      Chuyển thành học viên
-                    </button>
+                    <span className="trial-actions">
+                      <select
+                        className="text-input input-sm trial-status-select"
+                        value={t.status}
+                        onChange={(e) => void changeStatus(t, e.target.value)}
+                        aria-label={`Đổi trạng thái của ${t.name}`}
+                        title="Chuyển trạng thái nhanh"
+                      >
+                        {STATUSES.map((s) => (
+                          <option key={s} value={s}>
+                            {labelOf(TRIAL_STATUS_LABEL, s)}
+                          </option>
+                        ))}
+                      </select>
+                      <button className="btn btn-sm btn-primary" onClick={() => setConverting(t)}>
+                        Thành học viên
+                      </button>
+                    </span>
                   </td>
                 </tr>
               ))}
@@ -184,7 +198,7 @@ export function ConvertModal({
       <form onSubmit={submit}>
         <Field label="Ghi danh vào lớp (tùy chọn)">
           <select className="text-input" value={classId} onChange={(e) => setClassId(e.target.value)}>
-            <option value="">— Không ghi danh ngay —</option>
+            <option value="">- Không ghi danh ngay -</option>
             {classes.map((c) => (
               <option key={c.id} value={c.id}>
                 {c.name}

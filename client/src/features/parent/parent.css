@@ -1,0 +1,347 @@
+/* ============================================================
+   Portal phụ huynh - UI/UX nâng cấp 2026-10-09 (taste-ui)
+   Mobile-first, calm, chữ rõ, nút bấm to.
+   ============================================================ */
+
+/* ---------- Trang con: danh sách ---------- */
+.back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.child-card {
+  transition: transform 0.15s ease-out, box-shadow 0.15s ease-out;
+}
+.child-card:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+}
+.child-card:active {
+  transform: none;
+}
+.child-arrow {
+  margin-left: auto;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+/* ---------- Tabs chi tiết con (có icon) ---------- */
+.parent-tabs .tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.parent-tabs .tab svg {
+  flex-shrink: 0;
+}
+
+/* ---------- Bài tập ---------- */
+.hw-check {
+  min-width: 30px;
+  min-height: 30px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+}
+.hw-check svg {
+  display: block;
+}
+.hw-group-title {
+  font-weight: 700;
+  font-size: 13px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin: 18px 0 8px;
+}
+.hw-group-title:first-of-type {
+  margin-top: 4px;
+}
+.hw-feedback {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 8px 0 0;
+  padding: 10px 12px;
+  font-size: 13px;
+  color: #166534;
+  background: var(--success-soft, #dcfce7);
+  border: 1px solid #bbf7d0;
+  border-radius: var(--radius-md);
+}
+.hw-feedback svg {
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+.badge-quiz {
+  background: var(--primary-soft, #eef3ff);
+  color: var(--primary-600, #1b44b8);
+  font-weight: 700;
+}
+.hw-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+.hw-actions .btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* ---------- Quiz: từng câu một + thanh tiến trình ---------- */
+.quiz-progress {
+  margin-bottom: 14px;
+}
+.quiz-progress-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 8px;
+}
+.quiz-progress-label {
+  font-weight: 700;
+  font-size: 15px;
+}
+.quiz-progress-bar {
+  height: 8px;
+  border-radius: 999px;
+  background: var(--bg-muted, #eef1f6);
+  overflow: hidden;
+}
+.quiz-progress-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: var(--primary);
+  transition: width 0.25s ease-out;
+}
+.quiz-take-q {
+  margin-bottom: 16px;
+}
+.quiz-take-opt {
+  min-height: 56px;
+  padding: 14px 16px;
+  font-size: 16px;
+}
+button.quiz-take-opt {
+  width: 100%;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  background: var(--bg-soft);
+  appearance: none;
+}
+.quiz-take-opt .quiz-radio {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 2px solid var(--border-strong, #c3cddc);
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: border-color 0.15s ease;
+}
+.quiz-take-opt .quiz-radio::after {
+  content: '';
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: transparent;
+  transition: background 0.15s ease;
+}
+.quiz-take-opt.selected .quiz-radio {
+  border-color: var(--primary);
+}
+.quiz-take-opt.selected .quiz-radio::after {
+  background: var(--primary);
+}
+.quiz-nav {
+  display: flex;
+  gap: 10px;
+  margin-top: 4px;
+}
+.quiz-nav .btn {
+  flex: 1;
+  min-height: 48px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+/* ---------- Quiz: xem lại đáp án ---------- */
+.quiz-review-qhead {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+.quiz-review-qhead svg {
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+.quiz-review-qhead .icon-ok {
+  color: var(--success, #16a34a);
+}
+.quiz-review-qhead .icon-bad {
+  color: var(--danger, #dc2626);
+}
+.quiz-review-opt {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+.quiz-review-opt svg {
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+.quiz-review-opt .opt-dot {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 2px solid var(--border-strong, #c3cddc);
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+/* ---------- Quiz: kết quả ---------- */
+.quiz-result-ic {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 12px;
+  color: #fff;
+}
+.quiz-result-ic.good {
+  background: var(--success, #16a34a);
+}
+.quiz-result-ic.mid {
+  background: #d97706;
+}
+.quiz-result-ic.bad {
+  background: var(--danger, #dc2626);
+}
+
+/* ---------- Submit: chọn file ---------- */
+.file-drop {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 72px;
+  padding: 14px 16px;
+  border: 2px dashed var(--border-strong, #c3cddc);
+  border-radius: var(--radius-md);
+  background: var(--bg-soft, #fff);
+  cursor: pointer;
+  font-size: 15px;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+.file-drop:hover,
+.file-drop:focus-within {
+  border-color: var(--primary);
+  background: var(--primary-soft, #eef3ff);
+}
+.file-drop input[type='file'] {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+}
+.file-drop .file-drop-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: var(--primary-soft, #eef3ff);
+  color: var(--primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.file-chosen {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+  font-size: 13px;
+  color: var(--text);
+  background: var(--bg-muted, #eef1f6);
+  border-radius: 8px;
+  padding: 6px 10px;
+  max-width: 100%;
+}
+.file-chosen span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.file-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* ---------- Auth: input to, lỗi rõ ---------- */
+.parent-auth .text-input {
+  font-size: 16px;
+  min-height: 50px;
+}
+.auth-error {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 10px 12px;
+  margin-bottom: 12px;
+  font-size: 14px;
+  color: #991b1b;
+  background: #fee2e2;
+  border: 1px solid #fca5a5;
+  border-radius: var(--radius-md);
+}
+.auth-error svg {
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+/* ---------- Thanh toán ---------- */
+.payment-result .result-icon {
+  width: 84px;
+  height: 84px;
+  box-shadow: 0 8px 20px rgba(16, 24, 40, 0.18);
+}
+.payment-result .parent-title {
+  font-size: 22px;
+}
+
+/* ---------- Xin nghỉ: nút tạo đơn ---------- */
+.create-leave-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* ---------- 360px: không tràn ---------- */
+@media (max-width: 400px) {
+  .quiz-take-opt {
+    font-size: 15px;
+    padding: 12px 14px;
+  }
+  .referral-code {
+    letter-spacing: 2px;
+    font-size: 26px;
+  }
+  .parent-tabs .tab {
+    padding: 9px 14px;
+  }
+}

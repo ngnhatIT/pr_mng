@@ -1,0 +1,46 @@
+/* Trang đăng nhập: nền đặc tối, card gọn, lỗi hiển thị rõ trong card. */
+
+.login-page {
+  background: #101a30;
+}
+
+.login-card {
+  width: 380px;
+  padding: 32px 28px;
+  border-radius: 18px;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.35);
+}
+
+.login-title {
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+
+.login-error {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #b91c1c;
+  font-size: 13px;
+  line-height: 1.5;
+  border-radius: 10px;
+  padding: 10px 12px;
+  margin: 0 0 14px;
+  text-align: left;
+}
+
+.login-error svg {
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.login-card .text-input {
+  min-height: 46px;
+}
+
+.login-hint {
+  margin-top: 14px;
+}

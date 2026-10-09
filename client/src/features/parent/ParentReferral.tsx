@@ -4,6 +4,8 @@ import { useToast } from '../../shared/ui/toast';
 import { EmptyState } from '../../shared/components/EmptyState';
 import { Skeleton } from '../../shared/components/Skeleton';
 import { formatDate } from '../../shared/types';
+import './parent.css';
+
 export function ParentReferral() {
   const [data, setData] = useState<ReferralData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -72,7 +74,7 @@ export function ParentReferral() {
     <div className="parent-page">
       <h1 className="parent-title">Giới thiệu bạn bè</h1>
       <p className="muted">
-        Chia sẻ mã giới thiệu cho bạn bè đăng ký học thử — cả bạn và người được giới thiệu đều nhận ưu đãi
+        Chia sẻ mã giới thiệu cho bạn bè đăng ký học thử - cả bạn và người được giới thiệu đều nhận ưu đãi
         credits.
       </p>
 
@@ -124,7 +126,7 @@ export function ParentReferral() {
           </div>
         </div>
         <p className="muted">
-          Credits có thể dùng để trừ vào học phí — liên hệ trung tâm khi đóng học phí để được áp dụng.
+          Credits có thể dùng để trừ vào học phí - liên hệ trung tâm khi đóng học phí để được áp dụng.
         </p>
       </section>
 

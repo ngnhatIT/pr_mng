@@ -4,6 +4,7 @@ import { useToast } from '../../shared/ui/toast';
 import { Modal } from '../../shared/components/Modal';
 import { Field } from '../../shared/components/Form';
 import { EmptyState } from '../../shared/components/EmptyState';
+import { Icon } from '../../shared/components/icons';
 
 /** Ngân hàng câu hỏi: quản lý + chọn import vào quiz. */
 export function QuestionBank({
@@ -75,20 +76,28 @@ export function QuestionBank({
   return (
     <Modal title="Ngân hàng câu hỏi" onClose={onClose} wide>
       <div className="toolbar">
-        <input
-          className="text-input search-input"
-          placeholder="Tìm câu hỏi..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
+        <div className="hw-search-wrap">
+          <Icon name="search" size={15} />
+          <input
+            className="text-input search-input"
+            placeholder="Tìm câu hỏi..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+          {search && (
+            <button type="button" className="hw-search-clear" onClick={() => setSearch('')} aria-label="Xóa tìm kiếm">
+              <Icon name="x" size={14} />
+            </button>
+          )}
+        </div>
         <select className="text-input" value={tag} onChange={(e) => setTag(e.target.value)}>
           <option value="">Mọi chủ đề</option>
           {tags.map((t) => (
             <option key={t} value={t}>{t}</option>
           ))}
         </select>
-        <button className="btn btn-primary" onClick={() => setShowForm(true)}>
-          + Thêm câu hỏi
+        <button className="btn btn-primary hw-action-icon" onClick={() => setShowForm(true)}>
+          <Icon name="plus" size={15} /> Thêm câu hỏi
         </button>
       </div>
 
@@ -116,9 +125,9 @@ export function QuestionBank({
                   style={{ width: 18, height: 18 }}
                 />
               )}
-              <div style={{ flex: 1 }}>
-                <div style={{ fontWeight: 600 }}>{q.question}</div>
-                <div className="muted" style={{ fontSize: 13 }}>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div className="bank-q">{q.question}</div>
+                <div className="muted" style={{ fontSize: 13, marginTop: 4 }}>
                   {q.tag && <span className="badge badge-general" style={{ marginRight: 6 }}>{q.tag}</span>}
                   {q.points}đ · {q.options.length} đáp án
                 </div>
@@ -136,8 +145,8 @@ export function QuestionBank({
           <span className="muted">Đã chọn {selected.length} câu</span>
           <span className="spacer" />
           <button className="btn" onClick={onClose}>Hủy</button>
-          <button className="btn btn-primary" disabled={!selected.length} onClick={doImport}>
-            Import {selected.length} câu
+          <button className="btn btn-primary hw-action-icon" disabled={!selected.length} onClick={doImport}>
+            <Icon name="plus" size={15} /> Thêm {selected.length} câu vào đề
           </button>
         </div>
       )}
@@ -198,7 +207,7 @@ function BankQuestionForm({
         <Field label="Chủ đề">
           <div style={{ display: 'flex', gap: 8 }}>
             <select className="text-input" value={tag} onChange={(e) => setTag(e.target.value)}>
-              <option value="">— Chọn —</option>
+              <option value="">- Chọn -</option>
               {tags.map((t) => <option key={t} value={t}>{t}</option>)}
             </select>
             <input className="text-input" placeholder="Hoặc tạo mới" value={newTag}

@@ -1,0 +1,64 @@
+/* Students - CSS rieng cua trang hoc vien (dat canh component) */
+
+/* Nut co icon: icon va chu thang hang, hover nang nhe */
+.btn-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.btn-inline svg {
+  flex-shrink: 0;
+}
+
+/* O tim kiem co icon kinh lup ben trong */
+.search-wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+.search-wrap .search-icon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-faint);
+  pointer-events: none;
+  display: inline-flex;
+}
+.search-wrap .text-input {
+  padding-left: 36px;
+  min-width: 280px;
+}
+
+/* O ten: avatar nho + ten, tang kha nang nhan dien dong */
+.name-cell {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+.name-cell .link {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Link quay lai danh sach: icon mui ten ngang hang */
+.back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.flip-x {
+  transform: scaleX(-1);
+}
+
+@media (max-width: 640px) {
+  .search-wrap,
+  .search-wrap .text-input {
+    width: 100%;
+  }
+  .search-wrap .text-input {
+    min-width: 0;
+  }
+}

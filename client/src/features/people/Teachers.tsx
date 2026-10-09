@@ -7,7 +7,9 @@ import { PageHeader } from '../../shared/components/PageHeader';
 import { EmptyState } from '../../shared/components/EmptyState';
 import { TableSkeleton } from '../../shared/components/Skeleton';
 import { Pagination, type PaginationMeta } from '../../shared/components/Pagination';
+import { Icon } from '../../shared/components/icons';
 import { Teacher } from '../../shared/types';
+import './Teachers.css';
 
 export function Teachers() {
   const [teachers, setTeachers] = useState<Teacher[]>([]);
@@ -66,8 +68,9 @@ export function Teachers() {
         title="Giáo viên"
         desc="Quản lý giáo viên và tạo tài khoản đăng nhập cho họ"
         actions={
-          <button className="btn btn-primary" onClick={() => setEditing('new')}>
-            + Thêm giáo viên
+          <button className="btn btn-primary btn-inline" onClick={() => setEditing('new')}>
+            <Icon name="plus" size={14} />
+            Thêm giáo viên
           </button>
         }
       />
@@ -80,8 +83,9 @@ export function Teachers() {
           title="Chưa có giáo viên nào"
           desc="Thêm giáo viên và tạo tài khoản để họ chấm công, điểm danh và giao bài tập."
           action={
-            <button className="btn btn-primary" onClick={() => setEditing('new')}>
-              + Thêm giáo viên
+            <button className="btn btn-primary btn-inline" onClick={() => setEditing('new')}>
+              <Icon name="plus" size={14} />
+              Thêm giáo viên
             </button>
           }
         />
@@ -101,20 +105,33 @@ export function Teachers() {
             <tbody>
               {teachers.map((t) => (
                 <tr key={t.id}>
-                  <td>{t.name}</td>
-                  <td>{t.subject || '—'}</td>
-                  <td>{t.phone || '—'}</td>
-                  <td>{t.email || '—'}</td>
-                  <td>{t.class_count ?? 0}</td>
+                  <td>
+                    <span className="name-cell">
+                      <span className="avatar avatar-sm" aria-hidden="true">
+                        {t.name.charAt(0).toUpperCase()}
+                      </span>
+                      {t.name}
+                    </span>
+                  </td>
+                  <td>{t.subject || '-'}</td>
+                  <td>{t.phone || '-'}</td>
+                  <td>{t.email || '-'}</td>
+                  <td className="num">{t.class_count ?? 0}</td>
                   <td className="td-right">
-                    <span style={{ display: 'inline-flex', gap: 6 }}>
-                      <button className="btn btn-sm" onClick={() => setEditing(t)}>
+                    <span className="row-actions">
+                      <button className="btn btn-sm btn-inline" onClick={() => setEditing(t)}>
+                        <Icon name="pencil" size={13} />
                         Sửa
                       </button>
-                      <button className="btn btn-sm" onClick={() => setAccounting(t)}>
+                      <button className="btn btn-sm btn-inline" onClick={() => setAccounting(t)}>
+                        <Icon name="key" size={13} />
                         Tạo tài khoản
                       </button>
-                      <button className="btn btn-sm btn-danger-ghost" onClick={() => setDeleting(t)}>
+                      <button
+                        className="btn btn-sm btn-inline btn-danger-ghost"
+                        onClick={() => setDeleting(t)}
+                      >
+                        <Icon name="trash" size={13} />
                         Xóa
                       </button>
                     </span>
@@ -171,7 +188,7 @@ function AccountModal({ teacher, onClose }: { teacher: Teacher; onClose: () => v
   };
 
   return (
-    <Modal title={`Tạo tài khoản đăng nhập — ${teacher.name}`} onClose={onClose}>
+    <Modal title={`Tạo tài khoản đăng nhập - ${teacher.name}`} onClose={onClose}>
       <form onSubmit={submit}>
         <p className="muted">
           Giáo viên sẽ dùng tài khoản này để đăng nhập vào cổng giáo viên (xem buổi dạy, điểm danh, chấm

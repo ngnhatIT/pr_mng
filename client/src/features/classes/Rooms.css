@@ -1,0 +1,13 @@
+/* Rooms - phòng học.
+ * Cột tình trạng giúp quét nhanh phòng nào đang dùng, phòng nào trống.
+ */
+
+.room-name {
+  font-weight: 600;
+}
+
+.badge-idle {
+  background: var(--bg-soft);
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+}

@@ -11,7 +11,9 @@ import { PageHeader } from '../../shared/components/PageHeader';
 import { EmptyState } from '../../shared/components/EmptyState';
 import { TableSkeleton } from '../../shared/components/Skeleton';
 import { Pagination, type PaginationMeta } from '../../shared/components/Pagination';
+import { Icon } from '../../shared/components/icons';
 import { HomeworkItem, formatDate } from '../../shared/types';
+import './Homework.css';
 import { HomeworkFormModal } from './HomeworkFormModal';
 import { GradeModal } from './GradeModal';
 import { QuizAttemptsModal } from './QuizAttemptsModal';
@@ -113,7 +115,7 @@ export function Homework() {
   const doReuse = async (h: HomeworkItem) => {
     try {
       const res = await homeworkApi.reuse(h.id);
-      toast('Đã tạo bản nháp từ bài tập cũ — chỉnh sửa rồi đăng', 'success');
+      toast('Đã tạo bản nháp từ bài tập cũ - chỉnh sửa rồi đăng', 'success');
       setEditing(res.created);
       void load();
     } catch (err) {
@@ -160,17 +162,17 @@ export function Homework() {
     <div className="page">
       <PageHeader
         title="Bài tập về nhà"
-        desc="Giao bài tập & quiz cho nhiều lớp — học từ Google Classroom, Canvas, Teams"
+        desc="Giao bài tập và quiz cho các lớp, chấm điểm và theo dõi bài nộp"
         actions={
           <>
-            <button className="btn" onClick={() => setShowAnalytics(true)}>
-              📊 Phân tích
+            <button className="btn hw-action-icon" onClick={() => setShowAnalytics(true)}>
+              <Icon name="chart" size={15} /> Phân tích
             </button>
-            <button className="btn" onClick={() => setShowBank(true)}>
-              🏦 Ngân hàng câu hỏi
+            <button className="btn hw-action-icon" onClick={() => setShowBank(true)}>
+              <Icon name="book" size={15} /> Ngân hàng câu hỏi
             </button>
-            <button className="btn btn-primary" onClick={() => setEditing('new')}>
-              + Tạo bài tập
+            <button className="btn btn-primary hw-action-icon" onClick={() => setEditing('new')}>
+              <Icon name="plus" size={15} /> Tạo bài tập
             </button>
           </>
         }
@@ -179,18 +181,30 @@ export function Homework() {
       {stats && (
         <div className="stat-grid" style={{ gridTemplateColumns: 'repeat(4, 1fr)' }}>
           <div className="stat-card tone-blue">
+            <div className="stat-top">
+              <div className="stat-icon"><Icon name="clipboard" size={20} /></div>
+            </div>
             <div className="stat-value">{stats.total}</div>
             <div className="stat-label">Đã đăng</div>
           </div>
           <div className="stat-card tone-amber">
+            <div className="stat-top">
+              <div className="stat-icon"><Icon name="clock" size={20} /></div>
+            </div>
             <div className="stat-value">{stats.dueSoon}</div>
-            <div className="stat-label">Sắp hết hạn (≤3 ngày)</div>
+            <div className="stat-label">Sắp hết hạn (≤ 3 ngày)</div>
           </div>
-          <div className="stat-card" style={{ borderTopColor: '#dc2626' }}>
+          <div className="stat-card tone-red">
+            <div className="stat-top">
+              <div className="stat-icon"><Icon name="calendar-x" size={20} /></div>
+            </div>
             <div className="stat-value">{stats.overdue}</div>
             <div className="stat-label">Đã quá hạn</div>
           </div>
-          <div className="stat-card tone-gray">
+          <div className="stat-card tone-violet">
+            <div className="stat-top">
+              <div className="stat-icon"><Icon name="file" size={20} /></div>
+            </div>
             <div className="stat-value">{stats.drafts}</div>
             <div className="stat-label">Nháp / Hẹn giờ</div>
           </div>
@@ -201,7 +215,7 @@ export function Homework() {
         {tabs.map((t) => (
           <button
             key={t.id}
-            className={`tab ${statusTab === t.id ? 'tab-active' : ''}`}
+            className={`tab ${statusTab === t.id ? 'active' : ''}`}
             onClick={() => { setStatusTab(t.id); setPage(1); }}
           >
             {t.label}
@@ -256,8 +270,8 @@ export function Homework() {
             title="Chưa có bài tập nào"
             desc="Tạo bài tập mới, lưu nháp hoặc hẹn giờ đăng."
             action={
-              <button className="btn btn-primary" onClick={() => setEditing('new')}>
-                + Tạo bài tập
+              <button className="btn btn-primary hw-action-icon" onClick={() => setEditing('new')}>
+                <Icon name="plus" size={15} /> Tạo bài tập
               </button>
             }
           />
@@ -278,6 +292,9 @@ export function Homework() {
                 {items.map((h) => {
                   const due = dueStatus(h.due_date);
                   const st = STATUS_BADGE[h.status] || STATUS_BADGE.published;
+                  const done = h.completed_count ?? 0;
+                  const totalStudents = h.student_count ?? 0;
+                  const pct = totalStudents > 0 ? Math.round((done / totalStudents) * 100) : 0;
                   return (
                     <tr key={h.id}>
                       <td>
@@ -296,8 +313,15 @@ export function Homework() {
                           <div className="muted" style={{ fontSize: 12 }}>{formatDate(h.publish_at)}</div>
                         )}
                       </td>
-                      <td>{due ? <span className={`badge ${due.badge}`}>{due.label}</span> : <span className="muted">—</span>}</td>
-                      <td className="td-right"><span className="num">{h.completed_count ?? 0}/{h.student_count ?? 0}</span></td>
+                      <td>{due ? <span className={`badge ${due.badge}`}>{due.label}</span> : <span className="muted">-</span>}</td>
+                      <td className="td-right">
+                        <div className="hw-progress">
+                          <div className="hw-progress-track" aria-hidden="true">
+                            <div className="hw-progress-fill" style={{ width: `${pct}%` }} />
+                          </div>
+                          <span className="num">{done}/{totalStudents}</span>
+                        </div>
+                      </td>
                       <td className="td-right nowrap">
                         {h.status !== 'published' ? (
                           <button className="btn btn-sm btn-primary" onClick={() => doPublish(h)} title="Đăng ngay">Đăng</button>

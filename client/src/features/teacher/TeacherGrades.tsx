@@ -7,8 +7,10 @@ import { PageHeader } from '../../shared/components/PageHeader';
 import { EmptyState } from '../../shared/components/EmptyState';
 import { TableSkeleton } from '../../shared/components/Skeleton';
 import { Pagination, type PaginationMeta } from '../../shared/components/Pagination';
+import { Icon } from '../../shared/components/icons';
 import { ClassItem } from '../classes/classes.api';
 import { Grade, formatDate } from '../../shared/types';
+import './TeacherGrades.css';
 
 export function TeacherGrades() {
   const [classes, setClasses] = useState<ClassItem[]>([]);
@@ -86,16 +88,17 @@ export function TeacherGrades() {
         desc="Xem và nhập điểm cho học viên"
         actions={
           studentId ? (
-            <button className="btn btn-primary" onClick={() => setShowForm(true)}>
-              + Nhập điểm
+            <button className="btn btn-primary grades-add-btn" onClick={() => setShowForm(true)}>
+              <Icon name="plus" size={16} />
+              Nhập điểm
             </button>
           ) : undefined
         }
       />
 
-      <div className="toolbar">
+      <div className="toolbar grades-toolbar">
         <select className="text-input" value={classId} onChange={(e) => void pickClass(e.target.value)}>
-          <option value="">— Chọn lớp học —</option>
+          <option value="">- Chọn lớp học -</option>
           {classes.map((c) => (
             <option key={c.id} value={c.id}>
               {c.name}
@@ -111,7 +114,7 @@ export function TeacherGrades() {
           }}
           disabled={!classId}
         >
-          <option value="">— Chọn học viên —</option>
+          <option value="">- Chọn học viên -</option>
           {students.map((s) => (
             <option key={s.id} value={s.id}>
               {s.name} ({s.code})
@@ -146,12 +149,16 @@ export function TeacherGrades() {
               {grades.map((g) => (
                 <tr key={g.id}>
                   <td>{g.title}</td>
-                  <td className="num">
-                    <strong>
+                  <td>
+                    <span
+                      className={`score-pill ${
+                        g.max_score > 0 && g.score / g.max_score >= 0.5 ? 'score-pass' : 'score-fail'
+                      }`}
+                    >
                       {g.score}/{g.max_score}
-                    </strong>
+                    </span>
                   </td>
-                  <td>{g.comment || '—'}</td>
+                  <td>{g.comment || '-'}</td>
                   <td>{formatDate(g.created_at)}</td>
                   <td className="td-right">
                     <button className="btn btn-sm btn-danger-ghost" onClick={() => setDeleting(g)}>

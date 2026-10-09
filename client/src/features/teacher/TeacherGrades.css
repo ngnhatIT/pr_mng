@@ -1,0 +1,41 @@
+/* Điểm số - bảng gọn, điểm dạng pill. */
+
+.grades-toolbar {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+
+.grades-toolbar .text-input {
+  flex: 1 1 200px;
+  min-width: 0;
+}
+
+.score-pill {
+  display: inline-block;
+  min-width: 68px;
+  text-align: center;
+  font-weight: 700;
+  font-size: 14px;
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.score-pass {
+  background: #e8f7ee;
+  color: #15803d;
+}
+
+.score-fail {
+  background: #fdeeee;
+  color: #b91c1c;
+}
+
+.grades-add-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}

@@ -8,6 +8,8 @@ import { EmptyState } from '../../shared/components/EmptyState';
 import { TableSkeleton } from '../../shared/components/Skeleton';
 import { Pagination, type PaginationMeta } from '../../shared/components/Pagination';
 import { CenterItem, PLAN_LABEL, labelOf, formatDate } from '../../shared/types';
+import { Icon } from '../../shared/components/icons';
+import './SystemAdmin.css';
 
 const CENTERS_PER_PAGE = 20;
 
@@ -38,17 +40,18 @@ export function System() {
   return (
     <div className="page">
       <PageHeader
-        title="Hệ thống — Quản lý trung tâm"
+        title="Hệ thống - Quản lý trung tâm"
         desc="Tạo trung tâm mới và quản lý gói cước"
         actions={
           <button className="btn btn-primary" onClick={() => setShowCreate(true)}>
-            + Tạo trung tâm mới
+            <Icon name="plus" size={15} />
+            Tạo trung tâm mới
           </button>
         }
       />
 
       {loading ? (
-        <TableSkeleton cols={7} />
+        <TableSkeleton cols={6} />
       ) : centers.length === 0 ? (
         <EmptyState
           icon="building"
@@ -60,8 +63,7 @@ export function System() {
           <table className="table">
             <thead>
               <tr>
-                <th>Tên trung tâm</th>
-                <th>Subdomain</th>
+                <th>Trung tâm</th>
                 <th>Điện thoại</th>
                 <th>Gói</th>
                 <th>Hạn gói</th>
@@ -72,18 +74,21 @@ export function System() {
             <tbody>
               {centers.slice((page - 1) * CENTERS_PER_PAGE, page * CENTERS_PER_PAGE).map((c) => (
                 <tr key={c.id}>
-                  <td>{c.name}</td>
-                  <td className="mono">{c.subdomain}</td>
-                  <td>{c.phone || '—'}</td>
+                  <td>
+                    <div className="center-name">{c.name}</div>
+                    <div className="center-sub mono">{c.subdomain}</div>
+                  </td>
+                  <td>{c.phone || '-'}</td>
                   <td>
                     <span className={`badge badge-plan-${c.plan}`}>{labelOf(PLAN_LABEL, c.plan)}</span>
                   </td>
-                  <td>{formatDate(c.plan_expires_at)}</td>
+                  <td className="plan-expiry">{formatDate(c.plan_expires_at)}</td>
                   <td className="num">
                     {c.student_count ?? 0} / {c.class_count ?? 0} / {c.user_count ?? 0}
                   </td>
                   <td className="td-right">
                     <button className="btn btn-sm" onClick={() => setEditing(c)}>
+                      <Icon name="pencil" size={14} />
                       Sửa gói / hạn
                     </button>
                   </td>
@@ -167,56 +172,69 @@ function CreateCenterModal({ onClose, onDone }: { onClose: () => void; onDone: (
   return (
     <Modal title="Tạo trung tâm mới" onClose={onClose} wide>
       <form onSubmit={submit}>
-        <div className="form-grid">
-          <Field label="Tên trung tâm *">
-            <input className="text-input" value={name} onChange={(e) => setName(e.target.value)} required />
-          </Field>
-          <Field label="Subdomain *">
-            <input
-              className="text-input mono"
-              value={subdomain}
-              onChange={(e) => setSubdomain(e.target.value)}
-              required
-            />
-          </Field>
-          <Field label="Điện thoại">
-            <input className="text-input" value={phone} onChange={(e) => setPhone(e.target.value)} />
-          </Field>
-          <Field label="Địa chỉ" span>
-            <input className="text-input" value={address} onChange={(e) => setAddress(e.target.value)} />
-          </Field>
-          <Field label="Gói">
-            <select className="text-input" value={plan} onChange={(e) => setPlan(e.target.value)}>
-              <option value="basic">Cơ bản</option>
-              <option value="standard">Tiêu chuẩn</option>
-              <option value="premium">Cao cấp</option>
-            </select>
-          </Field>
-          <Field label="Hạn gói">
-            <input
-              className="text-input"
-              type="date"
-              value={expires}
-              onChange={(e) => setExpires(e.target.value)}
-            />
-          </Field>
-          <Field label="Tài khoản admin *">
-            <input
-              className="text-input"
-              value={adminUsername}
-              onChange={(e) => setAdminUsername(e.target.value)}
-              required
-            />
-          </Field>
-          <Field label="Mật khẩu admin *">
-            <input
-              className="text-input"
-              type="password"
-              value={adminPassword}
-              onChange={(e) => setAdminPassword(e.target.value)}
-              required
-            />
-          </Field>
+        <div className="center-form-section">
+          <h3>Thông tin trung tâm</h3>
+          <div className="form-grid">
+            <Field label="Tên trung tâm *">
+              <input className="text-input" value={name} onChange={(e) => setName(e.target.value)} required />
+            </Field>
+            <Field label="Subdomain *">
+              <input
+                className="text-input mono"
+                value={subdomain}
+                onChange={(e) => setSubdomain(e.target.value)}
+                required
+              />
+            </Field>
+            <Field label="Điện thoại">
+              <input className="text-input" value={phone} onChange={(e) => setPhone(e.target.value)} />
+            </Field>
+            <Field label="Địa chỉ" span>
+              <input className="text-input" value={address} onChange={(e) => setAddress(e.target.value)} />
+            </Field>
+          </div>
+        </div>
+        <div className="center-form-section">
+          <h3>Gói cước</h3>
+          <div className="form-grid">
+            <Field label="Gói">
+              <select className="text-input" value={plan} onChange={(e) => setPlan(e.target.value)}>
+                <option value="basic">Cơ bản</option>
+                <option value="standard">Tiêu chuẩn</option>
+                <option value="premium">Cao cấp</option>
+              </select>
+            </Field>
+            <Field label="Hạn gói">
+              <input
+                className="text-input"
+                type="date"
+                value={expires}
+                onChange={(e) => setExpires(e.target.value)}
+              />
+            </Field>
+          </div>
+        </div>
+        <div className="center-form-section">
+          <h3>Tài khoản quản trị</h3>
+          <div className="form-grid">
+            <Field label="Tài khoản admin *">
+              <input
+                className="text-input"
+                value={adminUsername}
+                onChange={(e) => setAdminUsername(e.target.value)}
+                required
+              />
+            </Field>
+            <Field label="Mật khẩu admin *">
+              <input
+                className="text-input"
+                type="password"
+                value={adminPassword}
+                onChange={(e) => setAdminPassword(e.target.value)}
+                required
+              />
+            </Field>
+          </div>
         </div>
         <div className="modal-actions">
           <button type="button" className="btn" onClick={onClose}>
@@ -264,7 +282,7 @@ function EditPlanModal({
   };
 
   return (
-    <Modal title={`Sửa gói — ${center.name}`} onClose={onClose}>
+    <Modal title={`Sửa gói - ${center.name}`} onClose={onClose}>
       <form onSubmit={submit}>
         <div className="form-grid">
           <Field label="Gói">

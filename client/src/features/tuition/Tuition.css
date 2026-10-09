@@ -1,0 +1,43 @@
+/* Tuition - trang học phí.
+ * Design read: admin trung tâm, số tiền phải rõ ràng khó nhầm, calm và tin cậy.
+ * Chỉ CSS cạnh component, không động vào styles.css.
+ */
+
+/* Hàng nút thao tác trong bảng: gọn, thẳng hàng, không dùng inline style */
+.tuition-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+/* Tổng còn nợ ở toolbar: dạng pill cảnh báo nhẹ, nhìn là thấy */
+.debt-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--danger-soft);
+  border: 1px solid #fecaca;
+  color: var(--danger);
+  border-radius: 999px;
+  padding: 5px 12px;
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* Tabs học phí: underline rõ ràng, chạm 150ms */
+.tabs .tab {
+  transition: color 0.15s ease-out, border-color 0.15s ease-out;
+}
+
+@media (max-width: 640px) {
+  /* Toolbar học phí: tìm kiếm full-width, pill xuống dòng riêng */
+  .tuition-toolbar .search-input {
+    flex: 1 1 100%;
+  }
+  .debt-pill {
+    order: -1;
+  }
+}

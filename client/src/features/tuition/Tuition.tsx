@@ -11,6 +11,7 @@ import { EmptyState } from '../../shared/components/EmptyState';
 import { TableSkeleton } from '../../shared/components/Skeleton';
 import { Pagination, type PaginationMeta } from '../../shared/components/Pagination';
 import { INVOICE_STATUS_LABEL, formatVND, formatDate } from '../../shared/types';
+import './Tuition.css';
 
 export function remindKind(dueDate: string | null): 'overdue' | 'upcoming' {
   const today = new Date().toISOString().slice(0, 10);
@@ -120,9 +121,9 @@ function PendingPayments() {
                   <td className="num">{formatVND(p.amount)}</td>
                   <td>{p.method || 'Chuyển khoản'}</td>
                   <td>{formatDate(p.paid_at)}</td>
-                  <td>{p.note || '—'}</td>
+                  <td>{p.note || '-'}</td>
                   <td className="td-right">
-                    <span style={{ display: 'inline-flex', gap: 6 }}>
+                    <span className="tuition-actions">
                       <button
                         className="btn btn-sm btn-primary"
                         onClick={() => void moderate(p, 'approve')}
@@ -208,7 +209,7 @@ function InvoiceList() {
 
   return (
     <>
-      <div className="toolbar">
+      <div className="toolbar tuition-toolbar">
         <input
           className="text-input search-input"
           placeholder="Tìm theo tên/mã học viên..."
@@ -232,7 +233,7 @@ function InvoiceList() {
           <option value="paid">Đã thanh toán</option>
         </select>
         <span className="spacer" />
-        <span className="muted">
+        <span className="debt-pill" aria-live="polite">
           Còn nợ: <strong className="debt-amount">{formatVND(totalDebt)}</strong>
         </span>
         <button className="btn btn-primary" onClick={() => setShowCreate(true)}>
@@ -258,10 +259,11 @@ function InvoiceList() {
           <table className="table">
             <thead>
               <tr>
+                <th>Học viên</th>
                 <th>Lớp</th>
-                <th>Số tiền</th>
-                <th>Đã thu</th>
-                <th>Còn nợ</th>
+                <th className="th-right">Số tiền</th>
+                <th className="th-right">Đã thu</th>
+                <th className="th-right">Còn nợ</th>
                 <th>Hạn nộp</th>
                 <th>Trạng thái</th>
                 <th className="th-right">Thao tác</th>
@@ -275,7 +277,7 @@ function InvoiceList() {
                     <td>
                       {inv.student_name} <span className="muted mono">({inv.student_code})</span>
                     </td>
-                    <td>{inv.class_name || '—'}</td>
+                    <td>{inv.class_name || '-'}</td>
                     <td className="num">{formatVND(inv.amount)}</td>
                     <td className="num">{formatVND(paid)}</td>
                     <td className="num debt-amount">{formatVND(inv.amount - paid)}</td>
@@ -285,7 +287,7 @@ function InvoiceList() {
                     </td>
                     <td className="td-right nowrap">
                       {inv.status !== 'paid' && (
-                        <span style={{ display: 'inline-flex', gap: 6 }}>
+                        <span className="tuition-actions">
                           <button
                             className="btn btn-sm"
                             onClick={() => void remindInvoice(inv)}
@@ -386,7 +388,7 @@ function ApplyCreditModal({
     <Modal title="Áp dụng credits vào hóa đơn" onClose={onClose}>
       <form onSubmit={submit}>
         <p className="confirm-text">
-          {invoice.student_name} ({invoice.student_code}) — còn nợ{' '}
+          {invoice.student_name} ({invoice.student_code}) - còn nợ{' '}
           <strong className="debt-amount">{formatVND(remain)}</strong>
         </p>
         <p className="muted">
@@ -482,7 +484,7 @@ function InvoiceFormModal({ onClose, onDone }: { onClose: () => void; onDone: ()
               onChange={(e) => setStudentId(e.target.value)}
               required
             >
-              <option value="">— Chọn học viên —</option>
+              <option value="">- Chọn học viên -</option>
               {students.map((s) => (
                 <option key={s.id} value={s.id}>
                   {s.name} ({s.code})
@@ -492,10 +494,10 @@ function InvoiceFormModal({ onClose, onDone }: { onClose: () => void; onDone: ()
           </Field>
           <Field label="Lớp học" span>
             <select className="text-input" value={classId} onChange={(e) => pickClass(e.target.value)}>
-              <option value="">— Không gắn lớp —</option>
+              <option value="">- Không gắn lớp -</option>
               {classes.map((c) => (
                 <option key={c.id} value={c.id}>
-                  {c.name} — {formatVND(c.tuition_fee)}
+                  {c.name} - {formatVND(c.tuition_fee)}
                 </option>
               ))}
             </select>
@@ -574,7 +576,7 @@ function PayModal({
     <Modal title="Thu tiền học phí" onClose={onClose}>
       <form onSubmit={submit}>
         <p className="confirm-text">
-          {invoice.student_name} — còn nợ <strong className="debt-amount">{formatVND(remain)}</strong>
+          {invoice.student_name} - còn nợ <strong className="debt-amount">{formatVND(remain)}</strong>
         </p>
         <div className="form-grid">
           <Field label="Số tiền thu (đ) *">
@@ -698,9 +700,11 @@ function DebtList() {
           <table className="table">
             <thead>
               <tr>
-                <th>Tổng phải thu</th>
-                <th>Đã thu</th>
-                <th>Còn nợ</th>
+                <th>Học viên</th>
+                <th>SĐT</th>
+                <th className="th-right">Tổng phải thu</th>
+                <th className="th-right">Đã thu</th>
+                <th className="th-right">Còn nợ</th>
                 <th className="th-right">Thao tác</th>
               </tr>
             </thead>
@@ -710,7 +714,7 @@ function DebtList() {
                   <td>
                     {d.name} <span className="muted mono">({d.code})</span>
                   </td>
-                  <td>{d.phone || '—'}</td>
+                  <td>{d.phone || '-'}</td>
                   <td className="num">{formatVND(d.total)}</td>
                   <td className="num">{formatVND(d.paid)}</td>
                   <td className="num debt-amount">{formatVND(d.debt)}</td>

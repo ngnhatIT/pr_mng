@@ -4,7 +4,9 @@ import { EmptyState } from '../../shared/components/EmptyState';
 import { parentApi, type Submission } from './parent.api';
 import { formatDateTime } from '../../shared/types';
 import { getToken } from '../../shared/api/client';
+import { Icon } from '../../shared/components/icons';
 import type { HomeworkItem } from '../../shared/types';
+import './parent.css';
 
 /** Phụ huynh xem lịch sử bài đã nộp của con. */
 export function MySubmissionsModal({
@@ -35,7 +37,7 @@ export function MySubmissionsModal({
   };
 
   return (
-    <Modal title={`Bài đã nộp — ${homework.title}`} onClose={onClose}>
+    <Modal title={`Bài đã nộp - ${homework.title}`} onClose={onClose}>
       {loading ? (
         <p className="muted">Đang tải...</p>
       ) : error ? (
@@ -53,8 +55,9 @@ export function MySubmissionsModal({
                 {s.note && <div style={{ marginTop: 6 }}>{s.note}</div>}
                 {s.file_url && (
                   <div style={{ marginTop: 6 }}>
-                    <a className="link" href={fileUrl(s.file_url)} target="_blank" rel="noreferrer">
-                      📎 {s.file_name || 'Xem file'}
+                    <a className="link file-link" href={fileUrl(s.file_url)} target="_blank" rel="noreferrer">
+                      <Icon name="paperclip" size={14} />
+                      {s.file_name || 'Xem file'}
                     </a>
                   </div>
                 )}

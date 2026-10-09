@@ -6,6 +6,7 @@ import { PageHeader } from '../../shared/components/PageHeader';
 import { EmptyState } from '../../shared/components/EmptyState';
 import { StatGridSkeleton } from '../../shared/components/Skeleton';
 import { formatVND } from '../../shared/types';
+import './TeacherSalary.css';
 
 export function TeacherSalary() {
   const now = new Date();
@@ -49,20 +50,23 @@ export function TeacherSalary() {
       {loading ? (
         <StatGridSkeleton count={3} />
       ) : salary ? (
-        <div className="stat-grid stat-grid-3">
-          <div className="stat-card">
-            <div className="stat-value">{salary.sessions}</div>
-            <div className="stat-label">Số buổi đã chấm công</div>
+        <>
+          <div className="salary-hero">
+            <div className="salary-month">Tổng lương tháng {month.slice(5, 7)}/{month.slice(0, 4)}</div>
+            <div className="salary-total">{formatVND(salary.total)}</div>
+            <div className="salary-sub">{salary.sessions} buổi đã chấm công</div>
           </div>
-          <div className="stat-card">
-            <div className="stat-value">{formatVND(salary.per_session)}</div>
-            <div className="stat-label">Đơn giá / buổi</div>
+          <div className="card salary-breakdown">
+            <div className="salary-row">
+              <span>Số buổi đã chấm công</span>
+              <strong>{salary.sessions}</strong>
+            </div>
+            <div className="salary-row">
+              <span>Đơn giá / buổi</span>
+              <strong>{formatVND(salary.per_session)}</strong>
+            </div>
           </div>
-          <div className="stat-card stat-card-highlight">
-            <div className="stat-value">{formatVND(salary.total)}</div>
-            <div className="stat-label">Tổng lương tháng {month}</div>
-          </div>
-        </div>
+        </>
       ) : (
         <EmptyState
           icon="wallet"

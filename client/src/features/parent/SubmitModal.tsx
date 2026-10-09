@@ -3,7 +3,9 @@ import { Modal } from '../../shared/components/Modal';
 import { Field } from '../../shared/components/Form';
 import { parentApi } from './parent.api';
 import { useToast } from '../../shared/ui/toast';
+import { Icon } from '../../shared/components/icons';
 import type { HomeworkItem } from '../../shared/types';
+import './parent.css';
 
 /** Phụ huynh nộp bài cho con: chụp ảnh bài làm hoặc đính kèm file + ghi chú. */
 export function SubmitModal({
@@ -40,15 +42,31 @@ export function SubmitModal({
   };
 
   return (
-    <Modal title={`Nộp bài — ${homework.title}`} onClose={onClose}>
+    <Modal title={`Nộp bài - ${homework.title}`} onClose={onClose}>
       <Field label="Ảnh / file bài làm (jpg, png, pdf... tối đa 10MB)">
-        <input
-          type="file"
-          accept=".jpg,.jpeg,.png,.gif,.webp,.pdf,.doc,.docx,.mp3,.mp4"
-          onChange={(e) => setFile(e.target.files?.[0] || null)}
-          className="text-input"
-        />
-        {file && <div className="muted" style={{ fontSize: 13, marginTop: 4 }}>📎 {file.name}</div>}
+        <label className="file-drop">
+          <input
+            type="file"
+            accept=".jpg,.jpeg,.png,.gif,.webp,.pdf,.doc,.docx,.mp3,.mp4"
+            onChange={(e) => setFile(e.target.files?.[0] || null)}
+          />
+          <span className="file-drop-icon">
+            <Icon name="upload" size={20} />
+          </span>
+          <span>
+            <strong>Chụp ảnh hoặc chọn file</strong>
+            <br />
+            <span className="muted" style={{ fontSize: 13 }}>
+              {file ? 'Đã chọn 1 file, bấm để đổi file khác' : 'Chạm để mở máy ảnh / thư viện'}
+            </span>
+          </span>
+        </label>
+        {file && (
+          <div className="file-chosen">
+            <Icon name="paperclip" size={14} />
+            <span>{file.name}</span>
+          </div>
+        )}
       </Field>
       <Field label="Ghi chú (không bắt buộc)">
         <textarea

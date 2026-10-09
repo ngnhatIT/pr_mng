@@ -228,6 +228,9 @@ const PATHS: Record<string, ReactNode> = {
       <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
     </>
   ),
+  paperclip: (
+    <path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48" />
+  ),
   eye: (
     <>
       <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" />
@@ -235,24 +238,59 @@ const PATHS: Record<string, ReactNode> = {
     </>
   ),
   'chevron-down': <path d="m6 9 6 6 6-6" />,
+  rotate: (
+    <>
+      <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+      <path d="M3 3v5h5" />
+    </>
+  ),
+  send: (
+    <>
+      <path d="m22 2-7 20-4-9-9-4Z" />
+      <path d="M22 2 11 13" />
+    </>
+  ),
   'arrow-right': (
     <>
       <path d="M5 12h14" />
       <path d="m12 5 7 7-7 7" />
     </>
   ),
+  'arrow-left': (
+    <>
+      <path d="M19 12H5" />
+      <path d="m12 19-7-7 7-7" />
+    </>
+  ),
+  upload: (
+    <>
+      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+      <path d="m17 8-5-5-5 5" />
+      <path d="M12 3v12" />
+    </>
+  ),
 };
 
 export type IconName = keyof typeof PATHS;
 
-export function Icon({ name, size = 16, className }: { name: IconName; size?: number; className?: string }) {
+export function Icon({
+  name,
+  size = 16,
+  className,
+  filled = false,
+}: {
+  name: IconName;
+  size?: number;
+  className?: string;
+  filled?: boolean;
+}) {
   return (
     <svg
       width={size}
       height={size}
       viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
+      fill={filled ? 'currentColor' : 'none'}
+      stroke={filled ? 'none' : 'currentColor'}
       strokeWidth={2}
       strokeLinecap="round"
       strokeLinejoin="round"

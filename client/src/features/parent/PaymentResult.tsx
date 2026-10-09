@@ -1,5 +1,6 @@
 import { Link, useSearchParams } from 'react-router-dom';
 import { Icon } from '../../shared/components/icons';
+import './parent.css';
 
 export function PaymentResult() {
   const [searchParams] = useSearchParams();
@@ -10,9 +11,14 @@ export function PaymentResult() {
     <div className="parent-page">
       <div className="card payment-result">
         <div className={`result-icon ${success ? 'result-success' : 'result-fail'}`}>
-          <Icon name={success ? 'check' : 'x'} size={34} />
+          <Icon name={success ? 'check' : 'x'} size={38} />
         </div>
-        <h1 className="parent-title">{success ? 'Thanh toán thành công!' : 'Thanh toán chưa thành công'}</h1>
+        <span className={`badge ${success ? 'badge-paid' : 'badge-overdue'}`}>
+          {success ? 'Đã thanh toán' : 'Chưa hoàn tất'}
+        </span>
+        <h1 className="parent-title" style={{ marginTop: 12 }}>
+          {success ? 'Thanh toán thành công!' : 'Thanh toán chưa thành công'}
+        </h1>
         <p className="muted">
           {success
             ? 'Học phí đã được thanh toán. Cảm ơn bạn!'

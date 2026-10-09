@@ -1,0 +1,78 @@
+/* ZaloReminders: dải trạng thái kết nối + nhóm cấu hình gọn. */
+
+.zalo-status {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: #fff;
+  padding: 12px 16px;
+  margin-bottom: 16px;
+  box-shadow: var(--shadow);
+}
+
+.zalo-status .status-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: var(--primary-soft);
+  color: var(--primary-strong);
+  flex: none;
+}
+
+.zalo-status .status-text {
+  min-width: 0;
+}
+
+.zalo-status .status-title {
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--text-strong);
+}
+
+.zalo-status .status-desc {
+  font-size: 12.5px;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+.zalo-status .badge {
+  margin-left: auto;
+}
+
+/* Nhóm form trong card cấu hình */
+.zalo-form-group {
+  margin-top: 4px;
+}
+
+.zalo-form-group + .zalo-form-group {
+  margin-top: 18px;
+}
+
+.zalo-group-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-strong);
+  margin: 0 0 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.zalo-group-title::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+
+/* Lịch sử: hàng mới nhất nổi nhẹ */
+.zalo-history .table tbody tr:first-child td:first-child {
+  font-weight: 600;
+  color: var(--text-strong);
+}

@@ -1,0 +1,62 @@
+/* Lương giáo viên: tổng nổi bật, số tabular. */
+
+.salary-hero {
+  background: var(--primary);
+  color: #fff;
+  border-radius: var(--radius-lg);
+  padding: 24px 22px;
+  margin-bottom: 14px;
+  box-shadow: var(--shadow);
+}
+
+.salary-month {
+  font-size: 13px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.85);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 6px;
+}
+
+.salary-total {
+  font-size: 40px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+}
+
+.salary-sub {
+  margin-top: 8px;
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.9);
+  font-variant-numeric: tabular-nums;
+}
+
+.salary-breakdown {
+  padding: 6px 18px;
+}
+
+.salary-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 13px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 14px;
+}
+
+.salary-row:last-child {
+  border-bottom: none;
+}
+
+.salary-row span {
+  color: var(--text-muted);
+}
+
+.salary-row strong {
+  color: var(--text-strong);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}

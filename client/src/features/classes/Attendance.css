@@ -1,0 +1,64 @@
+/* Attendance - điểm danh: thao tác nhanh lặp lại.
+ * Hàng điểm danh phải to rõ, chạm là phản hồi ngay (optimistic đã có ở state),
+ * trạng thái muộn/vắng nhìn là biết qua viền màu bên trái.
+ */
+
+.att-item {
+  border-left: 3px solid transparent;
+  transition: border-color 0.15s ease-out, box-shadow 0.15s ease-out,
+    border-left-color 0.15s ease-out, background-color 0.15s ease-out;
+}
+
+/* Muộn: viền cam; Vắng: viền đỏ + nền hồng nhạt để liếc mắt thấy ngay */
+.att-item.att-late {
+  border-left-color: var(--warning);
+}
+
+.att-item.att-absent {
+  border-left-color: var(--danger);
+  background: #fef6f6;
+}
+
+/* Tóm tắt savebar: số liệu tách cụm, số tabular */
+.att-summary .sum-sep {
+  color: var(--text-faint);
+  margin: 0 4px;
+}
+
+.att-summary .num {
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+}
+
+.att-summary .sum-late {
+  color: var(--warning);
+  font-weight: 600;
+}
+
+.att-summary .sum-absent {
+  color: var(--danger);
+  font-weight: 600;
+}
+
+/* Focus rõ ràng cho segmented control khi tab bằng bàn phím */
+.seg-btn:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: -2px;
+}
+
+@media (max-width: 640px) {
+  /* Mobile: hàng điểm danh xếp dọc, segmented full-width dễ chạm */
+  .att-item {
+    align-items: stretch;
+  }
+  .att-item .seg {
+    width: 100%;
+  }
+  .att-item .seg-btn {
+    flex: 1;
+    padding: 12px 8px;
+  }
+  .att-savebar {
+    bottom: 8px;
+  }
+}

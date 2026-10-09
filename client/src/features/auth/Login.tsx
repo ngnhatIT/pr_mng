@@ -2,12 +2,15 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api, setAuth } from '../../shared/api/client';
 import { useToast } from '../../shared/ui/toast';
+import { Icon } from '../../shared/components/icons';
 import { User } from '../../shared/types';
+import './Login.css';
 
 export function Login() {
   const [username, setUsername] = useState('admin');
   const [password, setPassword] = useState('123456');
   const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
   const navigate = useNavigate();
   const toast = useToast();
 
@@ -15,6 +18,7 @@ export function Login() {
     e.preventDefault();
     if (busy) return;
     setBusy(true);
+    setError('');
     try {
       const data = await api<{ token: string; user: User }>('/auth/login', {
         method: 'POST',
@@ -27,7 +31,7 @@ export function Login() {
       else if (role === 'parent') navigate('/parent');
       else navigate('/app');
     } catch (err) {
-      toast(err instanceof Error ? err.message : 'Đăng nhập thất bại', 'error');
+      setError(err instanceof Error ? err.message : 'Đăng nhập thất bại');
     } finally {
       setBusy(false);
     }
@@ -35,10 +39,16 @@ export function Login() {
 
   return (
     <div className="login-page">
-      <form className="login-card" onSubmit={submit}>
+      <form className="login-card" onSubmit={submit} noValidate={false}>
         <div className="login-logo">E</div>
         <h1 className="login-title">EduCenter Pro</h1>
         <p className="login-sub">Phần mềm quản lý trung tâm ngoại ngữ, lớp học</p>
+        {error && (
+          <p className="login-error" role="alert">
+            <Icon name="alert" size={16} />
+            <span>{error}</span>
+          </p>
+        )}
         <label className="field">
           <span className="field-label">Tên đăng nhập</span>
           <input

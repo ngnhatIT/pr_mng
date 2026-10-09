@@ -1,0 +1,27 @@
+/* Teachers - CSS rieng cua trang giao vien (dat canh component) */
+
+/* Nut co icon: icon va chu thang hang */
+.btn-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.btn-inline svg {
+  flex-shrink: 0;
+}
+
+/* Nhom nut thao tac trong o bang: thay cho style inline */
+.row-actions {
+  display: inline-flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+/* O ten: avatar nho + ten, tang kha nang nhan dien dong */
+.name-cell {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}

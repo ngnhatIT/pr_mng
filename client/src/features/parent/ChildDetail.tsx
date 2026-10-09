@@ -3,7 +3,8 @@ import { Link, useParams } from 'react-router-dom';
 import { parentApi, VietQRInfo } from './parent.api';
 import { useToast } from '../../shared/ui/toast';
 import { Modal } from '../../shared/components/Modal';
-import { Icon } from '../../shared/components/icons';
+import { Icon, IconName } from '../../shared/components/icons';
+import './parent.css';
 import { EmptyState } from '../../shared/components/EmptyState';
 import { QuizTaker } from './QuizTaker';
 import { SubmitModal } from './SubmitModal';
@@ -22,12 +23,12 @@ import {
 
 type Tab = 'schedule' | 'attendance' | 'tuition' | 'grades' | 'homework';
 
-const TABS: { id: Tab; label: string }[] = [
-  { id: 'schedule', label: 'Lịch học' },
-  { id: 'attendance', label: 'Điểm danh' },
-  { id: 'tuition', label: 'Học phí' },
-  { id: 'grades', label: 'Điểm số' },
-  { id: 'homework', label: 'Bài tập' },
+const TABS: { id: Tab; label: string; icon: IconName }[] = [
+  { id: 'schedule', label: 'Lịch học', icon: 'calendar' },
+  { id: 'attendance', label: 'Điểm danh', icon: 'clipboard' },
+  { id: 'tuition', label: 'Học phí', icon: 'banknote' },
+  { id: 'grades', label: 'Điểm số', icon: 'cap' },
+  { id: 'homework', label: 'Bài tập', icon: 'file' },
 ];
 
 export function ChildDetail() {
@@ -89,7 +90,8 @@ export function ChildDetail() {
   return (
     <div className="parent-page">
       <Link className="link back-link" to="/parent">
-        ← Trang chủ
+        <Icon name="arrow-left" size={16} />
+        Trang chủ
       </Link>
       <div className="parent-child-head">
         <div className="child-avatar child-avatar-lg">{data.student.name.charAt(0).toUpperCase()}</div>
@@ -102,6 +104,7 @@ export function ChildDetail() {
       <div className="tabs parent-tabs pill-tabs">
         {TABS.map((t) => (
           <button key={t.id} className={`tab${tab === t.id ? ' active' : ''}`} onClick={() => setTab(t.id)}>
+            <Icon name={t.icon} size={15} />
             {t.label}
           </button>
         ))}
@@ -128,7 +131,7 @@ function ScheduleTab({ data }: { data: ChildOverview }) {
             <div key={c.id} className="class-info-card">
               <strong>{c.name}</strong>
               <div className="muted">
-                Lịch: {c.schedule || '—'}
+                Lịch: {c.schedule || '-'}
                 {c.teacher_name && <> · GV: {c.teacher_name}</>}
                 {c.room_name && <> · Phòng: {c.room_name}</>}
               </div>
@@ -372,13 +375,13 @@ function GradesTab({ data }: { data: ChildOverview }) {
                 {grades.map((g) => (
                   <tr key={g.id}>
                     <td>{g.title}</td>
-                    <td>{g.class_name || '—'}</td>
+                    <td>{g.class_name || '-'}</td>
                     <td className="num">
                       <strong>
                         {g.score}/{g.max_score}
                       </strong>
                     </td>
-                    <td>{g.comment || '—'}</td>
+                    <td>{g.comment || '-'}</td>
                   </tr>
                 ))}
               </tbody>
@@ -473,13 +476,14 @@ function HomeworkTab({ data, onChanged }: { data: ChildOverview; onChanged: () =
             onClick={() => void toggle(h)}
             disabled={busy === h.id}
             title={isDone ? 'Bỏ đánh dấu' : 'Đánh dấu đã làm xong'}
+            aria-label={isDone ? 'Bỏ đánh dấu đã làm xong' : 'Đánh dấu đã làm xong'}
           >
-            {isDone ? '✓' : ''}
+            {isDone ? <Icon name="check" size={14} /> : null}
           </button>
         )}
         <div className="hw-body">
           <div className="hw-title">
-            {isQuiz && <span className="badge badge-plan-premium" style={{ marginRight: 6 }}>Quiz</span>}
+            {isQuiz && <span className="badge badge-quiz" style={{ marginRight: 6 }}>Quiz</span>}
             {h.title}
             {renderScore(h)}
           </div>
@@ -488,25 +492,31 @@ function HomeworkTab({ data, onChanged }: { data: ChildOverview; onChanged: () =
             <div className="homework-content" style={{ fontSize: 13 }}
               dangerouslySetInnerHTML={{ __html: renderMarkdown(h.content) }} />
           )}
-          {h.feedback && <p style={{ fontSize: 13, color: '#166534' }}>💬 {h.feedback}</p>}
-          {isQuiz && !isDone && (
-            <button className="btn btn-sm btn-primary" style={{ marginTop: 8 }}
-              onClick={() => setTakingQuiz(h)}>
-              Làm bài ngay
-            </button>
+          {h.feedback && (
+            <div className="hw-feedback">
+              <Icon name="info" size={16} />
+              <span>{h.feedback}</span>
+            </div>
           )}
-          {!isQuiz && !isDone && (
-            <button className="btn btn-sm btn-primary" style={{ marginTop: 8 }}
-              onClick={() => setSubmitting(h)}>
-              📤 Nộp bài
-            </button>
-          )}
-          {!isQuiz && (
-            <button className="btn btn-sm" style={{ marginTop: 8, marginLeft: 6 }}
-              onClick={() => setViewingSubs(h)}>
-              📁 Bài đã nộp
-            </button>
-          )}
+          <div className="hw-actions">
+            {isQuiz && !isDone && (
+              <button className="btn btn-sm btn-primary" onClick={() => setTakingQuiz(h)}>
+                Làm bài ngay
+              </button>
+            )}
+            {!isQuiz && !isDone && (
+              <button className="btn btn-sm btn-primary" onClick={() => setSubmitting(h)}>
+                <Icon name="upload" size={15} />
+                Nộp bài
+              </button>
+            )}
+            {!isQuiz && (
+              <button className="btn btn-sm" onClick={() => setViewingSubs(h)}>
+                <Icon name="file" size={15} />
+                Bài đã nộp
+              </button>
+            )}
+          </div>
         </div>
         <div>
           {h.due_date &&

@@ -5,7 +5,10 @@ import { useToast } from '../../shared/ui/toast';
 import { Modal } from '../../shared/components/Modal';
 import { Field } from '../../shared/components/Form';
 import { PageHeader } from '../../shared/components/PageHeader';
+import { EmptyState } from '../../shared/components/EmptyState';
 import { Skeleton } from '../../shared/components/Skeleton';
+import { Icon } from '../../shared/components/icons';
+import './Attendance.css';
 import { ATTENDANCE_LABEL, formatDate } from '../../shared/types';
 
 type Status = 'present' | 'absent' | 'late';
@@ -124,6 +127,8 @@ export function Attendance() {
   };
 
   const presentCount = rows.filter((r) => (r.status || 'present') === 'present').length;
+  const lateCount = rows.filter((r) => r.status === 'late').length;
+  const absentCount = rows.filter((r) => r.status === 'absent').length;
 
   const makeCheckinCode = async () => {
     if (!sessionId) return;
@@ -144,7 +149,7 @@ export function Attendance() {
 
       <div className="toolbar">
         <select className="text-input" value={classId} onChange={(e) => pickClass(e.target.value)}>
-          <option value="">— Chọn lớp học —</option>
+          <option value="">- Chọn lớp học -</option>
           {classes.map((c) => (
             <option key={c.id} value={c.id}>
               {c.name}
@@ -157,17 +162,18 @@ export function Attendance() {
           onChange={(e) => pickSession(e.target.value)}
           disabled={!classId}
         >
-          <option value="">— Chọn buổi học —</option>
+          <option value="">- Chọn buổi học -</option>
           {sessions.map((s) => (
             <option key={s.id} value={s.id}>
               {formatDate(s.date)}
-              {s.topic ? ` — ${s.topic}` : ''} ({s.attendance_count || 0} đã điểm danh)
+              {s.topic ? ` - ${s.topic}` : ''} ({s.attendance_count || 0} đã điểm danh)
             </option>
           ))}
         </select>
         {classId && (
           <button className="btn" onClick={() => setShowNewSession(true)}>
-            + Tạo buổi mới
+            <Icon name="plus" size={14} />
+            Tạo buổi mới
           </button>
         )}
       </div>
@@ -208,16 +214,18 @@ export function Attendance() {
               ))}
             </div>
           ) : rows.length === 0 ? (
-            <div className="card">
-              <p className="muted">Lớp chưa có học viên nào để điểm danh.</p>
-            </div>
+            <EmptyState
+              icon="users"
+              title="Chưa có học viên để điểm danh"
+              desc="Lớp này chưa có học viên nào được ghi danh."
+            />
           ) : (
             <>
               <div className="att-list">
                 {rows.map((r) => {
                   const st = (r.status || 'present') as Status;
                   return (
-                    <div key={r.id} className="att-item">
+                    <div key={r.id} className={`att-item${st === 'present' ? '' : ` att-${st}`}`}>
                       <div className="att-item-main">
                         <div className="att-item-name">{r.name}</div>
                         <div className="att-item-code mono muted">{r.code}</div>
@@ -249,7 +257,25 @@ export function Attendance() {
               </div>
               <div className="att-savebar">
                 <span className="att-summary">
-                  {rows.length} học viên · {presentCount} có mặt
+                  <span className="num">{rows.length}</span> học viên
+                  <span className="sum-sep">·</span>
+                  <span className="num">{presentCount}</span> có mặt
+                  {lateCount > 0 && (
+                    <>
+                      <span className="sum-sep">·</span>
+                      <span className="sum-late">
+                        <span className="num">{lateCount}</span> muộn
+                      </span>
+                    </>
+                  )}
+                  {absentCount > 0 && (
+                    <>
+                      <span className="sum-sep">·</span>
+                      <span className="sum-absent">
+                        <span className="num">{absentCount}</span> vắng
+                      </span>
+                    </>
+                  )}
                 </span>
                 <span className="spacer" />
                 <button className="btn btn-primary btn-lg" onClick={() => void save()} disabled={saving}>
@@ -275,7 +301,7 @@ export function Attendance() {
       {checkinCode && (
         <Modal title="Mã chấm công" onClose={() => setCheckinCode(null)}>
           <p className="confirm-text">
-            Giáo viên nhập mã này trong trang "Buổi dạy hôm nay" → "Chấm công" để ghi nhận điểm danh.
+            Giáo viên nhập mã này trong trang "Buổi dạy hôm nay" {'>'} "Chấm công" để ghi nhận điểm danh.
           </p>
           <div className="checkin-code">{checkinCode}</div>
           <div className="modal-actions">

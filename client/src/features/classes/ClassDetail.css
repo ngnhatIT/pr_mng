@@ -1,0 +1,33 @@
+/* ClassDetail - chi tiết lớp học.
+ * Giữ layout quen thuộc; nâng micro-interaction cho các link điều hướng.
+ */
+
+.back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.back-link .flip-x {
+  transform: scaleX(-1);
+  transition: transform 0.15s ease-out;
+}
+
+.back-link:hover .flip-x {
+  transform: scaleX(-1) translateX(3px);
+}
+
+.card-head .link-arrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.card-head .link-arrow svg {
+  transition: transform 0.15s ease-out;
+}
+
+.card-head .link-arrow:hover svg {
+  transform: translateX(3px);
+}

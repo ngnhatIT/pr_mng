@@ -1,0 +1,26 @@
+/* PaymentConfig - cấu hình thanh toán.
+ * Calm, form gọn; nút lưu luôn trong tầm tay nhờ savebar dính đáy.
+ */
+
+.payment-savebar {
+  position: sticky;
+  bottom: 0;
+  z-index: 10;
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  padding: 12px 4px;
+  margin-top: 8px;
+}
+
+/* Tiêu đề section có icon: quét mắt nhanh biết đang ở mục nào */
+.card-title .title-icon {
+  display: inline-flex;
+  vertical-align: -3px;
+  margin-right: 8px;
+  color: var(--primary);
+}
+
+/* Số tài khoản / mã bí mật: tabular cho dễ đối chiếu từng ký tự */
+.text-input.mono {
+  letter-spacing: 0.02em;
+}

@@ -6,7 +6,9 @@ import { Field } from '../../shared/components/Form';
 import { PageHeader } from '../../shared/components/PageHeader';
 import { EmptyState } from '../../shared/components/EmptyState';
 import { TableSkeleton } from '../../shared/components/Skeleton';
+import { Icon } from '../../shared/components/icons';
 import { PayrollRow, formatVND } from '../../shared/types';
+import './Payroll.css';
 
 export function Payroll() {
   const now = new Date();
@@ -41,8 +43,10 @@ export function Payroll() {
         title="Lương giáo viên"
         desc="Tính lương giáo viên theo số buổi đã dạy trong tháng"
         actions={
-          <span className="muted">
-            Tổng chi: <strong className="debt-amount">{formatVND(total)}</strong>
+          <span className="payroll-total">
+            <Icon name="banknote" size={16} />
+            Tổng chi
+            <strong className="debt-amount">{formatVND(total)}</strong>
           </span>
         }
       />
@@ -67,7 +71,7 @@ export function Payroll() {
           desc="Chưa có dữ liệu lương cho tháng này."
         />
       ) : (
-        <div className="table-wrap">
+        <div className="table-wrap sticky">
           <table className="table">
             <thead>
               <tr>
@@ -81,14 +85,22 @@ export function Payroll() {
             <tbody>
               {rows.map((r) => (
                 <tr key={r.teacher_id}>
-                  <td>{r.teacher_name}</td>
+                  <td>
+                    <span className="name-cell">
+                      <span className="avatar avatar-sm" aria-hidden="true">
+                        {r.teacher_name.charAt(0).toUpperCase()}
+                      </span>
+                      {r.teacher_name}
+                    </span>
+                  </td>
                   <td className="num">{r.sessions}</td>
                   <td className="num">{formatVND(r.per_session)}</td>
                   <td className="num">
                     <strong>{formatVND(r.total)}</strong>
                   </td>
                   <td className="td-right">
-                    <button className="btn btn-sm" onClick={() => setEditing(r)}>
+                    <button className="btn btn-sm btn-inline" onClick={() => setEditing(r)}>
+                      <Icon name="pencil" size={13} />
                       Đơn giá
                     </button>
                   </td>
@@ -133,7 +145,7 @@ function RateModal({ row, onClose, onDone }: { row: PayrollRow; onClose: () => v
   };
 
   return (
-    <Modal title={`Đơn giá dạy — ${row.teacher_name}`} onClose={onClose}>
+    <Modal title={`Đơn giá dạy - ${row.teacher_name}`} onClose={onClose}>
       <form onSubmit={submit}>
         <Field label="Đơn giá mỗi buổi (đ)">
           <input

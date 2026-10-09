@@ -8,6 +8,7 @@ import { PageHeader } from '../../shared/components/PageHeader';
 import { EmptyState } from '../../shared/components/EmptyState';
 import { TableSkeleton, Skeleton } from '../../shared/components/Skeleton';
 import { Pagination, type PaginationMeta } from '../../shared/components/Pagination';
+import { Icon } from '../../shared/components/icons';
 import {
   ZaloConfig,
   ReminderItem,
@@ -16,6 +17,7 @@ import {
   formatVND,
   formatDate,
 } from '../../shared/types';
+import './Zalo.css';
 
 const EMPTY_CONFIG: ZaloConfig = {
   zalo_oa_id: '',
@@ -128,8 +130,29 @@ export function ZaloReminders() {
     <div className="page">
       <PageHeader
         title="Nhắc học phí qua Zalo"
-        desc="Gửi tin nhắn nhắc học phí tự động tới phụ huynh/học viên qua Zalo ZNS. Khi chưa cấu hình Access Token, hệ thống chạy ở chế độ demo — chỉ ghi log, không gửi tin thật."
+        desc="Gửi tin nhắn nhắc học phí tự động tới phụ huynh/học viên qua Zalo ZNS. Khi chưa cấu hình Access Token, hệ thống chạy ở chế độ demo - chỉ ghi log, không gửi tin thật."
       />
+
+      {isAdmin && !loading && (
+        <div className="zalo-status">
+          <span className="status-icon">
+            <Icon name="zap" size={18} />
+          </span>
+          <div className="status-text">
+            <div className="status-title">Trạng thái nhắc tự động</div>
+            <div className="status-desc">
+              {config.zalo_access_token
+                ? 'Đã cấu hình Access Token - tin nhắn gửi thật qua Zalo ZNS.'
+                : 'Chưa có Access Token - hệ thống đang chạy chế độ demo, chỉ ghi log.'}
+            </div>
+          </div>
+          {config.zalo_enabled === '1' ? (
+            <span className="badge badge-approved">Đang bật</span>
+          ) : (
+            <span className="badge badge-pending">Đang tắt</span>
+          )}
+        </div>
+      )}
 
       {!isAdmin && (
         <div className="card">
@@ -160,53 +183,61 @@ export function ZaloReminders() {
               </div>
             ) : (
               <form onSubmit={save}>
-                <div className="form-grid">
-                  <Field label="Tên trung tâm">
-                    <input
-                      className="text-input"
-                      value={config.center_name}
-                      onChange={(e) => set('center_name')(e.target.value)}
-                      placeholder="Trung tâm Anh ngữ ABC"
-                    />
-                  </Field>
-                  <Field label="OA ID">
-                    <input
-                      className="text-input"
-                      value={config.zalo_oa_id}
-                      onChange={(e) => set('zalo_oa_id')(e.target.value)}
-                      placeholder="VD: 1234567890"
-                    />
-                  </Field>
-                  <Field label="Access Token" span>
-                    <input
-                      className="text-input"
-                      type="password"
-                      value={config.zalo_access_token}
-                      onChange={(e) => set('zalo_access_token')(e.target.value)}
-                      placeholder={
-                        config.zalo_access_token
-                          ? '•••••••• (đã lưu — nhập mới để thay đổi)'
-                          : 'Dán access token của OA'
-                      }
-                      autoComplete="off"
-                    />
-                  </Field>
-                  <Field label="Template ID — tin quá hạn">
-                    <input
-                      className="text-input"
-                      value={config.zalo_template_overdue}
-                      onChange={(e) => set('zalo_template_overdue')(e.target.value)}
-                      placeholder="ID mẫu ZNS quá hạn"
-                    />
-                  </Field>
-                  <Field label="Template ID — tin sắp đến hạn">
-                    <input
-                      className="text-input"
-                      value={config.zalo_template_upcoming}
-                      onChange={(e) => set('zalo_template_upcoming')(e.target.value)}
-                      placeholder="ID mẫu ZNS sắp đến hạn"
-                    />
-                  </Field>
+                <div className="zalo-form-group">
+                  <h3 className="zalo-group-title">Thông tin Zalo OA</h3>
+                  <div className="form-grid">
+                    <Field label="Tên trung tâm">
+                      <input
+                        className="text-input"
+                        value={config.center_name}
+                        onChange={(e) => set('center_name')(e.target.value)}
+                        placeholder="Trung tâm Anh ngữ ABC"
+                      />
+                    </Field>
+                    <Field label="OA ID">
+                      <input
+                        className="text-input"
+                        value={config.zalo_oa_id}
+                        onChange={(e) => set('zalo_oa_id')(e.target.value)}
+                        placeholder="VD: 1234567890"
+                      />
+                    </Field>
+                    <Field label="Access Token" span>
+                      <input
+                        className="text-input"
+                        type="password"
+                        value={config.zalo_access_token}
+                        onChange={(e) => set('zalo_access_token')(e.target.value)}
+                        placeholder={
+                          config.zalo_access_token
+                            ? '•••••••• (đã lưu - nhập mới để thay đổi)'
+                            : 'Dán access token của OA'
+                        }
+                        autoComplete="off"
+                      />
+                    </Field>
+                  </div>
+                </div>
+                <div className="zalo-form-group">
+                  <h3 className="zalo-group-title">Mẫu tin ZNS</h3>
+                  <div className="form-grid">
+                    <Field label="Template ID - tin quá hạn">
+                      <input
+                        className="text-input"
+                        value={config.zalo_template_overdue}
+                        onChange={(e) => set('zalo_template_overdue')(e.target.value)}
+                        placeholder="ID mẫu ZNS quá hạn"
+                      />
+                    </Field>
+                    <Field label="Template ID - tin sắp đến hạn">
+                      <input
+                        className="text-input"
+                        value={config.zalo_template_upcoming}
+                        onChange={(e) => set('zalo_template_upcoming')(e.target.value)}
+                        placeholder="ID mẫu ZNS sắp đến hạn"
+                      />
+                    </Field>
+                  </div>
                 </div>
                 <label className="checkbox-row">
                   <input
@@ -272,6 +303,7 @@ export function ZaloReminders() {
                   {saving ? 'Đang lưu...' : 'Lưu lịch'}
                 </button>
                 <button type="button" className="btn" onClick={runOnce} disabled={running}>
+                  <Icon name="play" size={15} />
                   {running ? 'Đang chạy...' : 'Chạy ngay một lần'}
                 </button>
               </div>
@@ -291,6 +323,7 @@ export function ZaloReminders() {
                 />
               </Field>
               <button className="btn btn-primary" onClick={sendTest} disabled={testing}>
+                <Icon name="send" size={15} />
                 {testing ? 'Đang gửi...' : 'Gửi tin nhắn thử'}
               </button>
             </div>
@@ -298,7 +331,7 @@ export function ZaloReminders() {
         </>
       )}
 
-      <div className="card">
+      <div className="card zalo-history">
         <h2 className="card-title">Lịch sử nhắc</h2>
         <p className="card-desc">100 lần nhắc gần nhất.</p>
         {loadingHistory ? (
@@ -331,12 +364,12 @@ export function ZaloReminders() {
                       <tr key={r.id}>
                         <td className="mono">{r.created_at?.slice(0, 16).replace('T', ' ')}</td>
                         <td>
-                          {r.student_name || '—'}
+                          {r.student_name || '-'}
                           {r.student_code && <span className="muted mono"> ({r.student_code})</span>}
                         </td>
-                        <td className="mono">{r.phone || '—'}</td>
+                        <td className="mono">{r.phone || '-'}</td>
                         <td className="num">
-                          {r.invoice_amount != null ? formatVND(r.invoice_amount) : '—'}
+                          {r.invoice_amount != null ? formatVND(r.invoice_amount) : '-'}
                         </td>
                         <td>
                           <span className={`badge badge-${r.kind}`}>
@@ -350,6 +383,7 @@ export function ZaloReminders() {
                         </td>
                         <td className="td-right">
                           <button className="btn btn-sm" onClick={() => setViewing(r)}>
+                            <Icon name="eye" size={14} />
                             Xem nội dung
                           </button>
                         </td>
@@ -376,9 +410,9 @@ export function ZaloReminders() {
         <Modal title="Nội dung tin nhắn" onClose={() => setViewing(null)}>
           <dl className="dl dl-compact">
             <dt>Học viên</dt>
-            <dd>{viewing.student_name || '—'}</dd>
+            <dd>{viewing.student_name || '-'}</dd>
             <dt>SĐT</dt>
-            <dd className="mono">{viewing.phone || '—'}</dd>
+            <dd className="mono">{viewing.phone || '-'}</dd>
             <dt>Loại</dt>
             <dd>{REMINDER_KIND_LABEL[viewing.kind] || viewing.kind}</dd>
             <dt>Trạng thái</dt>

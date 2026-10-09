@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { homeworkApi, type Submission } from './homework.api';
 import { Modal } from '../../shared/components/Modal';
 import { EmptyState } from '../../shared/components/EmptyState';
+import { Icon } from '../../shared/components/icons';
 import { formatDateTime } from '../../shared/types';
 import { getToken } from '../../shared/api/client';
 
@@ -27,7 +28,7 @@ export function SubmissionsModal({ homeworkId, title, onClose }: { homeworkId: n
   };
 
   return (
-    <Modal title={`Bài nộp — ${title}`} onClose={onClose} wide>
+    <Modal title={`Bài nộp - ${title}`} onClose={onClose} wide>
       {loading ? (
         <p className="muted">Đang tải...</p>
       ) : error ? (
@@ -35,31 +36,34 @@ export function SubmissionsModal({ homeworkId, title, onClose }: { homeworkId: n
       ) : subs.length === 0 ? (
         <EmptyState icon="file" title="Chưa có bài nộp" desc="Phụ huynh nộp bài qua cổng phụ huynh." />
       ) : (
-        <div className="submission-list">
-          {subs.map((s) => (
-            <div key={s.id} className="submission-item">
-              <div style={{ flex: 1 }}>
-                <div style={{ fontWeight: 600 }}>{s.student_name}</div>
-                <div className="muted" style={{ fontSize: 13 }}>
-                  Nộp lúc {formatDateTime(s.submitted_at)}
-                </div>
-                {s.note && <div style={{ marginTop: 6 }}>{s.note}</div>}
-                {s.file_url && !isImage(s.file_url) && (
-                  <div style={{ marginTop: 6 }}>
-                    <a className="link" href={fileUrl(s.file_url)} target="_blank" rel="noreferrer">
-                      📎 {s.file_name || 'Tải file'}
-                    </a>
+        <>
+          <div className="muted" style={{ fontSize: 13, marginBottom: 10 }}>
+            {subs.length} bài đã nộp
+          </div>
+          <div className="submission-list">
+            {subs.map((s) => (
+              <div key={s.id} className="submission-item">
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontWeight: 600 }}>{s.student_name}</div>
+                  <div className="muted" style={{ fontSize: 13 }}>
+                    Nộp lúc {formatDateTime(s.submitted_at)}
                   </div>
+                  {s.note && <div style={{ marginTop: 6, lineHeight: 1.5 }}>{s.note}</div>}
+                  {s.file_url && !isImage(s.file_url) && (
+                    <a className="link submission-file-link" href={fileUrl(s.file_url)} target="_blank" rel="noreferrer">
+                      <Icon name="paperclip" size={14} /> {s.file_name || 'Tải file'}
+                    </a>
+                  )}
+                </div>
+                {s.file_url && isImage(s.file_url) && (
+                  <a href={fileUrl(s.file_url)} target="_blank" rel="noreferrer" title="Xem ảnh lớn">
+                    <img src={fileUrl(s.file_url)} alt={s.file_name || 'Ảnh bài nộp'} className="submission-thumb" loading="lazy" />
+                  </a>
                 )}
               </div>
-              {s.file_url && isImage(s.file_url) && (
-                <a href={fileUrl(s.file_url)} target="_blank" rel="noreferrer">
-                  <img src={fileUrl(s.file_url)} alt={s.file_name || ''} className="submission-thumb" />
-                </a>
-              )}
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        </>
       )}
     </Modal>
   );

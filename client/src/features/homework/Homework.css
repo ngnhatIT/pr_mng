@@ -1,0 +1,110 @@
+/* Homework feature - styles rieng theo taste-ui. */
+   Design read: cụm bài tập cho giáo viên/admin, calm, chấm bài và xem bài nộp phải nhanh. */
+
+/* ---------- Stat cards: tone đỏ cho quá hạn ---------- */
+.tone-red .stat-icon { background: #fee2e2; color: #dc2626; }
+
+/* ---------- PageHeader actions có icon ---------- */
+.hw-action-icon { display: inline-flex; align-items: center; gap: 6px; }
+
+/* ---------- Kind switcher: icon thẳng hàng ---------- */
+.kind-btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
+.kind-btn svg { flex: none; }
+
+/* ---------- Chip đã chọn: icon check SVG ---------- */
+.chip svg { margin-right: 2px; flex: none; }
+
+/* ---------- Mini progress trong cột Hoàn thành ---------- */
+.hw-progress { display: flex; align-items: center; gap: 8px; justify-content: flex-end; }
+.hw-progress .num { font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.hw-progress-track { width: 64px; height: 6px; background: var(--bg-muted); border-radius: 3px; overflow: hidden; flex: none; }
+.hw-progress-fill { height: 100%; background: var(--primary); border-radius: 3px; transition: width 0.2s ease-out; }
+
+/* ---------- GradeModal: bố cục 2 vùng ---------- */
+.grade-layout { display: grid; grid-template-columns: 260px 1fr; gap: var(--sp-4); min-height: 420px; }
+.grade-list { display: flex; flex-direction: column; gap: var(--sp-2); overflow-y: auto; max-height: 520px; padding-right: 2px; }
+.grade-row {
+  display: flex; align-items: center; gap: var(--sp-2);
+  width: 100%; text-align: left;
+  padding: var(--sp-2) var(--sp-3);
+  border: 1px solid var(--border); border-radius: var(--radius-md);
+  background: var(--bg-soft); cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease, transform 0.15s ease;
+  font-family: inherit; color: var(--text);
+}
+.grade-row:hover { border-color: var(--border-strong); transform: translateY(-1px); }
+.grade-row.selected { border-color: var(--primary); background: var(--primary-soft); box-shadow: var(--shadow-sm); }
+.grade-row .grade-name { flex: 1; font-weight: 600; font-size: var(--font-size-sm); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.grade-row .num { font-weight: 700; font-variant-numeric: tabular-nums; font-size: var(--font-size-sm); }
+.grade-panel {
+  border: 1px solid var(--border); border-radius: var(--radius-lg);
+  padding: var(--sp-4); background: var(--bg-muted);
+  display: flex; flex-direction: column; gap: var(--sp-3);
+  align-self: start; position: sticky; top: 0;
+}
+.grade-panel-head { display: flex; align-items: center; gap: var(--sp-2); flex-wrap: wrap; }
+.grade-panel-head .grade-name { font-size: var(--font-size-md); font-weight: 700; flex: 1; }
+.grade-score-row { display: flex; align-items: baseline; gap: var(--sp-2); }
+.grade-score-input { width: 110px; font-size: 20px; font-weight: 800; text-align: center; font-variant-numeric: tabular-nums; }
+.grade-progress { display: flex; align-items: center; gap: var(--sp-3); margin-bottom: var(--sp-3); }
+.grade-progress .hw-progress-track { width: 100%; height: 8px; }
+
+/* ---------- Submissions: thumbnail gọn ---------- */
+.submission-item { transition: border-color 0.15s ease, box-shadow 0.15s ease; }
+.submission-item:hover { border-color: var(--border-strong); box-shadow: var(--shadow-sm); }
+.submission-thumb {
+  width: 132px; height: 96px; object-fit: cover;
+  border-radius: var(--radius-md); border: 1px solid var(--border);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  display: block; background: var(--bg-muted);
+}
+a:hover .submission-thumb { transform: translateY(-2px); box-shadow: var(--shadow-md); }
+.submission-file-link { display: inline-flex; align-items: center; gap: 6px; margin-top: 6px; font-weight: 600; }
+
+/* ---------- Question bank: hover + checkbox ---------- */
+.bank-item { transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease; }
+.bank-item:hover { border-color: var(--border-strong); box-shadow: var(--shadow-sm); transform: translateY(-1px); }
+.bank-item input[type="checkbox"] { accent-color: var(--primary); cursor: pointer; margin-top: 2px; }
+.bank-item .bank-q { font-weight: 600; line-height: 1.45; }
+
+/* ---------- Question bank: ô tìm kiếm có icon + nút xóa ---------- */
+.hw-search-wrap { position: relative; display: inline-flex; align-items: center; }
+.hw-search-wrap > svg { position: absolute; left: 10px; color: var(--text-muted); pointer-events: none; }
+.hw-search-wrap .text-input { padding-left: 34px; padding-right: 32px; }
+.hw-search-clear {
+  position: absolute; right: 4px;
+  width: 26px; height: 26px; border: none; background: transparent; border-radius: 6px;
+  display: inline-flex; align-items: center; justify-content: center;
+  color: var(--text-muted); cursor: pointer;
+}
+.hw-search-clear:hover { background: var(--bg-muted); color: var(--text); }
+
+/* ---------- Analytics: progress đặc thay gradient ---------- */
+.hw-analytics .progress-fill { background: var(--success); }
+
+/* ---------- Rich editor: quote icon ---------- */
+.rich-tool svg { display: block; }
+
+/* ---------- Alert có icon (quiz locked) ---------- */
+.alert-with-icon { display: flex; align-items: flex-start; gap: 8px; }
+.alert-with-icon svg { flex: none; margin-top: 1px; }
+
+/* ---------- Quiz builder: tinh chỉnh ---------- */
+.quiz-correct { flex: none; }
+
+/* ---------- Attachment row có icon ---------- */
+.att-row svg { flex: none; color: var(--text-muted); }
+.att-row span:nth-child(2) { font-weight: 600; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* ---------- Mobile ---------- */
+@media (max-width: 640px) {
+  .grade-layout { grid-template-columns: 1fr; min-height: 0; }
+  .grade-list { max-height: 220px; }
+  .grade-panel { position: static; }
+  .hw-progress-track { width: 48px; }
+  .submission-item { flex-wrap: wrap; }
+  .submission-thumb { width: 100%; height: 160px; }
+  .kind-switcher { flex-direction: column; }
+  .publish-options { flex-direction: column; }
+  .publish-btn { height: 44px; }
+}

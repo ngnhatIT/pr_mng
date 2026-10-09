@@ -6,7 +6,9 @@ import { useToast } from '../../shared/ui/toast';
 import { Field } from '../../shared/components/Form';
 import { EmptyState } from '../../shared/components/EmptyState';
 import { Skeleton } from '../../shared/components/Skeleton';
+import { Icon } from '../../shared/components/icons';
 import { ParentChild } from '../../shared/types';
+import './parent.css';
 
 export function ParentHome() {
   const [children, setChildren] = useState<ParentChild[]>([]);
@@ -81,9 +83,11 @@ export function ParentHome() {
                 <div className="child-avatar">{c.name.charAt(0).toUpperCase()}</div>
                 <div>
                   <div className="child-name">{c.name}</div>
-                  <div className="muted mono child-code">{c.code}</div>
+                  <div className="muted mono child-code">Mã: {c.code}</div>
                 </div>
-                <span className="child-arrow">›</span>
+                <span className="child-arrow" aria-hidden="true">
+                  <Icon name="chevron-right" size={20} />
+                </span>
               </div>
               {c.classes.length > 0 ? (
                 <div className="child-classes">
