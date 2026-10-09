@@ -90,6 +90,15 @@ router.put(
       res.status(400).json({ error: 'Tên phòng là bắt buộc', code: 'VALIDATION_REQUIRED' });
       return;
     }
+    const trimmed = String(name).trim();
+    // Chống trùng tên khi đổi tên (loại trừ chính phòng đang sửa)
+    const dup = (await db
+      .prepare('SELECT id FROM rooms WHERE center_id = ? AND LOWER(name) = LOWER(?) AND id != ?')
+      .get(room.center_id, trimmed, id)) as { id: number } | undefined;
+    if (dup) {
+      res.status(409).json({ error: 'Tên phòng đã tồn tại trong trung tâm', code: 'DUPLICATE' });
+      return;
+    }
     const cap = Number(capacity);
     await db
       .prepare('UPDATE rooms SET name = ?, capacity = ? WHERE id = ?')
