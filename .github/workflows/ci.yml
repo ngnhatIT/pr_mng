@@ -5,6 +5,11 @@ on:
     branches: [main, master]
   pull_request:
 
+# Hủy run cũ khi push mới (tiết kiệm runner cho loop audit-fix push liên tiếp)
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   lint:
     name: Lint + Format check
