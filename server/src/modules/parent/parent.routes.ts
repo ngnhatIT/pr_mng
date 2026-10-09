@@ -5,6 +5,7 @@ import { asyncHandler } from '../../shared/http';
 import { AppError } from '../../shared/errors';
 import { uploadSingle, cleanupUploadedFile } from '../../shared/upload';
 import { validate, v, paramId } from '../../shared/validate';
+import { env } from '../../config/env';
 import * as parentService from './parent.service';
 import { assertStrongPassword } from '../../shared/password';
 import { rotateRefreshToken, revokeRefreshToken } from '../auth/refresh.service';
@@ -135,7 +136,7 @@ router.post(
   '/invoices/:id/vnpay',
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const { parentId } = ctx(req);
-    const baseUrl = `${req.protocol}://${req.get('host')}`;
+    const baseUrl = env.APP_BASE_URL || `${req.protocol}://${req.get('host')}`;
     res
       .status(201)
       .json(await parentService.createVnpayPayment(parentId, paramId(req.params), baseUrl, req.ip || ''));

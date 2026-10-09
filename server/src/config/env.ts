@@ -87,6 +87,18 @@ export const env = {
   })(),
 
   /**
+   * Base URL công khai của app (dùng cho VNPay returnUrl gửi bên thứ 3).
+   * Nếu không đặt, fallback theo request (req.protocol + host).
+   */
+  APP_BASE_URL: (() => {
+    const v = optional('APP_BASE_URL', '');
+    if (v && !/^https?:\/\/[^/]+$/.test(v)) {
+      throw new Error(`[CONFIG] APP_BASE_URL sai format: "${v}" (đúng: "https://app.vn", không trailing slash)`);
+    }
+    return v;
+  })(),
+
+  /**
    * VNPay / Zalo: credential thực tế lưu per-center trong DB (center_settings),
    * KHÔNG đọc từ env. Giữ lại để tương thích nhưng đừng đặt nhầm tưởng có tác dụng.
    */
