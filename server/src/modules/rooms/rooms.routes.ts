@@ -67,7 +67,7 @@ router.post(
 async function getScopedRoom(req: AuthRequest, id: number) {
   const cid = await effCid(req);
   const row = (await db.prepare('SELECT * FROM rooms WHERE id = ?').get(id)) as
-    { id: number; center_id: number | null } | undefined;
+    { id: number; center_id: number | null; name: string } | undefined;
   if (!row) return null;
   // superadmin (effCid = default center) vẫn được sửa phòng của mọi trung tâm? Không — chỉ phòng thuộc center hiệu lực
   if (req.user?.role !== 'superadmin' && cid !== null && row.center_id !== cid) return null;
