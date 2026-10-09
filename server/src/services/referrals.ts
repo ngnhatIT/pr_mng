@@ -161,7 +161,7 @@ async function doAfterInvoicePaid(inv: { id: number; student_id: number; status:
       log.info(`Đã thưởng credits cho referral #${ref.id} (hóa đơn HD${inv.id})`);
       // Audit log: tiền thật được cấp, cần forensic trail
       await audit({
-        action: 'referral.reward',
+        action: 'referral_reward',
         entity: 'referral',
         entityId: ref.id,
         centerId,

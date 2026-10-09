@@ -11,7 +11,7 @@ import { logger } from './logger';
 const log = logger.scope('audit');
 
 export type AuditAction =
-  'create' | 'update' | 'delete' | 'approve' | 'reject' | 'payment' | 'refund' | 'apply_credit' | 'login' | 'change_password';
+  'create' | 'update' | 'delete' | 'approve' | 'reject' | 'payment' | 'refund' | 'apply_credit' | 'login' | 'change_password' | 'referral_reward';
 
 export interface AuditActor {
   id?: number | null;
