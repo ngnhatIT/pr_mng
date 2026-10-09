@@ -3,6 +3,13 @@ import { AppError } from '../../shared/errors';
 import { audit, type AuditActor } from '../../shared/audit';
 import { parsePagination, paginate, type PageOptions, type Paginated } from '../../shared/pagination';
 
+/** Parse ID từ query, throw 400 nếu không hợp lệ. */
+function parseQueryId(v: string): number {
+  const n = Number(v);
+  if (!Number.isInteger(n) || n <= 0) throw AppError.badRequest('ID không hợp lệ');
+  return n;
+}
+
 /* ---------------------------------- Types ---------------------------------- */
 
 /** Context phân quyền tối thiểu mà service cần (tách khỏi AuthRequest). */
@@ -51,11 +58,11 @@ export async function listGrades(
   const { student_id = '', class_id = '' } = query;
   if (student_id) {
     conds.push('g.student_id = ?');
-    params.push(Number(student_id));
+    params.push(parseQueryId(student_id));
   }
   if (class_id) {
     conds.push('g.class_id = ?');
-    params.push(Number(class_id));
+    params.push(parseQueryId(class_id));
   }
   const from = `FROM grades g
        JOIN students s ON s.id = g.student_id
