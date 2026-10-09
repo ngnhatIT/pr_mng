@@ -78,14 +78,6 @@ export function createApp(): Express {
   app.get(
     '/uploads/:filename',
     fileServeRateLimit,
-    (req, res, next) => {
-      // Cho phép token qua query ?token= (vì <img>/<a> không gửi header)
-      const qToken = req.query.token as string | undefined;
-      if (qToken && !req.headers.authorization) {
-        req.headers.authorization = `Bearer ${qToken}`;
-      }
-      next();
-    },
     requireAuth,
     asyncHandler(async (req, res) => {
       const authReq = req as AuthRequest;
