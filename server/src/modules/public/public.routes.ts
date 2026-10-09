@@ -91,6 +91,7 @@ router.get(
 // GET /api/public/reviews
 router.get(
   '/reviews',
+  publicRateLimit(20),
   asyncHandler(async (req: Request, res: Response) => {
     const center = await landingCenter(req, res);
     if (!center) return;
