@@ -3,7 +3,7 @@
  * Yêu cầu: roles.view để xem, roles.manage để thay đổi.
  */
 import { Router, Response } from 'express';
-import { AuthRequest, requireAuth } from '../../middleware/auth';
+import { AuthRequest, requireAuth, reqCenterId } from '../../middleware/auth';
 import { asyncHandler } from '../../shared/http';
 import { validate, v } from '../../shared/validate';
 import { AppError } from '../../shared/errors';
@@ -108,10 +108,14 @@ router.put(
   requirePermission('roles.manage'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const id = Number(req.params.id);
-    const role = (await db.prepare('SELECT is_system FROM roles WHERE id = ?').get(id)) as
-      { is_system: boolean } | undefined;
+    const role = (await db.prepare('SELECT is_system, center_id FROM roles WHERE id = ?').get(id)) as
+      | { is_system: boolean; center_id: number | null }
+      | undefined;
     if (!role) throw AppError.notFound('Không tìm thấy vai trò');
     if (role.is_system) throw AppError.badRequest('Không được sửa vai trò hệ thống');
+    // Admin chỉ sửa role của trung tâm mình
+    const cid = reqCenterId(req);
+    if (cid !== null && role.center_id !== cid) throw AppError.notFound('Không tìm thấy vai trò');
     const input = validate(req.body, {
       name: v.string({ max: 100, label: 'Tên' }),
       description: v.string({ max: 500, label: 'Mô tả' }),
@@ -170,6 +174,32 @@ router.post(
       user_id: v.number({ required: true, label: 'User' }),
       role_id: v.number({ required: true, label: 'Role' }),
     });
+    const cid = reqCenterId(req);
+    // Chặn gán role hệ thống (superadmin/admin/staff/teacher) — chỉ superadmin được gán qua flow riêng
+    const role = (await db
+      .prepare('SELECT id, is_system, center_id FROM roles WHERE id = ?')
+      .get(role_id)) as { id: number; is_system: boolean; center_id: number | null } | undefined;
+    if (!role) {
+      res.status(404).json({ error: 'Không tìm thấy role' });
+      return;
+    }
+    if (role.is_system && req.user?.role !== 'superadmin') {
+      res.status(403).json({ error: 'Chỉ superadmin được gán role hệ thống', code: 'FORBIDDEN' });
+      return;
+    }
+    // Admin chỉ gán role của trung tâm mình
+    if (cid !== null && role.center_id !== cid) {
+      res.status(404).json({ error: 'Không tìm thấy role' });
+      return;
+    }
+    // User được gán phải thuộc trung tâm mình
+    const targetUser = (await db
+      .prepare('SELECT id, center_id FROM users WHERE id = ?')
+      .get(user_id)) as { id: number; center_id: number | null } | undefined;
+    if (!targetUser || (cid !== null && targetUser.center_id !== cid)) {
+      res.status(404).json({ error: 'Không tìm thấy người dùng' });
+      return;
+    }
     await db
       .prepare('INSERT INTO user_roles (user_id, role_id) VALUES (?, ?) ON CONFLICT DO NOTHING')
       .run(user_id, role_id);
