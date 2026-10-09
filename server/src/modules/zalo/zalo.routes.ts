@@ -11,6 +11,7 @@ import {
   ZALO_CONFIG_KEYS,
 } from '../../services/zalo';
 import { costlyOpRateLimit } from '../../middleware/rateLimit';
+import { requireFeature } from '../../middleware/requireFeature';
 import { runReminderOnce } from '../../jobs/reminderScheduler';
 import { getDefaultCenter } from '../../utils/plans';
 import { asyncHandler } from '../../shared/http';
@@ -73,6 +74,7 @@ router.put(
 router.post(
   '/zalo/test',
   costlyOpRateLimit,
+  requireFeature('zalo_auto'),
   requirePermission('notifications.manage'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const cid = await cidOf(req);
@@ -144,6 +146,7 @@ router.post(
 router.post(
   '/zalo/run-once',
   costlyOpRateLimit,
+  requireFeature('zalo_auto'),
   requirePermission('notifications.manage'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const r = await runReminderOnce(await cidOf(req));
@@ -189,6 +192,7 @@ router.get(
 router.post(
   '/invoices/:id/remind',
   costlyOpRateLimit,
+  requireFeature('zalo_auto'),
   requirePermission('notifications.send'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const cid = reqCenterId(req);
