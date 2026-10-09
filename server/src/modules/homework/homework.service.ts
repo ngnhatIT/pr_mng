@@ -303,6 +303,13 @@ export async function createHomeworkBatch(input: CreateHomeworkInput): Promise<H
   if (status === 'scheduled' && !publish_at) throw AppError.badRequest('Hẹn giờ đăng cần chọn thời gian');
   assertValidDates(due_date, close_date);
 
+  // Validate rubric_id thuộc cùng center (chống cross-tenant linkage)
+  if (rubric_id) {
+    const { getRubric } = await import('./rubric.service');
+    const rubric = await getRubric(rubric_id, centerId);
+    if (!rubric) throw AppError.badRequest('Rubric không tồn tại hoặc không thuộc trung tâm này');
+  }
+
   const created: HomeworkRow[] = [];
   await db.transaction(async (tx) => {
     const insert = await tx.prepare(
