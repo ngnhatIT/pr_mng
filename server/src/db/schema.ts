@@ -1044,7 +1044,8 @@ CREATE TABLE IF NOT EXISTS reviews (
   status TEXT NOT NULL DEFAULT 'pending'
     CONSTRAINT chk_reviews_status CHECK (status IN ('pending', 'approved', 'rejected')),
   created_at TEXT NOT NULL DEFAULT (to_char(NOW(), 'YYYY-MM-DD HH24:MI:SS')),
-  updated_at TEXT NOT NULL DEFAULT (to_char(NOW(), 'YYYY-MM-DD HH24:MI:SS'))
+  updated_at TEXT NOT NULL DEFAULT (to_char(NOW(), 'YYYY-MM-DD HH24:MI:SS')),
+  CONSTRAINT uq_reviews_parent_center UNIQUE (parent_id, center_id)
 );
 
 CREATE TABLE IF NOT EXISTS referrals (

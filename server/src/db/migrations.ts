@@ -250,6 +250,16 @@ const MIGRATIONS: Migration[] = [
       `);
     },
   },
+  {
+    version: 13,
+    name: 'reviews_unique_parent_center',
+    up: async (tx) => {
+      // 1 review / parent / center — chống race tạo trùng
+      await tx.exec(
+        'CREATE UNIQUE INDEX IF NOT EXISTS parent_reviews_unique ON reviews(parent_id, center_id)'
+      );
+    },
+  },
 ];
 
 /** Version migration cao nhất mà code hiện tại biết (để test đối chiếu). */

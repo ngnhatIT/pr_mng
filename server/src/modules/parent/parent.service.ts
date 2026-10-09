@@ -539,27 +539,21 @@ export async function createReview(
 ): Promise<{ id: number; status: string }> {
   const r = Number(input.rating);
   if (!Number.isInteger(r) || r < 1 || r > 5) throw AppError.badRequest('Đánh giá phải từ 1 đến 5 sao');
-  // 1 review / parent / center: đã có thì UPDATE (unique index do data-layer migration bổ sung sau)
-  const existing = (await db
-    .prepare(
-      'SELECT id FROM reviews WHERE parent_id = ? AND ' +
-        (centerId === null ? 'center_id IS NULL' : 'center_id = ?')
-    )
-    .get(...(centerId === null ? [parentId] : [parentId, centerId]))) as { id: number } | undefined;
-  if (existing) {
-    await db
-      .prepare(
-        "UPDATE reviews SET rating = ?, comment = ?, status = 'pending', updated_at = datetime('now') WHERE id = ?"
-      )
-      .run(r, input.comment || null, existing.id);
-    return { id: existing.id, status: 'pending' };
-  }
+  // 1 review / parent / center: dùng ON CONFLICT để chống race (2 POST đồng thời)
   const ins = await db
     .prepare(
-      "INSERT INTO reviews (center_id, parent_id, rating, comment, status) VALUES (?, ?, ?, ?, 'pending')"
+      `INSERT INTO reviews (center_id, parent_id, rating, comment, status)
+       VALUES (?, ?, ?, ?, 'pending')
+       ON CONFLICT (parent_id, center_id) DO UPDATE SET
+         rating = excluded.rating,
+         comment = excluded.comment,
+         status = 'pending',
+         updated_at = datetime('now')
+       RETURNING id`
     )
     .run(centerId, parentId, r, input.comment || null);
-  return { id: Number(ins.lastInsertRowid), status: 'pending' };
+  const row = ins.rows?.[0] as { id: number } | undefined;
+  return { id: row?.id ?? Number(ins.lastInsertRowid), status: 'pending' };
 }
 
 export async function listMyReviews(parentId: number): Promise<unknown[]> {
