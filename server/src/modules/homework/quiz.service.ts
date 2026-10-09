@@ -1,6 +1,6 @@
 import { db } from '../../db';
 import { AppError } from '../../shared/errors';
-import { todayVN } from './homework.helpers';
+import { todayVN } from '../../shared/vnTime';
 import { eventBus } from '../../shared/events/eventBus';
 import { QuizSubmittedEvent } from '../../shared/events/homework.events';
 

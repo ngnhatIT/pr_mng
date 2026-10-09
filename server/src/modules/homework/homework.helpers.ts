@@ -4,11 +4,6 @@
  */
 import { AppError } from '../../shared/errors';
 
-/** Ngày hiện tại theo múi giờ Việt Nam, định dạng YYYY-MM-DD. */
-export function todayVN(): string {
-  return new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Ho_Chi_Minh' });
-}
-
 /** Giờ hiện tại VN định dạng YYYY-MM-DDTHH:mm (khớp input datetime-local). */
 export function nowVNMinute(): string {
   return new Date().toLocaleString('sv-SE', { timeZone: 'Asia/Ho_Chi_Minh' }).slice(0, 16).replace(' ', 'T');

@@ -3,7 +3,8 @@ import { parsePagination, paginate, type PageOptions, type Paginated } from '../
 import { escapeLike } from '../../shared/like';
 import { DAY_MS } from '../../shared/time';
 import { AppError } from '../../shared/errors';
-import { todayVN, nowVNMinute, assignedCountExpr, assertValidDates } from './homework.helpers';
+import { nowVNMinute, assignedCountExpr, assertValidDates } from './homework.helpers';
+import { todayVN } from '../../shared/vnTime';
 import { homeworkRepo, deleteHomeworkCascade } from './homework.repo';
 import { eventBus } from '../../shared/events/eventBus';
 import {
