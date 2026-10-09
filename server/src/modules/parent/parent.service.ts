@@ -1,6 +1,7 @@
 import bcrypt from 'bcryptjs';
 import { assertStrongPassword, BCRYPT_ROUNDS } from '../../shared/password';
 import { db, toISODate, confirmedPaid, getCenterSettings, formatSchedule } from '../../db';
+import { nowVNSql } from '../../shared/vnTime';
 import { withAdvisoryLock } from '../../shared/advisoryLock';
 import { AuthUser, DUMMY_PASSWORD_HASH } from '../../middleware/auth';
 import { issueTokenPair, TokenPair } from '../auth/refresh.service';
@@ -572,7 +573,7 @@ export async function createReview(
          rating = excluded.rating,
          comment = excluded.comment,
          status = 'pending',
-         updated_at = nowVNSql()
+         updated_at = '${nowVNSql()}'
        RETURNING id`
     )
     .run(centerId, parentId, r, input.comment || null);
@@ -610,7 +611,7 @@ export async function markHomeworkComplete(
     .prepare(
       `INSERT INTO homework_completions (homework_id, student_id, completed_by)
      VALUES (?, ?, 'parent')
-     ON CONFLICT(homework_id, student_id) DO UPDATE SET completed_at = nowVNSql(), completed_by = 'parent'`
+     ON CONFLICT(homework_id, student_id) DO UPDATE SET completed_at = '${nowVNSql()}', completed_by = 'parent'`
     )
     .run(homeworkId, studentId);
 }
