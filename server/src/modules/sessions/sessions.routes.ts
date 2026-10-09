@@ -39,7 +39,7 @@ router.post(
     });
     const created = await sessionService.createSession(scopeOf(req), {
       class_id: input.class_id,
-      date: input.date,
+      date: input.date!,
       topic: input.topic ?? undefined,
     });
     res.status(201).json(created);
