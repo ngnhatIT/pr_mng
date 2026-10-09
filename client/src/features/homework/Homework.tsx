@@ -244,6 +244,7 @@ export function Homework() {
       <div className="toolbar">
         <input
           className="text-input search-input"
+          aria-label={t('filters.searchPlaceholder')}
           placeholder={t('filters.searchPlaceholder')}
           value={search}
           onChange={(e) => setSearch(e.target.value)}

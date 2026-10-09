@@ -105,6 +105,7 @@ export function Students() {
           </span>
           <input
             className="text-input search-input"
+            aria-label={t('searchPlaceholder')}
             placeholder={t('searchPlaceholder')}
             value={search}
             onChange={(e) => setSearchReset(e.target.value)}

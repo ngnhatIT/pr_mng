@@ -73,7 +73,8 @@
     "audit": "Nhật ký",
     "roles": "Phân quyền",
     "systemAdmin": "Hệ thống",
-    "tagline": "Quản lý trung tâm"
+    "tagline": "Quản lý trung tâm",
+    "main": "Điều hướng chính"
   },
   "states": {
     "deleteError": "Xóa thất bại",

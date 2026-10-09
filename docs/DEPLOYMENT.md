@@ -3,7 +3,8 @@
 ## Yêu cầu
 
 - Node.js 20+ (khuyến nghị LTS)
-- 1GB RAM, 10GB disk (PostgreSQL 16+)
+- PostgreSQL 16+
+- 1GB RAM, 10GB disk
 
 ## Các bước
 
@@ -15,12 +16,15 @@ npm install
 npm run build
 ```
 
-### 2. Biến môi trường (bắt buộc)
+### 2. Biến môi trường
+
+Copy `server/.env.example` thành `server/.env` và điền giá trị thật. Biến bắt buộc:
 
 ```bash
-export JWT_SECRET="$(openssl rand -hex 32)"   # BẮT BUỘC — không dùng default
-export NODE_ENV=production
-export PORT=4000
+DATABASE_URL=postgresql://educenter:<mat-khau-manh>@localhost:5432/educenter
+JWT_SECRET="$(openssl rand -hex 32)"   # BẮT BUỘC — không đặt thì server từ chối khởi động ở production
+NODE_ENV=production
+PORT=4000
 ```
 
 > Không đặt `JWT_SECRET` ở production: server từ chối khởi động.
@@ -32,7 +36,10 @@ npm start
 # → http://localhost:4000
 ```
 
-Lần chạy đầu tiên tự tạo schema PostgreSQL (44 bảng + 36 trigger) + seed tài khoản demo.
+Lần chạy đầu tiên tự tạo schema PostgreSQL + chạy migrations theo version.
+Seed demo **mặc định TẮT** (`SEED_DEMO=false`) — chỉ bật cho môi trường dev/test.
+
+Tài khoản superadmin khởi tạo: xem log server lúc boot hoặc tạo qua seed.
 
 ### 4. Reverse proxy (Nginx mẫu)
 
@@ -45,25 +52,36 @@ server {
   location / {
     proxy_pass http://127.0.0.1:4000;
     proxy_set_header Host $host;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
   }
 }
 ```
 
+> Chạy sau proxy: đặt `TRUST_PROXY=true` để rate limit đọc IP thật từ `X-Forwarded-For`.
+
 ### 5. Sau khi lên production
 
-1. **Đổi mật khẩu demo ngay**: `admin`, `teacher1`, `root`, phụ huynh `0900000001`.
-2. **Backup DB**: cron pg_dump hàng ngày
+1. **Đổi mật khẩu** các tài khoản khởi tạo ngay.
+2. **Backup DB**: app đã có backup tự động (`BACKUP_CRON`, mặc định 2h sáng, giữ `BACKUP_KEEP` bản).
+   Ngoài ra nên có pg_dump ra nơi khác:
    ```bash
-   0 2 * * * pg_dump -Fc $DATABASE_URL -f /backup/educenter-$(date +\%F).dump
+   0 3 * * * pg_dump -Fc $DATABASE_URL -f /backup/educenter-$(date +\%F).dump
    ```
-3. **VNPay production**: đổi `VNPAY_PAY_URL` trong `server/src/services/vnpay.ts`
-   sang `https://www.vnpayment.vn/paymentv2/vpcpay.html` + cấu hình TMN code/hash secret
-   thật tại `/app/cau-hinh-thanh-toan`.
-4. **Zalo OA**: nhập access token thật tại `/app/zalo`; các template ZNS mới cần
-   được Zalo duyệt trước khi gửi thật (hiện tại log ở chế độ demo).
+3. **VNPay production**: đặt `VNPAY_URL=https://www.vnpayment.vn/paymentv2/vpcpay.html`,
+   `VNPAY_TMN_CODE`, `VNPAY_HASH_SECRET`, `VNPAY_RETURN_URL` thật (env hoặc
+   trang `/app/cau-hinh-thanh-toan`).
+4. **Zalo OA**: nhập `ZALO_OA_ID` + `ZALO_ACCESS_TOKEN` thật; template ZNS mới cần
+   được Zalo duyệt trước khi gửi thật (để trống = chế độ demo, chỉ ghi log).
+
+## Tính năng vận hành đã có
+
+- **Audit log**: mọi thao tác tiền bạc và xóa quan trọng được ghi `audit_logs` (xem `/app/nhat-ky`).
+- **Backup tự động**: theo lịch cron trong app.
+- **Health check**: `GET /health` (public), `GET /api/v1/health` (chi tiết, cần quyền).
+- **Metrics**: `GET /api/v1/metrics` (Prometheus).
+- **Rate limiting**: login 10 req/60s/IP; ghi dữ liệu 120 req/60s/IP.
 
 ## Giới hạn đã biết
 
-- PostgreSQL: sẵn sàng cho đa trung tâm đồng thời; khi cần scale lớn hơn,
-  migrate sang Postgres (tầng `db/` đã tách riêng, service không dính SQL dialect).
-- Chưa có audit log tập trung và backup tự động trong app.
+- Rate limiter và event bus dùng bộ nhớ trong (in-memory): phù hợp chạy 1 instance.
+  Khi scale multi-instance, cần thay bằng Redis.

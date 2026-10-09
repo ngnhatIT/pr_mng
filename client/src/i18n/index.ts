@@ -103,7 +103,16 @@ export function setAppLang(lng: AppLang) {
   } catch {
     /* bỏ qua */
   }
+  // Cập nhật <html lang> để screen reader phát âm đúng (WCAG 3.1.1)
+  if (typeof document !== 'undefined') {
+    document.documentElement.lang = lng;
+  }
   void i18n.changeLanguage(lng);
+}
+
+// Đồng bộ <html lang> với ngôn ngữ khởi tạo
+if (typeof document !== 'undefined') {
+  document.documentElement.lang = detectLang();
 }
 
 export function getAppLang(): AppLang {

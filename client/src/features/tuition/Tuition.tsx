@@ -214,6 +214,7 @@ function InvoiceList() {
       <div className="toolbar tuition-toolbar">
         <input
           className="text-input search-input"
+          aria-label={t('invoices.searchPlaceholder')}
           placeholder={t('invoices.searchPlaceholder')}
           value={search}
           onChange={(e) => {

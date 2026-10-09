@@ -121,6 +121,16 @@ export function Layout() {
     };
   }, [drawerOpen]);
 
+  // Escape đóng drawer mobile (a11y)
+  useEffect(() => {
+    if (!drawerOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setDrawerOpen(false);
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [drawerOpen]);
+
   const title = pageTitleFor(t, location.pathname, isSuperadmin);
 
   useEffect(() => {
@@ -129,8 +139,16 @@ export function Layout() {
 
   return (
     <div className="app-shell">
-      <div className={`scrim${drawerOpen ? ' show' : ''}`} onClick={() => setDrawerOpen(false)} />
-      <aside className={`sidebar${drawerOpen ? ' open' : ''}`}>
+      <div
+        className={`scrim${drawerOpen ? ' show' : ''}`}
+        onClick={() => setDrawerOpen(false)}
+        aria-hidden="true"
+      />
+      <aside
+        className={`sidebar${drawerOpen ? ' open' : ''}`}
+        aria-label={t('nav.main')}
+        aria-hidden={!drawerOpen && undefined}
+      >
         <div className="brand">
           <div className="brand-logo">E</div>
           <div>

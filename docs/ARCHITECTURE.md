@@ -46,8 +46,9 @@ server/src/
 ```
 
 **Unit test:** `*.test.ts` đặt cạnh file nguồn, chạy bằng `cd server && npm test`
-(dùng `node:test` có sẵn, 0 dependency). Hiện có 24 tests: validate, AppError,
-asyncHandler, date-utils, chữ ký VNPay.
+(dùng `node:test` có sẵn, 0 dependency). Hiện có **162 tests** server (unit + integration
+trên PostgreSQL thật: validate, AppError, VNPay, RBAC, refund, trial/lead convert race,
+idempotency, consistency...) + 12 tests client (vitest).
 
 ### Audit log
 
@@ -69,8 +70,11 @@ Xem tại `/app/nhat-ky` (chỉ admin) hoặc `GET /api/audit-logs`.
 3. **Không `process.env` rải rác.** Thêm biến mới vào `config/env.ts`.
 4. **Scope multi-tenant:** dùng `findByIdOr404(table, id, centerId, message)` từ
    `shared/repository.ts` thay vì viết tay 5 dòng check.
-5. **Phân quyền:** `requireAuth` → `denyParents` (ở mount trong `app.ts`) → `staffOnly` /
-   `teacherOnly` / `adminOnly` / `superadminOnly` (trong route). Phụ huynh CHỈ dùng `/api/parent`.
+5. **Phân quyền (RBAC):** `requireAuth` → `denyParents` (ở mount trong `app.ts`) →
+   `requirePermission('<module>.<action>')` với scope `own`/`center`/`all` (scope mạnh nhất thắng,
+   cache 60s). 61 permissions trong catalog (`modules/authorization/permissions.ts`).
+   Roles hệ thống: superadmin (61/all), admin (61/center), staff (37), teacher (12/own).
+   Custom role tạo qua API `/roles`. Phụ huynh CHỈ dùng `/api/parent` (token có `kind: 'parent'`).
 6. **Multi-tenant:** mọi query nghiệp vụ lọc theo `centerId`; superadmin (`centerId=null`) bypass.
 
 ### Thêm 1 domain mới
@@ -81,6 +85,7 @@ mkdir server/src/modules/<ten>
 #                 import { db } from '../../db'
 #                 import { ... } from '../../middleware/auth'
 ```
+
 Rồi mount trong `app.ts`: `app.use('/api/<ten>', ...staff, <ten>Routes);`
 
 ## Frontend (`client/src/`)

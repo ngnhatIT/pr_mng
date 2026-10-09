@@ -9,10 +9,14 @@ Tài liệu này dành cho dev mới join. Đọc `docs/ARCHITECTURE.md` trướ
    Service là hàm thuần nhận `(centerId | ScopeCtx, ...args)` — KHÔNG nhận `req/res`.
 3. **Route**: thêm handler mỏng trong `<domain>.routes.ts`:
    ```ts
-   router.post('/', staffOnly, asyncHandler(async (req: AuthRequest, res: Response) => {
-     const input = validate(req.body, { name: v.string({ required: true, max: 100, label: 'Tên' }) });
-     res.status(201).json(myService.create(reqCenterId(req), input));
-   }));
+   router.post(
+     '/',
+     staffOnly,
+     asyncHandler(async (req: AuthRequest, res: Response) => {
+       const input = validate(req.body, { name: v.string({ required: true, max: 100, label: 'Tên' }) });
+       res.status(201).json(myService.create(reqCenterId(req), input));
+     })
+   );
    ```
 4. **Test**: thêm case vào `*.test.ts` cạnh file service (chạy `npm test` trong `server/`).
 5. **Client**: thêm API call vào `client/src/features/<domain>/<domain>.api.ts`, dùng trong page.
@@ -44,6 +48,7 @@ npm run format:check  # Kiểm tra format (CI chạy)
 ```
 
 CI (`.github/workflows/ci.yml`) tự chạy trên mỗi push/PR:
+
 1. Lint + format check
 2. Unit tests
 3. Build server + client

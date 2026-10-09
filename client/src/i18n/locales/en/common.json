@@ -73,7 +73,8 @@
     "audit": "Audit log",
     "roles": "Roles",
     "systemAdmin": "System",
-    "tagline": "Center management"
+    "tagline": "Center management",
+    "main": "Main navigation"
   },
   "states": {
     "deleteError": "Delete failed",

@@ -80,6 +80,7 @@ export function QuestionBank({
           <Icon name="search" size={15} />
           <input
             className="text-input search-input"
+            aria-label={t('bank.searchPh')}
             placeholder={t('bank.searchPh')}
             value={search}
             onChange={(e) => setSearch(e.target.value)}

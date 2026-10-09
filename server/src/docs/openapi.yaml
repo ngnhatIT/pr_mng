@@ -3368,7 +3368,7 @@ paths:
           description: OK
 
   # ------------------------- VNPay callback -------------------------
-  /api/v1/parent/vnpay-return:
+  /api/v1/payments/vnpay-return:
     get:
       tags:
         - Parent
@@ -3377,7 +3377,7 @@ paths:
       responses:
         '302':
           description: Redirect về portal phụ huynh
-  /api/v1/parent/vnpay-ipn:
+  /api/v1/payments/vnpay-ipn:
     get:
       tags:
         - Parent
