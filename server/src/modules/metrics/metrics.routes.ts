@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { requirePermission } from '../authorization/authorization.middleware';
-import { db } from '../../db';
+import { db, getPoolStats } from '../../db';
 import { asyncHandler } from '../../shared/http';
 
 /**
@@ -64,6 +64,17 @@ router.get(
     for (const [route, count] of requestCounts) {
       lines.push(`educenter_http_requests_total{route="${route}"} ${count}`);
     }
+    // Pool stats — phát hiện cạn connection
+    const poolStats = getPoolStats();
+    lines.push('# HELP educenter_db_pool_total Tổng connection trong pool');
+    lines.push('# TYPE educenter_db_pool_total gauge');
+    lines.push(`educenter_db_pool_total ${poolStats.total}`);
+    lines.push('# HELP educenter_db_pool_idle Connection rảnh');
+    lines.push('# TYPE educenter_db_pool_idle gauge');
+    lines.push(`educenter_db_pool_idle ${poolStats.idle}`);
+    lines.push('# HELP educenter_db_pool_waiting Request đang chờ connection');
+    lines.push('# TYPE educenter_db_pool_waiting gauge');
+    lines.push(`educenter_db_pool_waiting ${poolStats.waiting}`);
 
     res.setHeader('Content-Type', 'text/plain; version=0.0.4');
     res.send(lines.join('\n') + '\n');

@@ -10,6 +10,7 @@ import {
   sendTuitionReminder,
   ZALO_CONFIG_KEYS,
 } from '../../services/zalo';
+import { costlyOpRateLimit } from '../../middleware/rateLimit';
 import { runReminderOnce } from '../../jobs/reminderScheduler';
 import { getDefaultCenter } from '../../utils/plans';
 import { asyncHandler } from '../../shared/http';
@@ -68,9 +69,10 @@ router.put(
 
 /* --------------------------- Gửi tin nhắn thử (admin) --------------------------- */
 
-// POST /api/zalo/test { phone }
+// POST /api/zalo/test { phone } — tốn tiền thật, giới hạn 5/15ph
 router.post(
   '/zalo/test',
+  costlyOpRateLimit,
   requirePermission('notifications.manage'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const cid = await cidOf(req);
@@ -138,9 +140,10 @@ router.post(
 
 /* --------------------------- Chạy lịch nhắc ngay (admin) --------------------------- */
 
-// POST /api/zalo/run-once — chỉ chạy cho trung tâm của user
+// POST /api/zalo/run-once — sweep toàn bộ nhắc nợ, tốn DB + tiền, giới hạn 5/15ph
 router.post(
   '/zalo/run-once',
+  costlyOpRateLimit,
   requirePermission('notifications.manage'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const r = await runReminderOnce(await cidOf(req));
@@ -182,8 +185,10 @@ router.get(
 /* --------------------------- Gửi nhắc thủ công 1 hóa đơn --------------------------- */
 
 // POST /api/invoices/:id/remind { kind: 'overdue' | 'upcoming' }
+// Gửi tin thật (tốn tiền) — bypass anti-spam của scheduler nên giới hạn riêng 5/15ph
 router.post(
   '/invoices/:id/remind',
+  costlyOpRateLimit,
   requirePermission('notifications.send'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const cid = reqCenterId(req);

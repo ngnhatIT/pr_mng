@@ -138,6 +138,23 @@ export const parentRateLimit = createRateLimit({
   message: 'Bạn thao tác quá nhanh, vui lòng thử lại sau ít phút.',
 });
 
+/**
+ * 5 requests / 15 phút / IP — cho thao tác tốn tiền thật (gửi Zalo ZNS, sweep nhắc nợ).
+ * Chống đốt tiền khi token staff bị lộ.
+ */
+export const costlyOpRateLimit = createRateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 5,
+  message: 'Thao tác này bị giới hạn 5 lần / 15 phút để tránh phát sinh chi phí. Vui lòng thử lại sau.',
+});
+
+/** 100 requests / 15 phút / IP — cho phục vụ file (chống cạn băng thông). */
+export const fileServeRateLimit = createRateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 100,
+  message: 'Bạn tải file quá nhanh, vui lòng thử lại sau ít phút.',
+});
+
 /* ------------------------- Login rate limit ------------------------- */
 
 const LOGIN_WINDOW_MS = env.LOGIN_RATE_WINDOW_MS;

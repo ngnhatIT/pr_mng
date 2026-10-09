@@ -19,6 +19,10 @@ const MIN_LEVEL: Level = env.IS_PROD ? 'info' : 'debug';
 
 function format(level: Level, scope: string, message: string, meta?: Record<string, unknown>): string {
   const ts = new Date().toISOString();
+  if (env.IS_PROD) {
+    // Production: JSON structured để ELK/Loki parse native
+    return JSON.stringify({ ts, level, scope, msg: message, ...(meta || {}) });
+  }
   const metaStr = meta && Object.keys(meta).length ? ` ${JSON.stringify(meta)}` : '';
   return `[${ts}][${level.toUpperCase()}][${scope}] ${message}${metaStr}`;
 }

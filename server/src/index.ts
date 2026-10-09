@@ -4,7 +4,7 @@ import cron from 'node-cron';
 import { env } from './config/env';
 import { logger } from './shared/logger';
 import { createApp } from './app';
-import { startReminderScheduler } from './jobs/reminderScheduler';
+import { startReminderScheduler, stopReminderScheduler } from './jobs/reminderScheduler';
 import { initDatabase, closePool, db } from './db';
 import { backupDatabase } from './db/backup';
 
@@ -23,7 +23,9 @@ process.on('unhandledRejection', (reason: unknown) => {
 
 process.on('uncaughtException', (err: unknown) => {
   logger.error('Uncaught exception', { error: String(err) });
-  if (!env.IS_PROD) process.exit(1);
+  // Production: crash ngay để process manager restart với trạng thái sạch.
+  // Tiếp tục phục vụ sau uncaughtException = trạng thái không xác định (rủi ro dữ liệu).
+  process.exit(1);
 });
 
 /** Kiểm tra pg_dump tồn tại trong PATH (backup tự động cần nó). */
@@ -42,13 +44,22 @@ function checkPgDump(): void {
  * múi giờ Asia/Ho_Chi_Minh, giữ BACKUP_KEEP bản mới nhất.
  * Lỗi backup chỉ log (không crash app) — nhưng PHẢI được giám sát.
  */
+let backupTask: ReturnType<typeof cron.schedule> | null = null;
+let consistencyTask: ReturnType<typeof cron.schedule> | null = null;
+
+export function stopSchedulers(): void {
+  backupTask?.stop();
+  consistencyTask?.stop();
+  backupTask = consistencyTask = null;
+}
+
 function startBackupScheduler(): void {
   if (!cron.validate(env.BACKUP_CRON)) {
     logger.warn(`BACKUP_CRON không hợp lệ: "${env.BACKUP_CRON}" — tắt backup tự động`);
     return;
   }
   const dir = path.resolve(process.cwd(), 'backups');
-  cron.schedule(
+  backupTask = cron.schedule(
     env.BACKUP_CRON,
     async () => {
       // Advisory lock: 2 instance không backup đè nhau
@@ -88,7 +99,7 @@ function startBackupScheduler(): void {
  * Chạy mỗi giờ; có vấn đề thì log ERROR để hệ giám sát bắt được.
  */
 function startConsistencyScheduler(): void {
-  cron.schedule(
+  consistencyTask = cron.schedule(
     '0 * * * *',
     async () => {
       try {
@@ -127,6 +138,8 @@ async function main(): Promise<void> {
    */
   function shutdown(signal: string): void {
     logger.info(`Nhận ${signal}, đang tắt graceful...`);
+    stopSchedulers();
+    stopReminderScheduler();
     const forceTimer = setTimeout(() => {
       logger.warn('Graceful timeout, ép tắt');
       process.exit(1);

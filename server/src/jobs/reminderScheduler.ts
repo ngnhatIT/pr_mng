@@ -163,8 +163,15 @@ export async function runReminderOnce(centerId?: number): Promise<RunOnceResult>
  * Khởi động scheduler: kiểm tra mỗi phút, chạy khi đến giờ cấu hình của từng trung tâm.
  * Trung tâm không có tính năng 'zalo_auto' (gói basic) sẽ bị bỏ qua.
  */
+let reminderTask: ReturnType<typeof cron.schedule> | null = null;
+
+export function stopReminderScheduler(): void {
+  reminderTask?.stop();
+  reminderTask = null;
+}
+
 export function startReminderScheduler(): void {
-  cron.schedule(
+  reminderTask = cron.schedule(
     '* * * * *',
     () => {
       (async () => {

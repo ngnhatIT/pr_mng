@@ -24,7 +24,7 @@ export async function initDatabase(): Promise<void> {
 }
 
 /* Re-export để mọi module dùng: import { db, toISODate } from '../db' */
-export { db, closePool } from './pg-compat';
+export { db, closePool, getPoolStats } from './pg-compat';
 export type { Db, Tx, Statement, RunResult } from './pg-compat';
 export { SCHEMA_VERSION };
 export * from './date-utils';

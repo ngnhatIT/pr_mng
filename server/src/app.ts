@@ -5,11 +5,12 @@ import path from 'path';
 import fs from 'fs';
 import { requireAuth, denyParents, reqCenterId, AuthRequest } from './middleware/auth';
 import { requestId } from './middleware/requestId';
+import { requestLogger } from './middleware/requestLogger';
 import { errorHandler, notFoundHandler, asyncHandler } from './shared/http';
 import { getUploadDir } from './shared/upload';
 import { checkUploadAccess } from './shared/uploadAccess';
 import { registerZaloListeners } from './shared/events/zalo.listeners';
-import { apiRateLimit, writeRateLimit, parentRateLimit } from './middleware/rateLimit';
+import { apiRateLimit, writeRateLimit, parentRateLimit, fileServeRateLimit } from './middleware/rateLimit';
 import { db } from './db';
 import { env } from './config/env';
 import { setupSwagger } from './docs/swagger';
@@ -49,6 +50,7 @@ export function createApp(): Express {
   const app = express();
 
   app.use(requestId); // Gán X-Request-Id cho mọi request (trace logs)
+  app.use(requestLogger); // Log method/path/status/duration + đếm metrics
   // M5: CORS allowlist + credentials (thay vì cors() mở toàn bộ) + security headers
   app.use(
     cors({
@@ -70,9 +72,11 @@ export function createApp(): Express {
   app.use(express.static(clientDist));
 
   // Phục vụ file bài nộp — CÓ AUTH (ảnh bài làm của học viên, không public)
+  // + rate limit riêng (route này bypass các limiter của /api/v1)
   const uploadDir = getUploadDir();
   app.get(
     '/uploads/:filename',
+    fileServeRateLimit,
     (req, res, next) => {
       // Cho phép token qua query ?token= (vì <img>/<a> không gửi header)
       const qToken = req.query.token as string | undefined;

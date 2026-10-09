@@ -339,3 +339,8 @@ export const db: Db = {
 export async function closePool(): Promise<void> {
   await pool.end();
 }
+
+/** Thống kê pool cho /metrics — phát hiện cạn connection trước khi timeout. */
+export function getPoolStats(): { total: number; idle: number; waiting: number } {
+  return { total: pool.totalCount, idle: pool.idleCount, waiting: pool.waitingCount };
+}
