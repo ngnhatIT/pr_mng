@@ -107,6 +107,15 @@ router.put(
     await db
       .prepare('UPDATE rooms SET name = ?, capacity = ? WHERE id = ?')
       .run(String(name).trim(), Math.floor(cap), id);
+    await audit({
+      centerId: room.center_id,
+      actor: actorFromReq(req),
+      action: 'update',
+      entity: 'rooms',
+      entityId: id,
+      summary: `Cập nhật phòng ${String(name).trim()}`,
+      meta: { old_name: room.name, new_name: String(name).trim(), capacity: Math.floor(cap) },
+    });
     res.json(await db.prepare('SELECT * FROM rooms WHERE id = ?').get(id));
   })
 );
