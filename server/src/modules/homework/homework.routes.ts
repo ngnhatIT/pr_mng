@@ -348,7 +348,7 @@ router.delete(
   '/bank/questions/:bid',
   requirePermission('homework.delete'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
-    await deleteBankQuestion(Number(req.params.bid), reqCenterId(req));
+    await deleteBankQuestion(paramId(req, 'bid'), reqCenterId(req));
     res.json({ ok: true });
   })
 );
@@ -414,7 +414,7 @@ router.delete(
   '/rubrics/:rid',
   requirePermission('homework.delete'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
-    const r = await getRubric(Number(req.params.rid), reqCenterId(req));
+    const r = await getRubric(paramId(req, 'rid'), reqCenterId(req));
     if (!r) {
       throw AppError.notFound('Không tìm thấy rubric');
     }
