@@ -48,7 +48,7 @@ router.post(
       phone: v.string({ required: false, label: 'Số điện thoại' }),
       address: v.string({ required: false, label: 'Địa chỉ' }),
       plan: v.string({ required: false, label: 'Gói cước' }),
-      plan_expires_at: v.string({ required: false, label: 'Hạn gói' }),
+      plan_expires_at: v.date({ required: false, label: 'Hạn gói' }),
       admin_username: v.string({ required: true, label: 'Tên đăng nhập admin' }),
       admin_password: v.string({ required: true, label: 'Mật khẩu admin' }),
     });
@@ -115,7 +115,13 @@ router.put(
     }
     if (body?.plan_expires_at !== undefined) {
       sets.push('plan_expires_at = ?');
-      params.push(body.plan_expires_at ? String(body.plan_expires_at).trim() : null);
+      const expRaw = body.plan_expires_at ? String(body.plan_expires_at).trim() : null;
+      // Validate ngày thật
+      if (expRaw) {
+        const { v: vv, validate: vValidate } = await import('../../shared/validate');
+        vValidate({ d: expRaw }, { d: vv.date({ label: 'Hạn gói' }) });
+      }
+      params.push(expRaw);
     }
     if (sets.length > 0) {
       await db.prepare(`UPDATE centers SET ${sets.join(', ')} WHERE id = ?`).run(...params, id);
