@@ -1,5 +1,6 @@
 import { db } from '../../db';
 import { parsePagination, paginate, type PageOptions, type Paginated } from '../../shared/pagination';
+import { AppError } from '../../shared/errors';
 
 /* ---------------------------------- Types ---------------------------------- */
 
@@ -27,6 +28,10 @@ export async function listLeaves(
   pageOpts: PageOptions = {}
 ): Promise<Paginated<LeaveRow>> {
   const { status = '' } = query;
+  // Validate status (tránh typo trả toàn bộ lặng lẽ)
+  if (status && !(LEAVE_STATUS as readonly string[]).includes(status)) {
+    throw AppError.badRequest('Trạng thái không hợp lệ');
+  }
   const conds: string[] = [];
   const params: unknown[] = [];
   if (centerId !== null) {
