@@ -82,49 +82,27 @@ export function Landing() {
       </header>
 
       <section className="landing-hero">
-        <div className="landing-badge">
-          <span className="landing-badge-dot" />
-          Đang tuyển sinh - đăng ký học thử miễn phí
-        </div>
-        <h1>{center?.name || 'Trung tâm của bạn'}</h1>
-        <p className="landing-hero-sub">
-          Nền tảng quản lý lớp học, học viên và học phí hiện đại - đồng hành cùng con bạn trên mỗi bước tiến.
-        </p>
-        <div className="landing-hero-cta">
-          <button className="btn btn-primary btn-lg" onClick={scrollToForm}>
-            Đăng ký tư vấn
-          </button>
-          <button className="btn btn-lg" onClick={scrollToForm}>
-            Đăng ký học thử
-          </button>
-        </div>
-        <div className="landing-stats">
-          <div className="landing-stat">
-            <div className="landing-stat-value">{courses.length}</div>
-            <div className="landing-stat-label">Khóa học</div>
-          </div>
-          <div className="landing-stat">
-            <div className="landing-stat-value">{teachers.length}</div>
-            <div className="landing-stat-label">Giáo viên</div>
-          </div>
-          <div className="landing-stat">
-            <div className="landing-stat-value">
-              {reviews && reviews.total > 0 ? reviews.avg.toFixed(1) : '-'}/5
+        <div className="landing-hero-inner">
+          <div className="landing-hero-copy">
+            <div className="landing-badge">Đang tuyển sinh - đăng ký học thử miễn phí</div>
+            <h1>{center?.name || 'Trung tâm của bạn'}</h1>
+            <p className="landing-hero-sub">
+              Lớp học sĩ số nhỏ, giáo viên theo sát từng học viên, học phí minh bạch -
+              đồng hành cùng con bạn trên mỗi bước tiến.
+            </p>
+            <div className="landing-hero-cta">
+              <button className="btn btn-primary btn-lg" onClick={scrollToForm}>
+                Đăng ký tư vấn
+              </button>
+              <button className="btn btn-lg" onClick={scrollToForm}>
+                Đăng ký học thử
+              </button>
             </div>
-            <div className="landing-stat-label">Đánh giá phụ huynh</div>
+          </div>
+          <div className="landing-hero-media">
+            <img src="/landing-hero.jpg" alt="Lớp học tại trung tâm" loading="eager" />
           </div>
         </div>
-        {(center?.phone || center?.address) && (
-          <p className="landing-hero-contact muted">
-            {center?.phone && (
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                <Icon name="phone" size={14} /> {center.phone}
-              </span>
-            )}
-            {center?.phone && center?.address && ' · '}
-            {center?.address && <>{center.address}</>}
-          </p>
-        )}
       </section>
 
       <section className="landing-section" id="khoa-hoc">
@@ -140,7 +118,6 @@ export function Landing() {
           <div className="course-grid">
             {courses.map((c) => (
               <div key={c.id} className="card course-card card-hover">
-                <div className="course-card-top" />
                 <h3>{c.name}</h3>
                 <dl className="dl dl-compact">
                   <dt>Giáo viên</dt>
@@ -173,12 +150,14 @@ export function Landing() {
             Đang cập nhật...
           </p>
         ) : (
-          <div className="course-grid">
+          <div className="teacher-list">
             {teachers.map((t, i) => (
-              <div key={i} className="card review-card card-hover">
+              <div key={i} className="teacher-row">
                 <div className="teacher-avatar">{t.name.charAt(0).toUpperCase()}</div>
-                <h3>{t.name}</h3>
-                <p className="muted">{t.subject || 'Giáo viên'}</p>
+                <div>
+                  <div className="teacher-name">{t.name}</div>
+                  <div className="muted">{t.subject || 'Giáo viên'}</div>
+                </div>
               </div>
             ))}
           </div>

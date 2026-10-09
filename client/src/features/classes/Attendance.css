@@ -1,30 +1,27 @@
 /* Attendance - điểm danh: thao tác nhanh lặp lại.
  * Hàng điểm danh phải to rõ, chạm là phản hồi ngay (optimistic đã có ở state),
- * trạng thái muộn/vắng nhìn là biết qua viền màu bên trái.
+ * trạng thái muộn/vắng nhìn là biết qua nền tint nhẹ (không dùng viền màu cạnh).
  */
 
 .att-item {
-  border-left: 3px solid transparent;
-  transition: border-color 0.15s ease-out, box-shadow 0.15s ease-out,
-    border-left-color 0.15s ease-out, background-color 0.15s ease-out;
+  transition: background-color 0.15s ease-out, box-shadow 0.15s ease-out;
 }
 
-/* Muộn: viền cam; Vắng: viền đỏ + nền hồng nhạt để liếc mắt thấy ngay */
+/* Muộn: nền vàng nhạt; Vắng: nền đỏ nhạt - badge trạng thái vẫn là tín hiệu chính */
 .att-item.att-late {
-  border-left-color: var(--warning);
+  background: #fffdf5;
 }
 
 .att-item.att-absent {
-  border-left-color: var(--danger);
-  background: #fef6f6;
+  background: #fef7f7;
 }
 
 /* Tóm tắt savebar: số liệu tách cụm, số tabular */
-.att-summary .sum-sep {
-  color: var(--text-faint);
-  margin: 0 4px;
+.att-summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 16px;
 }
-
 .att-summary .num {
   font-variant-numeric: tabular-nums;
   font-weight: 700;

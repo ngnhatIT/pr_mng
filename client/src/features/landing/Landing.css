@@ -63,7 +63,7 @@
   color: var(--text-strong);
 }
 
-/* Mobile: ẩn anchor nav, giữ 2 CTA; stats gọn */
+/* Mobile: ẩn anchor nav, giữ 2 CTA; hero xếp chồng */
 @media (max-width: 640px) {
   .landing-nav {
     padding: 12px 16px;
@@ -78,18 +78,48 @@
   }
 
   .landing-hero {
-    padding: 64px 16px 48px;
+    padding: 56px 16px 48px;
   }
 
-  .landing-stats {
-    gap: 20px;
-  }
-
-  .landing-stat-value {
-    font-size: 26px;
+  .landing-hero-inner {
+    grid-template-columns: 1fr;
+    gap: 32px;
   }
 
   .course-grid {
     grid-template-columns: 1fr;
   }
+}
+
+/* Đội ngũ giáo viên: danh sách roster gọn, khác layout với grid khóa học */
+.teacher-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 4px 40px;
+  max-width: 900px;
+  margin: 0 auto;
+}
+.teacher-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--border);
+}
+.teacher-avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: var(--primary-soft);
+  color: var(--primary);
+  font-weight: 700;
+  font-size: 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.teacher-name {
+  font-weight: 600;
+  color: var(--text-strong);
 }

@@ -1,5 +1,5 @@
 /**
- * API layer cho Nhật ký hoạt động (audit log) — chỉ admin.
+ * API layer cho Nhật ký hoạt động (audit log) - chỉ admin.
  */
 import { http, type Paginated, type PageParams } from '../../shared/api/client';
 

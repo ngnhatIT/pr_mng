@@ -95,8 +95,8 @@ export function QuizTaker({
         <div className="quiz-info-bar">
           <span className="muted" style={{ fontSize: 13 }}>
             {questions.length} câu
-            {homework.max_score != null && ` · ${homework.max_score}đ`}
-            {homework.due_date && ` · Hạn: ${homework.due_date}`}
+            {homework.max_score != null && ` (${homework.max_score}đ)`}
+            {homework.due_date && ` - Hạn: ${homework.due_date}`}
           </span>
           {history.length > 0 && (
             <span className="muted" style={{ fontSize: 13 }}>

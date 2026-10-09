@@ -257,24 +257,21 @@ export function Attendance() {
               </div>
               <div className="att-savebar">
                 <span className="att-summary">
-                  <span className="num">{rows.length}</span> học viên
-                  <span className="sum-sep">·</span>
-                  <span className="num">{presentCount}</span> có mặt
+                  <span>
+                    <span className="num">{rows.length}</span> học viên
+                  </span>
+                  <span>
+                    <span className="num">{presentCount}</span> có mặt
+                  </span>
                   {lateCount > 0 && (
-                    <>
-                      <span className="sum-sep">·</span>
-                      <span className="sum-late">
-                        <span className="num">{lateCount}</span> muộn
-                      </span>
-                    </>
+                    <span className="sum-late">
+                      <span className="num">{lateCount}</span> muộn
+                    </span>
                   )}
                   {absentCount > 0 && (
-                    <>
-                      <span className="sum-sep">·</span>
-                      <span className="sum-absent">
-                        <span className="num">{absentCount}</span> vắng
-                      </span>
-                    </>
+                    <span className="sum-absent">
+                      <span className="num">{absentCount}</span> vắng
+                    </span>
                   )}
                 </span>
                 <span className="spacer" />

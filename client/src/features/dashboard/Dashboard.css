@@ -20,11 +20,10 @@
 }
 
 .dash-section-label {
-  font-size: var(--font-size-sm);
+  font-size: var(--font-size-md);
   font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--text-faint);
+  letter-spacing: -0.01em;
+  color: var(--text-strong);
   margin: var(--sp-6) 0 var(--sp-3);
 }
 

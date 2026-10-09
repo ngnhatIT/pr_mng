@@ -1,5 +1,5 @@
 /**
- * API layer cho feature Hệ thống (quản lý trung tâm — superadmin).
+ * API layer cho feature Hệ thống (quản lý trung tâm - superadmin).
  */
 import { http } from '../../shared/api/client';
 import { CenterItem } from '../../shared/types';

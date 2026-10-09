@@ -95,7 +95,7 @@ export function GradeModal({ homework, onClose }: { homework: HomeworkItem; onCl
         <div className="rubric-banner">
           <strong>Rubric: {rubric.name}</strong>
           <div className="muted" style={{ fontSize: 13 }}>
-            {rubric.criteria.map((c) => `${c.name} (${c.max_score}đ)`).join(' · ')}
+            {rubric.criteria.map((c) => `${c.name} (${c.max_score}đ)`).join(', ')}
           </div>
         </div>
       )}

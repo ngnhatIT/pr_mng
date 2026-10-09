@@ -1,6 +1,6 @@
 /**
  * API layer cho feature Cổng giáo viên (TeacherToday / TeacherGrades / TeacherSalary).
- * Page chỉ import từ đây — không gọi http trực tiếp với URL string rải rác.
+ * Page chỉ import từ đây - không gọi http trực tiếp với URL string rải rác.
  */
 import { http, type Paginated, type PageParams } from '../../shared/api/client';
 import { TeacherTodayItem, Grade } from '../../shared/types';

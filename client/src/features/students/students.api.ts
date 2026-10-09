@@ -1,6 +1,6 @@
 /**
  * API layer cho feature Học viên.
- * Page chỉ import từ đây — không gọi http trực tiếp với URL string rải rác.
+ * Page chỉ import từ đây - không gọi http trực tiếp với URL string rải rác.
  */
 import { http, type Paginated, type PageParams } from '../../shared/api/client';
 import { type Grade } from '../../shared/types';

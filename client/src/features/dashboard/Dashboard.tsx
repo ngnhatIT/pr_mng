@@ -156,8 +156,8 @@ export function Dashboard() {
                     <div className="list-title">{s.class_name}</div>
                     <div className="list-sub">
                       {s.teacher_name || 'Chưa phân công'} · {s.scheduleText}
-                      {s.topic ? ` · Chủ đề: ${s.topic}` : ''}
                     </div>
+                    {s.topic && <div className="list-sub">Chủ đề: {s.topic}</div>}
                   </div>
                   <Link className="btn btn-sm" to={`/app/attendance?class=${s.class_id}&session=${s.id}`}>
                     Điểm danh

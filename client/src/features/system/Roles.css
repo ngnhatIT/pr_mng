@@ -307,7 +307,7 @@
   padding: 6px 10px;
   border-radius: var(--radius-sm);
   cursor: pointer;
-  transition: all 150ms ease-out;
+  transition: background-color 150ms ease-out, color 150ms ease-out;
   white-space: nowrap;
 }
 

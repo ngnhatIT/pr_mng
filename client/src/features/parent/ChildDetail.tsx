@@ -130,11 +130,14 @@ function ScheduleTab({ data }: { data: ChildOverview }) {
           data.classes.map((c) => (
             <div key={c.id} className="class-info-card">
               <strong>{c.name}</strong>
-              <div className="muted">
-                Lịch: {c.schedule || '-'}
-                {c.teacher_name && <> · GV: {c.teacher_name}</>}
-                {c.room_name && <> · Phòng: {c.room_name}</>}
-              </div>
+              <div className="muted">Lịch: {c.schedule || '-'}</div>
+              {(c.teacher_name || c.room_name) && (
+                <div className="muted">
+                  {c.teacher_name ? `GV: ${c.teacher_name}` : ''}
+                  {c.teacher_name && c.room_name ? ' · ' : ''}
+                  {c.room_name ? `Phòng: ${c.room_name}` : ''}
+                </div>
+              )}
             </div>
           ))
         )}
