@@ -103,7 +103,12 @@ export function QuestionBank({
             </button>
           )}
         </div>
-        <select className="text-input" value={tag} onChange={(e) => setTag(e.target.value)}>
+        <select
+          aria-label="Lọc theo thẻ"
+          className="text-input"
+          value={tag}
+          onChange={(e) => setTag(e.target.value)}
+        >
           <option value="">{t('bank.allTags')}</option>
           {tags.map((tg) => (
             <option key={tg} value={tg}>

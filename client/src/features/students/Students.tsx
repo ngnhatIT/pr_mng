@@ -112,7 +112,12 @@ export function Students() {
             onChange={(e) => setSearchReset(e.target.value)}
           />
         </span>
-        <select className="text-input" value={status} onChange={(e) => setStatusReset(e.target.value)}>
+        <select
+          aria-label="Lọc theo trạng thái"
+          className="text-input"
+          value={status}
+          onChange={(e) => setStatusReset(e.target.value)}
+        >
           <option value="">{t('allStatuses')}</option>
           <option value="studying">{t('status.studying')}</option>
           <option value="paused">{t('status.paused')}</option>

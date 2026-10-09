@@ -422,6 +422,7 @@ a {
 .btn-danger-ghost:hover:not(:disabled) {
   background: var(--danger-soft);
   border-color: #fecaca;
+  color: #991b1b; /* contrast 6.8:1 trên nền danger-soft */
 }
 /* Ghost button trên nền sáng: chữ muted, hover nền xám nhạt */
 .btn-ghost {
@@ -488,7 +489,8 @@ a {
 }
 .text-input:disabled {
   background: var(--bg-muted);
-  color: var(--text-muted);
+  color: var(--text-strong);
+  opacity: 0.6;
   cursor: not-allowed;
 }
 select.text-input {

@@ -99,7 +99,12 @@ export function TeacherGrades() {
       />
 
       <div className="toolbar grades-toolbar">
-        <select className="text-input" value={classId} onChange={(e) => void pickClass(e.target.value)}>
+        <select
+          aria-label="Chọn lớp"
+          className="text-input"
+          value={classId}
+          onChange={(e) => void pickClass(e.target.value)}
+        >
           <option value="">{t('grades.selectClass')}</option>
           {classes.map((c) => (
             <option key={c.id} value={c.id}>
@@ -108,6 +113,7 @@ export function TeacherGrades() {
           ))}
         </select>
         <select
+          aria-label="Chọn môn"
           className="text-input"
           value={studentId}
           onChange={(e) => {

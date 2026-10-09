@@ -130,10 +130,7 @@
     "correctAnswer": "Đáp án đúng",
     "criterion": "Tiêu chí",
     "criterionScore": "{{score}}đ",
-    "defaultCriteria": [
-      "Phát âm",
-      "Từ vựng"
-    ],
+    "defaultCriteria": ["Phát âm", "Từ vựng"],
     "deselectAll": "Bỏ chọn",
     "dueDate": "Hạn nộp",
     "dueNextWeek": "Tuần sau",

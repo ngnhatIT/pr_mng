@@ -225,6 +225,7 @@ function InvoiceList() {
           }}
         />
         <select
+          aria-label="Lọc theo trạng thái"
           className="text-input"
           value={status}
           onChange={(e) => {

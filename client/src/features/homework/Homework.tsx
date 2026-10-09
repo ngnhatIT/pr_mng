@@ -257,6 +257,7 @@ export function Homework() {
           onChange={(e) => setSearch(e.target.value)}
         />
         <select
+          aria-label="Lọc theo trạng thái"
           className="text-input"
           value={filters.class_id || ''}
           onChange={(e) => setFilter({ class_id: e.target.value || undefined })}
@@ -269,6 +270,7 @@ export function Homework() {
           ))}
         </select>
         <select
+          aria-label="Lọc theo lớp"
           className="text-input"
           value={filters.kind || ''}
           onChange={(e) => setFilter({ kind: (e.target.value || undefined) as HomeworkFilters['kind'] })}
@@ -278,6 +280,7 @@ export function Homework() {
           <option value="quiz">{t('filters.kindQuiz')}</option>
         </select>
         <select
+          aria-label="Lọc theo môn"
           className="text-input"
           value={filters.due || ''}
           onChange={(e) => setFilter({ due: (e.target.value || undefined) as HomeworkFilters['due'] })}
