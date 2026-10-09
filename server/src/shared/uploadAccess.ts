@@ -34,12 +34,26 @@ export async function checkUploadAccess(
   if (!sub) throw AppError.notFound('Không tìm thấy file');
 
   let allowed = false;
-  if (role === 'root') {
-    allowed = true; // root: toàn hệ thống
+  if (role === 'superadmin') {
+    allowed = true; // superadmin: toàn hệ thống
+  } else if (role === 'teacher') {
+    // Giáo viên chỉ xem file của học viên trong lớp mình dạy (scope 'own')
+    const teacherId = (await db
+      .prepare('SELECT id FROM teachers WHERE user_id = ?')
+      .get(userId)) as { id: number } | undefined;
+    if (teacherId) {
+      const inMyClass = await db
+        .prepare(
+          `SELECT 1 FROM homework_submissions hs
+           JOIN homework h ON h.id = hs.homework_id
+           JOIN classes c ON c.id = h.class_id
+           WHERE hs.file_url = ? AND c.teacher_id = ?`
+        )
+        .get(`/uploads/${safe}`, teacherId.id);
+      allowed = !!inMyClass;
+    }
   } else if (role !== 'parent' && userCenterId !== null && userCenterId === sub.center_id) {
-    allowed = true; // admin/staff/teacher: chỉ file trong center của mình
-  } else if (role !== 'parent' && userCenterId === null) {
-    allowed = true; // user chưa gán center (legacy)
+    allowed = true; // admin/staff: chỉ file trong center của mình
   } else if (role === 'parent') {
     const pid = parentId ?? userId;
     const link = await db
