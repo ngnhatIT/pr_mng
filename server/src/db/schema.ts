@@ -12,8 +12,8 @@
  *    trừ bảng nối nhiều-nhiều dùng khóa chính composite.
  *    Cột khóa ngoại đặt tên `<bang>_id` (vd: student_id -> students.id).
  *
- * 2. Thời gian: TEXT theo ISO-8601 'YYYY-MM-DD HH24:MI:SS' (giờ server),
- *    DEFAULT (to_char(NOW(), 'YYYY-MM-DD HH24:MI:SS')).
+ * 2. Thời gian: TEXT theo ISO-8601 'YYYY-MM-DD HH24:MI:SS' (giờ Việt Nam Asia/Ho_Chi_Minh),
+ *    DEFAULT (to_char(NOW(), 'YYYY-MM-DD HH24:MI:SS')) với PG session timezone=Asia/Ho_Chi_Minh.
  *    Cố tình dùng TEXT thay vì TIMESTAMPTZ để giữ nguyên semantics so sánh chuỗi
  *    và kiểu dữ liệu JS (string) như trước — tránh ripple đổi toàn bộ app.
  *    Mọi bảng nghiệp vụ chính có `created_at`; bảng mutable có thêm

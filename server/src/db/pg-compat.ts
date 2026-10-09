@@ -55,7 +55,7 @@ const pool = new Pool({
   idleTimeoutMillis: 30000,
   // statement_timeout: kill query chạy quá 30s (chống runaway làm cạn pool).
   // timezone=UTC: NOW() nhất quán mọi môi trường (trước đây theo TZ của server PG).
-  options: '-c statement_timeout=30000 -c timezone=UTC',
+  options: '-c statement_timeout=30000 -c timezone=Asia/Ho_Chi_Minh',
 });
 
 pool.on('error', (err) => {

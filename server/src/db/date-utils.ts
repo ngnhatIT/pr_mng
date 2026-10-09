@@ -20,11 +20,21 @@ export interface ClassRow {
 
 /* ------------------------------ Tiện ích ngày ------------------------------ */
 
+/** Múi giờ nghiệp vụ: mọi "hôm nay", "tháng này" đều theo giờ Việt Nam. */
+export const VN_TZ = 'Asia/Ho_Chi_Minh';
+
+/**
+ * Ngày YYYY-MM-DD theo giờ Việt Nam (không phụ thuộc TZ của server).
+ * Server thường chạy UTC — dùng getFullYear() thuần sẽ sai ngày từ 00:00-06:59 giờ VN.
+ */
 export function toISODate(d: Date): string {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${y}-${m}-${day}`;
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: VN_TZ,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(d);
+  return parts; // en-CA cho ra YYYY-MM-DD
 }
 
 export function parseISODate(s: string): Date {
