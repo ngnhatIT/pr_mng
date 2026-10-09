@@ -195,8 +195,18 @@ export const http = {
     api<T>(path, {
       method: 'POST',
       body: body !== undefined ? JSON.stringify(body) : undefined,
-      // Idempotency-Key: chống double-submit tạo 2 bản ghi (server dedupe theo key)
-      headers: { 'Idempotency-Key': crypto.randomUUID() },
+    }),
+  /**
+   * POST với Idempotency-Key do caller cung cấp (ổn định cho mỗi intent).
+   * Caller sinh key 1 lần khi user thực hiện action (vd: crypto.randomUUID() trong
+   * handler submit), truyền vào đây. Double-click / retry cùng intent dùng cùng
+   * key → server dedupe. Không dùng cho GET/PUT/DELETE.
+   */
+  postIdempotent: <T>(path: string, body?: unknown, idempotencyKey?: string) =>
+    api<T>(path, {
+      method: 'POST',
+      body: body !== undefined ? JSON.stringify(body) : undefined,
+      headers: { 'Idempotency-Key': idempotencyKey ?? crypto.randomUUID() },
     }),
   put: <T>(path: string, body?: unknown) => api<T>(path, { method: 'PUT', body: JSON.stringify(body) }),
   del: <T>(path: string) => api<T>(path, { method: 'DELETE' }),
