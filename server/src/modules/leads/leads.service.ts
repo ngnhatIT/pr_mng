@@ -110,11 +110,25 @@ export async function convertLeadToStudent(input: ConvertLeadInput): Promise<{ s
   }
 
   return db.transaction(async (tx) => {
-    const code = await genLeadStudentCode(tx);
-    const r = await tx
-      .prepare("INSERT INTO students (code, name, phone, status, center_id) VALUES (?, ?, ?, 'studying', ?)")
-      .run(code, lead.name, lead.phone, leadCenterId);
-    const studentId = Number(r.lastInsertRowid);
+    // Retry khi race sinh mã trùng: catch UNIQUE violation rồi sinh mã mới
+    let studentId = 0;
+    for (let attempt = 0; attempt < 5; attempt++) {
+      const code = await genLeadStudentCode(tx);
+      try {
+        const r = await tx
+          .prepare(
+            "INSERT INTO students (code, name, phone, status, center_id) VALUES (?, ?, ?, 'studying', ?)"
+          )
+          .run(code, lead.name, lead.phone, leadCenterId);
+        studentId = Number(r.lastInsertRowid);
+        break;
+      } catch (err) {
+        const msg = (err as { code?: string })?.code || '';
+        if (msg === '23505' && attempt < 4) continue; // UNIQUE violation → thử mã khác
+        throw err;
+      }
+    }
+    if (studentId === 0) throw AppError.conflict('Không sinh được mã học viên, vui lòng thử lại');
     if (classId !== null) {
       await tx
         .prepare('INSERT OR IGNORE INTO enrollments (student_id, class_id) VALUES (?, ?)')

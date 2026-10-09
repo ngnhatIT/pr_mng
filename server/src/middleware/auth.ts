@@ -52,7 +52,7 @@ function withActorContext(user: AuthUser, next: NextFunction): void {
 export function requireAuth(req: AuthRequest, res: Response, next: NextFunction): void {
   const header = req.headers.authorization;
   if (!header || !header.startsWith('Bearer ')) {
-    res.status(401).json({ error: 'Thiếu token đăng nhập' });
+    res.status(401).json({ error: 'Thiếu token đăng nhập', code: 'NO_TOKEN' });
     return;
   }
   try {
@@ -60,7 +60,7 @@ export function requireAuth(req: AuthRequest, res: Response, next: NextFunction)
     req.user = payload;
     withActorContext(payload, next);
   } catch {
-    res.status(401).json({ error: 'Token không hợp lệ hoặc đã hết hạn' });
+    res.status(401).json({ error: 'Token không hợp lệ hoặc đã hết hạn', code: 'INVALID_TOKEN' });
   }
 }
 
@@ -68,26 +68,26 @@ export function requireAuth(req: AuthRequest, res: Response, next: NextFunction)
 export function parentAuth(req: AuthRequest, res: Response, next: NextFunction): void {
   const header = req.headers.authorization;
   if (!header || !header.startsWith('Bearer ')) {
-    res.status(401).json({ error: 'Vui lòng đăng nhập tài khoản phụ huynh' });
+    res.status(401).json({ error: 'Vui lòng đăng nhập tài khoản phụ huynh', code: 'PARENT_AUTH_REQUIRED' });
     return;
   }
   try {
     const payload = jwt.verify(header.slice(7), JWT_SECRET, JWT_VERIFY_OPTS) as AuthUser;
     if (payload.role !== 'parent' || !payload.parent_id) {
-      res.status(403).json({ error: 'Tài khoản này không phải phụ huynh' });
+      res.status(403).json({ error: 'Tài khoản này không phải phụ huynh', code: 'NOT_PARENT' });
       return;
     }
     req.user = payload;
     withActorContext(payload, next);
   } catch {
-    res.status(401).json({ error: 'Token không hợp lệ hoặc đã hết hạn' });
+    res.status(401).json({ error: 'Token không hợp lệ hoặc đã hết hạn', code: 'INVALID_TOKEN' });
   }
 }
 
 export function requireRole(...roles: string[]) {
   return (req: AuthRequest, res: Response, next: NextFunction): void => {
     if (!req.user || !roles.includes(req.user.role)) {
-      res.status(403).json({ error: 'Không có quyền thực hiện' });
+      res.status(403).json({ error: 'Không có quyền thực hiện', code: 'FORBIDDEN' });
       return;
     }
     next();
@@ -97,7 +97,7 @@ export function requireRole(...roles: string[]) {
 /** Chặn tài khoản phụ huynh truy cập API nhân sự (dùng sau requireAuth ở mount) */
 export function denyParents(req: AuthRequest, res: Response, next: NextFunction): void {
   if (req.user?.role === 'parent') {
-    res.status(403).json({ error: 'Tài khoản phụ huynh không có quyền truy cập' });
+    res.status(403).json({ error: 'Tài khoản phụ huynh không có quyền truy cập', code: 'FORBIDDEN' });
     return;
   }
   next();
