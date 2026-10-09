@@ -7,7 +7,7 @@ import { asyncHandler } from '../../shared/http';
 import { validate, v, paramId } from '../../shared/validate';
 import { listTeachers } from './teachers.service';
 import { audit, actorFromReq } from '../../shared/audit';
-import { assertStrongPassword } from '../../shared/password';
+import { assertStrongPassword, BCRYPT_ROUNDS } from '../../shared/password';
 
 const router = Router();
 

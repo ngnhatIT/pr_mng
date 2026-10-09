@@ -7,7 +7,7 @@ import { asyncHandler } from '../../shared/http';
 import { validate, v } from '../../shared/validate';
 import { issueTokenPair, rotateRefreshToken, revokeRefreshToken, revokeAllForOwner, revokeAllForOwnerExcept } from './refresh.service';
 import { audit } from '../../shared/audit';
-import { assertStrongPassword } from '../../shared/password';
+import { assertStrongPassword, BCRYPT_ROUNDS } from '../../shared/password';
 import { logger } from '../../shared/logger';
 
 const log = logger.scope('auth');

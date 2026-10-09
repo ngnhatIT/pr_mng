@@ -1,5 +1,5 @@
 import bcrypt from 'bcryptjs';
-import { assertStrongPassword } from '../../shared/password';
+import { assertStrongPassword, BCRYPT_ROUNDS } from '../../shared/password';
 import { db } from '../../db';
 import { PLANS, listCenters, getCenter, type Center } from '../../utils/plans';
 import { AppError } from '../../shared/errors';

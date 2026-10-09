@@ -1,5 +1,5 @@
 import bcrypt from 'bcryptjs';
-import { assertStrongPassword } from '../../shared/password';
+import { assertStrongPassword, BCRYPT_ROUNDS } from '../../shared/password';
 import { db, toISODate, confirmedPaid, getCenterSettings, formatSchedule } from '../../db';
 import { nowVNSql } from '../../shared/vnTime';
 import { withAdvisoryLock } from '../../shared/advisoryLock';
