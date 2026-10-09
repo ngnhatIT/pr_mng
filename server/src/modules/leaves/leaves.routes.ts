@@ -72,7 +72,7 @@ router.post(
       )
       .run(req.user!.id, now, id);
     if ((upd.changes ?? 0) !== 1) {
-      res.status(409).json({ error: 'Đơn xin nghỉ đã được xử lý trước đó', code: 'BAD_REQUEST' });
+      res.status(409).json({ error: 'Đơn xin nghỉ đã được xử lý trước đó', code: 'CONFLICT' });
       return;
     }
     // Gợi ý học bù: các buổi BỊ MISS trong khoảng nghỉ [from_date, to_date]
@@ -118,7 +118,7 @@ router.post(
       )
       .run(req.user!.id, now, id);
     if ((upd.changes ?? 0) !== 1) {
-      res.status(409).json({ error: 'Đơn xin nghỉ đã được xử lý trước đó', code: 'BAD_REQUEST' });
+      res.status(409).json({ error: 'Đơn xin nghỉ đã được xử lý trước đó', code: 'CONFLICT' });
       return;
     }
     await notifyParents(
