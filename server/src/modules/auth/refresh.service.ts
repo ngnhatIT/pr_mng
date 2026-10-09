@@ -145,25 +145,33 @@ export async function rotateRefreshToken(
   meta?: { ip?: string; userAgent?: string }
 ): Promise<TokenPair> {
   const h = hashToken(refreshToken);
-  const row = (await db.prepare('SELECT * FROM refresh_tokens WHERE token_hash = ?').get(h)) as
-    RefreshRow | undefined;
-  if (!row) throw AppError.unauthorized('Refresh token không hợp lệ');
-  if (row.revoked_at) {
-    // Dùng lại token đã revoke = dấu hiệu trộm token -> thu hồi cả chuỗi.
-    await revokeAllForOwner(row.kind, row.kind === 'parent' ? row.parent_id! : row.user_id!);
-    throw AppError.unauthorized('Phiên đăng nhập đã bị thu hồi vì nghi ngờ bị đánh cắp');
-  }
-  if (new Date(row.expires_at).getTime() < Date.now()) {
-    throw AppError.unauthorized('Refresh token đã hết hạn');
+  // Atomic claim: UPDATE...RETURNING để 2 request đồng thời chỉ 1 thành công
+  // (tránh race: cả 2 cùng SELECT thấy chưa revoke rồi cùng cấp token mới)
+  const claimed = (await db
+    .prepare(
+      `UPDATE refresh_tokens SET revoked_at = NOW() 
+       WHERE token_hash = ? AND revoked_at IS NULL AND expires_at > NOW()
+       RETURNING *`
+    )
+    .get(h)) as RefreshRow | undefined;
+
+  if (!claimed) {
+    // Không claim được: kiểm tra xem là token không tồn tại hay đã bị dùng lại (theft)
+    const row = (await db.prepare('SELECT * FROM refresh_tokens WHERE token_hash = ?').get(h)) as
+      RefreshRow | undefined;
+    if (row?.revoked_at) {
+      // Dùng lại token đã revoke = dấu hiệu trộm token -> thu hồi cả chuỗi.
+      await revokeAllForOwner(row.kind, row.kind === 'parent' ? row.parent_id! : row.user_id!);
+      throw AppError.unauthorized('Phiên đăng nhập đã bị thu hồi vì nghi ngờ bị đánh cắp');
+    }
+    throw AppError.unauthorized('Refresh token không hợp lệ hoặc đã hết hạn');
   }
 
-  const user = await buildAuthUser(row);
+  const user = await buildAuthUser(claimed);
   const pair = await issueTokenPair(user, meta);
-  // Revoke token cũ trong cùng transaction logic (2 câu lệnh liên tiếp, idempotent).
+  // Cập nhật replaced_by cho token vừa claim
   await db
-    .prepare(
-      'UPDATE refresh_tokens SET revoked_at = NOW(), replaced_by = ? WHERE token_hash = ? AND revoked_at IS NULL'
-    )
+    .prepare('UPDATE refresh_tokens SET replaced_by = ? WHERE token_hash = ?')
     .run(hashToken(pair.refresh_token), h);
   return pair;
 }
