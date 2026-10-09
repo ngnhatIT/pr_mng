@@ -1773,12 +1773,10 @@ paths:
             schema:
               type: object
               required:
-                - student_ids
+                - student_id
               properties:
-                student_ids:
-                  type: array
-                  items:
-                    type: integer
+                student_id:
+                  type: integer
       responses:
         '200':
           description: OK
