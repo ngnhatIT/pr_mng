@@ -283,7 +283,8 @@ export async function getChildOverview(
        WHERE i.student_id = ? ORDER BY i.id DESC`
     )
     .all(studentId)) as { id: number; amount: number }[];
-  const invoices = invoiceRows.map((i) => ({ ...i, paid: confirmedPaid(i.id) }));
+  const paidList = await Promise.all(invoiceRows.map((i) => confirmedPaid(i.id)));
+  const invoices = invoiceRows.map((i, idx) => ({ ...i, paid: paidList[idx] }));
 
   const grades = await db
     .prepare(
@@ -328,7 +329,7 @@ export async function getChildOverview(
     invoices,
     grades,
     homework,
-    credits: creditSummary(parentId),
+    credits: await creditSummary(parentId),
   };
 }
 
@@ -524,7 +525,7 @@ export async function getReferralInfo(parentId: number, origin: string): Promise
     referral_code: referralCode,
     share_link: `${origin}/?ref=${referralCode}`,
     stats,
-    credits: creditSummary(parentId),
+    credits: await creditSummary(parentId),
     referrals,
   };
 }
