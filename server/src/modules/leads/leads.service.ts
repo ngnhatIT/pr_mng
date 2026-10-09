@@ -2,6 +2,7 @@ import { db } from '../../db';
 import { parsePagination, paginate, type PageOptions, type Paginated } from '../../shared/pagination';
 import { escapeLike } from '../../shared/like';
 import { AppError } from '../../shared/errors';
+import { normalizePhone } from '../../services/zalo';
 import type { Db } from '../../db/pg-compat';
 
 type Tx = Parameters<Parameters<Db['transaction']>[0]>[0];
@@ -104,9 +105,10 @@ export async function convertLeadToStudent(input: ConvertLeadInput): Promise<{ s
     if (!cls) throw AppError.badRequest('Lớp học không tồn tại');
   }
   if (lead.phone) {
+    const normalized = normalizePhone(lead.phone) || lead.phone.trim();
     const dup = await db
       .prepare('SELECT id FROM students WHERE center_id = ? AND phone = ?')
-      .get(leadCenterId, lead.phone);
+      .get(leadCenterId, normalized);
     if (dup) throw AppError.conflict('Số điện thoại này đã là học viên của trung tâm');
   }
 
