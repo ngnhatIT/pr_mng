@@ -45,6 +45,11 @@ export const requestActor = new AsyncLocalStorage<string>();
  * Cấu hình: DATABASE_URL (vd: postgres://user:pass@localhost:5432/educenter)
  */
 
+// Fail-fast: DATABASE_URL bắt buộc (pg fallback sang default local nếu undefined → boot "thành công" nhầm DB)
+if (!process.env.DATABASE_URL) {
+  throw new Error('[CONFIG] Thiếu DATABASE_URL — hãy đặt biến môi trường DATABASE_URL');
+}
+
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   max: 20,

@@ -1339,6 +1339,53 @@ paths:
                 properties:
                   ok:
                     type: boolean
+  /api/v1/auth/logout-all:
+    post:
+      tags:
+        - Auth
+      summary: Đăng xuất mọi thiết bị — thu hồi toàn bộ refresh token
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+  /api/v1/auth/change-password:
+    post:
+      tags:
+        - Auth
+      summary: Đổi mật khẩu (yêu cầu mật khẩu cũ, thu hồi mọi session khác)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - old_password
+                - new_password
+              properties:
+                old_password:
+                  type: string
+                new_password:
+                  type: string
+                  description: Tối thiểu 8 ký tự, không nằm trong danh sách phổ biến
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+        '400':
+          description: Mật khẩu cũ sai / mật khẩu mới yếu / trùng mật khẩu cũ
   /api/v1/students:
     get:
       tags:
@@ -2391,6 +2438,12 @@ paths:
     put:
       tags:
         - Payroll
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
       summary: Cập nhật quy tắc tính lương
       responses:
         '200':
@@ -2648,6 +2701,33 @@ paths:
       tags:
         - Centers
       summary: Tạo trung tâm mới (superadmin)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+                - admin_username
+                - admin_password
+              properties:
+                name:
+                  type: string
+                subdomain:
+                  type: string
+                phone:
+                  type: string
+                address:
+                  type: string
+                plan:
+                  type: string
+                  enum: [basic, standard, premium]
+                admin_username:
+                  type: string
+                admin_password:
+                  type: string
+                  description: Tối thiểu 8 ký tự
       responses:
         '201':
           description: Đã tạo
