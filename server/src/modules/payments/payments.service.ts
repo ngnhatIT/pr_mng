@@ -41,7 +41,7 @@ type VnpayConfirmResult =
   | { kind: 'confirmed'; txnRef: string; already: boolean }
   | {
       kind: 'failed';
-      reason: 'notfound' | 'invalid_signature' | 'payment_failed' | 'invalid_status' | 'error';
+      reason: 'notfound' | 'invalid_signature' | 'payment_failed' | 'invalid_status' | 'error' | 'overpay';
     };
 
 /**
@@ -107,6 +107,16 @@ async function confirmVnpayTxn(
     await tx
       .prepare("UPDATE payment_txns SET status = 'confirmed' WHERE ref = ? AND status = 'pending'")
       .run(txnRef);
+    // Guard chống overpay: nếu thanh toán này làm vượt tổng hóa đơn → từ chối
+    const paidSoFar = (await tx
+      .prepare(
+        "SELECT COALESCE(SUM(amount),0) as paid FROM payments WHERE invoice_id = ? AND status = 'confirmed'"
+      )
+      .get(txn.invoice_id)) as { paid: number };
+    if (Number(paidSoFar.paid) + amount > inv.amount + 0.01) {
+      await tx.prepare("UPDATE payment_txns SET status = 'failed' WHERE ref = ?").run(txnRef);
+      return { kind: 'failed', reason: 'overpay' } as VnpayConfirmResult;
+    }
     await tx
       .prepare(
         "INSERT INTO payments (invoice_id, amount, method, note, status) VALUES (?, ?, 'vnpay', ?, 'confirmed')"

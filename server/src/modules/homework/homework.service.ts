@@ -4,7 +4,7 @@ import { escapeLike } from '../../shared/like';
 import { DAY_MS } from '../../shared/time';
 import { AppError } from '../../shared/errors';
 import { todayVN, nowVNMinute, assignedCountExpr, assertValidDates } from './homework.helpers';
-import { homeworkRepo } from './homework.repo';
+import { homeworkRepo, deleteHomeworkCascade } from './homework.repo';
 import { eventBus } from '../../shared/events/eventBus';
 import {
   HomeworkCreatedEvent,
@@ -491,7 +491,7 @@ export async function updateHomework(
 }
 
 export async function deleteHomework(id: number, centerId: number | null = null): Promise<void> {
-  await homeworkRepo.deleteCascade(id);
+  await deleteHomeworkCascade(id);
   eventBus.emitSync(new HomeworkDeletedEvent(id, centerId));
 }
 

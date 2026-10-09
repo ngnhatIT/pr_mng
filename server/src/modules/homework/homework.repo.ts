@@ -1,5 +1,8 @@
 import { db } from '../../db';
 import type { HomeworkRow, HomeworkStatus } from './homework.service';
+import { promises as fs } from 'fs';
+import path from 'path';
+import { getUploadDir } from '../../shared/upload';
 
 /**
  * Repository: lớp truy cập dữ liệu thuần cho homework.
@@ -118,28 +121,52 @@ export const homeworkRepo = {
       .run(now);
     return Number(r.changes);
   },
-
-  /** Xóa bài tập và toàn bộ dữ liệu liên quan (cascade trong transaction). */
-  async deleteCascade(id: number): Promise<void> {
-    await db.transaction(async (tx) => {
-      await tx
-        .prepare(
-          'DELETE FROM quiz_answers WHERE attempt_id IN (SELECT id FROM quiz_attempts WHERE homework_id = ?)'
-        )
-        .run(id);
-      await tx.prepare('DELETE FROM quiz_attempts WHERE homework_id = ?').run(id);
-      await tx
-        .prepare(
-          'DELETE FROM quiz_options WHERE question_id IN (SELECT id FROM quiz_questions WHERE homework_id = ?)'
-        )
-        .run(id);
-      await tx.prepare('DELETE FROM quiz_questions WHERE homework_id = ?').run(id);
-      await tx.prepare('DELETE FROM homework_scores WHERE homework_id = ?').run(id);
-      await tx.prepare('DELETE FROM homework_completions WHERE homework_id = ?').run(id);
-      await tx.prepare('DELETE FROM homework_attachments WHERE homework_id = ?').run(id);
-      await tx.prepare('DELETE FROM homework_targets WHERE homework_id = ?').run(id);
-      await tx.prepare('DELETE FROM homework_submissions WHERE homework_id = ?').run(id);
-      await tx.prepare('DELETE FROM homework WHERE id = ?').run(id);
-    });
-  },
 };
+
+/** Xóa file vật lý an toàn (chỉ trong upload dir, bỏ qua lỗi). */
+async function deleteUploadFile(url: string): Promise<void> {
+  if (!url || !url.startsWith('/uploads/')) return;
+  const filename = path.basename(url);
+  // Chống path traversal: chỉ cho phép tên file đơn giản
+  if (!/^[a-zA-Z0-9._-]+$/.test(filename)) return;
+  try {
+    await fs.unlink(path.join(getUploadDir(), filename));
+  } catch {
+    // File đã mất hoặc không xóa được — không chặn xóa DB
+  }
+}
+
+/**
+ * Xóa bài tập và toàn bộ dữ liệu liên quan (cascade trong transaction),
+ * đồng thời dọn file đính kèm vật lý trên disk (chống file mồ côi).
+ */
+export async function deleteHomeworkCascade(id: number): Promise<void> {
+  // Lấy danh sách file đính kèm TRƯỚC khi xóa DB
+  const files = (await db
+    .prepare("SELECT url FROM homework_attachments WHERE homework_id = ? AND kind = 'file'")
+    .all(id)) as { url: string }[];
+  await db.transaction(async (tx) => {
+    await tx
+      .prepare(
+        'DELETE FROM quiz_answers WHERE attempt_id IN (SELECT id FROM quiz_attempts WHERE homework_id = ?)'
+      )
+      .run(id);
+    await tx.prepare('DELETE FROM quiz_attempts WHERE homework_id = ?').run(id);
+    await tx
+      .prepare(
+        'DELETE FROM quiz_options WHERE question_id IN (SELECT id FROM quiz_questions WHERE homework_id = ?)'
+      )
+      .run(id);
+    await tx.prepare('DELETE FROM quiz_questions WHERE homework_id = ?').run(id);
+    await tx.prepare('DELETE FROM homework_scores WHERE homework_id = ?').run(id);
+    await tx.prepare('DELETE FROM homework_completions WHERE homework_id = ?').run(id);
+    await tx.prepare('DELETE FROM homework_attachments WHERE homework_id = ?').run(id);
+    await tx.prepare('DELETE FROM homework_targets WHERE homework_id = ?').run(id);
+    await tx.prepare('DELETE FROM homework_submissions WHERE homework_id = ?').run(id);
+    await tx.prepare('DELETE FROM homework WHERE id = ?').run(id);
+  });
+  // Dọn file vật lý SAU khi DB đã xóa thành công
+  for (const f of files) {
+    await deleteUploadFile(f.url);
+  }
+}
