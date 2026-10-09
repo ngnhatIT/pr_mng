@@ -370,14 +370,28 @@ export async function claimPaid(
   parentId: number,
   invoiceId: number
 ): Promise<{ payment_id: number; status: string }> {
-  const inv = await getParentInvoice(parentId, invoiceId);
-  const remaining = await remainingOrThrow(invoiceId, inv.amount);
-  const r = await db
-    .prepare(
-      "INSERT INTO payments (invoice_id, amount, method, note, status) VALUES (?, ?, 'bank_transfer', ?, 'pending')"
-    )
-    .run(invoiceId, remaining, 'Phụ huynh báo đã chuyển khoản');
-  return { payment_id: Number(r.lastInsertRowid), status: 'pending' };
+  const { withAdvisoryLock } = await import('../../shared/advisoryLock');
+  const outcome = await withAdvisoryLock(`claim-paid:${invoiceId}`, async () => {
+    const inv = await getParentInvoice(parentId, invoiceId);
+    const remaining = await remainingOrThrow(invoiceId, inv.amount);
+    // Chống double-submit: nếu đã có pending payment thì trả về cái cũ
+    const existing = (await db
+      .prepare("SELECT id FROM payments WHERE invoice_id = ? AND status = 'pending' LIMIT 1")
+      .get(invoiceId)) as { id: number } | undefined;
+    if (existing) {
+      return { payment_id: existing.id, status: 'pending' };
+    }
+    const r = await db
+      .prepare(
+        "INSERT INTO payments (invoice_id, amount, method, note, status) VALUES (?, ?, 'bank_transfer', ?, 'pending')"
+      )
+      .run(invoiceId, remaining, 'Phụ huynh báo đã chuyển khoản');
+    return { payment_id: Number(r.lastInsertRowid), status: 'pending' };
+  });
+  if (outcome.status !== 'done' || !outcome.result) {
+    throw new Error('Không thể tạo phiếu thu, vui lòng thử lại');
+  }
+  return outcome.result;
 }
 
 export async function createVnpayPayment(
