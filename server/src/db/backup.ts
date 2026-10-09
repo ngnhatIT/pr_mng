@@ -2,6 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import { execFile } from 'child_process';
 import { promisify } from 'util';
+import { env } from '../config/env';
 
 const execFileAsync = promisify(execFile);
 
@@ -29,8 +30,7 @@ function pad(n: number): string {
 }
 
 export async function backupDatabase(backupDir: string, keep = 7): Promise<BackupResult> {
-  const databaseUrl = process.env.DATABASE_URL;
-  if (!databaseUrl) throw new Error('Thiếu DATABASE_URL — không thể backup');
+  const databaseUrl = env.DATABASE_URL;
   fs.mkdirSync(backupDir, { recursive: true });
   const now = new Date();
   const stamp =

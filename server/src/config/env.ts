@@ -29,6 +29,13 @@ export const env = {
   IS_PROD: isProd,
   PORT: optionalInt('PORT', 4000),
 
+  /** PostgreSQL connection string. BẮT BUỘC (fail-fast khi boot). */
+  DATABASE_URL: (() => {
+    const u = process.env.DATABASE_URL;
+    if (!u) throw new Error('[CONFIG] Thiếu DATABASE_URL');
+    return u;
+  })(),
+
   /** Secret ký JWT. Production BẮT BUỘC đặt, dev dùng fallback + cảnh báo. */
   JWT_SECRET: (() => {
     const s = process.env.JWT_SECRET;
@@ -90,7 +97,14 @@ export const env = {
   ALERT_WEBHOOK_URL: optional('ALERT_WEBHOOK_URL', ''),
 
   /** Access token sống bao lâu (chuỗi jwt, vd: '1h', '30m'). Mặc định 1 giờ. */
-  ACCESS_TOKEN_TTL: optional('ACCESS_TOKEN_TTL', '1h'),
+  ACCESS_TOKEN_TTL: (() => {
+    const v = optional('ACCESS_TOKEN_TTL', '1h');
+    // Fail-fast nếu format sai (vd: '60' thiếu đơn vị) — tránh chạy với TTL không mong muốn
+    if (!/^\d+[smhd]$/.test(v)) {
+      throw new Error(`[CONFIG] ACCESS_TOKEN_TTL sai format: "${v}" (vd đúng: "1h", "30m")`);
+    }
+    return v;
+  })(),
 
   /** Refresh token sống bao nhiêu ngày. Mặc định 30 ngày. */
   REFRESH_TOKEN_DAYS: optionalInt('REFRESH_TOKEN_DAYS', 30),

@@ -46,12 +46,10 @@ export const requestActor = new AsyncLocalStorage<string>();
  */
 
 // Fail-fast: DATABASE_URL bắt buộc (pg fallback sang default local nếu undefined → boot "thành công" nhầm DB)
-if (!process.env.DATABASE_URL) {
-  throw new Error('[CONFIG] Thiếu DATABASE_URL — hãy đặt biến môi trường DATABASE_URL');
-}
+import { env } from '../config/env';
 
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
+  connectionString: env.DATABASE_URL,
   max: 20,
   // Không treo vô hạn khi DB unreachable: fail-fast sau 5s để request báo lỗi
   // thay vì kẹt worker.
