@@ -220,10 +220,21 @@ export async function saveAttendance(
 
 /** Sinh mã điểm danh 6 số cho buổi học (staff) — dùng crypto CSPRNG. */
 export async function generateCheckinCode(ctx: ScopeCtx, id: number): Promise<{ code: string }> {
-  await getSessionOr404(ctx, id);
-  const code = String(crypto.randomInt(100000, 1000000));
-  await db
-    .prepare('UPDATE sessions SET checkin_code = ?, checkin_date = ? WHERE id = ?')
-    .run(code, toISODate(new Date()), id);
-  return { code };
+  const session = await getSessionOr404(ctx, id);
+  const today = toISODate(new Date());
+  // Thử tối đa 10 lần để tránh trùng mã với buổi khác cùng ngày
+  for (let attempt = 0; attempt < 10; attempt++) {
+    const code = String(crypto.randomInt(100000, 1000000));
+    const clash = (await db
+      .prepare(
+        `SELECT 1 FROM sessions
+         WHERE checkin_date = ? AND checkin_code = ? AND id != ? LIMIT 1`
+      )
+      .get(today, code, id)) as { '1'?: number } | undefined;
+    if (!clash) {
+      await db.prepare('UPDATE sessions SET checkin_code = ?, checkin_date = ? WHERE id = ?').run(code, today, id);
+      return { code };
+    }
+  }
+  throw AppError.conflict('Không sinh được mã điểm danh duy nhất, vui lòng thử lại');
 }
