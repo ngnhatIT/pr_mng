@@ -751,10 +751,17 @@ function RefundModal({
   const [reason, setReason] = useState('');
   const [busy, setBusy] = useState(false);
   const toast = useToast();
+  // Lỗi inline dưới field + focus field lỗi (skill 8.2); dữ liệu giữ nguyên khi lỗi
+  const { errors, refFor, show, clear } = useFieldErrors<'amount'>();
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (busy) return; // Chống double-submit
+    const amt = Number(amount);
+    const errs: { amount?: string } = {};
+    if (!amount.trim() || !Number.isFinite(amt) || amt < 1 || amt > paid)
+      errs.amount = t('refund.errors.amountInvalid');
+    if (!show(errs)) return;
     setBusy(true);
     try {
       await invoicesApi.refund(invoice.id, {
@@ -782,15 +789,18 @@ function RefundModal({
           />
         </p>
         <div className="form-grid">
-          <Field label={t('refund.amount')}>
+          <Field label={t('refund.amount')} error={errors.amount}>
             <input
+              ref={refFor('amount')}
               className="text-input"
               type="number"
               min={1}
               max={paid}
               value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-              required
+              onChange={(e) => {
+                setAmount(e.target.value);
+                clear('amount');
+              }}
             />
           </Field>
           <Field label={t('refund.reason')} span>

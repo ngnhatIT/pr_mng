@@ -171,7 +171,10 @@
     "processing": "Đang hoàn tiền...",
     "done": "Đã ghi nhận hoàn tiền",
     "error": "Hoàn tiền thất bại",
-    "confirmText": "Hoàn tiền cho học viên <strong>{{name}}</strong> (đã thu <strong>{{paid}}</strong>). Số tiền hoàn sẽ trừ vào công nợ."
+    "confirmText": "Hoàn tiền cho học viên <strong>{{name}}</strong> (đã thu <strong>{{paid}}</strong>). Số tiền hoàn sẽ trừ vào công nợ.",
+    "errors": {
+      "amountInvalid": "Số tiền hoàn phải từ 1 đến số đã thu"
+    }
   },
   "receipt": {
     "title": "Biên lai thu học phí",

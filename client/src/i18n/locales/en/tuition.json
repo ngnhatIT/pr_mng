@@ -171,7 +171,10 @@
     "processing": "Processing refund...",
     "done": "Refund recorded",
     "error": "Refund failed",
-    "confirmText": "Refund for student <strong>{{name}}</strong> (collected <strong>{{paid}}</strong>). The refund will reduce the outstanding balance."
+    "confirmText": "Refund for student <strong>{{name}}</strong> (collected <strong>{{paid}}</strong>). The refund will reduce the outstanding balance.",
+    "errors": {
+      "amountInvalid": "Refund amount must be between 1 and the paid amount"
+    }
   },
   "receipt": {
     "title": "Tuition Receipt",
