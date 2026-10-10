@@ -41,7 +41,7 @@ export function HomeworkFormModal({
   const toast = useToast();
   // Lỗi inline dưới field + focus field lỗi đầu tiên (skill 8.2).
   // Nút submit KHÔNG disable khi thiếu dữ liệu: bấm sẽ hiện lỗi inline thay vì im lặng.
-  type HwErrKey = 'classes' | 'title' | 'maxScore' | 'dueDate' | 'closeDate' | 'publishAt' | 'students' | 'quiz';
+  type HwErrKey = 'classes' | 'title' | 'maxScore' | 'dueDate' | 'closeDate' | 'publishAt' | 'students' | 'quiz' | 'rubricName' | 'rubricCriteria';
   const { errors, refFor, show, clear } = useFieldErrors<HwErrKey>();
   const [kind, setKind] = useState<'homework' | 'quiz'>(initial?.kind || 'homework');
   const [title, setTitle] = useState(initial?.title || '');
@@ -74,6 +74,7 @@ export function HomeworkFormModal({
   const [newCriteria, setNewCriteria] = useState<{ name: string; max_score: string }[]>(() =>
     defaultCriteria.map((name) => ({ name, max_score: '10' }))
   );
+  const [rubricBusy, setRubricBusy] = useState(false);
   // Quiz builder
   const [questions, setQuestions] = useState<QuizQuestionForm[]>([
     {
@@ -197,14 +198,18 @@ export function HomeworkFormModal({
   };
 
   const createRubricNow = async () => {
+    if (rubricBusy) return;
+    // Validate inline dưới field + focus field lỗi đầu tiên (skill 8.2)
+    const rerrs: { rubricName?: string; rubricCriteria?: string } = {};
+    if (!newRubricName.trim()) rerrs.rubricName = t('form.errors.rubricNameRequired');
+    const validCriteria = newCriteria
+      .map((c) => ({ name: c.name.trim(), max_score: Number(c.max_score) || 0 }))
+      .filter((c) => c.name && c.max_score > 0);
+    if (validCriteria.length === 0) rerrs.rubricCriteria = t('form.errors.rubricCriteriaRequired');
+    if (!show(rerrs)) return;
+    setRubricBusy(true);
     try {
-      const r = await homeworkApi.createRubric(
-        newRubricName.trim(),
-        newCriteria.map((c) => ({
-          name: c.name.trim(),
-          max_score: Number(c.max_score) || 0,
-        }))
-      );
+      const r = await homeworkApi.createRubric(newRubricName.trim(), validCriteria);
       setRubrics((rs) => [r, ...rs]);
       setRubricId(String(r.id));
       setShowRubricForm(false);
@@ -212,6 +217,8 @@ export function HomeworkFormModal({
       toast(t('form.toast.rubricCreated'), 'success');
     } catch (err) {
       toast(err instanceof Error ? err.message : t('form.toast.rubricFail'), 'error');
+    } finally {
+      setRubricBusy(false);
     }
   };
 
@@ -644,20 +651,33 @@ export function HomeworkFormModal({
             {showRubricForm && (
               <div className="rubric-form">
                 <input
+                  ref={refFor('rubricName')}
                   className="text-input hw-mb-8"
                   placeholder={t('form.rubricNamePh')}
                   value={newRubricName}
-                  onChange={(e) => setNewRubricName(e.target.value)}
+                  onChange={(e) => {
+                    setNewRubricName(e.target.value);
+                    clear('rubricName');
+                  }}
+                  aria-invalid={errors.rubricName ? true : undefined}
                 />
+                {errors.rubricName && (
+                  <span className="field-error" role="alert">
+                    {errors.rubricName}
+                  </span>
+                )}
                 {newCriteria.map((c, i) => (
                   <div key={i} className="hw-flex hw-mb-8">
                     <input
+                      ref={i === 0 ? refFor('rubricCriteria') : undefined}
                       className="text-input"
                       placeholder={t('form.criterion')}
                       value={c.name}
-                      onChange={(e) =>
-                        setNewCriteria((x) => x.map((y, j) => (j === i ? { ...y, name: e.target.value } : y)))
-                      }
+                      onChange={(e) => {
+                        setNewCriteria((x) => x.map((y, j) => (j === i ? { ...y, name: e.target.value } : y)));
+                        clear('rubricCriteria');
+                      }}
+                      aria-invalid={errors.rubricCriteria ? true : undefined}
                     />
                     <input
                       className="text-input hw-w-100"
@@ -680,6 +700,11 @@ export function HomeworkFormModal({
                     </button>
                   </div>
                 ))}
+                {errors.rubricCriteria && (
+                  <span className="field-error" role="alert">
+                    {errors.rubricCriteria}
+                  </span>
+                )}
                 <div className="hw-flex">
                   <button
                     type="button"
@@ -688,8 +713,14 @@ export function HomeworkFormModal({
                   >
                     {t('form.addCriterion')}
                   </button>
-                  <button type="button" className="btn btn-sm btn-primary" onClick={createRubricNow}>
-                    {t('form.saveRubric')}
+                  <button
+                    type="button"
+                    className="btn btn-sm btn-primary"
+                    disabled={rubricBusy}
+                    onClick={createRubricNow}
+                  >
+                    {rubricBusy && <span className="spinner" aria-hidden="true" />}
+                    {rubricBusy ? t('actions.saving', { ns: 'common' }) : t('form.saveRubric')}
                   </button>
                 </div>
               </div>

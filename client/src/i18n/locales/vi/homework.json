@@ -252,7 +252,9 @@
       "duePast": "Hạn nộp không được là ngày đã qua",
       "publishAtRequired": "Vui lòng chọn thời gian đăng",
       "studentsRequired": "Vui lòng chọn ít nhất 1 học viên",
-      "quizInvalid": "Còn {{count}} câu hỏi chưa đủ đáp án hoặc chưa có đáp án đúng"
+      "quizInvalid": "Còn {{count}} câu hỏi chưa đủ đáp án hoặc chưa có đáp án đúng",
+      "rubricNameRequired": "Nhập tên thang điểm",
+      "rubricCriteriaRequired": "Cần ít nhất 1 tiêu chí có tên và điểm > 0"
     }
   },
   "grade": {

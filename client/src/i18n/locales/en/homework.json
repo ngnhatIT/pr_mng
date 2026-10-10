@@ -252,7 +252,9 @@
       "duePast": "Due date cannot be in the past",
       "publishAtRequired": "Please choose a publish time",
       "studentsRequired": "Please select at least 1 student",
-      "quizInvalid": "{{count}} question(s) are missing options or a correct answer"
+      "quizInvalid": "{{count}} question(s) are missing options or a correct answer",
+      "rubricNameRequired": "Enter a rubric name",
+      "rubricCriteriaRequired": "Need at least 1 criterion with a name and score > 0"
     }
   },
   "grade": {
