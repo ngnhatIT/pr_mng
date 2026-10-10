@@ -455,6 +455,41 @@ export const MIGRATIONS: Migration[] = [
       await tx.exec('ALTER TABLE question_bank DROP COLUMN IF EXISTS difficulty');
     },
   },
+  {
+    version: 21,
+    name: 'quiz_essay_scores',
+    up: async (tx) => {
+      // YC2: điểm chấm tay câu tự luận theo tiêu chí rubric (PK gộp 4 cột để
+      // upsert idempotent khi chấm lại; score >= 0, trần từng tiêu chí do
+      // service validate theo rubric_criteria.max_score).
+      await tx.exec(`DO $$
+        BEGIN
+          IF NOT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'quiz_essay_scores') THEN
+            CREATE TABLE quiz_essay_scores (
+              homework_id INTEGER NOT NULL
+                CONSTRAINT fk_qes_hw REFERENCES homework(id) ON DELETE CASCADE,
+              student_id INTEGER NOT NULL
+                CONSTRAINT fk_qes_student REFERENCES students(id) ON DELETE CASCADE,
+              question_id INTEGER NOT NULL
+                CONSTRAINT fk_qes_question REFERENCES quiz_questions(id) ON DELETE CASCADE,
+              criterion_id INTEGER NOT NULL
+                CONSTRAINT fk_qes_criterion REFERENCES rubric_criteria(id) ON DELETE CASCADE,
+              score DOUBLE PRECISION NOT NULL
+                CONSTRAINT chk_qes_score CHECK (score >= 0),
+              graded_by INTEGER
+                CONSTRAINT fk_qes_grader REFERENCES users(id) ON DELETE SET NULL,
+              graded_at TEXT NOT NULL DEFAULT (to_char(NOW(), 'YYYY-MM-DD HH24:MI:SS')),
+              CONSTRAINT pk_quiz_essay_scores PRIMARY KEY (homework_id, student_id, question_id, criterion_id)
+            );
+          END IF;
+        END $$;`);
+    },
+    down: async (tx) => {
+      // Đảo ngược v21: điểm chấm tay đã ghi sẽ mất theo (down chỉ dùng khi
+      // chưa ai chấm essay, vì không khôi phục được dữ liệu đã xóa).
+      await tx.exec('DROP TABLE IF EXISTS quiz_essay_scores');
+    },
+  },
 ];
 
 /** Version migration cao nhất mà code hiện tại biết (để test đối chiếu). */

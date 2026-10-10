@@ -51,6 +51,8 @@ function stmtFor(sql: string) {
       if (sql.includes('FROM quiz_attempts WHERE homework_id')) return ATTEMPTS;
       if (sql.includes('FROM quiz_answers qa')) return ANSWERS;
       if (sql.includes('FROM quiz_answers WHERE attempt_id')) return ANSWERS.filter((a) => a.attempt_id === 11);
+      // YC2: điểm chấm tay câu essay trong getAttemptReview — 1 query GROUP BY duy nhất
+      if (sql.includes('FROM quiz_essay_scores')) return [];
       throw new Error('unexpected all: ' + sql);
     },
     run: async () => ({ lastInsertRowid: 1, changes: 1 }),

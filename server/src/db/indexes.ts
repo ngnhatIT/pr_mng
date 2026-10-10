@@ -50,6 +50,8 @@ CREATE INDEX IF NOT EXISTS idx_quiz_attempts ON quiz_attempts(homework_id, stude
 CREATE INDEX IF NOT EXISTS idx_quiz_answers_attempt ON quiz_answers(attempt_id);
 CREATE INDEX IF NOT EXISTS idx_quiz_answers_question ON quiz_answers(question_id);
 CREATE INDEX IF NOT EXISTS idx_quiz_answers_option ON quiz_answers(option_id);
+-- YC2: tra cứu điểm essay theo học viên (tính tổng khi chấm, xem lại kết quả)
+CREATE INDEX IF NOT EXISTS idx_quiz_essay_scores ON quiz_essay_scores(homework_id, student_id);
 CREATE INDEX IF NOT EXISTS idx_rubric_criteria ON rubric_criteria(rubric_id, position);
 CREATE INDEX IF NOT EXISTS idx_rubrics_center ON rubrics(center_id);
 CREATE INDEX IF NOT EXISTS idx_rubrics_creator ON rubrics(created_by);

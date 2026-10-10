@@ -974,6 +974,98 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/QuizAttemptRow'
+  /api/v1/homework/{id}/quiz/essay:
+    get:
+      tags:
+        - Quiz
+      summary: YC2 — câu essay của quiz + rubric gắn kèm (để màn chấm hiện/ẩn nút chấm)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  essay_questions:
+                    type: array
+                    items:
+                      type: object
+                  rubric:
+                    type: object
+                    nullable: true
+  /api/v1/homework/{id}/quiz/essay/{studentId}:
+    get:
+      tags:
+        - Quiz
+      summary: YC2 — dữ liệu form chấm tự luận của 1 học viên
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+        - in: path
+          name: studentId
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Quiz chưa gắn rubric / học viên không thuộc lớp
+  /api/v1/homework/{id}/quiz/essay/grade:
+    post:
+      tags:
+        - Quiz
+      summary: YC2 — chấm 1 câu tự luận theo tiêu chí rubric (idempotent)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - student_id
+                - question_id
+                - criteria
+              properties:
+                student_id:
+                  type: integer
+                question_id:
+                  type: integer
+                criteria:
+                  type: array
+                  items:
+                    type: object
+                    required:
+                      - criterion_id
+                      - score
+                    properties:
+                      criterion_id:
+                        type: integer
+                      score:
+                        type: number
+                feedback:
+                  type: string
+      responses:
+        '200':
+          description: OK — trả { ok, total, auto_score, essay_score }
+        '400':
+          description: Tiêu chí lạ / điểm vượt trần / quiz chưa gắn rubric
   /api/v1/homework/{id}/quiz/import:
     post:
       tags:
@@ -3172,7 +3264,7 @@ paths:
     get:
       tags:
         - ParentPortal
-      summary: Xem lại chi tiết 1 lượt làm (đúng/sai từng câu)
+      summary: Xem lại chi tiết 1 lượt làm (đúng/sai từng câu; câu essay kèm essay_score đã chấm tay)
       parameters:
         - in: path
           name: attemptId

@@ -245,7 +245,8 @@
     "essayPlaceholder": "Type the answer here...",
     "pendingGrade": "Pending grading",
     "essayAnswer": "Student's answer",
-    "unansweredEssay": "{{count}} questions unanswered (including essays)"
+    "unansweredEssay": "{{count}} questions unanswered (including essays)",
+    "essayGraded": "Essay {{score}}/{{max}}"
   },
   "referral": {
     "copied": "Copied",

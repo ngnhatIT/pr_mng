@@ -32,6 +32,9 @@ import {
   getAllAttempts,
   getQuizForStaff,
   validateQuizQuestions,
+  getQuizEssayInfo,
+  getEssayGrading,
+  gradeQuizEssay,
 } from './quiz.service';
 import type { QuizQuestionInput } from './quiz.service';
 import {
@@ -334,6 +337,67 @@ router.get(
     const id = paramId(req.params);
     await requireHomework(req, id, 'homework.grade');
     res.json(await getAllAttempts(id));
+  })
+);
+
+/** YC2: thông tin chấm tự luận của quiz — câu essay nào + rubric nào (để màn chấm hiện/ẩn nút) */
+router.get(
+  '/:id/quiz/essay',
+  requirePermission('homework.grade'),
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const id = paramId(req.params);
+    await requireHomework(req, id, 'homework.grade');
+    res.json(await getQuizEssayInfo(id));
+  })
+);
+
+/** YC2: dữ liệu form chấm tự luận của 1 học viên — bài làm + điểm đã chấm + tổng */
+router.get(
+  '/:id/quiz/essay/:studentId',
+  requirePermission('homework.grade'),
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const id = paramId(req.params);
+    await requireHomework(req, id, 'homework.grade');
+    res.json(await getEssayGrading(id, paramId(req.params, 'studentId')));
+  })
+);
+
+/** YC2: chấm 1 câu tự luận theo tiêu chí rubric (idempotent — chấm lại ghi đè) */
+router.post(
+  '/:id/quiz/essay/grade',
+  requirePermission('homework.grade'),
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const id = paramId(req.params);
+    const hw = await requireHomework(req, id, 'homework.grade');
+    const body = validate(req.body, {
+      student_id: v.number({ integer: true, min: 1, label: 'Học viên' }),
+      question_id: v.number({ integer: true, min: 1, label: 'Câu hỏi' }),
+      criteria: v.any({ label: 'Điểm tiêu chí' }),
+      feedback: v.string({ max: 2000, label: 'Nhận xét' }),
+    });
+    const result = await gradeQuizEssay(
+      id,
+      body.student_id as number,
+      body.question_id as number,
+      body.criteria as { criterion_id: number; score: number }[],
+      (body.feedback as string) || null,
+      req.user!.id
+    );
+    await audit({
+      centerId: reqCenterId(req),
+      actor: actorFromReq(req),
+      action: 'update',
+      entity: 'homework',
+      entityId: id,
+      summary: `Chấm tự luận quiz "${hw.title}" — HV#${body.student_id}, câu #${body.question_id}: tổng ${result.total}`,
+      meta: {
+        title: hw.title,
+        student_id: body.student_id,
+        question_id: body.question_id,
+        total: result.total,
+      },
+    });
+    res.json({ ok: true, ...result });
   })
 );
 

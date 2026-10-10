@@ -245,7 +245,8 @@
     "essayPlaceholder": "Gõ bài làm vào đây...",
     "pendingGrade": "Chờ chấm",
     "essayAnswer": "Bài làm của con",
-    "unansweredEssay": "Còn {{count}} câu chưa trả lời (kể cả tự luận)"
+    "unansweredEssay": "Còn {{count}} câu chưa trả lời (kể cả tự luận)",
+    "essayGraded": "Tự luận {{score}}/{{max}}đ"
   },
   "referral": {
     "copied": "Đã sao chép",

@@ -950,10 +950,9 @@ export function HomeworkFormModal({
           </div>
         </Field>
 
-        {/* Rubric */}
-        {kind === 'homework' && (
-          <Field label={t('form.rubric')}>
-            <div className="hw-flex hw-mb-8">
+        {/* Rubric — bài thường chấm tay; quiz dùng để chấm các câu tự luận (YC2) */}
+        <Field label={t('form.rubric')} hint={kind === 'quiz' ? t('form.rubricQuizHint') : undefined}>
+          <div className="hw-flex hw-mb-8">
               <select
                 className="text-input hw-flex-1"
                 value={rubricId}
@@ -1058,7 +1057,6 @@ export function HomeworkFormModal({
               </div>
             )}
           </Field>
-        )}
 
         {/* Quiz builder */}
         {kind === 'quiz' && (

@@ -141,6 +141,8 @@ export interface QuizAttemptDetail {
   options: { id: number; text: string; is_correct: boolean; chosen: boolean }[];
   answer_text: string | null;
   correct: boolean | null;
+  /** YC2: điểm chấm tay câu essay (null = chưa chấm). */
+  essay_score: number | null;
 }
 
 export interface QuizAttemptDetail {

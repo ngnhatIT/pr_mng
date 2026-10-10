@@ -303,7 +303,8 @@
       "rubricNameRequired": "Nhập tên thang điểm",
       "rubricCriteriaRequired": "Cần ít nhất 1 tiêu chí có tên và điểm > 0",
       "pointsInvalid": "Điểm mỗi câu phải lớn hơn 0 và tối đa 1000"
-    }
+    },
+    "rubricQuizHint": "Rubric dùng để chấm tay các câu tự luận của quiz."
   },
   "grade": {
     "empty": "Chưa có học viên để chấm",
@@ -387,5 +388,31 @@
     "unpublishFail": "Không gỡ đăng được bài tập, vui lòng thử lại",
     "unpublished": "Đã gỡ về nháp",
     "unpublishTitle": "Gỡ đăng bài tập"
+  },
+  "essay": {
+    "title": "Chấm tự luận: {{title}}",
+    "gradeButton": "Chấm tự luận",
+    "gradeCol": "Tự luận",
+    "rubricName": "Rubric: {{name}}",
+    "autoScore": "Trắc nghiệm: {{score}}đ",
+    "totalScore": "Tổng: {{score}}/{{max}}đ",
+    "feedback": "Nhận xét chung",
+    "feedbackPh": "Nhận xét cho học viên...",
+    "questionN": "Câu {{n}}",
+    "points": "{{points}}đ",
+    "answerLabel": "Bài làm của học viên",
+    "noAnswer": "Học viên bỏ trống câu này",
+    "submittedAt": "Nộp lúc {{time}}",
+    "saveQuestion": "Lưu điểm câu này",
+    "saved": "Đã lưu điểm. Tổng hiện tại: {{total}}đ",
+    "saveFail": "Không lưu được điểm, vui lòng thử lại",
+    "loadFail": "Không tải được dữ liệu chấm, vui lòng thử lại",
+    "noEssay": "Quiz chưa có câu tự luận",
+    "noEssayDesc": "Thêm câu hỏi loại tự luận vào đề để chấm tay theo rubric.",
+    "invalidScore": "Điểm không hợp lệ",
+    "overCriterion": "Điểm không vượt quá {{max}}",
+    "noScore": "Nhập điểm ít nhất 1 tiêu chí",
+    "done": "Đã chấm",
+    "pending": "Chờ chấm"
   }
 }

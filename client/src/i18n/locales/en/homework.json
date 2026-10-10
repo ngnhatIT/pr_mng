@@ -303,7 +303,8 @@
       "rubricNameRequired": "Enter a rubric name",
       "rubricCriteriaRequired": "Need at least 1 criterion with a name and score > 0",
       "pointsInvalid": "Each question must be worth more than 0 and at most 1000 points"
-    }
+    },
+    "rubricQuizHint": "Rubric used to manually grade the quiz essay questions."
   },
   "grade": {
     "empty": "No students to grade",
@@ -387,5 +388,31 @@
     "unpublishFail": "Couldn't unpublish the assignment, please try again",
     "unpublished": "Moved back to drafts",
     "unpublishTitle": "Unpublish homework"
+  },
+  "essay": {
+    "title": "Grade essays: {{title}}",
+    "gradeButton": "Grade essays",
+    "gradeCol": "Essays",
+    "rubricName": "Rubric: {{name}}",
+    "autoScore": "Auto-graded: {{score}}",
+    "totalScore": "Total: {{score}}/{{max}}",
+    "feedback": "General feedback",
+    "feedbackPh": "Feedback for the student...",
+    "questionN": "Question {{n}}",
+    "points": "{{points}} pts",
+    "answerLabel": "Student answer",
+    "noAnswer": "Student left this blank",
+    "submittedAt": "Submitted {{time}}",
+    "saveQuestion": "Save this question",
+    "saved": "Saved. Current total: {{total}}",
+    "saveFail": "Could not save the score, please try again",
+    "loadFail": "Could not load grading data, please try again",
+    "noEssay": "Quiz has no essay questions",
+    "noEssayDesc": "Add essay-type questions to grade manually with a rubric.",
+    "invalidScore": "Invalid score",
+    "overCriterion": "Score must not exceed {{max}}",
+    "noScore": "Enter a score for at least 1 criterion",
+    "done": "Graded",
+    "pending": "Pending"
   }
 }

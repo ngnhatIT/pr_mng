@@ -25,12 +25,20 @@ function QuizReviewView({
     <div className="quiz-review">
       {review.map((q, qi) => {
         if (q.qtype === 'essay') {
+          // YC2: đã chấm tay thì hiện điểm chi tiết thay vì badge "Chờ chấm"
+          const graded = q.essay_score !== null && q.essay_score !== undefined;
           return (
-            <div key={q.question_id} className="quiz-review-q pending">
+            <div key={q.question_id} className={`quiz-review-q ${graded ? 'correct' : 'pending'}`}>
               <div className="quiz-review-qhead">
-                <Icon name="clock" size={18} className="icon-warn" />
+                <Icon name={graded ? 'check' : 'clock'} size={18} className={graded ? 'icon-ok' : 'icon-warn'} />
                 <span>{t('quiz.questionLabel', { num: qi + 1, question: q.question })}</span>
-                <span className="badge badge-late">{t('quiz.pendingGrade')}</span>
+                {graded ? (
+                  <span className="badge badge-paid">
+                    {t('quiz.essayGraded', { score: q.essay_score, max: q.points })}
+                  </span>
+                ) : (
+                  <span className="badge badge-late">{t('quiz.pendingGrade')}</span>
+                )}
               </div>
               <div className="quiz-essay-answer">
                 <div className="muted-sm">{t('quiz.essayAnswer')}</div>

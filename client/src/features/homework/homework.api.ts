@@ -113,6 +113,35 @@ export interface QuizAttemptRow {
   submitted_at: string;
 }
 
+/** YC2: câu essay + rubric của quiz (để màn chấm hiện/ẩn nút chấm tự luận). */
+export interface QuizEssayInfo {
+  essay_questions: { question_id: number; question: string; points: number }[];
+  rubric: Rubric | null;
+}
+
+/** YC2: dữ liệu form chấm tự luận của 1 học viên. */
+export interface EssayGradingData {
+  rubric: Rubric;
+  questions: {
+    question_id: number;
+    question: string;
+    points: number;
+    answer_text: string | null;
+    submitted_at: string | null;
+    scores: { criterion_id: number; score: number }[];
+  }[];
+  auto_score: number;
+  total_score: number | null;
+  feedback: string | null;
+}
+
+export interface EssayGradeResult {
+  ok: boolean;
+  total: number;
+  auto_score: number;
+  essay_score: number;
+}
+
 export interface HomeworkStats {
   total: number;
   dueSoon: number;
@@ -168,6 +197,23 @@ export const homeworkApi = {
   saveQuiz: (id: number, questions: QuizQuestionForm[]) =>
     http.put<{ ok: boolean; count: number }>(`/homework/${id}/quiz`, { questions }),
   getQuizAttempts: (id: number) => http.get<QuizAttemptRow[]>(`/homework/${id}/quiz/attempts`),
+  // YC2: chấm tự luận quiz theo rubric
+  getQuizEssayInfo: (id: number) => http.get<QuizEssayInfo>(`/homework/${id}/quiz/essay`),
+  getEssayGrading: (id: number, studentId: number) =>
+    http.get<EssayGradingData>(`/homework/${id}/quiz/essay/${studentId}`),
+  gradeQuizEssay: (
+    id: number,
+    studentId: number,
+    questionId: number,
+    criteria: { criterion_id: number; score: number }[],
+    feedback: string
+  ) =>
+    http.post<EssayGradeResult>(`/homework/${id}/quiz/essay/grade`, {
+      student_id: studentId,
+      question_id: questionId,
+      criteria,
+      feedback,
+    }),
   // Rubric
   listRubrics: () => http.get<Rubric[]>('/homework/rubrics/list'),
   createRubric: (name: string, criteria: { name: string; max_score: number }[]) =>

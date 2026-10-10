@@ -757,6 +757,23 @@ export async function getHomeworkSubmissions(
 
 /* --------------------------------- Chấm điểm --------------------------------- */
 
+/**
+ * Học viên phải đang học lớp của bài tập (hoặc nằm trong danh sách giao riêng)
+ * mới được chấm điểm — chống điểm "mồ côi". Dùng chung cho chấm tay bài thường
+ * (gradeHomework) và chấm tự luận quiz (gradeQuizEssay trong quiz.service).
+ */
+export async function assertGradableStudent(homeworkId: number, classId: number, studentId: number): Promise<void> {
+  const enrolled = await db
+    .prepare(`SELECT 1 FROM enrollments WHERE student_id = ? AND class_id = ? AND status = 'active'`)
+    .get(studentId, classId);
+  if (!enrolled) {
+    const targeted = await db
+      .prepare('SELECT 1 FROM homework_targets WHERE homework_id = ? AND student_id = ?')
+      .get(homeworkId, studentId);
+    if (!targeted) throw AppError.badRequest('Học viên không thuộc lớp của bài tập này');
+  }
+}
+
 /** Chấm điểm bài tập thường (tay hoặc theo rubric).
  * - Bọc transaction: điểm + đánh dấu hoàn thành là 1 đơn vị nguyên tử.
  * - Kiểm tra học viên thuộc lớp của bài tập (chống điểm "mồ côi"). */
@@ -777,16 +794,7 @@ export async function gradeHomework(
       throw AppError.badRequest(`Điểm không được vượt quá ${hw.max_score}`);
     }
   }
-  // Học viên phải đang học lớp của bài tập (hoặc nằm trong danh sách giao riêng)
-  const enrolled = await db
-    .prepare(`SELECT 1 FROM enrollments WHERE student_id = ? AND class_id = ? AND status = 'active'`)
-    .get(studentId, hw.class_id);
-  if (!enrolled) {
-    const targeted = await db
-      .prepare('SELECT 1 FROM homework_targets WHERE homework_id = ? AND student_id = ?')
-      .get(homeworkId, studentId);
-    if (!targeted) throw AppError.badRequest('Học viên không thuộc lớp của bài tập này');
-  }
+  await assertGradableStudent(homeworkId, hw.class_id, studentId);
   await db.transaction(async (tx) => {
     await tx
       .prepare(

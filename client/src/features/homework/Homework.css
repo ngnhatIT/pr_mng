@@ -415,11 +415,13 @@ a:hover .submission-thumb {
 }
 
 /* ---------- HomeworkFormModal: thay inline styles ---------- */
-.hw-mb-8 {
-  margin-bottom: 8px;
+.hw-mb-8 {  margin-bottom: 8px;
 }
 .hw-mb-12 {
   margin-bottom: 12px;
+}
+.hw-mb-16 {
+  margin-bottom: 16px;
 }
 .hw-mt-4 {
   margin-top: 4px;
@@ -505,6 +507,60 @@ a:hover .submission-thumb {
 }
 @media (prefers-reduced-motion: reduce) {
   .upload-fill {
+    transition: none;
+  }
+}
+
+/* ---------- YC2: chấm tự luận quiz theo rubric ---------- */
+.essay-summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+  margin-bottom: 16px;
+}
+.essay-q {
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--bg-soft);
+  padding: 16px;
+  margin-bottom: 16px;
+}
+.essay-q-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 8px;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+.essay-answer {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px;
+  white-space: pre-wrap;
+  word-break: break-word;
+  margin: 8px 0 12px;
+  font-size: 14px;
+}
+.essay-criterion {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.essay-criterion label {
+  flex: 1;
+  min-width: 0;
+  font-size: 14px;
+}
+.essay-criterion .text-input {
+  width: 96px;
+  flex: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .essay-q {
     transition: none;
   }
 }

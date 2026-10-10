@@ -2,8 +2,10 @@ import { db } from '../../db';
 import { AppError } from '../../shared/errors';
 import { todayVN } from '../../shared/vnTime';
 import { eventBus } from '../../shared/events/eventBus';
-import { QuizSubmittedEvent } from '../../shared/events/homework.events';
+import { QuizSubmittedEvent, HomeworkGradedEvent } from '../../shared/events/homework.events';
 import { sumQuestionPoints, normalizePoints, normalizeQtype, validateQuestionOptions, gradeQuestion, type QuestionType } from './homework.helpers';
+import { getRubric, type Rubric } from './rubric.service';
+import { assertGradableStudent } from './homework.service';
 
 /* ---------------------------------- Types ---------------------------------- */
 
@@ -434,7 +436,247 @@ export async function getAllAttempts(homeworkId: number): Promise<unknown[]> {
     .all(homeworkId);
 }
 
-/* ------------------------------- Chấm lại ------------------------------- */
+/* ------------------------- Chấm tự luận theo rubric (YC2) ------------------------- */
+
+export interface EssayQuestionInfo {
+  question_id: number;
+  question: string;
+  points: number;
+}
+
+/** Thông tin quiz-level cho màn chấm: câu essay nào + rubric nào (để hiện/ẩn nút chấm). */
+export async function getQuizEssayInfo(homeworkId: number): Promise<{
+  essay_questions: EssayQuestionInfo[];
+  rubric: Rubric | null;
+}> {
+  const hw = (await db.prepare('SELECT kind, rubric_id FROM homework WHERE id = ?').get(homeworkId)) as
+    { kind: string; rubric_id: number | null } | undefined;
+  if (!hw) throw AppError.notFound('Không tìm thấy bài tập');
+  const essay_questions =
+    hw.kind === 'quiz'
+      ? ((await db
+          .prepare(
+            `SELECT id as question_id, question, points FROM quiz_questions
+             WHERE homework_id = ? AND qtype = 'essay' ORDER BY position, id`
+          )
+          .all(homeworkId)) as EssayQuestionInfo[])
+      : [];
+  const rubric = hw.rubric_id ? await getRubric(hw.rubric_id) : null;
+  return { essay_questions, rubric };
+}
+
+export interface EssayCriterionScore {
+  criterion_id: number;
+  score: number;
+}
+
+export interface EssayGradingQuestion extends EssayQuestionInfo {
+  answer_text: string | null; // bài làm ở lượt mới nhất (null = bỏ trống)
+  submitted_at: string | null;
+  scores: EssayCriterionScore[]; // điểm đã chấm trước đó (nếu có)
+}
+
+export interface EssayGradingData {
+  rubric: Rubric;
+  questions: EssayGradingQuestion[];
+  auto_score: number; // điểm trắc nghiệm cao nhất (quy tắc giữ điểm cao nhất)
+  total_score: number | null; // tổng hiện tại (tự động + tay), null = chưa có
+  feedback: string | null;
+}
+
+/** Dữ liệu form chấm tự luận của 1 học viên: bài làm + điểm đã chấm + tổng. */
+export async function getEssayGrading(homeworkId: number, studentId: number): Promise<EssayGradingData> {
+  const hw = (await db
+    .prepare('SELECT class_id, kind, rubric_id FROM homework WHERE id = ?')
+    .get(homeworkId)) as { class_id: number; kind: string; rubric_id: number | null } | undefined;
+  if (!hw) throw AppError.notFound('Không tìm thấy bài tập');
+  if (hw.kind !== 'quiz') throw AppError.badRequest('Chấm tự luận theo rubric chỉ áp dụng cho quiz');
+  const rubric = hw.rubric_id ? await getRubric(hw.rubric_id) : null;
+  if (!rubric) throw AppError.badRequest('Quiz chưa gắn rubric — hãy chọn rubric trước khi chấm tự luận');
+  await assertGradableStudent(homeworkId, hw.class_id, studentId);
+
+  const questions = (await db
+    .prepare(
+      `SELECT id as question_id, question, points FROM quiz_questions
+       WHERE homework_id = ? AND qtype = 'essay' ORDER BY position, id`
+    )
+    .all(homeworkId)) as EssayQuestionInfo[];
+  // Bài làm ở lượt mới nhất của học viên (giáo viên chấm bài mới nhất)
+  const latest = (await db
+    .prepare(
+      `SELECT id, submitted_at FROM quiz_attempts
+       WHERE homework_id = ? AND student_id = ? ORDER BY submitted_at DESC, id DESC LIMIT 1`
+    )
+    .get(homeworkId, studentId)) as { id: number; submitted_at: string } | undefined;
+  const answers = new Map<number, string | null>();
+  if (latest && questions.length) {
+    for (const r of (await db
+      .prepare(
+        `SELECT question_id, answer_text FROM quiz_answers
+         WHERE attempt_id = ? AND question_id IN (${questions.map(() => '?').join(',')})`
+      )
+      .all(latest.id, ...questions.map((q) => q.question_id))) as {
+      question_id: number;
+      answer_text: string | null;
+    }[]) {
+      answers.set(r.question_id, r.answer_text);
+    }
+  }
+  const scored = new Map<number, EssayCriterionScore[]>();
+  for (const r of (await db
+    .prepare(
+      `SELECT question_id, criterion_id, score FROM quiz_essay_scores
+       WHERE homework_id = ? AND student_id = ?`
+    )
+    .all(homeworkId, studentId)) as { question_id: number; criterion_id: number; score: number }[]) {
+    const list = scored.get(r.question_id) ?? [];
+    list.push({ criterion_id: r.criterion_id, score: r.score });
+    scored.set(r.question_id, list);
+  }
+  const auto_score = Number(
+    (
+      (await db
+        .prepare('SELECT COALESCE(MAX(score), 0) as m FROM quiz_attempts WHERE homework_id = ? AND student_id = ?')
+        .get(homeworkId, studentId)) as { m: number }
+    ).m
+  );
+  const cur = (await db
+    .prepare('SELECT score, feedback FROM homework_scores WHERE homework_id = ? AND student_id = ?')
+    .get(homeworkId, studentId)) as { score: number | null; feedback: string | null } | undefined;
+  return {
+    rubric,
+    questions: questions.map((q) => ({
+      ...q,
+      answer_text: answers.get(q.question_id) ?? null,
+      submitted_at: latest?.submitted_at ?? null,
+      scores: scored.get(q.question_id) ?? [],
+    })),
+    auto_score,
+    total_score: cur?.score ?? null,
+    feedback: cur?.feedback ?? null,
+  };
+}
+
+export interface EssayGradeCriterionInput {
+  criterion_id: number;
+  score: number;
+}
+
+/**
+ * Chấm 1 câu tự luận theo tiêu chí rubric.
+ * - Idempotent: upsert từng dòng tiêu chí (chấm lại ghi đè).
+ * - Trong cùng transaction: tổng = điểm tự động (lượt cao nhất) + tổng điểm tay
+ *   mọi câu essay đã chấm → cập nhật homework_scores. Giữ số thập phân, không làm tròn.
+ * - Phát sự kiện homework.graded như chấm tay bài thường.
+ */
+export async function gradeQuizEssay(
+  homeworkId: number,
+  studentId: number,
+  questionId: number,
+  criteria: EssayGradeCriterionInput[],
+  feedback: string | null,
+  gradedBy: number | null
+): Promise<{ total: number; auto_score: number; essay_score: number }> {
+  // --- Validate toàn bộ ở trust boundary, trước mọi ghi ---
+  const hw = (await db
+    .prepare('SELECT class_id, kind, rubric_id, max_score FROM homework WHERE id = ?')
+    .get(homeworkId)) as
+    { class_id: number; kind: string; rubric_id: number | null; max_score: number | null } | undefined;
+  if (!hw) throw AppError.notFound('Không tìm thấy bài tập');
+  if (hw.kind !== 'quiz') throw AppError.badRequest('Chấm tự luận theo rubric chỉ áp dụng cho quiz');
+  if (!hw.rubric_id) throw AppError.badRequest('Quiz chưa gắn rubric — hãy chọn rubric trước khi chấm tự luận');
+  const q = (await db
+    .prepare('SELECT id, qtype FROM quiz_questions WHERE id = ? AND homework_id = ?')
+    .get(questionId, homeworkId)) as { id: number; qtype: string } | undefined;
+  if (!q) throw AppError.notFound('Không tìm thấy câu hỏi trong quiz này');
+  if (normalizeQtype(q.qtype) !== 'essay') throw AppError.badRequest('Chỉ câu tự luận mới chấm tay theo rubric');
+  await assertGradableStudent(homeworkId, hw.class_id, studentId);
+  if (!Array.isArray(criteria) || criteria.length === 0)
+    throw AppError.badRequest('Chưa nhập điểm cho tiêu chí nào');
+  // Tiêu chí phải thuộc đúng rubric của quiz (chống ghi bừa criterion_id lạ)
+  const rubric = await getRubric(hw.rubric_id);
+  const critById = new Map((rubric?.criteria ?? []).map((c) => [c.id, c]));
+  const seen = new Set<number>();
+  const clean: { criterion_id: number; score: number }[] = [];
+  for (const c of criteria) {
+    if (typeof c !== 'object' || c === null || !Number.isInteger(c.criterion_id))
+      throw AppError.badRequest('Tiêu chí chấm không hợp lệ');
+    const def = critById.get(c.criterion_id);
+    if (!def) throw AppError.badRequest('Tiêu chí không thuộc rubric của quiz này');
+    if (seen.has(c.criterion_id)) throw AppError.badRequest('Tiêu chí bị nhập trùng');
+    seen.add(c.criterion_id);
+    const s = Number(c.score);
+    if (!Number.isFinite(s) || s < 0) throw AppError.badRequest(`Điểm tiêu chí "${def.name}" không hợp lệ`);
+    if (s > def.max_score)
+      throw AppError.badRequest(`Điểm tiêu chí "${def.name}" không được vượt quá ${def.max_score}`);
+    clean.push({ criterion_id: c.criterion_id, score: s });
+  }
+  const attemptCount = (
+    (await db
+      .prepare('SELECT COUNT(*) as c FROM quiz_attempts WHERE homework_id = ? AND student_id = ?')
+      .get(homeworkId, studentId)) as { c: number }
+  ).c;
+  if (attemptCount === 0) throw AppError.badRequest('Học viên chưa làm quiz này');
+
+  let total = 0;
+  let auto_score = 0;
+  let essay_score = 0;
+  await db.transaction(async (tx) => {
+    // P1-13: lock row homework để serialize với submitQuiz (chấm tay và nộp bài
+    // đồng thời không ghi đè lẫn nhau)
+    await tx.prepare('SELECT id FROM homework WHERE id = ? FOR UPDATE').get(homeworkId);
+    const up = await tx.prepare(
+      `INSERT INTO quiz_essay_scores (homework_id, student_id, question_id, criterion_id, score, graded_by)
+       VALUES (?, ?, ?, ?, ?, ?)
+       ON CONFLICT(homework_id, student_id, question_id, criterion_id)
+       DO UPDATE SET score = excluded.score, graded_by = excluded.graded_by, graded_at = datetime('now')`
+    );
+    for (const c of clean) await up.run(homeworkId, studentId, questionId, c.criterion_id, c.score, gradedBy);
+    auto_score = Number(
+      (
+        (await tx
+          .prepare(
+            'SELECT COALESCE(MAX(score), 0) as m FROM quiz_attempts WHERE homework_id = ? AND student_id = ?'
+          )
+          .get(homeworkId, studentId)) as { m: number }
+      ).m
+    );
+    essay_score = Number(
+      (
+        (await tx
+          .prepare(
+            'SELECT COALESCE(SUM(score), 0) as s FROM quiz_essay_scores WHERE homework_id = ? AND student_id = ?'
+          )
+          .get(homeworkId, studentId)) as { s: number }
+      ).s
+    );
+    total = auto_score + essay_score;
+    // Chặn tổng vượt thang điểm (gõ nhầm) — nhất quán với gradeHomework
+    if (hw.max_score != null && total > hw.max_score) {
+      throw AppError.badRequest(`Tổng điểm không được vượt quá ${hw.max_score}`);
+    }
+    // feedback: chỉ ghi đè khi giáo viên nhập (null = giữ nhận xét cũ)
+    await tx
+      .prepare(
+        `INSERT INTO homework_scores (homework_id, student_id, score, feedback, graded_by, graded_at)
+         VALUES (?, ?, ?, ?, ?, datetime('now'))
+         ON CONFLICT(homework_id, student_id) DO UPDATE SET
+           score = excluded.score, graded_by = excluded.graded_by, graded_at = datetime('now')
+           ${feedback !== null ? ', feedback = excluded.feedback' : ''}`
+      )
+      .run(homeworkId, studentId, total, feedback, gradedBy);
+    await tx
+      .prepare(
+        `INSERT INTO homework_completions (homework_id, student_id, completed_by)
+         VALUES (?, ?, 'teacher') ON CONFLICT(homework_id, student_id) DO NOTHING`
+      )
+      .run(homeworkId, studentId);
+  });
+  eventBus.emitSync(new HomeworkGradedEvent(homeworkId, studentId, total, gradedBy));
+  return { total, auto_score, essay_score };
+}
+
+/* ------------------------------- Xem lại bài làm ------------------------------- */
 
 export interface QuizReview {
   question_id: number;
@@ -444,6 +686,7 @@ export interface QuizReview {
   options: { id: number; text: string; is_correct: boolean; chosen: boolean }[];
   answer_text: string | null; // bài làm tự luận (câu essay)
   correct: boolean | null; // null = essay, chờ chấm tay
+  essay_score: number | null; // điểm chấm tay câu essay (null = chưa chấm)
 }
 
 /** Chi tiết 1 lượt làm: câu hỏi + đáp án đúng/sai + đáp án đã chọn (Google Forms: review).
@@ -471,6 +714,17 @@ export async function getAttemptReview(attemptId: number, studentId: number): Pr
     .all(attempt.homework_id)) as { id: number; qtype: string; question: string; points: number }[];
   // P1-4: 1 query duy nhất cho mọi đáp án thay vì 1 query/câu hỏi
   const options = await getOptionsBatch(qs.map((q) => q.id));
+  // YC2: điểm chấm tay từng câu essay (theo học viên, không theo lượt làm) —
+  // phụ huynh thấy điểm chi tiết phần tự luận đã chấm, hết badge "Chờ chấm".
+  const essayScores = new Map<number, number>();
+  for (const r of (await db
+    .prepare(
+      `SELECT question_id, SUM(score) as s FROM quiz_essay_scores
+       WHERE homework_id = ? AND student_id = ? GROUP BY question_id`
+    )
+    .all(attempt.homework_id, attempt.student_id)) as { question_id: number; s: number }[]) {
+    essayScores.set(r.question_id, r.s);
+  }
   return qs.map((q) => {
     const qtype = normalizeQtype(q.qtype);
     const given = chosenByQ.get(q.id) ?? { option_ids: [], answer_text: null };
@@ -489,6 +743,7 @@ export async function getAttemptReview(attemptId: number, studentId: number): Pr
       })),
       answer_text: given.answer_text,
       correct: gradeQuestion(qtype, given.option_ids, correctIds),
+      essay_score: qtype === 'essay' ? (essayScores.get(q.id) ?? null) : null,
     };
   });
 }
