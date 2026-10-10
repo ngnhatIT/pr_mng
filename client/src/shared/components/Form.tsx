@@ -14,6 +14,7 @@ export function Field({
   span,
   error,
   required,
+  hint,
 }: {
   label: string;
   children: ReactNode;
@@ -21,6 +22,8 @@ export function Field({
   /** Lỗi validation hiển thị inline ngay dưới field (thay vì chỉ toast). */
   error?: string;
   required?: boolean;
+  /** Gợi ý ngắn dưới field, giúp người không rành kỹ thuật hiểu setting. Ẩn khi có lỗi. */
+  hint?: string;
 }) {
   const errorId = `${label}-error`;
   // Gắn aria-invalid + aria-describedby vào input con để screen reader đọc lỗi
@@ -42,10 +45,12 @@ export function Field({
         )}
       </span>
       {enhanced}
-      {error && (
+      {error ? (
         <span className="field-error" id={errorId} role="alert">
           {error}
         </span>
+      ) : (
+        hint && <span className="field-hint">{hint}</span>
       )}
     </label>
   );

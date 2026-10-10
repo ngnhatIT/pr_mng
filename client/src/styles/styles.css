@@ -1968,6 +1968,14 @@ button.search-clear:active {
   font-size: 12px;
   margin-top: 4px;
 }
+/* Gợi ý ngắn dưới field: chữ nhỏ muted, giúp admin không rành kỹ thuật hiểu setting */
+.field-hint {
+  display: block;
+  color: var(--text-muted);
+  font-size: 12px;
+  margin-top: 4px;
+  line-height: 1.5;
+}
 .text-input::placeholder {
   color: var(--text-faint);
   opacity: 1;

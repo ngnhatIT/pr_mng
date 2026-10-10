@@ -231,6 +231,8 @@
       "sectionInfo": "Center information",
       "sectionPlan": "Plan",
       "subdomain": "Subdomain *",
+      "subdomainHint": "Lowercase, no spaces; used in the center's login URL (e.g. apollo.yourdomain.vn)",
+      "adminUsernameHint": "This account signs in first to manage the center",
       "submit": "Create center",
       "title": "Create new center"
     },

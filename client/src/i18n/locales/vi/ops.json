@@ -231,6 +231,8 @@
       "sectionInfo": "Thông tin trung tâm",
       "sectionPlan": "Gói cước",
       "subdomain": "Subdomain *",
+      "subdomainHint": "Viết liền không dấu, dùng trong đường dẫn đăng nhập (vd: apollo.tenmien.vn)",
+      "adminUsernameHint": "Tài khoản này đăng nhập lần đầu để quản trị trung tâm",
       "submit": "Tạo trung tâm",
       "title": "Tạo trung tâm mới"
     },

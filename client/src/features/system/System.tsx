@@ -189,7 +189,7 @@ function CreateCenterModal({ onClose, onDone }: { onClose: () => void; onDone: (
             <Field label={t('system.createForm.name')}>
               <input className="text-input" value={name} onChange={(e) => setName(e.target.value)} required />
             </Field>
-            <Field label={t('system.createForm.subdomain')}>
+            <Field label={t('system.createForm.subdomain')} hint={t('system.createForm.subdomainHint')}>
               <input
                 className="text-input mono"
                 value={subdomain}
@@ -230,7 +230,10 @@ function CreateCenterModal({ onClose, onDone }: { onClose: () => void; onDone: (
         <div className="center-form-section">
           <h3>{t('system.createForm.sectionAdmin')}</h3>
           <div className="form-grid">
-            <Field label={t('system.createForm.adminUsername')}>
+            <Field
+              label={t('system.createForm.adminUsername')}
+              hint={t('system.createForm.adminUsernameHint')}
+            >
               <input
                 className="text-input"
                 value={adminUsername}
@@ -254,6 +257,7 @@ function CreateCenterModal({ onClose, onDone }: { onClose: () => void; onDone: (
             {t('actions.cancel', { ns: 'common' })}
           </button>
           <button type="submit" className="btn btn-primary" disabled={busy}>
+            {busy && <span className="spinner" aria-hidden="true" />}
             {busy ? t('system.createForm.creating') : t('system.createForm.submit')}
           </button>
         </div>
@@ -328,6 +332,7 @@ function EditPlanModal({
             {t('actions.cancel', { ns: 'common' })}
           </button>
           <button type="submit" className="btn btn-primary" disabled={busy}>
+            {busy && <span className="spinner" aria-hidden="true" />}
             {busy ? t('actions.saving', { ns: 'common' }) : t('actions.save', { ns: 'common' })}
           </button>
         </div>
