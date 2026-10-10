@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { parentApi, type QuizQuestion, type QuizAttempt } from './parent.api';
 import { HomeworkItem, formatDate } from '../../shared/types';
 import { useToast } from '../../shared/ui/toast';
-import { Modal } from '../../shared/components/Modal';
+import { ConfirmDialog, Modal } from '../../shared/components/Modal';
 import { EmptyState } from '../../shared/components/EmptyState';
 import { Icon } from '../../shared/components/icons';
 import './parent.css';
@@ -61,12 +61,19 @@ export function QuizTaker({
       .finally(() => setLoading(false));
   }, [homework.id]);
 
-  const submit = async () => {
+  const [confirming, setConfirming] = useState(false);
+
+  // Bấm Nộp bài -> mở dialog xác nhận của app (không dùng confirm() native)
+  const submit = () => {
     if (Object.keys(answers).length < questions.length) {
       toast(t('quiz.unanswered', { count: questions.length - Object.keys(answers).length }), 'error');
       return;
     }
-    if (!confirm(t('quiz.confirmSubmit'))) return;
+    setConfirming(true);
+  };
+
+  const doSubmit = async () => {
+    setConfirming(false);
     setSubmitting(true);
     try {
       const res = await parentApi.submitQuiz(
@@ -300,6 +307,14 @@ export function QuizTaker({
             )}
           </div>
         </>
+      )}
+      {confirming && (
+        <ConfirmDialog
+          title={t('quiz.confirmTitle')}
+          message={t('quiz.confirmSubmit')}
+          onClose={() => setConfirming(false)}
+          onConfirm={doSubmit}
+        />
       )}
     </Modal>
   );

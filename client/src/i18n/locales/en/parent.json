@@ -189,6 +189,7 @@
     "bestScore": "Best:",
     "bestScoreLine": "{{best}}/{{max}} pts",
     "confirmSubmit": "Submit? You can retake it to improve your score.",
+    "confirmTitle": "Submit the quiz?",
     "dueDate": "- Due: {{date}}",
     "excellent": "Excellent!",
     "good": "Good job, keep it up!",

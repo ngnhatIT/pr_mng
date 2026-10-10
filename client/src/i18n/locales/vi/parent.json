@@ -189,6 +189,7 @@
     "bestScore": "Cao nhất:",
     "bestScoreLine": "{{best}}/{{max}}đ",
     "confirmSubmit": "Nộp bài? Bạn vẫn có thể làm lại để cải thiện điểm.",
+    "confirmTitle": "Nộp bài kiểm tra?",
     "dueDate": "- Hạn: {{date}}",
     "excellent": "Xuất sắc!",
     "good": "Khá tốt, cố gắng thêm nhé!",
