@@ -482,38 +482,48 @@ export async function createLeave(
   if (from_date > to_date) throw AppError.badRequest('Ngày bắt đầu phải trước hoặc bằng ngày kết thúc');
   // Không cho xin nghỉ cho ngày đã qua
   if (to_date < toISODate(new Date())) throw AppError.badRequest('Không thể xin nghỉ cho ngày đã qua');
-  // Chặn đơn trùng: học viên đã có đơn pending/approved giao nhau với khoảng ngày này
-  const overlap = (await db
-    .prepare(
-      `SELECT id FROM leave_requests
+  // Chặn đơn trùng: học viên đã có đơn pending/approved giao nhau với khoảng ngày này.
+  // Lock theo học viên để 2 tab gửi đồng thời không lọt qua check rồi tạo 2 đơn trùng.
+  const outcome = await withAdvisoryLock(`leave:${student.id}`, async () => {
+    const overlap = (await db
+      .prepare(
+        `SELECT id FROM leave_requests
        WHERE student_id = ? AND status IN ('pending', 'approved')
          AND NOT (to_date < ? OR from_date > ?)`
-    )
-    .get(student.id, from_date, to_date)) as { id: number } | undefined;
-  if (overlap) throw AppError.conflict('Học viên đã có đơn xin nghỉ trong khoảng thời gian này');
-  // class_id (nếu có) phải thuộc đúng center của học viên và học viên đang học lớp đó
-  let classId: number | null = null;
-  if (input.class_id) {
-    classId = Number(input.class_id);
-    const cls = (await db.prepare('SELECT id, center_id FROM classes WHERE id = ?').get(classId)) as
-      | {
-          id: number;
-          center_id: number | null;
-        }
-      | undefined;
-    if (!cls || cls.center_id !== student.center_id)
-      throw AppError.badRequest('Lớp học không thuộc trung tâm của học viên');
-    const enrolled = await db
-      .prepare("SELECT 1 FROM enrollments WHERE student_id = ? AND class_id = ? AND status = 'active'")
-      .get(student.id, classId);
-    if (!enrolled) throw AppError.badRequest('Học viên không đang học lớp này');
+      )
+      .get(student.id, from_date, to_date)) as { id: number } | undefined;
+    if (overlap) throw AppError.conflict('Học viên đã có đơn xin nghỉ trong khoảng thời gian này');
+    // class_id (nếu có) phải thuộc đúng center của học viên và học viên đang học lớp đó
+    let classId: number | null = null;
+    if (input.class_id) {
+      classId = Number(input.class_id);
+      const cls = (await db.prepare('SELECT id, center_id FROM classes WHERE id = ?').get(classId)) as
+        | {
+            id: number;
+            center_id: number | null;
+          }
+        | undefined;
+      if (!cls || cls.center_id !== student.center_id)
+        throw AppError.badRequest('Lớp học không thuộc trung tâm của học viên');
+      const enrolled = await db
+        .prepare("SELECT 1 FROM enrollments WHERE student_id = ? AND class_id = ? AND status = 'active'")
+        .get(student.id, classId);
+      if (!enrolled) throw AppError.badRequest('Học viên không đang học lớp này');
+    }
+    const r = await db
+      .prepare(
+        "INSERT INTO leave_requests (center_id, student_id, class_id, from_date, to_date, reason, status) VALUES (?, ?, ?, ?, ?, ?, 'pending')"
+      )
+      .run(student.center_id, student.id, classId, from_date, to_date, input.reason || null);
+    return { id: Number(r.lastInsertRowid), status: 'pending' };
+  });
+  if (outcome.status === 'locked') {
+    throw AppError.conflict('Hệ thống đang bận, vui lòng thử lại sau giây lát');
   }
-  const r = await db
-    .prepare(
-      "INSERT INTO leave_requests (center_id, student_id, class_id, from_date, to_date, reason, status) VALUES (?, ?, ?, ?, ?, ?, 'pending')"
-    )
-    .run(student.center_id, student.id, classId, from_date, to_date, input.reason || null);
-  return { id: Number(r.lastInsertRowid), status: 'pending' };
+  if (outcome.status !== 'done' || !outcome.result) {
+    throw new AppError(503, 'Không thể tạo đơn xin nghỉ lúc này, vui lòng thử lại', 'SERVICE_UNAVAILABLE');
+  }
+  return outcome.result;
 }
 
 export async function listLeaves(parentId: number): Promise<unknown[]> {
