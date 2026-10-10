@@ -155,6 +155,9 @@ export function QuizTaker({
             {t('quiz.questionCount', { count: questions.length })}
             {homework.max_score != null && ` ${t('quiz.maxScore', { score: homework.max_score })}`}
             {homework.due_date && ` ${t('quiz.dueDate', { date: formatDateTime(homework.due_date) })}`}
+            {homework.close_date &&
+              homework.close_date !== homework.due_date &&
+              ` ${t('quiz.closeDate', { date: formatDateTime(homework.close_date) })}`}
           </span>
           {history.length > 0 && (
             <span className="muted-sm">

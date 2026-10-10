@@ -74,7 +74,8 @@
       "todo": "Cần làm ({{count}})",
       "unmark": "Bỏ đánh dấu đã làm xong",
       "viewSubmissions": "Bài đã nộp",
-      "emptyDesc": "Bài tập về nhà sẽ hiện ở đây khi giáo viên giao."
+      "emptyDesc": "Bài tập về nhà sẽ hiện ở đây khi giáo viên giao.",
+      "closeLabel": "Hạn chót nộp: {{date}}"
     },
     "loadError": "Không tải được thông tin",
     "notFoundDesc": "Không tìm thấy thông tin học viên.",
@@ -234,7 +235,8 @@
     "viewAnswers": "Xem đáp án",
     "youChose": "(bạn chọn)",
     "retry": "Làm lại",
-    "noQuestionsDesc": "Đề chưa có câu hỏi nào. Vui lòng thử lại sau hoặc liên hệ trung tâm."
+    "noQuestionsDesc": "Đề chưa có câu hỏi nào. Vui lòng thử lại sau hoặc liên hệ trung tâm.",
+    "closeDate": "- Hạn chót nộp: {{date}}"
   },
   "referral": {
     "copied": "Đã sao chép",

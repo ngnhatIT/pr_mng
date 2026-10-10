@@ -610,6 +610,11 @@ function HomeworkTab({ data, onChanged }: { data: ChildOverview; onChanged: () =
                 {t('child.homework.dueLabel', { date: formatDateTime(h.due_date) })}
               </span>
             ))}
+          {h.close_date && h.close_date !== h.due_date && (
+            <div className="muted-sm" style={{ marginTop: 4 }}>
+              {t('child.homework.closeLabel', { date: formatDateTime(h.close_date) })}
+            </div>
+          )}
         </div>
       </div>
     );

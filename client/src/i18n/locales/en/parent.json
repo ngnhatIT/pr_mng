@@ -74,7 +74,8 @@
       "todo": "To do ({{count}})",
       "unmark": "Unmark as done",
       "viewSubmissions": "Submitted work",
-      "emptyDesc": "Homework will appear here once the teacher assigns it."
+      "emptyDesc": "Homework will appear here once the teacher assigns it.",
+      "closeLabel": "Final deadline: {{date}}"
     },
     "loadError": "Couldn't load the details",
     "notFoundDesc": "Student record not found.",
@@ -234,7 +235,8 @@
     "viewAnswers": "View answers",
     "youChose": "(your choice)",
     "retry": "Retry",
-    "noQuestionsDesc": "This quiz has no questions yet. Please try again later or contact the center."
+    "noQuestionsDesc": "This quiz has no questions yet. Please try again later or contact the center.",
+    "closeDate": "- Final deadline: {{date}}"
   },
   "referral": {
     "copied": "Copied",
