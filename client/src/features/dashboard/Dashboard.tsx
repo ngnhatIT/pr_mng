@@ -34,6 +34,7 @@ export function Dashboard() {
   const { t, i18n } = useTranslation(['dashboard', 'common']);
   const [data, setData] = useState<DashboardData | null>(null);
   const [debts, setDebts] = useState<DebtRow[]>([]);
+  const [debtsError, setDebtsError] = useState(false);
   const [loading, setLoading] = useState(true);
   const toast = useToast();
   const user = getUser();
@@ -64,8 +65,12 @@ export function Dashboard() {
         // Teacher không có quyền invoices.view → 403, bỏ qua (không vỡ dashboard)
         const debt = await dashboardApi.topDebts({ limit: 5 });
         setDebts(debt.data);
-      } catch {
+        setDebtsError(false);
+      } catch (err) {
         setDebts([]);
+        // 403 thiếu quyền (teacher): ẩn widget êm; lỗi khác mới báo + cho thử lại
+        const code = err instanceof Error ? (err as Error & { code?: string }).code : undefined;
+        setDebtsError(code !== 'FORBIDDEN');
       }
     } catch (err) {
       toast(err instanceof Error ? err.message : t('loadError'), 'error');
@@ -246,7 +251,19 @@ export function Dashboard() {
               {t('viewAll')} <Icon name="arrow-right" size={14} />
             </Link>
           </div>
-          {debts.length === 0 ? (
+          {debtsError ? (
+            <EmptyState
+              icon="alert"
+              title={t('debtLoadErrorTitle')}
+              desc={t('debtLoadErrorDesc')}
+              action={
+                <button className="btn btn-inline" onClick={() => void load()}>
+                  <Icon name="rotate" size={14} />
+                  {t('actions.retry', { ns: 'common' })}
+                </button>
+              }
+            />
+          ) : debts.length === 0 ? (
             <p className="muted">{t('debtEmpty')}</p>
           ) : (
             <ul className="list">

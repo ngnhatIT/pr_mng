@@ -1,5 +1,7 @@
 {
   "debtEmpty": "Không có khoản nợ nào cần thu.",
+  "debtLoadErrorDesc": "Không tải được danh sách công nợ. Vui lòng thử lại.",
+  "debtLoadErrorTitle": "Không tải được công nợ",
   "debtTitle": "Công nợ cao nhất",
   "fallbackName": "bạn",
   "greeting": {

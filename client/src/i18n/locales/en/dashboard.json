@@ -1,5 +1,7 @@
 {
   "debtEmpty": "No outstanding debt to collect.",
+  "debtLoadErrorDesc": "Couldn't load the debtor list. Please try again.",
+  "debtLoadErrorTitle": "Couldn't load debts",
   "debtTitle": "Top debtors",
   "fallbackName": "you",
   "greeting": {
