@@ -54,6 +54,8 @@ export function Homework() {
   const [page, setPage] = useState(1);
   const [pagination, setPagination] = useState<PaginationMeta | null>(null);
   const toast = useToast();
+  // Chống bấm đúp nút hành động trên từng dòng (pattern busyId của Tuition)
+  const [busyId, setBusyId] = useState<number | null>(null);
   // Portal giáo viên (/teacher/bai-tap): ẩn tab/nút quản trị, chỉ giữ luồng giao bài nhanh
   const isTeacher = getUser()?.role === 'teacher';
 
@@ -123,6 +125,8 @@ export function Homework() {
   };
 
   const doReuse = async (h: HomeworkItem) => {
+    if (busyId !== null) return;
+    setBusyId(h.id);
     try {
       const res = await homeworkApi.reuse(h.id);
       toast(t('toast.reused'), 'success');
@@ -130,10 +134,14 @@ export function Homework() {
       void load();
     } catch (err) {
       toast(err instanceof Error ? err.message : t('toast.reuseFail'), 'error');
+    } finally {
+      setBusyId(null);
     }
   };
 
   const doPublish = async (h: HomeworkItem) => {
+    if (busyId !== null) return;
+    setBusyId(h.id);
     try {
       await homeworkApi.publish(h.id);
       toast(t('toast.published'), 'success');
@@ -141,6 +149,8 @@ export function Homework() {
       refreshStats();
     } catch (err) {
       toast(err instanceof Error ? err.message : t('toast.publishFail'), 'error');
+    } finally {
+      setBusyId(null);
     }
   };
 
@@ -409,14 +419,17 @@ export function Homework() {
                           <button
                             className="btn btn-sm btn-primary"
                             onClick={() => doPublish(h)}
+                            disabled={busyId === h.id}
                             title={t('actions.publishNow')}
                           >
+                            {busyId === h.id && <span className="spinner" aria-hidden="true" />}
                             {t('actions.publish')}
                           </button>
                         ) : (
                           <button
                             className="btn btn-sm"
                             onClick={() => doUnpublish(h)}
+                            disabled={busyId === h.id}
                             title={t('actions.unpublishTitle')}
                           >
                             {t('actions.unpublish')}
@@ -425,8 +438,10 @@ export function Homework() {
                         <button
                           className="btn btn-sm"
                           onClick={() => doReuse(h)}
+                          disabled={busyId === h.id}
                           title={t('actions.reuseTitle')}
                         >
+                          {busyId === h.id && <span className="spinner" aria-hidden="true" />}
                           {t('actions.reuse')}
                         </button>{' '}
                         {h.kind === 'quiz' ? (
