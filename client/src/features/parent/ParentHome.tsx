@@ -104,7 +104,7 @@ export function ParentHome() {
                 <div className="child-avatar" aria-hidden="true">
                   <Icon name="user" size={20} />
                 </div>
-                <div>
+                <div className="child-head-main">
                   <div className="child-name">{c.name}</div>
                   <div className="muted mono child-code">{t('home.codeLabel', { code: c.code })}</div>
                 </div>

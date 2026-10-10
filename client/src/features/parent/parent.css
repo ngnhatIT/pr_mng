@@ -332,6 +332,11 @@ button.quiz-take-opt {
   .parent-tabs .tab {
     padding: 9px 14px;
   }
+  /* Tên con dài thì khối tên co lại, không đẩy mũi tên tràn */
+  .child-head-main {
+    min-width: 0;
+    overflow-wrap: break-word;
+  }
 }
 
 /* ---------- Biểu đồ tiến bộ: màu theo theme (SVG dùng CSS vars) ---------- */
