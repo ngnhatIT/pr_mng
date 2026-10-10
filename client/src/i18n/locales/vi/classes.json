@@ -16,7 +16,8 @@
       "creating": "Đang tạo...",
       "date": "Ngày *",
       "title": "Tạo buổi học mới",
-      "topic": "Chủ đề"
+      "topic": "Chủ đề",
+      "dateRequired": "Vui lòng chọn ngày học"
     },
     "row": {
       "noteAria": "Ghi chú cho {{name}}",

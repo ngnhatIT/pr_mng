@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { classesApi, sessionsApi, ClassItem, SessionItem, AttendanceRow } from './classes.api';
 import { useToast } from '../../shared/ui/toast';
 import { Modal } from '../../shared/components/Modal';
-import { Field } from '../../shared/components/Form';
+import { Field, useFieldErrors } from '../../shared/components/Form';
 import { PageHeader } from '../../shared/components/PageHeader';
 import { EmptyState } from '../../shared/components/EmptyState';
 import { Skeleton } from '../../shared/components/Skeleton';
@@ -352,16 +352,20 @@ function NewSessionModal({
   const [topic, setTopic] = useState('');
   const [busy, setBusy] = useState(false);
   const toast = useToast();
+  const { errors, refFor, show, clear } = useFieldErrors<'date'>();
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (busy) return;
+    if (!show(date ? {} : { date: t('attendance.newSession.dateRequired') })) return;
     setBusy(true);
     try {
       const s = await sessionsApi.create(classId, date, topic);
       toast(t('attendance.toast.created'), 'success');
       onCreated(s.id);
     } catch (err) {
-      toast(err instanceof Error ? err.message : t('attendance.toast.createError'), 'error');
+      // Lỗi tạo buổi (vd trùng ngày) hiện inline dưới ô ngày, giữ lại dữ liệu đã nhập
+      show({ date: err instanceof Error ? err.message : t('attendance.toast.createError') });
     } finally {
       setBusy(false);
     }
@@ -371,13 +375,16 @@ function NewSessionModal({
     <Modal title={t('attendance.newSession.title')} onClose={onClose}>
       <form onSubmit={submit}>
         <div className="form-grid">
-          <Field label={t('attendance.newSession.date')}>
+          <Field label={t('attendance.newSession.date')} error={errors.date}>
             <input
               className="text-input"
               type="date"
               value={date}
-              onChange={(e) => setDate(e.target.value)}
-              required
+              onChange={(e) => {
+                setDate(e.target.value);
+                clear('date');
+              }}
+              ref={refFor('date')}
             />
           </Field>
           <Field label={t('attendance.newSession.topic')}>

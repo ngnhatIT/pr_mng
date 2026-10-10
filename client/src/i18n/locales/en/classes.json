@@ -16,7 +16,8 @@
       "creating": "Creating...",
       "date": "Date *",
       "title": "Create new session",
-      "topic": "Topic"
+      "topic": "Topic",
+      "dateRequired": "Please pick the session date"
     },
     "row": {
       "noteAria": "Note for {{name}}",

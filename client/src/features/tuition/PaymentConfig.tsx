@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { paymentsApi, PaymentConfigData } from './tuition.api';
 import { useToast } from '../../shared/ui/toast';
-import { Field } from '../../shared/components/Form';
+import { Field, useFieldErrors } from '../../shared/components/Form';
 import { PageHeader } from '../../shared/components/PageHeader';
 import { EmptyState } from '../../shared/components/EmptyState';
 import { Skeleton } from '../../shared/components/Skeleton';
@@ -45,10 +45,18 @@ export function PaymentConfig() {
 
   const set = (k: keyof PaymentConfigData) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
     setForm((f) => (f ? { ...f, [k]: e.target.value } : f));
+  const { errors, refFor, show, clear } = useFieldErrors<'pay_vnp_tmncode' | 'pay_vnp_hashsecret'>();
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form || busy) return;
+    // Bật VNPay mà thiếu thông tin thì cổng thanh toán sẽ gãy: chặn ngay tại form
+    if (form.pay_vnp_enabled === '1') {
+      const errs: { pay_vnp_tmncode?: string; pay_vnp_hashsecret?: string } = {};
+      if (!form.pay_vnp_tmncode.trim()) errs.pay_vnp_tmncode = t('config.vnpay.errors.tmnRequired');
+      if (!form.pay_vnp_hashsecret.trim()) errs.pay_vnp_hashsecret = t('config.vnpay.errors.secretRequired');
+      if (!show(errs)) return;
+    }
     setBusy(true);
     try {
       // CRITICAL: không bao giờ gửi secret dạng mask ('••••••••' hoặc 'abcd••••••••wxyz')
@@ -137,19 +145,27 @@ export function PaymentConfig() {
           </h2>
           <p className="card-desc">{t('config.vnpay.desc')}</p>
           <div className="form-grid">
-            <Field label={t('config.vnpay.tmnCode')}>
+            <Field label={t('config.vnpay.tmnCode')} error={errors.pay_vnp_tmncode}>
               <input
                 className="text-input mono"
                 value={form.pay_vnp_tmncode}
-                onChange={set('pay_vnp_tmncode')}
+                onChange={(e) => {
+                  set('pay_vnp_tmncode')(e);
+                  clear('pay_vnp_tmncode');
+                }}
+                ref={refFor('pay_vnp_tmncode')}
               />
             </Field>
-            <Field label={t('config.vnpay.hashSecret')}>
+            <Field label={t('config.vnpay.hashSecret')} error={errors.pay_vnp_hashsecret}>
               <input
                 className="text-input mono"
                 type="password"
                 value={form.pay_vnp_hashsecret}
-                onChange={set('pay_vnp_hashsecret')}
+                onChange={(e) => {
+                  set('pay_vnp_hashsecret')(e);
+                  clear('pay_vnp_hashsecret');
+                }}
+                ref={refFor('pay_vnp_hashsecret')}
                 onFocus={(e) => {
                   // Xoá mask khi focus để người dùng nhập secret mới sạch sẽ
                   if (e.target.value.includes('•')) {
@@ -164,7 +180,15 @@ export function PaymentConfig() {
               />
             </Field>
             <Field label={t('config.vnpay.status')}>
-              <select className="text-input" value={form.pay_vnp_enabled} onChange={set('pay_vnp_enabled')}>
+              <select
+                className="text-input"
+                value={form.pay_vnp_enabled}
+                onChange={(e) => {
+                  set('pay_vnp_enabled')(e);
+                  clear('pay_vnp_tmncode');
+                  clear('pay_vnp_hashsecret');
+                }}
+              >
                 <option value="1">{t('config.vnpay.enabled')}</option>
                 <option value="0">{t('config.vnpay.disabled')}</option>
               </select>

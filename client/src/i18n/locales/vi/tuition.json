@@ -30,7 +30,11 @@
       "status": "Trạng thái",
       "title": "VNPay",
       "tmnCode": "Mã website (TMN Code)",
-      "newSecretPlaceholder": "Nhập secret mới (để trống = giữ nguyên)"
+      "newSecretPlaceholder": "Nhập secret mới (để trống = giữ nguyên)",
+      "errors": {
+        "tmnRequired": "Vui lòng nhập mã website khi bật VNPay",
+        "secretRequired": "Vui lòng nhập chuỗi bí mật khi bật VNPay"
+      }
     }
   },
   "credit": {

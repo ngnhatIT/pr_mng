@@ -30,7 +30,11 @@
       "status": "Status",
       "title": "VNPay",
       "tmnCode": "Website code (TMN Code)",
-      "newSecretPlaceholder": "Enter new secret (leave blank to keep current)"
+      "newSecretPlaceholder": "Enter new secret (leave blank to keep current)",
+      "errors": {
+        "tmnRequired": "Please enter the TMN code when VNPay is enabled",
+        "secretRequired": "Please enter the hash secret when VNPay is enabled"
+      }
     }
   },
   "credit": {
