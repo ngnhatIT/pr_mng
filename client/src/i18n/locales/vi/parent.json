@@ -297,7 +297,8 @@
     "submitted": "Đã nộp bài",
     "submitting": "Đang nộp...",
     "tapToChoose": "Chạm để mở máy ảnh / thư viện",
-    "title": "Nộp bài - {{title}}"
+    "title": "Nộp bài - {{title}}",
+    "fileTooLarge": "File vượt quá 10MB, vui lòng chọn file nhỏ hơn"
   },
   "bottomNav": {
     "home": "Trang chủ",

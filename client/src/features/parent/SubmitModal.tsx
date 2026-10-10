@@ -27,11 +27,17 @@ export function SubmitModal({
   const [busy, setBusy] = useState(false);
   const [submitError, setSubmitError] = useState('');
   const { errors, show, clear } = useFieldErrors<'file'>();
+  // FIX 7: khớp giới hạn server (server/src/shared/upload.ts:122)
+  const MAX_FILE_SIZE = 10 * 1024 * 1024;
 
   const submit = async () => {
     // Chưa chọn file lẫn chưa nhập ghi chú: báo inline dưới ô chọn file
     if (!file && !note.trim()) {
       show({ file: t('submit.fileOrNoteRequired') });
+      return;
+    }
+    if (file && file.size > MAX_FILE_SIZE) {
+      show({ file: t('submit.fileTooLarge') });
       return;
     }
     setBusy(true);
@@ -55,7 +61,14 @@ export function SubmitModal({
             type="file"
             accept=".jpg,.jpeg,.png,.gif,.webp,.pdf,.doc,.docx,.mp3,.mp4"
             onChange={(e) => {
-              setFile(e.target.files?.[0] || null);
+              const f = e.target.files?.[0] || null;
+              if (f && f.size > MAX_FILE_SIZE) {
+                e.target.value = ''; // Cho chọn lại cùng file sau khi nén nhỏ
+                setFile(null);
+                show({ file: t('submit.fileTooLarge') });
+                return;
+              }
+              setFile(f);
               clear('file');
             }}
           />

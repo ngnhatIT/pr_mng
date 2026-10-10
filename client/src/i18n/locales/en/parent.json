@@ -297,7 +297,8 @@
     "submitted": "Submitted",
     "submitting": "Submitting...",
     "tapToChoose": "Tap to open camera / library",
-    "title": "Submit - {{title}}"
+    "title": "Submit - {{title}}",
+    "fileTooLarge": "File exceeds 10MB, please choose a smaller file"
   },
   "bottomNav": {
     "home": "Home",
