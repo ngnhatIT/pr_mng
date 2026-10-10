@@ -828,6 +828,8 @@ function RefundModal({
   const [reason, setReason] = useState('');
   const [busy, setBusy] = useState(false);
   const toast = useToast();
+  // Idempotency-Key per-intent như PayModal: retry không hoàn trùng, mở modal mới vẫn hoàn tiếp được.
+  const [idemKey] = useState(() => `refund-${invoice.id}-${crypto.randomUUID()}`);
   // Lỗi inline dưới field + focus field lỗi (skill 8.2); dữ liệu giữ nguyên khi lỗi
   const { errors, refFor, show, clear } = useFieldErrors<'amount'>();
 
@@ -841,10 +843,14 @@ function RefundModal({
     if (!show(errs)) return;
     setBusy(true);
     try {
-      await invoicesApi.refund(invoice.id, {
-        amount: Number(amount),
-        reason: reason || undefined,
-      });
+      await invoicesApi.refund(
+        invoice.id,
+        {
+          amount: Number(amount),
+          reason: reason || undefined,
+        },
+        idemKey
+      );
       toast(t('refund.done'), 'success');
       onDone();
     } catch (err) {

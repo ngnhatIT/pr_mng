@@ -243,6 +243,7 @@ export function ClassDetail() {
       {showEnroll && (
         <EnrollModal
           classId={cls.id}
+          enrolledIds={data.students.map((s) => s.id)}
           onClose={() => setShowEnroll(false)}
           onDone={() => {
             setShowEnroll(false);
@@ -265,10 +266,12 @@ export function ClassDetail() {
 
 function EnrollModal({
   classId,
+  enrolledIds,
   onClose,
   onDone,
 }: {
   classId: number;
+  enrolledIds: number[];
   onClose: () => void;
   onDone: () => void;
 }) {
@@ -277,6 +280,8 @@ function EnrollModal({
   const [search, setSearch] = useState('');
   const [busyId, setBusyId] = useState<number | null>(null);
   const toast = useToast();
+  // Ẩn học viên đã ghi danh khỏi danh sách để không bấm Thêm rồi nhận lỗi khó hiểu
+  const enrolled = new Set(enrolledIds);
 
   useEffect(() => {
     studentsApi
@@ -287,8 +292,9 @@ function EnrollModal({
 
   const filtered = students.filter(
     (s) =>
-      s.name.toLowerCase().includes(search.toLowerCase()) ||
-      s.code.toLowerCase().includes(search.toLowerCase())
+      !enrolled.has(s.id) &&
+      (s.name.toLowerCase().includes(search.toLowerCase()) ||
+        s.code.toLowerCase().includes(search.toLowerCase()))
   );
 
   const enroll = async (studentId: number) => {
