@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { getUser, logout as doLogout } from '../../shared/api/client';
@@ -83,6 +83,13 @@ export function Layout() {
   const user = getUser();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [showChangePw, setShowChangePw] = useState(false);
+  // Nút mở drawer: trả focus về đây khi drawer đóng bằng Esc/scrim.
+  const menuBtnRef = useRef<HTMLButtonElement>(null);
+  // Đóng drawer; restoreFocus=true khi user chủ động đóng (Esc/scrim) để không mất focus.
+  const closeDrawer = (restoreFocus: boolean) => {
+    setDrawerOpen(false);
+    if (restoreFocus) menuBtnRef.current?.focus();
+  };
   // Chỉ inert sidebar khi ở mobile và drawer đóng (desktop sidebar luôn hiển thị, không được inert)
   const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' && window.innerWidth <= 768);
   useEffect(() => {
@@ -136,7 +143,7 @@ export function Layout() {
     if (!drawerOpen) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
-        setDrawerOpen(false);
+        closeDrawer(true);
         return;
       }
       if (e.key !== 'Tab') return;
@@ -177,7 +184,7 @@ export function Layout() {
       </a>
       <div
         className={`scrim${drawerOpen ? ' show' : ''}`}
-        onClick={() => setDrawerOpen(false)}
+        onClick={() => closeDrawer(true)}
         aria-hidden="true"
       />
       <aside
@@ -245,6 +252,7 @@ export function Layout() {
       <div className="main-col">
         <header className="topbar">
           <button
+            ref={menuBtnRef}
             className="btn btn-icon btn-ghost menu-btn"
             onClick={() => setDrawerOpen(true)}
             aria-label={t('nav.openMenu')}
