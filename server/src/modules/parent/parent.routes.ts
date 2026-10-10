@@ -287,12 +287,21 @@ router.get(
 router.post(
   '/homework/:homeworkId/complete',
   asyncHandler(async (req: AuthRequest, res: Response) => {
-    const { parentId } = ctx(req);
+    const { parentId, centerId } = ctx(req);
     const homeworkId = paramId(req.params, 'homeworkId');
     const { student_id } = validate(req.body, {
       student_id: v.number({ integer: true, min: 1, label: 'Học viên' }),
     });
     await parentService.markHomeworkComplete(parentId, student_id as number, homeworkId);
+    await audit({
+      centerId,
+      actor: { id: parentId, role: 'parent' },
+      action: 'create',
+      entity: 'homework_completions',
+      entityId: homeworkId,
+      summary: `Phụ huynh #${parentId} đánh dấu HV#${student_id} hoàn thành bài #${homeworkId}`,
+      meta: { student_id, homework_id: homeworkId },
+    });
     res.status(201).json({ ok: true });
   })
 );
@@ -384,7 +393,7 @@ router.post(
     // E2: fileFilter của multer chỉ check đuôi file (chạy trước khi ghi đĩa) —
     // kiểm tra magic bytes + mimetype tại đây, file giả mạo → xóa + 400.
     if (req.file) assertSafeUpload(req.file);
-    const { parentId } = ctx(req);
+    const { parentId, centerId } = ctx(req);
     const homeworkId = paramId(req.params, 'homeworkId');
     const studentId = Number(req.body.student_id);
     if (!studentId) {
@@ -400,6 +409,15 @@ router.post(
       });
       // Nộp trùng (idempotent): file vừa upload không dùng tới → xóa để khỏi mồ côi
       if (!result.inserted) cleanupUploadedFile(req.file);
+      await audit({
+        centerId,
+        actor: { id: parentId, role: 'parent' },
+        action: 'create',
+        entity: 'homework_submissions',
+        entityId: result.id,
+        summary: `Phụ huynh #${parentId} nộp bài #${homeworkId} cho HV#${studentId}${result.inserted ? '' : ' (trùng, giữ bản cũ)'}`,
+        meta: { student_id: studentId, homework_id: homeworkId, inserted: result.inserted },
+      });
     } catch (err) {
       cleanupUploadedFile(req.file);
       throw err;

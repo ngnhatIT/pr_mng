@@ -220,8 +220,17 @@ router.post(
   requirePermission('homework.create'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const id = paramId(req.params);
-    await requireHomework(req, id, 'homework.create');
+    const hw = await requireHomework(req, id, 'homework.create');
     await setHomeworkStatus(id, 'published', reqCenterId(req));
+    await audit({
+      centerId: reqCenterId(req),
+      actor: actorFromReq(req),
+      action: 'update',
+      entity: 'homework',
+      entityId: id,
+      summary: `Đăng bài tập "${hw.title}"`,
+      meta: { title: hw.title },
+    });
     res.json({ ok: true });
   })
 );
@@ -264,7 +273,7 @@ router.post(
   requirePermission('homework.grade'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const id = paramId(req.params);
-    await requireHomework(req, id, 'homework.grade');
+    const hw = await requireHomework(req, id, 'homework.grade');
     const body = validate(req.body, {
       student_id: v.number({ integer: true, min: 1, label: 'Học viên' }),
       score: v.any({ label: 'Điểm' }),
@@ -282,6 +291,15 @@ router.post(
       (body.feedback as string) || null,
       req.user!.id
     );
+    await audit({
+      centerId: reqCenterId(req),
+      actor: actorFromReq(req),
+      action: 'update',
+      entity: 'homework',
+      entityId: id,
+      summary: `Chấm điểm bài "${hw.title}" — HV#${body.student_id}: ${score ?? 'chưa chấm'}`,
+      meta: { title: hw.title, student_id: body.student_id, score },
+    });
     res.json({ ok: true });
   })
 );
@@ -314,12 +332,21 @@ router.put(
   requirePermission('homework.create'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const id = paramId(req.params);
-    await requireHomework(req, id, 'homework.create');
+    const hw = await requireHomework(req, id, 'homework.create');
     const { questions } = req.body as { questions: unknown };
     if (!Array.isArray(questions)) {
       throw AppError.badRequest('Thiếu danh sách câu hỏi');
     }
     await saveQuizQuestions(id, questions as never);
+    await audit({
+      centerId: reqCenterId(req),
+      actor: actorFromReq(req),
+      action: 'update',
+      entity: 'homework',
+      entityId: id,
+      summary: `Lưu đề quiz "${hw.title}" (${questions.length} câu)`,
+      meta: { title: hw.title, count: questions.length },
+    });
     res.json({ ok: true, count: questions.length });
   })
 );
@@ -352,9 +379,17 @@ router.post(
     if (!Array.isArray(options)) {
       throw AppError.badRequest('Thiếu đáp án');
     }
-    res
-      .status(201)
-      .json(await addBankQuestion(reqCenterId(req), req.user!.id, { tag, question, points, options }));
+    const q = await addBankQuestion(reqCenterId(req), req.user!.id, { tag, question, points, options });
+    await audit({
+      centerId: reqCenterId(req),
+      actor: actorFromReq(req),
+      action: 'create',
+      entity: 'question_bank',
+      entityId: q.id,
+      summary: `Thêm câu hỏi vào ngân hàng (${points ?? 1} điểm)`,
+      meta: { question: q.question.slice(0, 100) },
+    });
+    res.status(201).json(q);
   })
 );
 
@@ -362,7 +397,16 @@ router.delete(
   '/bank/questions/:bid',
   requirePermission('homework.delete'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
-    await deleteBankQuestion(paramId(req.params, 'bid'), reqCenterId(req));
+    const bid = paramId(req.params, 'bid');
+    await deleteBankQuestion(bid, reqCenterId(req));
+    await audit({
+      centerId: reqCenterId(req),
+      actor: actorFromReq(req),
+      action: 'delete',
+      entity: 'question_bank',
+      entityId: bid,
+      summary: `Xóa câu hỏi #${bid} khỏi ngân hàng`,
+    });
     res.json({ ok: true });
   })
 );
@@ -373,12 +417,21 @@ router.post(
   requirePermission('homework.create'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const id = paramId(req.params);
-    await requireHomework(req, id, 'homework.create');
+    const hw = await requireHomework(req, id, 'homework.create');
     const { bank_ids } = req.body as { bank_ids: number[] };
     if (!Array.isArray(bank_ids) || !bank_ids.length) {
       throw AppError.badRequest('Chưa chọn câu hỏi');
     }
     const count = await importFromBank(id, bank_ids.map(Number), reqCenterId(req));
+    await audit({
+      centerId: reqCenterId(req),
+      actor: actorFromReq(req),
+      action: 'update',
+      entity: 'homework',
+      entityId: id,
+      summary: `Import ${count} câu từ ngân hàng vào quiz "${hw.title}"`,
+      meta: { title: hw.title, count, bank_ids },
+    });
     res.status(201).json({ ok: true, count });
   })
 );
@@ -420,7 +473,17 @@ router.post(
     if (!Array.isArray(criteria)) {
       throw AppError.badRequest('Thiếu danh sách tiêu chí');
     }
-    res.status(201).json(await createRubric(reqCenterId(req), req.user!.id, { name, criteria }));
+    const rubric = await createRubric(reqCenterId(req), req.user!.id, { name, criteria });
+    await audit({
+      centerId: reqCenterId(req),
+      actor: actorFromReq(req),
+      action: 'create',
+      entity: 'rubric',
+      entityId: rubric.id,
+      summary: `Tạo rubric "${name}" (${criteria.length} tiêu chí)`,
+      meta: { name, count: criteria.length },
+    });
+    res.status(201).json(rubric);
   })
 );
 
@@ -433,6 +496,15 @@ router.delete(
       throw AppError.notFound('Không tìm thấy rubric');
     }
     await deleteRubric(r.id, reqCenterId(req));
+    await audit({
+      centerId: reqCenterId(req),
+      actor: actorFromReq(req),
+      action: 'delete',
+      entity: 'rubric',
+      entityId: r.id,
+      summary: `Xóa rubric "${r.name}"`,
+      meta: { name: r.name },
+    });
     res.json({ ok: true });
   })
 );
