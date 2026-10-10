@@ -25,6 +25,12 @@
   --info: #1d4ed8;
   --info-soft: #dbeafe;
 
+  /* ---------- Toast: nền tối cố định, chữ trắng ---------- */
+  --toast-bg: #1e293b;
+  --toast-success: #14532d;
+  --toast-error: #7f1d1d;
+  --toast-info: #1e3a8a;
+
   /* ---------- Chiều cao chuẩn (đồng bộ button/input/badge) ---------- */
   --h-xs: 28px;
   --h-sm: 32px;
@@ -90,6 +96,12 @@
   --warning-soft: #3a2c14;
   --info: #60a5fa;
   --info-soft: #17294d;
+
+  /* Toast giữ nguyên mặt tối ở cả 2 theme (nổi trên mọi nền) */
+  --toast-bg: #1e293b;
+  --toast-success: #14532d;
+  --toast-error: #7f1d1d;
+  --toast-info: #1e3a8a;
 
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
   --shadow: 0 1px 3px rgba(0, 0, 0, 0.45), 0 1px 2px rgba(0, 0, 0, 0.35);
@@ -2428,7 +2440,7 @@ textarea.text-input {
   display: flex;
   align-items: center;
   gap: 10px;
-  background: #1e293b;
+  background: var(--toast-bg);
   color: #fff;
   font-size: 14px;
   max-width: 340px;
@@ -2476,13 +2488,13 @@ textarea.text-input {
   outline-offset: 1px;
 }
 .toast-success {
-  background: #14532d;
+  background: var(--toast-success);
 }
 .toast-error {
-  background: #7f1d1d;
+  background: var(--toast-error);
 }
 .toast-info {
-  background: #1e3a8a;
+  background: var(--toast-info);
 }
 @keyframes toast-in {
   from {
