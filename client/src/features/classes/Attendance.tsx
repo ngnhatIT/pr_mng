@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { classesApi, sessionsApi, ClassItem, SessionItem, AttendanceRow } from './classes.api';
 import { useToast } from '../../shared/ui/toast';
@@ -227,7 +227,17 @@ export function Attendance() {
               ))}
             </div>
           ) : rows.length === 0 ? (
-            <EmptyState icon="users" title={t('attendance.emptyTitle')} desc={t('attendance.emptyDesc')} />
+            <EmptyState
+              icon="users"
+              title={t('attendance.emptyTitle')}
+              desc={t('attendance.emptyDesc')}
+              action={
+                <Link className="btn btn-primary btn-inline" to={`/app/classes/${classId}`}>
+                  <Icon name="plus" size={14} />
+                  {t('detail.enroll.add')}
+                </Link>
+              }
+            />
           ) : (
             <>
               <div className="att-list">
