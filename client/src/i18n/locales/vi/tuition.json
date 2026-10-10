@@ -110,6 +110,44 @@
     "title": "Tạo phiếu thu",
     "amountInvalid": "Số tiền phải là số dương"
   },
+  "detail": {
+    "title": "Hóa đơn #{{id}}",
+    "breadcrumbLabel": "Điều hướng trang hóa đơn",
+    "breadcrumbTuition": "Học phí",
+    "breadcrumbInvoice": "Hóa đơn #{{id}}",
+    "back": "Quay lại",
+    "backToTuition": "Về trang Học phí",
+    "retry": "Thử lại",
+    "loadErrorTitle": "Không tải được hóa đơn",
+    "loadErrorDesc": "Đã có lỗi xảy ra, vui lòng thử lại.",
+    "notFoundTitle": "Không tìm thấy hóa đơn",
+    "notFoundDesc": "Hóa đơn này có thể đã bị xóa hoặc bạn không có quyền xem.",
+    "info": "Thông tin hóa đơn",
+    "student": "Học viên",
+    "class": "Lớp",
+    "amount": "Số tiền",
+    "paid": "Đã thu",
+    "remain": "Còn nợ",
+    "dueDate": "Hạn thanh toán",
+    "createdAt": "Ngày tạo",
+    "printReceipt": "In biên lai",
+    "collect": "Thu tiền",
+    "payments": "Lịch sử thanh toán",
+    "noPaymentsTitle": "Chưa có thanh toán",
+    "noPaymentsDesc": "Hóa đơn này chưa ghi nhận khoản thu nào.",
+    "paymentsTable": {
+      "date": "Ngày",
+      "amount": "Số tiền",
+      "method": "Phương thức",
+      "status": "Trạng thái",
+      "note": "Ghi chú"
+    },
+    "paymentStatus": {
+      "pending": "Chờ duyệt",
+      "confirmed": "Đã xác nhận",
+      "rejected": "Từ chối"
+    }
+  },
   "invoiceStatus": {
     "paid": "Đã thanh toán",
     "partial": "Thanh toán một phần",

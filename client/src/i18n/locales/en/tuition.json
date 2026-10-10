@@ -110,6 +110,44 @@
     "title": "Create invoice",
     "amountInvalid": "Amount must be a positive number"
   },
+  "detail": {
+    "title": "Invoice #{{id}}",
+    "breadcrumbLabel": "Invoice page navigation",
+    "breadcrumbTuition": "Tuition",
+    "breadcrumbInvoice": "Invoice #{{id}}",
+    "back": "Back",
+    "backToTuition": "Back to Tuition",
+    "retry": "Retry",
+    "loadErrorTitle": "Could not load the invoice",
+    "loadErrorDesc": "Something went wrong, please try again.",
+    "notFoundTitle": "Invoice not found",
+    "notFoundDesc": "This invoice may have been deleted or you do not have permission to view it.",
+    "info": "Invoice details",
+    "student": "Student",
+    "class": "Class",
+    "amount": "Amount",
+    "paid": "Collected",
+    "remain": "Outstanding",
+    "dueDate": "Due date",
+    "createdAt": "Created at",
+    "printReceipt": "Print receipt",
+    "collect": "Collect",
+    "payments": "Payment history",
+    "noPaymentsTitle": "No payments yet",
+    "noPaymentsDesc": "No payments have been recorded for this invoice.",
+    "paymentsTable": {
+      "date": "Date",
+      "amount": "Amount",
+      "method": "Method",
+      "status": "Status",
+      "note": "Note"
+    },
+    "paymentStatus": {
+      "pending": "Pending",
+      "confirmed": "Confirmed",
+      "rejected": "Rejected"
+    }
+  },
   "invoiceStatus": {
     "paid": "Paid",
     "partial": "Partially paid",

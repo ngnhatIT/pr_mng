@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { useTranslation, Trans } from 'react-i18next';
 import { invoicesApi, paymentsApi, InvoiceItem, PendingPayment, DebtRow } from './tuition.api';
 import { studentsApi, Student } from '../students/students.api';
@@ -362,6 +362,9 @@ function InvoiceList() {
                 return (
                   <tr key={inv.id}>
                     <td>
+                      <Link className="link" to={`/app/tuition/invoices/${inv.id}`}>
+                        #{inv.id}
+                      </Link>{' '}
                       {inv.student_name} <span className="muted mono">({inv.student_code})</span>
                     </td>
                     <td>{inv.class_name || <EmptyCell />}</td>
@@ -574,7 +577,7 @@ function InvoiceFormModal({ onClose, onDone }: { onClose: () => void; onDone: ()
   useEffect(() => {
     Promise.all([
       studentsApi.list('', 'studying', { limit: 100 }),
-      classesApi.list("", { limit: 100 }).then((r) => r.data),
+      classesApi.list('', { limit: 100 }).then((r) => r.data),
     ])
       .then(([s, c]) => {
         setStudents(s.data);

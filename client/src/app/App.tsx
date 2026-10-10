@@ -43,6 +43,7 @@ const Classes = lazyPage(() => import('../features/classes/Classes'), 'Classes')
 const ClassDetail = lazyPage(() => import('../features/classes/ClassDetail'), 'ClassDetail');
 const Attendance = lazyPage(() => import('../features/classes/Attendance'), 'Attendance');
 const Tuition = lazyPage(() => import('../features/tuition/Tuition'), 'Tuition');
+const InvoiceDetail = lazyPage(() => import('../features/tuition/InvoiceDetail'), 'InvoiceDetail');
 const ZaloReminders = lazyPage(() => import('../features/notifications/ZaloReminders'), 'ZaloReminders');
 const Teachers = lazyPage(() => import('../features/people/Teachers'), 'Teachers');
 const Rooms = lazyPage(() => import('../features/classes/Rooms'), 'Rooms');
@@ -170,6 +171,7 @@ export default function App() {
             <Route path="classes/:id" element={<ClassDetail />} />
             <Route path="attendance" element={<Attendance />} />
             <Route path="tuition" element={<Tuition />} />
+            <Route path="tuition/invoices/:id" element={<InvoiceDetail />} />
             <Route path="rooms" element={<Rooms />} />
             <Route path="payroll" element={<Payroll />} />
             <Route path="leaves" element={<LeavesAdmin />} />
@@ -193,6 +195,7 @@ export default function App() {
           <Route path="/classes/:id" element={<OldRedirect to="/app/classes/:id" />} />
           <Route path="/attendance" element={<OldRedirect to="/app/attendance" />} />
           <Route path="/tuition" element={<OldRedirect to="/app/tuition" />} />
+          <Route path="/tuition/invoices/:id" element={<OldRedirect to="/app/tuition/invoices/:id" />} />
           <Route path="/teachers" element={<OldRedirect to="/app/teachers" />} />
           <Route path="/zalo-reminders" element={<OldRedirect to="/app/zalo-reminders" />} />
 

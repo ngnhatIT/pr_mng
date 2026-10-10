@@ -51,3 +51,44 @@
     font-size: 13px;
   }
 }
+
+/* InvoiceDetail - breadcrumb và layout trang chi tiết hóa đơn */
+.invoice-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+  font-size: var(--font-size-sm);
+  color: var(--text-muted);
+}
+
+.invoice-breadcrumb-sep {
+  color: var(--text-muted);
+}
+
+.invoice-breadcrumb [aria-current='page'] {
+  color: var(--text-strong);
+  font-weight: 600;
+}
+
+@media (max-width: 640px) {
+  /* 360px: nút hành động trang chi tiết full-width, không tràn ngang */
+  .page-head .page-actions {
+    width: 100%;
+  }
+  .page-head .page-actions .btn {
+    flex: 1;
+  }
+}
+
+/* Nút Quay lại dùng thẻ button để gọi navigate(-1): reset style mặc định của button */
+button.back-link {
+  background: none;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}

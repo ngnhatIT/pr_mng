@@ -18,6 +18,21 @@ export interface InvoiceItem {
   paid: number;
 }
 
+export interface PaymentItem {
+  id: number;
+  invoice_id: number;
+  amount: number;
+  paid_at: string;
+  method: string | null;
+  note: string | null;
+  status: 'pending' | 'confirmed' | 'rejected';
+}
+
+export interface InvoiceDetailData {
+  invoice: InvoiceItem & { created_at: string };
+  payments: PaymentItem[];
+}
+
 export interface PendingPayment {
   id: number;
   invoice_id: number;
@@ -81,8 +96,16 @@ export const invoicesApi = {
     due_date?: string | null;
     note?: string | null;
   }) => http.post<InvoiceItem>('/invoices', data),
-  recordPayment: (invoiceId: number, data: { amount: number; method: string; note?: string | null }, idempotencyKey?: string) =>
-    http.postIdempotent<{ ok: boolean; status: string }>(`/invoices/${invoiceId}/payments`, data, idempotencyKey),
+  recordPayment: (
+    invoiceId: number,
+    data: { amount: number; method: string; note?: string | null },
+    idempotencyKey?: string
+  ) =>
+    http.postIdempotent<{ ok: boolean; status: string }>(
+      `/invoices/${invoiceId}/payments`,
+      data,
+      idempotencyKey
+    ),
   refund: (invoiceId: number, data: { amount: number; reason?: string }, idempotencyKey?: string) =>
     http.postIdempotent<{ ok: boolean; refunded: number; status: string }>(
       `/invoices/${invoiceId}/refund`,
@@ -95,6 +118,7 @@ export const invoicesApi = {
     }),
   remind: (invoiceId: number, kind: 'overdue' | 'upcoming') =>
     http.post<RemindResult>(`/invoices/${invoiceId}/remind`, { kind }),
+  detail: (invoiceId: number) => http.get<InvoiceDetailData>(`/invoices/${invoiceId}`),
 };
 
 export const paymentsApi = {
