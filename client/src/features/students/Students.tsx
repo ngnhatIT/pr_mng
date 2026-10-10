@@ -202,14 +202,26 @@ export function Students() {
                     <span className={`badge badge-${s.status}`}>{t(`status.${s.status}`)}</span>
                   </td>
                   <td className="td-right">
-                    <button className="btn btn-sm btn-inline" onClick={() => setEditing(s)}>
-                      <Icon name="pencil" size={13} />
-                      {t('actions.edit', { ns: 'common' })}
-                    </button>{' '}
-                    <button className="btn btn-sm btn-inline btn-danger-ghost" onClick={() => setDeleting(s)}>
-                      <Icon name="trash" size={13} />
-                      {t('actions.delete', { ns: 'common' })}
-                    </button>
+                    <span className="row-actions">
+                      <button
+                        type="button"
+                        className="icon-btn"
+                        title={t('actions.edit', { ns: 'common' })}
+                        aria-label={t('actions.edit', { ns: 'common' })}
+                        onClick={() => setEditing(s)}
+                      >
+                        <Icon name="pencil" size={15} />
+                      </button>
+                      <button
+                        type="button"
+                        className="icon-btn icon-btn-danger"
+                        title={t('actions.delete', { ns: 'common' })}
+                        aria-label={t('actions.delete', { ns: 'common' })}
+                        onClick={() => setDeleting(s)}
+                      >
+                        <Icon name="trash" size={15} />
+                      </button>
+                    </span>
                   </td>
                 </tr>
               ))}

@@ -123,16 +123,23 @@ export function Rooms() {
                   </td>
                   <td className="td-right">
                     <span className="row-actions">
-                      <button className="btn btn-sm btn-inline" onClick={() => setEditing(r)}>
-                        <Icon name="pencil" size={13} />
-                        {t('actions.edit', { ns: 'common' })}
+                      <button
+                        type="button"
+                        className="icon-btn"
+                        title={t('actions.edit', { ns: 'common' })}
+                        aria-label={t('actions.edit', { ns: 'common' })}
+                        onClick={() => setEditing(r)}
+                      >
+                        <Icon name="pencil" size={15} />
                       </button>
                       <button
-                        className="btn btn-sm btn-inline btn-danger-ghost"
+                        type="button"
+                        className="icon-btn icon-btn-danger"
+                        title={t('actions.delete', { ns: 'common' })}
+                        aria-label={t('actions.delete', { ns: 'common' })}
                         onClick={() => setDeleting(r)}
                       >
-                        <Icon name="trash" size={13} />
-                        {t('actions.delete', { ns: 'common' })}
+                        <Icon name="trash" size={15} />
                       </button>
                     </span>
                   </td>

@@ -409,10 +409,17 @@ export function ZaloReminders() {
                           </span>
                         </td>
                         <td className="td-right">
-                          <button className="btn btn-sm" onClick={() => setViewing(r)}>
-                            <Icon name="eye" size={14} />
-                            {t('zalo.viewContent')}
-                          </button>
+                          <span className="row-actions">
+                            <button
+                              type="button"
+                              className="icon-btn"
+                              title={t('zalo.viewContent')}
+                              aria-label={t('zalo.viewContent')}
+                              onClick={() => setViewing(r)}
+                            >
+                              <Icon name="eye" size={15} />
+                            </button>
+                          </span>
                         </td>
                       </tr>
                     ))}

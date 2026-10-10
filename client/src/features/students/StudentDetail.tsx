@@ -248,10 +248,17 @@ function GradesSection({ studentId }: { studentId: number }) {
                   <td>{g.comment || '-'}</td>
                   <td>{formatDate(g.created_at)}</td>
                   <td className="td-right">
-                    <button className="btn btn-sm btn-inline btn-danger-ghost" onClick={() => setDeleting(g)}>
-                      <Icon name="trash" size={13} />
-                      {t('actions.delete', { ns: 'common' })}
-                    </button>
+                    <span className="row-actions">
+                      <button
+                        type="button"
+                        className="icon-btn icon-btn-danger"
+                        title={t('actions.delete', { ns: 'common' })}
+                        aria-label={t('actions.delete', { ns: 'common' })}
+                        onClick={() => setDeleting(g)}
+                      >
+                        <Icon name="trash" size={15} />
+                      </button>
+                    </span>
                   </td>
                 </tr>
               ))}

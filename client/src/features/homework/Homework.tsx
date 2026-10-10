@@ -425,9 +425,6 @@ export function Homework() {
                             {t('actions.grade')}
                           </button>
                         )}{' '}
-                        <button className="btn btn-sm" onClick={() => setEditing(h)}>
-                          {t('actions.edit', { ns: 'common' })}
-                        </button>{' '}
                         {h.kind === 'homework' && (
                           <>
                             <button className="btn btn-sm" onClick={() => setViewSubs(h)}>
@@ -435,9 +432,26 @@ export function Homework() {
                             </button>{' '}
                           </>
                         )}
-                        <button className="btn btn-sm btn-danger-ghost" onClick={() => setDeleting(h)}>
-                          {t('actions.delete', { ns: 'common' })}
-                        </button>
+                        <span className="row-actions">
+                          <button
+                            type="button"
+                            className="icon-btn"
+                            title={t('actions.edit', { ns: 'common' })}
+                            aria-label={t('actions.edit', { ns: 'common' })}
+                            onClick={() => setEditing(h)}
+                          >
+                            <Icon name="pencil" size={15} />
+                          </button>
+                          <button
+                            type="button"
+                            className="icon-btn icon-btn-danger"
+                            title={t('actions.delete', { ns: 'common' })}
+                            aria-label={t('actions.delete', { ns: 'common' })}
+                            onClick={() => setDeleting(h)}
+                          >
+                            <Icon name="trash" size={15} />
+                          </button>
+                        </span>
                       </td>
                     </tr>
                   );

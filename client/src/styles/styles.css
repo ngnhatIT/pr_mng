@@ -456,6 +456,53 @@ a {
   border-color: #fecaca;
   color: #991b1b; /* contrast 6.8:1 trên nền danger-soft */
 }
+
+/* Cột action cuối bảng: nút icon 32px, luôn có title (tooltip) + aria-label.
+   Dùng cho thao tác CRUD (sửa/xóa/xem); thao tác nghiệp vụ quan trọng giữ nút chữ. */
+.row-actions {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
+}
+.icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease,
+    border-color 0.15s ease,
+    transform 0.1s ease;
+}
+.icon-btn:hover:not(:disabled) {
+  background: var(--bg-muted);
+  border-color: var(--border);
+  color: var(--text);
+}
+.icon-btn:active:not(:disabled) {
+  transform: scale(0.94);
+}
+.icon-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.icon-btn-danger {
+  color: var(--danger);
+}
+.icon-btn-danger:hover:not(:disabled) {
+  background: var(--danger-soft);
+  border-color: transparent;
+  color: var(--danger);
+}
 /* Ghost button trên nền sáng: chữ muted, hover nền xám nhạt */
 .btn-ghost {
   background: transparent;

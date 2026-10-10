@@ -110,10 +110,17 @@ export function Payroll() {
                     <strong>{formatVND(r.total)}</strong>
                   </td>
                   <td className="td-right">
-                    <button className="btn btn-sm btn-inline" onClick={() => setEditing(r)}>
-                      <Icon name="pencil" size={13} />
-                      {t('payroll.rate')}
-                    </button>
+                    <span className="row-actions">
+                      <button
+                        type="button"
+                        className="icon-btn"
+                        title={t('payroll.rate')}
+                        aria-label={t('payroll.rate')}
+                        onClick={() => setEditing(r)}
+                      >
+                        <Icon name="pencil" size={15} />
+                      </button>
+                    </span>
                   </td>
                 </tr>
               ))}

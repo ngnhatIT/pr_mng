@@ -87,10 +87,17 @@ export function System() {
                     {c.student_count ?? 0} / {c.class_count ?? 0} / {c.user_count ?? 0}
                   </td>
                   <td className="td-right">
-                    <button className="btn btn-sm" onClick={() => setEditing(c)}>
-                      <Icon name="pencil" size={14} />
-                      {t('system.editPlan')}
-                    </button>
+                    <span className="row-actions">
+                      <button
+                        type="button"
+                        className="icon-btn"
+                        title={t('system.editPlan')}
+                        aria-label={t('system.editPlan')}
+                        onClick={() => setEditing(c)}
+                      >
+                        <Icon name="pencil" size={15} />
+                      </button>
+                    </span>
                   </td>
                 </tr>
               ))}
