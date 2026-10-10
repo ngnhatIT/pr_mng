@@ -21,6 +21,7 @@ import {
   formatVND,
   formatDate,
   formatDateTime,
+  isPastCloseDate,
   todayVN,
 } from '../../shared/types';
 
@@ -544,6 +545,8 @@ function HomeworkTab({ data, onChanged }: { data: ChildOverview; onChanged: () =
     const isDone = !!h.completed;
     const isOverdue = !isDone && h.due_date && h.due_date < today;
     const isQuiz = h.kind === 'quiz';
+    // FIX 6: qua hạn chót cứng thì khóa nộp/làm, báo rõ (server cũng chặn theo close_date)
+    const isClosed = !isDone && isPastCloseDate(h.close_date);
     return (
       <div key={h.id} className={`hw-item ${isDone ? 'hw-item-done' : ''}`}>
         {!isQuiz && (
@@ -581,7 +584,7 @@ function HomeworkTab({ data, onChanged }: { data: ChildOverview; onChanged: () =
             </div>
           )}
           <div className="hw-actions">
-            {isQuiz && !isDone && (
+            {isQuiz && !isDone && !isClosed && (
               <button className="btn btn-sm btn-primary" onClick={() => setTakingQuiz(h)}>
                 {t('child.homework.takeQuiz')}
               </button>
@@ -592,7 +595,7 @@ function HomeworkTab({ data, onChanged }: { data: ChildOverview; onChanged: () =
                 {t('child.homework.reviewQuiz')}
               </button>
             )}
-            {!isQuiz && !isDone && (
+            {!isQuiz && !isDone && !isClosed && (
               <button className="btn btn-sm btn-primary" onClick={() => setSubmitting(h)}>
                 <Icon name="upload" size={15} />
                 {t('child.homework.submit')}
@@ -607,7 +610,10 @@ function HomeworkTab({ data, onChanged }: { data: ChildOverview; onChanged: () =
           </div>
         </div>
         <div>
-          {h.due_date &&
+          {isClosed ? (
+            <span className="badge badge-overdue">{t('quiz.expiredTitle')}</span>
+          ) : (
+            h.due_date &&
             (isOverdue ? (
               <span className="badge badge-overdue">
                 {t('child.homework.overdueLabel', { date: formatDateTime(h.due_date) })}
@@ -616,7 +622,8 @@ function HomeworkTab({ data, onChanged }: { data: ChildOverview; onChanged: () =
               <span className="badge badge-upcoming">
                 {t('child.homework.dueLabel', { date: formatDateTime(h.due_date) })}
               </span>
-            ))}
+            ))
+          )}
           {h.close_date && h.close_date !== h.due_date && (
             <div className="muted-sm" style={{ marginTop: 4 }}>
               {t('child.homework.closeLabel', { date: formatDateTime(h.close_date) })}
