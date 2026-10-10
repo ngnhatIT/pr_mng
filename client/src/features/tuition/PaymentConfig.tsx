@@ -96,7 +96,17 @@ export function PaymentConfig() {
     return (
       <div className="page">
         <PageHeader title={t('config.title')} desc={t('config.pageDesc')} />
-        <EmptyState icon="settings" title={t('config.loadFailTitle')} desc={t('config.loadFailDesc')} />
+        <EmptyState
+          icon="alert"
+          title={t('config.loadFailTitle')}
+          desc={t('config.loadFailDesc')}
+          action={
+            <button className="btn btn-primary btn-inline" onClick={() => void load()}>
+              <Icon name="rotate" size={14} />
+              {t('actions.retry', { ns: 'common' })}
+            </button>
+          }
+        />
       </div>
     );
 

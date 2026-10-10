@@ -94,7 +94,7 @@ export function Dashboard() {
       <div className="page">
         <PageHeader title={t('pageTitle')} desc={t('pageDesc')} />
         <EmptyState
-          icon="alert"
+          icon={loadError ? 'alert' : 'chart'}
           title={loadError ? t('loadError') : t('noData')}
           desc={loadError ? t('loadErrorDesc') : undefined}
           action={

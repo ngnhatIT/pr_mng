@@ -54,7 +54,8 @@
     "sending": "Đang gửi...",
     "update": "Cập nhật",
     "upload": "Tải lên",
-    "viewAll": "Xem tất cả"
+    "viewAll": "Xem tất cả",
+    "retry": "Thử lại"
   },
   "confirm": {
     "deleteMessage": "Hành động này không thể hoàn tác.",

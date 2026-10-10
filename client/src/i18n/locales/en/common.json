@@ -54,7 +54,8 @@
     "sending": "Sending...",
     "update": "Update",
     "upload": "Upload",
-    "viewAll": "View all"
+    "viewAll": "View all",
+    "retry": "Retry"
   },
   "confirm": {
     "deleteMessage": "This action cannot be undone.",
