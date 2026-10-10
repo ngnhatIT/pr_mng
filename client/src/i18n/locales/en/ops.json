@@ -286,7 +286,12 @@
       "statusUpdated": "Status updated",
       "updateFail": "Update failed"
     },
-    "totalCount": "{{total}} registrations total"
+    "totalCount": "{{total}} registrations total",
+    "emptyFiltered": {
+      "title": "No trial registrations match",
+      "desc": "Try a different status or clear the filter to see all.",
+      "clear": "Clear filter"
+    }
   },
   "zalo": {
     "col": {

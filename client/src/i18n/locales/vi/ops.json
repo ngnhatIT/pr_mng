@@ -286,7 +286,12 @@
       "statusUpdated": "Đã cập nhật trạng thái",
       "updateFail": "Cập nhật thất bại"
     },
-    "totalCount": "Tổng {{total}} đăng ký"
+    "totalCount": "Tổng {{total}} đăng ký",
+    "emptyFiltered": {
+      "title": "Không tìm thấy đăng ký học thử",
+      "desc": "Thử trạng thái khác hoặc xóa bộ lọc để xem toàn bộ.",
+      "clear": "Xóa bộ lọc"
+    }
   },
   "zalo": {
     "col": {

@@ -8,6 +8,7 @@ import { Field } from '../../shared/components/Form';
 import { PageHeader } from '../../shared/components/PageHeader';
 import { EmptyState } from '../../shared/components/EmptyState';
 import { TableSkeleton } from '../../shared/components/Skeleton';
+import { Icon } from '../../shared/components/icons';
 import { Pagination, type PaginationMeta } from '../../shared/components/Pagination';
 import { TrialItem, formatDate } from '../../shared/types';
 import './Admissions.css';
@@ -82,7 +83,25 @@ export function Trials() {
       {loading ? (
         <TableSkeleton cols={7} />
       ) : trials.length === 0 ? (
-        <EmptyState icon="play" title={t('trials.empty.title')} desc={t('trials.empty.desc')} />
+        <EmptyState
+          icon="play"
+          title={t(status ? 'trials.emptyFiltered.title' : 'trials.empty.title')}
+          desc={t(status ? 'trials.emptyFiltered.desc' : 'trials.empty.desc')}
+          action={
+            status ? (
+              <button
+                className="btn btn-secondary btn-inline"
+                onClick={() => {
+                  setStatus('');
+                  setPage(1);
+                }}
+              >
+                <Icon name="x" size={14} />
+                {t('trials.emptyFiltered.clear')}
+              </button>
+            ) : undefined
+          }
+        />
       ) : (
         <div className="table-wrap sticky">
           <table className="table">
