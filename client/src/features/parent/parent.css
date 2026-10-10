@@ -337,6 +337,15 @@ button.quiz-take-opt {
     min-width: 0;
     overflow-wrap: break-word;
   }
+  /* 5 tab pill xếp 2 hàng gọn, không cuộn ngang */
+  .parent-tabs {
+    overflow-x: visible;
+    flex-wrap: wrap;
+  }
+  .parent-tabs .tab {
+    flex: 1 1 calc(50% - 4px);
+    justify-content: center;
+  }
 }
 
 /* ---------- Biểu đồ tiến bộ: màu theo theme (SVG dùng CSS vars) ---------- */

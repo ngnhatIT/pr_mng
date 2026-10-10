@@ -106,7 +106,7 @@ export function ChildDetail() {
         <div className="child-avatar child-avatar-lg" aria-hidden="true">
           <Icon name="user" size={26} />
         </div>
-        <div>
+        <div className="child-head-main">
           <h1 className="parent-title">{data.student.name}</h1>
           <div className="muted mono">{data.student.code}</div>
         </div>
