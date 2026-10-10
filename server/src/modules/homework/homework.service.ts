@@ -153,13 +153,25 @@ export async function listHomework(
   const { page, limit, offset } = parsePagination(pageOpts);
   const total = ((await db.prepare(`SELECT COUNT(*) as c ${from} ${where}`).get(...params)) as { c: number })
     .c;
+  // P1-4: gộp 4 correlated subquery/row thành JOIN + GROUP BY (1 round-trip).
+  // COUNT(DISTINCT ...) chống nhân dòng do fan-out của các JOIN.
+  // student_count giữ đúng ngữ nghĩa assignedCountExpr: có target riêng → đếm
+  // target, không có → đếm học viên đang học của lớp.
   const rows = (await db
     .prepare(
       `SELECT h.*, c.name as class_name,
-        (SELECT COUNT(*) FROM homework_completions hc WHERE hc.homework_id = h.id) as completed_count,
-        ${assignedCountExpr('h', 'h')} as student_count,
-        (SELECT COUNT(*) FROM quiz_questions qq WHERE qq.homework_id = h.id) as question_count
-       ${from} ${where} ORDER BY h.id DESC LIMIT ? OFFSET ?`
+        COUNT(DISTINCT hc.id) as completed_count,
+        COALESCE(
+          NULLIF(COUNT(DISTINCT ht.student_id), 0),
+          COUNT(DISTINCT e.student_id)
+        ) as student_count,
+        COUNT(DISTINCT qq.id) as question_count
+       ${from}
+       LEFT JOIN homework_completions hc ON hc.homework_id = h.id
+       LEFT JOIN homework_targets ht ON ht.homework_id = h.id
+       LEFT JOIN enrollments e ON e.class_id = h.class_id AND e.status = 'active'
+       LEFT JOIN quiz_questions qq ON qq.homework_id = h.id
+       ${where} GROUP BY h.id, c.name ORDER BY h.id DESC LIMIT ? OFFSET ?`
     )
     .all(...params, limit, offset)) as HomeworkRow[];
   return paginate(rows, total, page, limit);

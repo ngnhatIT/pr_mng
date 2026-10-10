@@ -101,14 +101,37 @@ export async function getQuizForStudent(homeworkId: number): Promise<QuizQuestio
   const qs = (await db
     .prepare('SELECT id, question, points FROM quiz_questions WHERE homework_id = ? ORDER BY position, id')
     .all(homeworkId)) as { id: number; question: string; points: number }[];
-  return Promise.all(
-    qs.map(async (q) => ({
-      ...q,
-      options: (await db
-        .prepare('SELECT id, text FROM quiz_options WHERE question_id = ? ORDER BY position, id')
-        .all(q.id)) as { id: number; text: string }[],
-    }))
-  );
+  // P1-4: 1 query duy nhất cho mọi đáp án thay vì 1 query/câu hỏi.
+  // Học viên KHÔNG bao giờ thấy is_correct — strip ở đây, không phụ thuộc caller.
+  const options = await getOptionsBatch(qs.map((q) => q.id));
+  return qs.map((q) => ({
+    ...q,
+    options: (options.get(q.id) ?? []).map((o) => ({ id: o.id, text: o.text })),
+  }));
+}
+
+/**
+ * Tải đáp án của nhiều câu hỏi trong 1 query, gom theo question_id (chống N+1).
+ * Luôn lấy is_correct để staff dùng; caller tự strip khi trả cho học viên.
+ */
+async function getOptionsBatch(
+  questionIds: number[]
+): Promise<Map<number, { id: number; text: string; is_correct: number }[]>> {
+  const map = new Map<number, { id: number; text: string; is_correct: number }[]>();
+  if (!questionIds.length) return map;
+  const rows = (await db
+    .prepare(
+      `SELECT id, question_id, text, is_correct FROM quiz_options WHERE question_id IN (${questionIds
+        .map(() => '?')
+        .join(',')}) ORDER BY question_id, position, id`
+    )
+    .all(...questionIds)) as { id: number; question_id: number; text: string; is_correct: number }[];
+  for (const r of rows) {
+    const list = map.get(r.question_id) ?? [];
+    list.push({ id: r.id, text: r.text, is_correct: r.is_correct });
+    map.set(r.question_id, list);
+  }
+  return map;
 }
 
 /** Đếm số câu hỏi của quiz. */
@@ -127,14 +150,16 @@ export async function getQuizForStaff(
   const qs = (await db
     .prepare('SELECT id, question, points FROM quiz_questions WHERE homework_id = ? ORDER BY position, id')
     .all(homeworkId)) as { id: number; question: string; points: number }[];
-  return Promise.all(
-    qs.map(async (q) => ({
-      ...q,
-      options: (await db
-        .prepare('SELECT id, text, is_correct FROM quiz_options WHERE question_id = ? ORDER BY position, id')
-        .all(q.id)) as { id: number; text: string; is_correct: boolean }[],
-    }))
-  );
+  // P1-4: 1 query duy nhất cho mọi đáp án thay vì 1 query/câu hỏi
+  const options = await getOptionsBatch(qs.map((q) => q.id));
+  return qs.map((q) => ({
+    ...q,
+    options: (options.get(q.id) ?? []).map((o) => ({
+      id: o.id,
+      text: o.text,
+      is_correct: o.is_correct === 1,
+    })),
+  }));
 }
 
 /** Đếm số lượt làm của quiz (để chặn sửa đề khi đã có người làm). */
@@ -251,19 +276,29 @@ export async function getStudentAttempts(homeworkId: number, studentId: number):
       'SELECT id, score, max_score, submitted_at FROM quiz_attempts WHERE homework_id = ? AND student_id = ? ORDER BY submitted_at DESC'
     )
     .all(homeworkId, studentId)) as QuizAttempt[];
-  return Promise.all(
-    attempts.map(async (a) => ({
-      ...a,
-      answers: (await db
-        .prepare(
-          `SELECT qa.question_id, qa.option_id,
+  // P1-4: 1 query duy nhất cho đáp án mọi lượt làm thay vì 1 query/lượt
+  const answersByAttempt = new Map<number, { question_id: number; option_id: number | null; correct: boolean }[]>();
+  if (attempts.length) {
+    const rows = (await db
+      .prepare(
+        `SELECT qa.attempt_id, qa.question_id, qa.option_id,
           CASE WHEN qo.is_correct = 1 THEN 1 ELSE 0 END as correct
          FROM quiz_answers qa LEFT JOIN quiz_options qo ON qo.id = qa.option_id
-         WHERE qa.attempt_id = ?`
-        )
-        .all(a.id)) as { question_id: number; option_id: number | null; correct: boolean }[],
-    }))
-  );
+         WHERE qa.attempt_id IN (${attempts.map(() => '?').join(',')})`
+      )
+      .all(...attempts.map((a) => a.id))) as {
+      attempt_id: number;
+      question_id: number;
+      option_id: number | null;
+      correct: boolean;
+    }[];
+    for (const r of rows) {
+      const list = answersByAttempt.get(r.attempt_id) ?? [];
+      list.push({ question_id: r.question_id, option_id: r.option_id, correct: r.correct });
+      answersByAttempt.set(r.attempt_id, list);
+    }
+  }
+  return attempts.map((a) => ({ ...a, answers: answersByAttempt.get(a.id) ?? [] }));
 }
 
 /** Staff xem tất cả lượt làm bài của 1 quiz. */
@@ -302,23 +337,17 @@ export async function getAttemptReview(attemptId: number, studentId: number): Pr
   const qs = (await db
     .prepare('SELECT id, question, points FROM quiz_questions WHERE homework_id = ? ORDER BY position, id')
     .all(attempt.homework_id)) as { id: number; question: string; points: number }[];
-  return Promise.all(
-    qs.map(async (q) => ({
-      question_id: q.id,
-      question: q.question,
-      points: q.points,
-      options: (
-        (await db
-          .prepare(
-            'SELECT id, text, is_correct FROM quiz_options WHERE question_id = ? ORDER BY position, id'
-          )
-          .all(q.id)) as { id: number; text: string; is_correct: number }[]
-      ).map((o) => ({
-        id: o.id,
-        text: o.text,
-        is_correct: o.is_correct === 1,
-        chosen: chosen.get(q.id) === o.id,
-      })),
-    }))
-  );
+  // P1-4: 1 query duy nhất cho mọi đáp án thay vì 1 query/câu hỏi
+  const options = await getOptionsBatch(qs.map((q) => q.id));
+  return qs.map((q) => ({
+    question_id: q.id,
+    question: q.question,
+    points: q.points,
+    options: (options.get(q.id) ?? []).map((o) => ({
+      id: o.id,
+      text: o.text,
+      is_correct: o.is_correct === 1,
+      chosen: chosen.get(q.id) === o.id,
+    })),
+  }));
 }

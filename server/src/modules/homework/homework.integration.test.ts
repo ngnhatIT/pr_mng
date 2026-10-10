@@ -894,3 +894,115 @@ describe('parent.service - nộp bài idempotent (P1-6)', () => {
     assert.equal(rows.length, 1); // không tạo bản ghi thứ 2
   });
 });
+
+describe('homework.service - listHomework JOIN/GROUP BY (P1-4)', () => {
+  beforeEach(async () => {
+    await resetDb();
+  });
+
+  it('completed_count / student_count / question_count đúng sau khi gộp query', async () => {
+    // Bài thường: giao riêng 1 HV + 1 lượt hoàn thành
+    const [hw1] = await homeworkService.createHomeworkBatch({
+      class_ids: [classId],
+      title: 'Bài có target',
+      created_by: 1,
+      centerId: null,
+      status: 'published',
+      target_student_ids: [student1Id],
+    });
+    await db
+      .prepare("INSERT INTO homework_completions (homework_id, student_id, completed_by) VALUES (?, ?, 'teacher')")
+      .run(hw1.id, student1Id);
+    // Quiz 2 câu, giao cả lớp (không target)
+    const [hw2] = await homeworkService.createHomeworkBatch({
+      class_ids: [classId],
+      title: 'Quiz cả lớp',
+      created_by: 1,
+      centerId: null,
+      kind: 'quiz',
+      status: 'published',
+    });
+    await quizService.saveQuizQuestions(hw2.id, [
+      {
+        question: 'Q1',
+        points: 1,
+        options: [
+          { text: 'A', is_correct: true },
+          { text: 'B', is_correct: false },
+        ],
+      },
+      {
+        question: 'Q2',
+        points: 2,
+        options: [
+          { text: 'A', is_correct: false },
+          { text: 'B', is_correct: true },
+        ],
+      },
+    ]);
+    const list = await homeworkService.listHomework(
+      { centerId: null, role: 'admin', teacherId: null, ownOnly: false },
+      {},
+      { limit: 10 }
+    );
+    const r1 = list.data.find((r) => r.id === hw1.id)!;
+    const r2 = list.data.find((r) => r.id === hw2.id)!;
+    assert.equal(Number(r1.completed_count), 1);
+    assert.equal(Number(r1.student_count), 1); // có target riêng → đếm target
+    assert.equal(Number(r1.question_count), 0);
+    assert.equal(Number(r2.completed_count), 0);
+    assert.equal(Number(r2.student_count), 2); // không target → đếm cả lớp
+    assert.equal(Number(r2.question_count), 2);
+  });
+
+  it('getQuizForStudent không lộ is_correct; getStudentAttempts gom đáp án đúng', async () => {
+    const [hw] = await homeworkService.createHomeworkBatch({
+      class_ids: [classId],
+      title: 'Quiz N+1',
+      created_by: 1,
+      centerId: null,
+      kind: 'quiz',
+      status: 'published',
+    });
+    await quizService.saveQuizQuestions(hw.id, [
+      {
+        question: 'Q1',
+        points: 1,
+        options: [
+          { text: 'A', is_correct: true },
+          { text: 'B', is_correct: false },
+        ],
+      },
+      {
+        question: 'Q2',
+        points: 1,
+        options: [
+          { text: 'A', is_correct: false },
+          { text: 'B', is_correct: true },
+        ],
+      },
+    ]);
+    const forStudent = await quizService.getQuizForStudent(hw.id);
+    assert.equal(forStudent.length, 2);
+    assert.equal(forStudent[0].options.length, 2);
+    assert.ok(!('is_correct' in forStudent[0].options[0]), 'học viên không được thấy is_correct');
+    const forStaff = await quizService.getQuizForStaff(hw.id);
+    assert.equal(typeof forStaff[0].options[0].is_correct, 'boolean');
+    // Nộp bài rồi xem lịch sử
+    const ids = await getQuizIds(hw.id);
+    await quizService.submitQuiz(hw.id, student1Id, [
+      { question_id: ids[0].qid, option_id: ids[0].correctOpt },
+      { question_id: ids[1].qid, option_id: ids[1].wrongOpt },
+    ]);
+    const attempts = await quizService.getStudentAttempts(hw.id, student1Id);
+    assert.equal(attempts.length, 1);
+    assert.equal(attempts[0].answers.length, 2);
+    assert.deepEqual(
+      attempts[0].answers.map((a) => Boolean(a.correct)),
+      [true, false]
+    );
+    const review = await quizService.getAttemptReview(attempts[0].id, student1Id);
+    assert.equal(review.length, 2);
+    assert.equal(review[0].options.filter((o) => o.chosen).length, 1);
+  });
+});
