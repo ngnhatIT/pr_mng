@@ -715,6 +715,37 @@ describe('homework.service - update và reuse', () => {
     assert.equal(row.due_date, '2026-12-01');
   });
 
+  it('update từ chối ngày sai format / ngày không có thật / close trước due', async () => {
+    const [hw] = await homeworkService.createHomeworkBatch({
+      class_ids: [classId],
+      title: 'Date test',
+      created_by: 1,
+      centerId: null,
+      due_date: '2026-12-01',
+    });
+    const bad = [
+      { close_date: 'abc' }, // format sai
+      { close_date: '2026-02-30' }, // ngày không có thật
+      { due_date: '2026-12-10', close_date: '2026-12-05' }, // close trước due
+    ];
+    for (const d of bad) {
+      await assert.rejects(
+        () => homeworkService.updateHomework(hw.id, { title: 'Date test', ...d }),
+        /không hợp lệ|phải sau hạn nộp/
+      );
+    }
+    // Luồng update hợp lệ vẫn đi qua
+    await homeworkService.updateHomework(hw.id, {
+      title: 'Date test',
+      due_date: '2026-12-01',
+      close_date: '2026-12-10',
+    });
+    const row = (await db.prepare('SELECT close_date FROM homework WHERE id = ?').get(hw.id)) as {
+      close_date: string;
+    };
+    assert.equal(row.close_date, '2026-12-10');
+  });
+
   it('reuse copy targets sang bài mới', async () => {
     const [hw] = await homeworkService.createHomeworkBatch({
       class_ids: [classId],

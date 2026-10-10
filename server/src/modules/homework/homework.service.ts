@@ -455,10 +455,8 @@ export async function updateHomework(
   }
 ): Promise<HomeworkRow> {
   if (!data.title.trim()) throw AppError.badRequest('Vui lòng nhập tiêu đề bài tập');
-  // Validate logic ngày
-  if (data.due_date && data.close_date && data.close_date < data.due_date) {
-    throw AppError.badRequest('Hạn chót cứng phải sau hạn nộp');
-  }
+  // Validate format + logic ngày (date có thật, close_date sau due_date)
+  assertValidDates(data.due_date, data.close_date);
   if (data.status === 'scheduled' && !data.publish_at) {
     throw AppError.badRequest('Hẹn giờ đăng cần chọn thời gian');
   }

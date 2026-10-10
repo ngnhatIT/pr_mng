@@ -457,6 +457,12 @@ router.put(
     if (body.due_date && !/^\d{4}-\d{2}-\d{2}$/.test(body.due_date)) {
       throw AppError.badRequest('Hạn nộp không hợp lệ (YYYY-MM-DD)');
     }
+    if (body.close_date && !/^\d{4}-\d{2}-\d{2}$/.test(body.close_date)) {
+      throw AppError.badRequest('Hạn chót không hợp lệ (YYYY-MM-DD)');
+    }
+    if (body.publish_at && !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(body.publish_at)) {
+      throw AppError.badRequest('Hẹn đăng không hợp lệ (YYYY-MM-DDTHH:mm)');
+    }
     res.json(
       await updateHomework(id, {
         title: body.title as string,
