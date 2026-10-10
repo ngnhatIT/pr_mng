@@ -81,8 +81,8 @@ export const invoicesApi = {
     due_date?: string | null;
     note?: string | null;
   }) => http.post<InvoiceItem>('/invoices', data),
-  recordPayment: (invoiceId: number, data: { amount: number; method: string; note?: string | null }) =>
-    http.post<{ ok: boolean; status: string }>(`/invoices/${invoiceId}/payments`, data),
+  recordPayment: (invoiceId: number, data: { amount: number; method: string; note?: string | null }, idempotencyKey?: string) =>
+    http.postIdempotent<{ ok: boolean; status: string }>(`/invoices/${invoiceId}/payments`, data, idempotencyKey),
   refund: (invoiceId: number, data: { amount: number; reason?: string }) =>
     http.post<{ ok: boolean; refunded: number; status: string }>(`/invoices/${invoiceId}/refund`, data),
   applyCredit: (invoiceId: number, creditId: number) =>

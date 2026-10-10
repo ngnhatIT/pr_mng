@@ -720,6 +720,10 @@ function PayModal({
   const [note, setNote] = useState('');
   const [busy, setBusy] = useState(false);
   const toast = useToast();
+  // Idempotency-Key ổn định cho 1 lần thu (per-intent): retry cùng thao tác không thu
+  // trùng; mở modal mới là intent mới nên thu tiếp cùng số tiền vẫn ghi nhận được.
+  // Không dùng key theo invoice+amount vì 2 lần thu cùng số tiền trong 24h sẽ bị dedupe nhầm.
+  const [idemKey] = useState(() => `pay-${invoice.id}-${crypto.randomUUID()}`);
   // Lỗi inline dưới field + focus field lỗi (skill 8.2); dữ liệu giữ nguyên khi lỗi
   const { errors, refFor, show, clear } = useFieldErrors<'amount'>();
 
@@ -733,12 +737,16 @@ function PayModal({
     if (!show(errs)) return;
     setBusy(true);
     try {
-      await invoicesApi.recordPayment(invoice.id, {
-        amount: Number(amount),
-        // Giữ tương thích server/DB: gửi chuỗi tiếng Việt cũ thay vì code
-        method: PAYMENT_METHODS.find((m) => m.code === method)?.legacy ?? method,
-        note: note || null,
-      });
+      await invoicesApi.recordPayment(
+        invoice.id,
+        {
+          amount: Number(amount),
+          // Giữ tương thích server/DB: gửi chuỗi tiếng Việt cũ thay vì code
+          method: PAYMENT_METHODS.find((m) => m.code === method)?.legacy ?? method,
+          note: note || null,
+        },
+        idemKey
+      );
       toast(t('pay.recorded'), 'success');
       onDone();
     } catch (err) {
