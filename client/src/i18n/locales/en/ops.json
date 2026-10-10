@@ -265,7 +265,8 @@
       "classLabel": "Enroll into class (optional)",
       "confirm": "Confirm",
       "converting": "Converting...",
-      "noEnroll": "- Don't enroll yet -"
+      "noEnroll": "- Don't enroll yet -",
+      "loadFail": "Could not load the class list, please try again"
     },
     "convertTitle": "Convert \"{{name}}\" to student",
     "desc": "Trial signups from the landing page - review and convert to students",

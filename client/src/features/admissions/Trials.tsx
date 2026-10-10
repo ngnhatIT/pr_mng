@@ -4,7 +4,7 @@ import { trialsApi } from './admissions.api';
 import { ClassItem } from '../classes/classes.api';
 import { useToast } from '../../shared/ui/toast';
 import { Modal } from '../../shared/components/Modal';
-import { Field } from '../../shared/components/Form';
+import { Field, useFieldErrors } from '../../shared/components/Form';
 import { PageHeader } from '../../shared/components/PageHeader';
 import { EmptyState } from '../../shared/components/EmptyState';
 import { TableSkeleton } from '../../shared/components/Skeleton';
@@ -197,13 +197,17 @@ export function ConvertModal({
   const [classId, setClassId] = useState('');
   const [busy, setBusy] = useState(false);
   const toast = useToast();
+  const { errors, refFor, show, clear } = useFieldErrors<'classId'>();
 
   useEffect(() => {
     trialsApi
       .listClasses()
       .then((c) => setClasses(c.filter((x) => x.status === 'active')))
-      .catch((err: Error) => toast(err.message, 'error'));
-  }, [toast]);
+      .catch((err: Error) => {
+        toast(err.message, 'error');
+        show({ classId: t('trials.convertForm.loadFail') });
+      });
+  }, [toast, show, t]);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -219,8 +223,16 @@ export function ConvertModal({
   return (
     <Modal title={title} onClose={onClose}>
       <form onSubmit={submit}>
-        <Field label={t('trials.convertForm.classLabel')}>
-          <select className="text-input" value={classId} onChange={(e) => setClassId(e.target.value)}>
+        <Field label={t('trials.convertForm.classLabel')} error={errors.classId}>
+          <select
+            className="text-input"
+            value={classId}
+            onChange={(e) => {
+              setClassId(e.target.value);
+              clear('classId');
+            }}
+            ref={refFor('classId')}
+          >
             <option value="">{t('trials.convertForm.noEnroll')}</option>
             {classes.map((c) => (
               <option key={c.id} value={c.id}>

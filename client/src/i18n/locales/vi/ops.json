@@ -265,7 +265,8 @@
       "classLabel": "Ghi danh vào lớp (tùy chọn)",
       "confirm": "Xác nhận",
       "converting": "Đang chuyển...",
-      "noEnroll": "- Không ghi danh ngay -"
+      "noEnroll": "- Không ghi danh ngay -",
+      "loadFail": "Không tải được danh sách lớp, vui lòng thử lại"
     },
     "convertTitle": "Chuyển \"{{name}}\" thành học viên",
     "desc": "Đăng ký học thử từ landing page - duyệt và chuyển thành học viên",
