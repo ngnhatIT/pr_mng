@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Modal } from './Modal';
+import { ConfirmDialog, Modal } from './Modal';
 import { Field } from './Form';
 import { useToast } from '../ui/toast';
 import { api } from '../api/client';
@@ -48,8 +48,10 @@ export function ChangePasswordModal({ onClose }: Props) {
     }
   };
 
+  const [confirmingLogout, setConfirmingLogout] = useState(false);
+
   const logoutAll = async () => {
-    if (!confirm(t('changePassword.logoutAllConfirm', 'Đăng xuất khỏi tất cả thiết bị khác?'))) return;
+    setConfirmingLogout(false);
     setBusy(true);
     try {
       await api('/auth/logout-all', { method: 'POST' });
@@ -63,56 +65,72 @@ export function ChangePasswordModal({ onClose }: Props) {
   };
 
   return (
-    <Modal title={t('changePassword.title', 'Đổi mật khẩu')} onClose={onClose}>
-      <form onSubmit={submit} className="form-grid">
-        {error && (
-          <div className="error-box" role="alert">
-            {error}
+    <>
+      <Modal title={t('changePassword.title', 'Đổi mật khẩu')} onClose={onClose}>
+        <form onSubmit={submit} className="form-grid">
+          {error && (
+            <div className="error-box" role="alert">
+              {error}
+            </div>
+          )}
+          <Field label={t('changePassword.old', 'Mật khẩu hiện tại')} required>
+            <input
+              type="password"
+              className="text-input"
+              value={oldPassword}
+              onChange={(e) => setOldPassword(e.target.value)}
+              required
+              autoComplete="current-password"
+            />
+          </Field>
+          <Field label={t('changePassword.new', 'Mật khẩu mới')} required>
+            <input
+              type="password"
+              className="text-input"
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+              required
+              autoComplete="new-password"
+              minLength={8}
+            />
+          </Field>
+          <Field label={t('changePassword.confirm', 'Nhập lại mật khẩu mới')} required>
+            <input
+              type="password"
+              className="text-input"
+              value={confirmPw}
+              onChange={(e) => setConfirmPw(e.target.value)}
+              required
+              autoComplete="new-password"
+            />
+          </Field>
+          <div className="form-actions">
+            <button type="button" className="btn" onClick={onClose} disabled={busy}>
+              {t('actions.cancel', 'Hủy')}
+            </button>
+            <button
+              type="button"
+              className="btn btn-danger"
+              onClick={() => setConfirmingLogout(true)}
+              disabled={busy}
+            >
+              {t('changePassword.logoutAll', 'Đăng xuất mọi thiết bị')}
+            </button>
+            <button type="submit" className="btn btn-primary" disabled={busy}>
+              {busy ? t('actions.saving', 'Đang lưu...') : t('changePassword.submit', 'Đổi mật khẩu')}
+            </button>
           </div>
-        )}
-        <Field label={t('changePassword.old', 'Mật khẩu hiện tại')} required>
-          <input
-            type="password"
-            className="text-input"
-            value={oldPassword}
-            onChange={(e) => setOldPassword(e.target.value)}
-            required
-            autoComplete="current-password"
-          />
-        </Field>
-        <Field label={t('changePassword.new', 'Mật khẩu mới')} required>
-          <input
-            type="password"
-            className="text-input"
-            value={newPassword}
-            onChange={(e) => setNewPassword(e.target.value)}
-            required
-            autoComplete="new-password"
-            minLength={8}
-          />
-        </Field>
-        <Field label={t('changePassword.confirm', 'Nhập lại mật khẩu mới')} required>
-          <input
-            type="password"
-            className="text-input"
-            value={confirmPw}
-            onChange={(e) => setConfirmPw(e.target.value)}
-            required
-            autoComplete="new-password"
-          />
-        </Field>
-        <div className="form-actions">
-          <button type="button" className="btn" onClick={onClose} disabled={busy}>
-            {t('actions.cancel', 'Hủy')}
-          </button>
-          <button type="button" className="btn btn-danger" onClick={logoutAll} disabled={busy}>
-            {t('changePassword.logoutAll', 'Đăng xuất mọi thiết bị')}
-          </button>
-          <button type="submit" className="btn btn-primary" disabled={busy}>
-            {busy ? t('actions.saving', 'Đang lưu...') : t('changePassword.submit', 'Đổi mật khẩu')}
-          </button>
-        </div>
-      </form>
-    </Modal>
+        </form>
+      </Modal>
+      {confirmingLogout && (
+        <ConfirmDialog
+          title={t('changePassword.logoutAll', 'Đăng xuất mọi thiết bị')}
+          message={t('changePassword.logoutAllConfirm', 'Đăng xuất khỏi tất cả thiết bị khác?')}
+          onClose={() => setConfirmingLogout(false)}
+          onConfirm={logoutAll}
+          danger
+        />
+      )}
+    </>
   );
 }
