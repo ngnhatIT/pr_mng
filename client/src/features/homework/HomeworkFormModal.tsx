@@ -282,7 +282,7 @@ export function HomeworkFormModal({
         const qtype = q.qtype ?? 'single';
         return {
           ...q,
-          // single/truefalse: 1 đáp án đúng — bỏ chọn các đáp án khác;
+          // single/truefalse: 1 đáp án đúng nên bỏ chọn các đáp án khác;
           // multiple: bật/tắt từng đáp án, giữ nguyên các đáp án còn lại
           options: q.options.map((o, k) =>
             k === oi
