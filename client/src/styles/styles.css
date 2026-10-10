@@ -457,8 +457,9 @@ a {
   color: #991b1b; /* contrast 6.8:1 trên nền danger-soft */
 }
 
-/* Cột action cuối bảng: nút icon 32px, luôn có title (tooltip) + aria-label.
-   Dùng cho thao tác CRUD (sửa/xóa/xem); thao tác nghiệp vụ quan trọng giữ nút chữ. */
+/* Cột action cuối bảng: sửa/xóa chính dùng nút chữ nhỏ (icon + label) để admin
+   lớn tuổi và mobile không hover vẫn đọc được; action phụ giữ nút icon 32px
+   kèm title + aria-label đầy đủ. */
 .row-actions {
   display: inline-flex;
   align-items: center;

@@ -126,12 +126,11 @@ export function Teachers() {
                     <span className="row-actions">
                       <button
                         type="button"
-                        className="icon-btn"
-                        title={t('actions.edit', { ns: 'common' })}
-                        aria-label={t('actions.edit', { ns: 'common' })}
+                        className="btn btn-sm btn-ghost"
                         onClick={() => setEditing(tch)}
                       >
                         <Icon name="pencil" size={15} />
+                        {t('actions.edit', { ns: 'common' })}
                       </button>
                       <button
                         type="button"
@@ -144,12 +143,11 @@ export function Teachers() {
                       </button>
                       <button
                         type="button"
-                        className="icon-btn icon-btn-danger"
-                        title={t('actions.delete', { ns: 'common' })}
-                        aria-label={t('actions.delete', { ns: 'common' })}
+                        className="btn btn-sm btn-danger-ghost"
                         onClick={() => setDeleting(tch)}
                       >
                         <Icon name="trash" size={15} />
+                        {t('actions.delete', { ns: 'common' })}
                       </button>
                     </span>
                   </td>
