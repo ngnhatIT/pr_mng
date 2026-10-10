@@ -87,6 +87,7 @@
       "notFound": "No students found.",
       "searchLabel": "Find student",
       "searchPlaceholder": "Enter name or code...",
+      "clearSearch": "Clear search",
       "title": "Add student to class"
     },
     "kick": {

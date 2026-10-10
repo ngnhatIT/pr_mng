@@ -31,3 +31,11 @@
 .card-head .link-arrow:hover svg {
   transform: translateX(3px);
 }
+
+/* O tim kiem trong modal them hoc vien: full-width, dung .search-clear dung chung */
+.enroll-search {
+  width: 100%;
+}
+.enroll-search .text-input {
+  width: 100%;
+}

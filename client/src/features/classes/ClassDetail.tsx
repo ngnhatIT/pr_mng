@@ -296,12 +296,24 @@ function EnrollModal({
   return (
     <Modal title={t('detail.enroll.title')} onClose={onClose}>
       <Field label={t('detail.enroll.searchLabel')}>
-        <input
-          className="text-input"
-          placeholder={t('detail.enroll.searchPlaceholder')}
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
+        <span className={`search-wrap enroll-search${search ? ' has-clear' : ''}`}>
+          <input
+            className="text-input"
+            placeholder={t('detail.enroll.searchPlaceholder')}
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+          {search !== '' && (
+            <button
+              type="button"
+              className="search-clear"
+              onClick={() => setSearch('')}
+              aria-label={t('detail.enroll.clearSearch')}
+            >
+              <Icon name="x" size={14} />
+            </button>
+          )}
+        </span>
       </Field>
       <ul className="list list-scroll">
         {filtered.slice(0, 30).map((s) => (

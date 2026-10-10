@@ -543,6 +543,49 @@ textarea.text-input {
   max-width: 320px;
 }
 
+/* Ô tìm kiếm có nút xóa bên trong: .search-wrap > input + button.search-clear (chỉ hiện khi có chữ).
+   Lọc tức thì (danh sách đã tải) thì hiện nút xóa; đang chờ debounce/tải thì hiện spinner. */
+.search-wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+.search-wrap.has-clear .text-input {
+  padding-right: 36px;
+}
+.search-wrap .search-clear {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-faint);
+  cursor: pointer;
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease,
+    transform 0.15s ease;
+}
+button.search-clear:hover {
+  background: var(--bg-muted);
+  color: var(--text);
+}
+button.search-clear:active {
+  transform: translateY(-50%) scale(0.96);
+}
+.search-wrap .search-clear .spinner {
+  width: 14px;
+  height: 14px;
+}
+
 /* ============================ Cards (dinh nghia DUY NHAT - khong trung lap) ============================ */
 .card {
   background: var(--bg-soft);

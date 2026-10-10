@@ -87,6 +87,7 @@
       "notFound": "Không tìm thấy học viên.",
       "searchLabel": "Tìm học viên",
       "searchPlaceholder": "Nhập tên hoặc mã...",
+      "clearSearch": "Xóa từ khóa tìm kiếm",
       "title": "Thêm học viên vào lớp"
     },
     "kick": {
