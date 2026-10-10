@@ -12,6 +12,10 @@
     "title": "Delete role?"
   },
   "create": "Create role",
+  "dangerZone": {
+    "desc": "Delete this role from the system. Users with this role will lose its permissions.",
+    "title": "Danger zone"
+  },
   "delete": "Delete",
   "desc": "Who can do what, on which data, in which scope",
   "disableScope": "Turn off this permission",

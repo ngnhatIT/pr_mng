@@ -121,6 +121,7 @@ function RoleForm({
           {t('actions.cancel', { ns: 'common' })}
         </button>
         <button className="btn btn-primary" onClick={save} disabled={saving}>
+          {saving && <span className="spinner" aria-hidden="true" />}
           {saving ? t('saving') : initial ? t('form.save') : t('form.create')}
         </button>
       </div>
@@ -394,9 +395,6 @@ export function Roles() {
                     <button className="btn btn-ghost" onClick={() => setShowEdit(true)}>
                       <Icon name="pencil" size={15} /> {t('edit')}
                     </button>
-                    <button className="btn btn-ghost btn-danger-ghost" onClick={() => setConfirmDelete(true)}>
-                      <Icon name="trash" size={15} /> {t('delete')}
-                    </button>
                   </div>
                 )}
               </div>
@@ -495,10 +493,27 @@ export function Roles() {
                         {t('actions.cancel', { ns: 'common' })}
                       </button>
                       <button className="btn btn-primary" onClick={savePermissions} disabled={saving}>
+                        {saving && <span className="spinner" aria-hidden="true" />}
                         {saving ? t('saving') : t('savePerms')}
                       </button>
                     </div>
                   </div>
+
+                  {!detail.is_system && (
+                    <section className="danger-zone" aria-label={t('dangerZone.title')}>
+                      <div className="danger-zone-info">
+                        <h2>{t('dangerZone.title')}</h2>
+                        <p>{t('dangerZone.desc')}</p>
+                      </div>
+                      <button
+                        type="button"
+                        className="btn btn-ghost btn-danger-ghost"
+                        onClick={() => setConfirmDelete(true)}
+                      >
+                        <Icon name="trash" size={15} /> {t('delete')}
+                      </button>
+                    </section>
+                  )}
                 </>
               )}
             </>

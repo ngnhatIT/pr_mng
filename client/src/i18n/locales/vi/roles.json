@@ -12,6 +12,10 @@
     "title": "Xóa vai trò?"
   },
   "create": "Tạo vai trò",
+  "dangerZone": {
+    "desc": "Xóa vai trò này khỏi hệ thống. Người dùng đang mang vai trò sẽ mất các quyền đi kèm.",
+    "title": "Vùng nguy hiểm"
+  },
   "delete": "Xóa",
   "desc": "Ai được làm gì, trên dữ liệu nào, trong phạm vi nào",
   "disableScope": "Tắt quyền này",

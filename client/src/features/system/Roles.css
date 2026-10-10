@@ -451,3 +451,26 @@
     padding: 10px 12px;
   }
 }
+
+/* ---------- Vùng nguy hiểm: tách rõ khỏi thao tác thường, viền đỏ toàn khung ---------- */
+.danger-zone {
+  margin-top: 24px;
+  border: 1px solid var(--danger);
+  border-radius: var(--radius-lg);
+  padding: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.danger-zone-info h2 {
+  margin: 0 0 4px;
+  font-size: 15px;
+  color: var(--danger);
+}
+.danger-zone-info p {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-muted);
+}
