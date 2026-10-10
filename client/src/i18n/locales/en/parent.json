@@ -52,7 +52,7 @@
     },
     "homework": {
       "actionError": "Action failed",
-      "desc": "Tick the circle when your child finishes. Quizzes are taken right here and graded automatically.",
+      "desc": "Tap Mark as done when your child finishes. Quizzes are taken right here and graded automatically.",
       "done": "Done ({{count}})",
       "dueLabel": "Due: {{date}}",
       "empty": "No homework yet",
@@ -70,7 +70,7 @@
       "viewSubmissions": "Submitted work"
     },
     "loadError": "Couldn't load the details",
-    "notFoundDesc": "This student record doesn't exist.",
+    "notFoundDesc": "Student record not found.",
     "notFoundTitle": "Student not found",
     "pay": {
       "accountName": "Account holder",

@@ -52,7 +52,7 @@
     },
     "homework": {
       "actionError": "Thao tác thất bại",
-      "desc": "Tick vào ô tròn khi con đã làm xong. Quiz trắc nghiệm làm trực tiếp và chấm tự động.",
+      "desc": "Bấm Đánh dấu đã làm xong khi con hoàn thành bài. Bài trắc nghiệm làm trực tiếp và được chấm tự động.",
       "done": "Đã hoàn thành ({{count}})",
       "dueLabel": "Hạn: {{date}}",
       "empty": "Chưa có bài tập nào",
@@ -70,7 +70,7 @@
       "viewSubmissions": "Bài đã nộp"
     },
     "loadError": "Không tải được thông tin",
-    "notFoundDesc": "Thông tin học viên không tồn tại.",
+    "notFoundDesc": "Không tìm thấy thông tin học viên.",
     "notFoundTitle": "Không tìm thấy học viên",
     "pay": {
       "accountName": "Chủ TK",
