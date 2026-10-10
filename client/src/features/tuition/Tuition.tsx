@@ -391,10 +391,11 @@ function InvoiceList() {
                         )}
                         {paid > 0 && (
                           <button
-                            className="btn btn-sm btn-ghost"
+                            className="btn btn-sm btn-danger-ghost"
                             onClick={() => setRefunding(inv)}
                             title={t('refund.title')}
                           >
+                            <Icon name="rotate" size={14} />
                             {t('refund.action')}
                           </button>
                         )}
@@ -403,6 +404,7 @@ function InvoiceList() {
                           onClick={() => setReceipt(inv)}
                           title={t('receipt.title')}
                         >
+                          <Icon name="printer" size={14} />
                           {t('receipt.print')}
                         </button>
                       </span>
