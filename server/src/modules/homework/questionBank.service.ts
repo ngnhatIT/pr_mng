@@ -1,7 +1,6 @@
 import { db } from '../../db';
 import { AppError } from '../../shared/errors';
 import { escapeLike } from '../../shared/like';
-import { countQuizAttempts } from './quiz.service';
 import { sumQuestionPoints, normalizePoints, assertUniqueOptionTexts } from './homework.helpers';
 
 /* ---------------------------------- Types ---------------------------------- */
@@ -229,10 +228,6 @@ export async function importFromBank(
     { kind: string } | undefined;
   if (!hw) throw AppError.notFound('Không tìm thấy bài tập');
   if (hw.kind !== 'quiz') throw AppError.badRequest('Chỉ được import câu hỏi vào bài quiz');
-  // Chặn import khi đã có học viên làm bài (đồng nhất với saveQuizQuestions)
-  if ((await countQuizAttempts(homeworkId)) > 0) {
-    throw AppError.badRequest('Đã có học viên làm bài, không thể thêm câu hỏi. Hãy tạo quiz mới.');
-  }
   // Lọc bankIds theo center trước khi import (chống rò rỉ cross-tenant)
   const placeholders = uniqueIds.map(() => '?').join(',');
   const params: unknown[] = [...uniqueIds];
@@ -258,6 +253,18 @@ export async function importFromBank(
     .all(...ordered.map((v) => v.id))) as { question_id: number; text: string; is_correct: number }[];
   // Toàn bộ import trong 1 transaction (tránh import dở khi lỗi giữa chừng)
   const count = await db.transaction(async (tx) => {
+    // P1-13: lock row homework — check attempts + import là 1 đơn vị nguyên tử,
+    // hết race TOCTOU với saveQuizQuestions/submitQuiz
+    await tx.prepare('SELECT id FROM homework WHERE id = ? FOR UPDATE').get(homeworkId);
+    // Chặn import khi đã có học viên làm bài (đồng nhất với saveQuizQuestions)
+    const attempts = (
+      (await tx
+        .prepare('SELECT COUNT(*) as c FROM quiz_attempts WHERE homework_id = ?')
+        .get(homeworkId)) as { c: number }
+    ).c;
+    if (attempts > 0) {
+      throw AppError.badRequest('Đã có học viên làm bài, không thể thêm câu hỏi. Hãy tạo quiz mới.');
+    }
     const maxPos = (
       (await tx
         .prepare('SELECT COALESCE(MAX(position), -1) as m FROM quiz_questions WHERE homework_id = ?')

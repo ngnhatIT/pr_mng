@@ -61,15 +61,23 @@ export function validateQuizQuestions(questions: QuizQuestionInput[]): void {
 
 /** Lưu bộ câu hỏi cho quiz (thay thế toàn bộ). Validate TẤT CẢ trước khi xóa để tránh mất dữ liệu. */
 export async function saveQuizQuestions(homeworkId: number, questions: QuizQuestionInput[]): Promise<void> {
-  // Chặn sửa đề khi đã có học viên làm bài (tránh hỏng lịch sử)
-  if ((await countQuizAttempts(homeworkId)) > 0) {
-    throw AppError.badRequest('Đã có học viên làm bài, không thể sửa đề. Hãy tạo quiz mới.');
-  }
-  // Validate toàn bộ trước — không xóa gì nếu có lỗi
+  // Validate toàn bộ trước — không xóa gì nếu có lỗi (không cần lock)
   validateQuizQuestions(questions);
 
   // Tất cả hợp lệ → thay thế trong transaction
   await db.transaction(async (tx) => {
+    // P1-13: lock row homework để serialize với importFromBank/submitQuiz —
+    // check attempts + xóa + ghi là 1 đơn vị nguyên tử, hết race TOCTOU
+    await tx.prepare('SELECT id FROM homework WHERE id = ? FOR UPDATE').get(homeworkId);
+    // Chặn sửa đề khi đã có học viên làm bài (tránh hỏng lịch sử)
+    const attempts = (
+      (await tx
+        .prepare('SELECT COUNT(*) as c FROM quiz_attempts WHERE homework_id = ?')
+        .get(homeworkId)) as { c: number }
+    ).c;
+    if (attempts > 0) {
+      throw AppError.badRequest('Đã có học viên làm bài, không thể sửa đề. Hãy tạo quiz mới.');
+    }
     const qids = (await tx
       .prepare('SELECT id FROM quiz_questions WHERE homework_id = ?')
       .all(homeworkId)) as { id: number }[];
@@ -231,6 +239,8 @@ export async function submitQuiz(
     ).c + 1;
 
   const attemptId = await db.transaction(async (tx) => {
+    // P1-13: lock row homework để serialize các lần nộp đồng thời cùng bài
+    await tx.prepare('SELECT id FROM homework WHERE id = ? FOR UPDATE').get(homeworkId);
     const ar = await tx
       .prepare('INSERT INTO quiz_attempts (homework_id, student_id, score, max_score) VALUES (?, ?, ?, ?)')
       .run(homeworkId, studentId, score, maxScore);
