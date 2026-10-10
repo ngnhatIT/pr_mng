@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { parentApi, type QuizQuestion, type QuizAttempt } from './parent.api';
-import { HomeworkItem, formatDate, todayVN } from '../../shared/types';
+import { HomeworkItem, formatDate, formatDateTime, todayVN } from '../../shared/types';
 import { useToast } from '../../shared/ui/toast';
 import { ConfirmDialog, Modal } from '../../shared/components/Modal';
 import { EmptyState } from '../../shared/components/EmptyState';
@@ -154,7 +154,7 @@ export function QuizTaker({
           <span className="muted-sm">
             {t('quiz.questionCount', { count: questions.length })}
             {homework.max_score != null && ` ${t('quiz.maxScore', { score: homework.max_score })}`}
-            {homework.due_date && ` ${t('quiz.dueDate', { date: formatDate(homework.due_date) })}`}
+            {homework.due_date && ` ${t('quiz.dueDate', { date: formatDateTime(homework.due_date) })}`}
           </span>
           {history.length > 0 && (
             <span className="muted-sm">

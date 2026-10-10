@@ -60,7 +60,7 @@
       "actionError": "Không hoàn tất được thao tác, vui lòng thử lại",
       "desc": "Bấm Đánh dấu đã làm xong khi con hoàn thành bài. Bài trắc nghiệm làm trực tiếp và được chấm tự động.",
       "done": "Đã hoàn thành ({{count}})",
-      "dueLabel": "Hạn: {{date}}",
+      "dueLabel": "Hạn nộp: {{date}}",
       "empty": "Chưa có bài tập nào",
       "mark": "Đánh dấu đã làm xong",
       "markedDone": "Đã đánh dấu hoàn thành",

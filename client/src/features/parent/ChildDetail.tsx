@@ -20,6 +20,7 @@ import {
   HomeworkItem,
   formatVND,
   formatDate,
+  formatDateTime,
   todayVN,
 } from '../../shared/types';
 
@@ -602,11 +603,11 @@ function HomeworkTab({ data, onChanged }: { data: ChildOverview; onChanged: () =
           {h.due_date &&
             (isOverdue ? (
               <span className="badge badge-overdue">
-                {t('child.homework.overdueLabel', { date: formatDate(h.due_date) })}
+                {t('child.homework.overdueLabel', { date: formatDateTime(h.due_date) })}
               </span>
             ) : (
               <span className="badge badge-upcoming">
-                {t('child.homework.dueLabel', { date: formatDate(h.due_date) })}
+                {t('child.homework.dueLabel', { date: formatDateTime(h.due_date) })}
               </span>
             ))}
         </div>
