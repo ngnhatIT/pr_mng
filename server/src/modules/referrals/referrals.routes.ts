@@ -36,43 +36,32 @@ router.get(
     const cid = reqCenterId(req);
     const centerFilter = cid !== null ? 'AND p.center_id = ?' : '';
     const params: unknown[] = cid !== null ? [cid] : [];
-    const total = (
-      (await db
+    // Gộp 3 COUNT thành 1 query (COUNT FILTER), chạy song song với SUM credits
+    const [counts, totalReward] = await Promise.all([
+      db
         .prepare(
-          `SELECT COUNT(*) as c FROM referrals rf
-         JOIN parents p ON p.id = rf.referrer_parent_id
-         WHERE 1 = 1 ${centerFilter}`
+          `SELECT COUNT(*) as total,
+                  COUNT(*) FILTER (WHERE rf.status = 'pending') as pending,
+                  COUNT(*) FILTER (WHERE rf.status = 'rewarded') as rewarded
+           FROM referrals rf
+           JOIN parents p ON p.id = rf.referrer_parent_id
+           WHERE 1 = 1 ${centerFilter}`
         )
-        .get(...params)) as { c: number }
-    ).c;
-    const pending = (
-      (await db
-        .prepare(
-          `SELECT COUNT(*) as c FROM referrals rf
-         JOIN parents p ON p.id = rf.referrer_parent_id
-         WHERE rf.status = 'pending' ${centerFilter}`
-        )
-        .get(...params)) as { c: number }
-    ).c;
-    const rewarded = (
-      (await db
-        .prepare(
-          `SELECT COUNT(*) as c FROM referrals rf
-         JOIN parents p ON p.id = rf.referrer_parent_id
-         WHERE rf.status = 'rewarded' ${centerFilter}`
-        )
-        .get(...params)) as { c: number }
-    ).c;
-    const totalReward = (
-      (await db
+        .get(...params) as Promise<{ total: number; pending: number; rewarded: number }>,
+      db
         .prepare(
           `SELECT COALESCE(SUM(c.amount), 0) as total FROM credits c
-         JOIN parents p ON p.id = c.parent_id
-         WHERE c.reason LIKE 'Thưởng giới thiệu%' ${centerFilter}`
+           JOIN parents p ON p.id = c.parent_id
+           WHERE c.reason LIKE 'Thưởng giới thiệu%' ${centerFilter}`
         )
-        .get(...params)) as { total: number }
-    ).total;
-    res.json({ total, pending, rewarded, total_reward: totalReward });
+        .get(...params) as Promise<{ total: number }>,
+    ]);
+    res.json({
+      total: counts.total,
+      pending: counts.pending,
+      rewarded: counts.rewarded,
+      total_reward: totalReward.total,
+    });
   })
 );
 
