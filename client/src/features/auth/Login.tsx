@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { api, setAuth, takePostLoginRedirect } from '../../shared/api/client';
 import { useToast } from '../../shared/ui/toast';
-import { Icon } from '../../shared/components/icons';
+import { Field, useFieldErrors } from '../../shared/components/Form';
 import { ThemeLangSwitch } from '../../shared/ui/ThemeLangSwitch';
 import { User } from '../../shared/types';
 import './Login.css';
@@ -13,15 +13,21 @@ export function Login() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState('');
+  const { errors, refFor, show, clear } = useFieldErrors<'username' | 'password'>();
   const navigate = useNavigate();
   const toast = useToast();
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (busy) return;
+    if (
+      !show({
+        ...(username.trim() ? {} : { username: t('usernameRequired') }),
+        ...(password ? {} : { password: t('passwordRequired') }),
+      })
+    )
+      return;
     setBusy(true);
-    setError('');
     try {
       const data = await api<{ token: string; user: User }>('/auth/login', {
         method: 'POST',
@@ -40,7 +46,8 @@ export function Login() {
       else if (role === 'parent') navigate('/parent');
       else navigate('/app');
     } catch (err) {
-      setError(err instanceof Error ? err.message : t('fail'));
+      // Lỗi đăng nhập (sai tài khoản/mật khẩu) hiện inline dưới ô mật khẩu, focus để nhập lại
+      show({ password: err instanceof Error ? err.message : t('fail') });
     } finally {
       setBusy(false);
     }
@@ -55,31 +62,31 @@ export function Login() {
         <div className="login-logo">E</div>
         <h1 className="login-title">{t('brand')}</h1>
         <p className="login-sub">{t('sub')}</p>
-        {error && (
-          <p className="login-error" role="alert">
-            <Icon name="alert" size={16} />
-            <span>{error}</span>
-          </p>
-        )}
-        <label className="field">
-          <span className="field-label">{t('username')}</span>
+        <Field label={t('username')} error={errors.username} required>
           <input
             className="text-input"
             value={username}
-            onChange={(e) => setUsername(e.target.value)}
+            onChange={(e) => {
+              setUsername(e.target.value);
+              clear('username');
+            }}
             autoComplete="username"
+            ref={refFor('username')}
           />
-        </label>
-        <label className="field">
-          <span className="field-label">{t('password')}</span>
+        </Field>
+        <Field label={t('password')} error={errors.password} required>
           <input
             className="text-input"
             type="password"
             value={password}
-            onChange={(e) => setPassword(e.target.value)}
+            onChange={(e) => {
+              setPassword(e.target.value);
+              clear('password');
+            }}
             autoComplete="current-password"
+            ref={refFor('password')}
           />
-        </label>
+        </Field>
         <button className="btn btn-primary btn-block btn-lg" type="submit" disabled={busy}>
           {busy && <span className="spinner" aria-hidden="true" />}
           {busy ? t('submitting') : t('submit')}
