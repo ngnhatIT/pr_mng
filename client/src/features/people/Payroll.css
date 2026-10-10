@@ -1,14 +1,6 @@
 /* Payroll - CSS rieng cua trang luong (dat canh component) */
 
-/* Nut co icon: icon va chu thang hang */
-.btn-inline {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
-.btn-inline svg {
-  flex-shrink: 0;
-}
+/* .btn-inline đã gom về styles.css (dùng chung toàn app) */
 
 /* Chip tong chi o PageHeader: noi bat so tien, de doc hon dong chu thuong */
 .payroll-total {

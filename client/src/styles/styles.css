@@ -553,6 +553,15 @@ a {
   font-size: var(--font-size-sm);
   border-radius: var(--radius-sm);
 }
+/* Nút có icon: icon và chữ thẳng hàng, gap 6px (gom từ CSS riêng 3 trang, dùng chung toàn app) */
+.btn-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.btn-inline svg {
+  flex-shrink: 0;
+}
 .btn-lg {
   height: var(--h-lg);
   padding: 0 var(--sp-5);

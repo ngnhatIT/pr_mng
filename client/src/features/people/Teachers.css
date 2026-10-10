@@ -1,14 +1,6 @@
 /* Teachers - CSS rieng cua trang giao vien (dat canh component) */
 
-/* Nut co icon: icon va chu thang hang */
-.btn-inline {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
-.btn-inline svg {
-  flex-shrink: 0;
-}
+/* .btn-inline đã gom về styles.css (dùng chung toàn app) */
 
 /* Nhom nut thao tac trong o bang: thay cho style inline */
 .row-actions {
