@@ -182,6 +182,8 @@
       "Pronunciation",
       "Vocabulary"
     ],
+    "discardMessage": "You have entered data that is not saved yet. Close and discard these changes?",
+    "discardTitle": "Discard unsaved changes?",
     "deselectAll": "Deselect",
     "dueDate": "Due date",
     "dueNextWeek": "Next week",

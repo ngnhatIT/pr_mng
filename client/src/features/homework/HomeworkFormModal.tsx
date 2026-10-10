@@ -1,10 +1,10 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { homeworkApi, type QuizQuestionForm, type Rubric } from './homework.api';
 import { ClassItem, classesApi } from '../classes/classes.api';
 import { HomeworkItem, formatDate, todayVN, nowVN } from '../../shared/types';
 import { useToast } from '../../shared/ui/toast';
-import { Modal } from '../../shared/components/Modal';
+import { Modal, ConfirmDialog } from '../../shared/components/Modal';
 import { Field, useFieldErrors } from '../../shared/components/Form';
 import { Icon } from '../../shared/components/icons';
 import { RichTextarea } from '../../shared/components/RichTextarea';
@@ -92,6 +92,8 @@ export function HomeworkFormModal({
     },
   ]);
   const [quizLocked, setQuizLocked] = useState(false); // đã có người làm → không sửa đề
+  // P0-1: đánh dấu đã sửa đề quiz (không bật khi tải đề cũ lúc mở modal sửa)
+  const [quizEdited, setQuizEdited] = useState(false);
 
   // Khi sửa quiz: tải đề cũ (kèm đáp án đúng) để không vô tình xóa
   useEffect(() => {
@@ -131,7 +133,7 @@ export function HomeworkFormModal({
       qtype: b.qtype as QType,
       options: b.options.map((o) => ({ text: o.text, is_correct: o.is_correct })),
     }));
-    setQuestions((qs) => {
+    editQuestions((qs) => {
       const onlyEmpty = qs.length === 1 && !qs[0].question.trim();
       return onlyEmpty ? mapped : [...qs, ...mapped];
     });
@@ -230,8 +232,14 @@ export function HomeworkFormModal({
   };
 
   // Quiz builder helpers
+  /** Mọi thao tác sửa đề quiz đi qua đây để đánh dấu đã sửa (dirty-check P0-1).
+   * Tải đề cũ lúc mở modal sửa dùng setQuestions trực tiếp nên không bị đánh dấu. */
+  const editQuestions = (updater: (qs: QuizQuestionForm[]) => QuizQuestionForm[]) => {
+    setQuizEdited(true);
+    setQuestions(updater);
+  };
   const addQuestion = () =>
-    setQuestions((q) => [
+    editQuestions((q) => [
       ...q,
       {
         question: '',
@@ -242,12 +250,12 @@ export function HomeworkFormModal({
     ]);
   const updateQuestion = (i: number, patch: Partial<QuizQuestionForm>) => {
     clear('quiz');
-    setQuestions((qs) => qs.map((q, j) => (j === i ? { ...q, ...patch } : q)));
+    editQuestions((qs) => qs.map((q, j) => (j === i ? { ...q, ...patch } : q)));
   };
   /** Đổi loại câu hỏi: truefalse tự tạo sẵn 2 đáp án Đúng/Sai, essay ẩn đáp án. */
   const changeQuestionType = (qi: number, next: QType) => {
     clear('quiz');
-    setQuestions((qs) =>
+    editQuestions((qs) =>
       qs.map((q, j) => {
         if (j !== qi) return q;
         if (next === 'truefalse') {
@@ -272,11 +280,11 @@ export function HomeworkFormModal({
     );
   };
   const addOption = (qi: number) =>
-    setQuestions((qs) =>
+    editQuestions((qs) =>
       qs.map((q, j) => (j === qi ? { ...q, options: [...q.options, { text: '', is_correct: false }] } : q))
     );
   const updateOption = (qi: number, oi: number, patch: Partial<{ text: string; is_correct: boolean }>) =>
-    setQuestions((qs) =>
+    editQuestions((qs) =>
       qs.map((q, j) => {
         if (j !== qi) return q;
         const qtype = q.qtype ?? 'single';
@@ -295,7 +303,7 @@ export function HomeworkFormModal({
       })
     );
   const removeOption = (qi: number, oi: number) =>
-    setQuestions((qs) =>
+    editQuestions((qs) =>
       qs.map((q, j) => (j === qi ? { ...q, options: q.options.filter((_, k) => k !== oi) } : q))
     );
 
@@ -393,6 +401,49 @@ export function HomeworkFormModal({
     }
   };
 
+  // P0-1: phát hiện dữ liệu đã nhập/sửa để hỏi xác nhận khi đóng modal (chống mất dữ liệu).
+  // Chế độ sửa: so với giá trị ban đầu; chế độ tạo: so với form trống.
+  const isDirty = useMemo(() => {
+    if (initial) {
+      return (
+        title !== (initial.title || '') ||
+        content !== (initial.content || '') ||
+        dueDate !== (initial.due_date?.slice(0, 10) || '') ||
+        closeDate !== (initial.close_date?.slice(0, 10) || '') ||
+        maxScore !== (initial.max_score?.toString() || '') ||
+        rubricId !== (initial.rubric_id?.toString() || '') ||
+        quizEdited
+      );
+    }
+    return (
+      kind !== 'homework' ||
+      title.trim() !== '' ||
+      content.trim() !== '' ||
+      dueDate !== '' ||
+      closeDate !== '' ||
+      maxScore !== '' ||
+      selectedClasses.length > 0 ||
+      selectedStudents.length > 0 ||
+      attachments.length > 0 ||
+      rubricId !== '' ||
+      newRubricName.trim() !== '' ||
+      publishMode !== 'now' ||
+      publishAt !== '' ||
+      quizEdited ||
+      questions.length > 1 ||
+      (questions[0]?.question.trim() ?? '') !== ''
+    );
+  }, [
+    initial, kind, title, content, dueDate, closeDate, maxScore, selectedClasses,
+    selectedStudents, attachments, rubricId, newRubricName, publishMode, publishAt,
+    questions, quizEdited,
+  ]);
+  const [confirmClose, setConfirmClose] = useState(false);
+  const tryClose = useCallback(() => {
+    if (isDirty) setConfirmClose(true);
+    else onClose();
+  }, [isDirty, onClose]);
+
   const quickDueOptions = [
     { k: 'today', label: t('form.dueToday') },
     { k: 'tomorrow', label: t('form.dueTomorrow') },
@@ -401,7 +452,7 @@ export function HomeworkFormModal({
   ] as const;
 
   return (
-    <Modal title={initial ? t('form.titleEdit') : t('form.titleNew')} onClose={onClose} wide>
+    <Modal title={initial ? t('form.titleEdit') : t('form.titleNew')} onClose={tryClose} wide>
       {/* Loại bài tập */}
       {!initial && (
         <div className="kind-switcher">
@@ -813,7 +864,7 @@ export function HomeworkFormModal({
                       type="button"
                       className="btn btn-sm btn-danger-ghost"
                       disabled={quizLocked}
-                      onClick={() => setQuestions((x) => x.filter((_, j) => j !== qi))}
+                      onClick={() => editQuestions((x) => x.filter((_, j) => j !== qi))}
                     >
                       ×
                     </button>
@@ -975,7 +1026,7 @@ export function HomeworkFormModal({
             {showPreview ? t('form.hidePreview') : t('form.preview')}
           </button>
           <span className="spacer" />
-          <button type="button" className="btn" onClick={onClose}>
+          <button type="button" className="btn" onClick={tryClose}>
             {t('actions.cancel', { ns: 'common' })}
           </button>
           {initial ? (
@@ -1003,6 +1054,14 @@ export function HomeworkFormModal({
       </form>
       {showBankPicker && (
         <QuestionBank onClose={() => setShowBankPicker(false)} selectMode onImport={importBankQuestions} />
+      )}
+      {confirmClose && (
+        <ConfirmDialog
+          title={t('form.discardTitle')}
+          message={t('form.discardMessage')}
+          onClose={() => setConfirmClose(false)}
+          onConfirm={onClose}
+        />
       )}
     </Modal>
   );

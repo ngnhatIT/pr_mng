@@ -182,6 +182,8 @@
       "Phát âm",
       "Từ vựng"
     ],
+    "discardMessage": "Bạn đã nhập dữ liệu nhưng chưa lưu. Đóng và bỏ các thay đổi này?",
+    "discardTitle": "Bỏ các thay đổi chưa lưu?",
     "deselectAll": "Bỏ chọn",
     "dueDate": "Hạn nộp",
     "dueNextWeek": "Tuần sau",
