@@ -69,14 +69,18 @@ export function CardGridSkeleton({ count = 6 }: { count?: number }) {
 }
 
 export function StatGridSkeleton({ count = 4 }: { count?: number }) {
+  // Mô phỏng đúng cấu trúc stat-card thật (icon 40px + value + sub) để chiều cao
+  // khớp khi dữ liệu về, không nhảy layout
   return (
     <div className="stat-grid" aria-hidden="true">
       {Array.from({ length: count }).map((_, i) => (
         <div key={i} className="stat-card">
-          <Skeleton width="40%" height={26} />
-          <div style={{ marginTop: 10 }}>
-            <Skeleton width="70%" height={13} />
+          <div className="stat-top">
+            <Skeleton width="45%" height={14} radius={6} />
+            <Skeleton width={40} height={40} radius={10} />
           </div>
+          <Skeleton width="60%" height={32} radius={8} />
+          <Skeleton width="75%" height={13} radius={6} />
         </div>
       ))}
     </div>
