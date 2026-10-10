@@ -206,6 +206,7 @@ export function Attendance() {
                 {t('attendance.toolbar.allPresent')}
               </button>
               <button className="btn btn-sm" onClick={() => void makeCheckinCode()} disabled={makingCode}>
+                {makingCode && <span className="spinner spinner-dark" aria-hidden="true" />}
                 {makingCode ? t('attendance.toolbar.creatingCode') : t('attendance.toolbar.createCode')}
               </button>
             </div>
@@ -288,6 +289,7 @@ export function Attendance() {
                 </span>
                 <span className="spacer" />
                 <button className="btn btn-primary btn-lg" onClick={() => void save()} disabled={saving}>
+                  {saving && <span className="spinner" aria-hidden="true" />}
                   {saving ? t('actions.saving', { ns: 'common' }) : t('attendance.save')}
                 </button>
               </div>
@@ -377,6 +379,7 @@ function NewSessionModal({
             {t('actions.cancel', { ns: 'common' })}
           </button>
           <button type="submit" className="btn btn-primary" disabled={busy}>
+            {busy && <span className="spinner" aria-hidden="true" />}
             {busy ? t('attendance.newSession.creating') : t('attendance.newSession.create')}
           </button>
         </div>
