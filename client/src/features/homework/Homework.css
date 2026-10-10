@@ -86,14 +86,12 @@
   cursor: pointer;
   transition:
     border-color 0.15s ease,
-    background 0.15s ease,
-    transform 0.15s ease;
+    background 0.15s ease;
   font-family: inherit;
   color: var(--text);
 }
 .grade-row:hover {
   border-color: var(--border-strong);
-  transform: translateY(-1px);
 }
 .grade-row.selected {
   border-color: var(--primary);
@@ -161,15 +159,6 @@
 }
 
 /* ---------- Submissions: thumbnail gọn ---------- */
-.submission-item {
-  transition:
-    border-color 0.15s ease,
-    box-shadow 0.15s ease;
-}
-.submission-item:hover {
-  border-color: var(--border-strong);
-  box-shadow: var(--shadow-sm);
-}
 .submission-thumb {
   width: 132px;
   height: 96px;
@@ -195,17 +184,6 @@ a:hover .submission-thumb {
 }
 
 /* ---------- Question bank: hover + checkbox ---------- */
-.bank-item {
-  transition:
-    border-color 0.15s ease,
-    box-shadow 0.15s ease,
-    transform 0.15s ease;
-}
-.bank-item:hover {
-  border-color: var(--border-strong);
-  box-shadow: var(--shadow-sm);
-  transform: translateY(-1px);
-}
 .bank-item input[type='checkbox'] {
   accent-color: var(--primary);
   cursor: pointer;
