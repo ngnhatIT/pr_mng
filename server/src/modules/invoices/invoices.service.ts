@@ -259,24 +259,25 @@ export async function updateInvoice(
 
 export async function deleteInvoice(centerId: number | null, id: number, actor?: AuditActor): Promise<void> {
   await assertInvoiceScope(centerId, id);
-  const inv = (await db.prepare('SELECT amount FROM invoices WHERE id = ?').get(id)) as
-    { amount: number } | undefined;
-  // Chặn xóa cứng hóa đơn đã có thanh toán được xác nhận (tránh mất dữ liệu tài chính)
-  const confirmed = (
-    (await db
-      .prepare("SELECT COUNT(*) as c FROM payments WHERE invoice_id = ? AND status = 'confirmed'")
-      .get(id)) as {
-      c: number;
-    }
-  ).c;
-  if (confirmed > 0) {
-    throw AppError.badRequest('Không thể xóa phiếu thu đã có thanh toán được xác nhận');
-  }
+  let deletedAmount: number | null = null;
   await db.transaction(async (tx) => {
     // Lock invoice trước để chống double-delete đồng thời
-    const inv = (await tx.prepare('SELECT id FROM invoices WHERE id = ? FOR UPDATE').get(id)) as
-      { id: number } | undefined;
-    if (!inv) throw AppError.notFound('Không tìm thấy phiếu thu');
+    const locked = (await tx.prepare('SELECT id, amount FROM invoices WHERE id = ? FOR UPDATE').get(id)) as
+      { id: number; amount: number } | undefined;
+    if (!locked) throw AppError.notFound('Không tìm thấy phiếu thu');
+    deletedAmount = locked.amount;
+    // Chặn xóa hóa đơn đã có thanh toán được xác nhận — check TRONG transaction,
+    // sau khi lock, để không bị TOCTOU với luồng confirm payment đồng thời
+    const confirmed = (
+      (await tx
+        .prepare("SELECT COUNT(*) as c FROM payments WHERE invoice_id = ? AND status = 'confirmed'")
+        .get(id)) as {
+        c: number;
+      }
+    ).c;
+    if (confirmed > 0) {
+      throw AppError.badRequest('Không thể xóa phiếu thu đã có thanh toán được xác nhận');
+    }
     // Hoàn lại credits đã áp dụng (payments method='credit' lưu credit_id trong note)
     const creditPays = (await tx
       .prepare("SELECT amount, note FROM payments WHERE invoice_id = ? AND method = 'credit'")
@@ -298,7 +299,7 @@ export async function deleteInvoice(centerId: number | null, id: number, actor?:
     action: 'delete',
     entity: 'invoices',
     entityId: id,
-    summary: `Xóa phiếu thu HD${id}${inv ? `: ${formatVND(inv.amount)}` : ''}`,
+    summary: `Xóa phiếu thu HD${id}${deletedAmount !== null ? `: ${formatVND(deletedAmount)}` : ''}`,
   });
 }
 
