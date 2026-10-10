@@ -35,7 +35,6 @@ export function Dashboard() {
   const [data, setData] = useState<DashboardData | null>(null);
   const [debts, setDebts] = useState<DebtRow[]>([]);
   const [loading, setLoading] = useState(true);
-  const [loadError, setLoadError] = useState(false);
   const toast = useToast();
   const user = getUser();
 
@@ -58,7 +57,6 @@ export function Dashboard() {
 
   const load = useCallback(async () => {
     setLoading(true);
-    setLoadError(false);
     try {
       const d = await dashboardApi.summary();
       setData(d);
@@ -70,7 +68,6 @@ export function Dashboard() {
         setDebts([]);
       }
     } catch (err) {
-      setLoadError(true);
       toast(err instanceof Error ? err.message : t('loadError'), 'error');
     } finally {
       setLoading(false);
@@ -90,20 +87,19 @@ export function Dashboard() {
     );
   }
   if (!data) {
+    // Không có data sau khi tải xong luôn là lỗi (server không bao giờ trả null khi thành công)
     return (
       <div className="page">
         <PageHeader title={t('pageTitle')} desc={t('pageDesc')} />
         <EmptyState
-          icon={loadError ? 'alert' : 'chart'}
-          title={loadError ? t('loadError') : t('noData')}
-          desc={loadError ? t('loadErrorDesc') : undefined}
+          icon="alert"
+          title={t('loadError')}
+          desc={t('loadErrorDesc')}
           action={
-            loadError ? (
-              <button className="btn btn-primary btn-inline" onClick={() => void load()}>
-                <Icon name="rotate" size={14} />
-                {t('actions.retry', { ns: 'common' })}
-              </button>
-            ) : undefined
+            <button className="btn btn-primary btn-inline" onClick={() => void load()}>
+              <Icon name="rotate" size={14} />
+              {t('actions.retry', { ns: 'common' })}
+            </button>
           }
         />
       </div>
