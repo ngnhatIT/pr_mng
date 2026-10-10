@@ -292,8 +292,8 @@ export function Homework() {
         </select>
       </div>
 
-      <div className="card">
-        {loading ? (
+      <div className="card" aria-busy={loading || undefined}>
+        {loading && items.length === 0 ? (
           <TableSkeleton rows={6} cols={6} />
         ) : items.length === 0 ? (
           <EmptyState
@@ -428,7 +428,7 @@ export function Homework() {
         )}
       </div>
 
-      {pagination && <Pagination pagination={pagination} onChange={(p) => setPage(p)} />}
+      {pagination && <Pagination pagination={pagination} onChange={(p) => setPage(p)} loading={loading} />}
 
       {editing && (
         <HomeworkFormModal

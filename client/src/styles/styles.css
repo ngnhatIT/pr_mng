@@ -551,6 +551,12 @@ textarea.text-input {
   box-shadow: var(--shadow);
   padding: var(--sp-6);
   margin-bottom: var(--sp-5);
+  transition: opacity 0.15s ease-out;
+}
+/* Đang tải trang mới: giữ nội dung cũ hiển thị mờ thay vì thay bằng skeleton (không nhảy layout) */
+.card[aria-busy='true'] {
+  opacity: 0.55;
+  pointer-events: none;
 }
 .card-head {
   display: flex;
