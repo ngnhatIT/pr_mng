@@ -398,6 +398,16 @@ a {
   outline: 2px solid var(--primary);
   outline-offset: 2px;
 }
+/* Phản hồi nhấn vật lý cho mọi nút không dùng class .btn (skill 8.1): scale 0.98 khi :active */
+.chip:active,
+.seg-btn:active,
+.lang-seg-btn:active,
+.modal-close:active,
+.hw-check:active,
+.quick-action:active,
+.nav-link:active {
+  transform: scale(0.98);
+}
 .btn-primary {
   background: var(--primary);
   border-color: var(--primary);
