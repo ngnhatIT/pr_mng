@@ -942,7 +942,6 @@ textarea.text-input {
   padding: var(--sp-8) var(--sp-4);
   z-index: 100;
   overflow-y: auto;
-  animation: fadeIn 0.15s ease;
 }
 .modal {
   background: var(--bg-soft);
@@ -950,7 +949,6 @@ textarea.text-input {
   width: 520px;
   max-width: 100%;
   box-shadow: var(--shadow-lg);
-  animation: slideUp 0.2s ease;
 }
 .modal-wide {
   width: 680px;
@@ -979,24 +977,6 @@ textarea.text-input {
   margin-top: var(--sp-5);
   padding-top: var(--sp-4);
   border-top: 1px solid var(--border);
-}
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}
-@keyframes slideUp {
-  from {
-    opacity: 0;
-    transform: translateY(12px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
 }
 .confirm-text {
   margin: 0 0 6px;
