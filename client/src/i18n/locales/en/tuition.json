@@ -198,6 +198,7 @@
     "class": "Class",
     "amount": "Total",
     "paid": "Paid",
+    "discount": "Discount",
     "remaining": "Remaining",
     "note": "Note",
     "date": "Date {date}",

@@ -47,6 +47,12 @@ export function ReceiptModal({
             <span>{t('receipt.paid')}</span>
             <strong>{formatVND(invoice.paid)}</strong>
           </div>
+          {invoice.discount > 0 && (
+            <div className="kv">
+              <span>{t('receipt.discount')}</span>
+              <strong>{formatVND(invoice.discount)}</strong>
+            </div>
+          )}
           <div className="kv">
             <span>{t('receipt.remaining')}</span>
             <strong>{formatVND(invoice.amount - invoice.discount - invoice.paid)}</strong>

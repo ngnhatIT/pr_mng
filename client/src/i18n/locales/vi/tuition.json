@@ -198,6 +198,7 @@
     "class": "Lớp",
     "amount": "Tổng tiền",
     "paid": "Đã thu",
+    "discount": "Giảm giá",
     "remaining": "Còn lại",
     "note": "Ghi chú",
     "date": "Ngày {date}",
