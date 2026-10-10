@@ -328,15 +328,25 @@ export function Roles() {
       <div className="roles-layout">
         {/* Cột trái: danh sách vai trò */}
         <aside className="roles-list-col">
-          <div className="roles-search">
-            <Icon name="search" size={16} className="roles-search-icon" />
+          <span className={`search-wrap roles-search${search ? ' has-clear' : ''}`}>
+            <Icon name="search" size={16} className="search-icon" />
             <input
               className="text-input roles-search-input"
               placeholder={t('searchPh')}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
-          </div>
+            {search !== '' && (
+              <button
+                type="button"
+                className="search-clear"
+                onClick={() => setSearch('')}
+                aria-label={t('clear', { ns: 'common' })}
+              >
+                <Icon name="x" size={14} />
+              </button>
+            )}
+          </span>
           <div className="roles-list">
             {filteredRoles.length === 0 ? (
               <EmptyState icon="users" title={t('emptySearch.title')} desc={t('emptySearch.desc')} />
