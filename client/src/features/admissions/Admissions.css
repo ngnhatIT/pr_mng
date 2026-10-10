@@ -40,18 +40,7 @@
   margin: 0;
 }
 
-.pipeline-card {
-  transition:
-    transform 150ms ease-out,
-    box-shadow 150ms ease-out,
-    border-color 150ms ease-out;
-}
-
-.pipeline-card:hover {
-  transform: translateY(-1px);
-  border-color: var(--primary);
-  box-shadow: var(--shadow-md);
-}
+/* pipeline-card không bấm được (chỉ nút bên trong): không hover nâng/đổi viền (chống false affordance, luật 3b) */
 
 .pipeline-card .lead-name {
   font-weight: 600;
