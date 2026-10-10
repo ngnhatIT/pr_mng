@@ -13,6 +13,7 @@ import { setupTestDb, resetTestDb, teardownTestDb } from '../../db/test-utils';
 import * as homeworkService from './homework.service';
 import * as quizService from './quiz.service';
 import * as parentService from '../parent/parent.service';
+import { createRubric } from './rubric.service';
 import { eventBus } from '../../shared/events/eventBus';
 
 // ---------------------------------------------------------------------------
@@ -774,6 +775,39 @@ describe('homework.service - update và reuse', () => {
       targets.map((t) => Number(t.student_id)),
       [student1Id, student2Id]
     );
+  });
+});
+
+describe('homework.service - update validate rubric thuộc center (P1-1)', () => {
+  beforeEach(async () => {
+    await resetDb();
+  });
+
+  it('chặn rubric cross-tenant, cho phép rubric cùng center', async () => {
+    await db.prepare("INSERT INTO centers (id, name) VALUES (1, 'C1'), (2, 'C2')").run();
+    const [hw] = await homeworkService.createHomeworkBatch({
+      class_ids: [classId],
+      title: 'R',
+      created_by: 1,
+      centerId: 1,
+    });
+    const other = await createRubric(2, 1, {
+      name: 'Rubric center 2',
+      criteria: [{ name: 'TC1', max_score: 10 }],
+    });
+    await assert.rejects(
+      () => homeworkService.updateHomework(hw.id, { title: 'R', rubric_id: other.id }, 1),
+      /không thuộc trung tâm/
+    );
+    const own = await createRubric(1, 1, {
+      name: 'Rubric center 1',
+      criteria: [{ name: 'TC1', max_score: 10 }],
+    });
+    await homeworkService.updateHomework(hw.id, { title: 'R', rubric_id: own.id }, 1);
+    const row = (await db.prepare('SELECT rubric_id FROM homework WHERE id = ?').get(hw.id)) as {
+      rubric_id: number;
+    };
+    assert.equal(Number(row.rubric_id), own.id);
   });
 });
 

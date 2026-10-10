@@ -576,17 +576,21 @@ router.put(
       throw AppError.badRequest('Hẹn đăng không hợp lệ (YYYY-MM-DDTHH:mm)');
     }
     res.json(
-      await updateHomework(id, {
-        title: body.title,
-        content: body.content,
-        // undefined = không gửi → giữ nguyên trong DB (P0-1)
-        due_date: body.due_date,
-        max_score: body.max_score != null ? Number(body.max_score) : null,
-        close_date: body.close_date,
-        status: body.status as 'draft' | 'scheduled' | 'published' | undefined,
-        publish_at: body.publish_at || null,
-        rubric_id: body.rubric_id != null ? Number(body.rubric_id) : null,
-      })
+      await updateHomework(
+        id,
+        {
+          title: body.title,
+          content: body.content,
+          // undefined = không gửi → giữ nguyên trong DB (P0-1)
+          due_date: body.due_date,
+          max_score: body.max_score != null ? Number(body.max_score) : null,
+          close_date: body.close_date,
+          status: body.status as 'draft' | 'scheduled' | 'published' | undefined,
+          publish_at: body.publish_at || null,
+          rubric_id: body.rubric_id != null ? Number(body.rubric_id) : null,
+        },
+        reqCenterId(req) // P1-1: validate rubric_id thuộc center
+      )
     );
   })
 );

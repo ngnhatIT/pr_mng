@@ -525,7 +525,8 @@ export async function updateHomework(
     status?: 'draft' | 'scheduled' | 'published';
     publish_at?: string | null;
     rubric_id?: number | null;
-  }
+  },
+  centerId: number | null = null
 ): Promise<HomeworkRow> {
   if (!data.title.trim()) throw AppError.badRequest('Vui lòng nhập tiêu đề bài tập');
   // P0-1: merge với ngày hiện tại trong DB trước khi check cặp ngày.
@@ -559,6 +560,12 @@ export async function updateHomework(
   if (maxScore !== null && (!Number.isFinite(maxScore) || maxScore <= 0)) {
     throw AppError.badRequest('Điểm tối đa phải lớn hơn 0');
   }
+  // P1-1: validate rubric_id thuộc cùng center (như lúc tạo) — chặn cross-tenant linkage
+  const rubricId = data.rubric_id ?? null;
+  if (rubricId !== null) {
+    const rubric = await getRubric(rubricId, centerId);
+    if (!rubric) throw AppError.badRequest('Rubric không tồn tại hoặc không thuộc trung tâm này');
+  }
   // Chặn hạ max_score dưới điểm cao nhất đã chấm
   if (maxScore !== null) {
     const top = (await db
@@ -582,7 +589,7 @@ export async function updateHomework(
       close_date || null,
       status,
       data.publish_at || null,
-      data.rubric_id ?? null,
+      rubricId,
       id
     );
   return (await db.prepare('SELECT * FROM homework WHERE id = ?').get(id)) as HomeworkRow;
