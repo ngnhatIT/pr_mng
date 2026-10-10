@@ -22,7 +22,7 @@
       "WEAK_PASSWORD": "Password is too weak",
       "WRONG_PASSWORD": "Current password is incorrect",
       "SAME_PASSWORD": "New password must differ from the current one",
-      "ZALO_SEND_FAILED": "Failed to send via Zalo",
+      "ZALO_SEND_FAILED": "Couldn't send via Zalo, please try again",
       "REMINDER_COOLDOWN": "This invoice was recently reminded, please try again later",
       "REMINDER_IN_PROGRESS": "Another reminder is in progress for this invoice"
     }
@@ -101,14 +101,14 @@
     "changePassword": "Change password"
   },
   "states": {
-    "deleteError": "Delete failed",
+    "deleteError": "Couldn't delete, please try again",
     "deleteSuccess": "Deleted",
     "empty": "No data yet",
     "error": "Something went wrong",
     "loadError": "Failed to load data",
     "loading": "Loading...",
     "noData": "No data",
-    "saveError": "Save failed",
+    "saveError": "Couldn't save, please try again",
     "saveSuccess": "Saved"
   },
   "theme": {
@@ -157,7 +157,7 @@
     "confirm": "Confirm new password",
     "submit": "Change password",
     "success": "Password changed successfully",
-    "fail": "Failed to change password",
+    "fail": "Couldn't change the password, please try again",
     "mismatch": "New passwords do not match",
     "tooShort": "Password must be at least 8 characters",
     "logoutAll": "Log out all devices",

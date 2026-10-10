@@ -33,7 +33,7 @@
   },
   "lead": {
     "desc": "Leave your details and we'll call back with course advice.",
-    "fail": "Couldn't send",
+    "fail": "Couldn't send your info, please try again",
     "submit": "Send request",
     "success": "Consultation request sent. We'll contact you soon!",
     "title": "Book a consultation"
@@ -63,7 +63,7 @@
   },
   "trial": {
     "desc": "Try one class free before deciding.",
-    "fail": "Couldn't send",
+    "fail": "Couldn't send the trial request, please try again",
     "submit": "Book trial class",
     "success": "Trial class booked!",
     "title": "Book a trial class"

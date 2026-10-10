@@ -22,7 +22,7 @@
       "WEAK_PASSWORD": "Mật khẩu quá yếu",
       "WRONG_PASSWORD": "Mật khẩu hiện tại không đúng",
       "SAME_PASSWORD": "Mật khẩu mới phải khác mật khẩu hiện tại",
-      "ZALO_SEND_FAILED": "Gửi tin Zalo thất bại",
+      "ZALO_SEND_FAILED": "Không gửi được tin Zalo, vui lòng thử lại",
       "REMINDER_COOLDOWN": "Hóa đơn này vừa được nhắc, vui lòng thử lại sau",
       "REMINDER_IN_PROGRESS": "Đang có yêu cầu nhắc khác cho hóa đơn này"
     }
@@ -101,14 +101,14 @@
     "changePassword": "Đổi mật khẩu"
   },
   "states": {
-    "deleteError": "Xóa thất bại",
+    "deleteError": "Không xóa được, vui lòng thử lại",
     "deleteSuccess": "Đã xóa",
     "empty": "Chưa có dữ liệu",
     "error": "Có lỗi xảy ra",
     "loadError": "Không tải được dữ liệu",
     "loading": "Đang tải...",
     "noData": "Không có dữ liệu",
-    "saveError": "Lưu thất bại",
+    "saveError": "Không lưu được, vui lòng thử lại",
     "saveSuccess": "Đã lưu"
   },
   "theme": {
@@ -157,7 +157,7 @@
     "confirm": "Nhập lại mật khẩu mới",
     "submit": "Đổi mật khẩu",
     "success": "Đổi mật khẩu thành công",
-    "fail": "Đổi mật khẩu thất bại",
+    "fail": "Không đổi được mật khẩu, vui lòng thử lại",
     "mismatch": "Mật khẩu mới không khớp",
     "tooShort": "Mật khẩu phải từ 8 ký tự",
     "logoutAll": "Đăng xuất mọi thiết bị",

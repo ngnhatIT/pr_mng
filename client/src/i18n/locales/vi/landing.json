@@ -33,7 +33,7 @@
   },
   "lead": {
     "desc": "Để lại thông tin, trung tâm sẽ gọi lại tư vấn khóa học phù hợp.",
-    "fail": "Gửi thất bại",
+    "fail": "Không gửi được thông tin tư vấn, vui lòng thử lại",
     "submit": "Gửi đăng ký tư vấn",
     "success": "Đã gửi đăng ký tư vấn. Chúng tôi sẽ liên hệ sớm!",
     "title": "Đăng ký tư vấn"
@@ -63,7 +63,7 @@
   },
   "trial": {
     "desc": "Trải nghiệm một buổi học miễn phí trước khi quyết định.",
-    "fail": "Gửi thất bại",
+    "fail": "Không gửi được đăng ký học thử, vui lòng thử lại",
     "submit": "Đăng ký học thử",
     "success": "Đã đăng ký học thử thành công!",
     "title": "Đăng ký học thử"
