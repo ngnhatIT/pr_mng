@@ -717,6 +717,7 @@ export function HomeworkFormModal({
                     className="text-input hw-flex-1"
                     placeholder={t('form.questionPh', { n: qi + 1 })}
                     value={q.question}
+                    disabled={quizLocked}
                     onChange={(e) => updateQuestion(qi, { question: e.target.value })}
                   />
                   <input
@@ -725,6 +726,7 @@ export function HomeworkFormModal({
                     min="0.5"
                     step="0.5"
                     value={q.points}
+                    disabled={quizLocked}
                     onChange={(e) => updateQuestion(qi, { points: Number(e.target.value) || 1 })}
                     title={t('form.points')}
                   />
@@ -732,6 +734,7 @@ export function HomeworkFormModal({
                     <button
                       type="button"
                       className="btn btn-sm btn-danger-ghost"
+                      disabled={quizLocked}
                       onClick={() => setQuestions((x) => x.filter((_, j) => j !== qi))}
                     >
                       ×
@@ -743,6 +746,7 @@ export function HomeworkFormModal({
                     <button
                       type="button"
                       className={`quiz-correct ${o.is_correct ? 'active' : ''}`}
+                      disabled={quizLocked}
                       onClick={() => updateOption(qi, oi, { is_correct: true })}
                       title={t('form.correctAnswer')}
                     >
@@ -752,12 +756,14 @@ export function HomeworkFormModal({
                       className="text-input input-sm hw-flex-1"
                       placeholder={t('form.optionPh', { letter: String.fromCharCode(65 + oi) })}
                       value={o.text}
+                      disabled={quizLocked}
                       onChange={(e) => updateOption(qi, oi, { text: e.target.value })}
                     />
                     {q.options.length > 2 && (
                       <button
                         type="button"
                         className="btn btn-sm btn-danger-ghost"
+                        disabled={quizLocked}
                         onClick={() => removeOption(qi, oi)}
                       >
                         ×
@@ -765,16 +771,26 @@ export function HomeworkFormModal({
                     )}
                   </div>
                 ))}
-                <button type="button" className="btn btn-sm hw-mt-4" onClick={() => addOption(qi)}>
+                <button
+                  type="button"
+                  className="btn btn-sm hw-mt-4"
+                  disabled={quizLocked}
+                  onClick={() => addOption(qi)}
+                >
                   {t('form.addOption')}
                 </button>
               </div>
             ))}
             <div className="hw-flex">
-              <button type="button" className="btn" onClick={addQuestion}>
+              <button type="button" className="btn" disabled={quizLocked} onClick={addQuestion}>
                 {t('form.addQuestion')}
               </button>
-              <button type="button" className="btn hw-action-icon" onClick={() => setShowBankPicker(true)}>
+              <button
+                type="button"
+                className="btn hw-action-icon"
+                disabled={quizLocked}
+                onClick={() => setShowBankPicker(true)}
+              >
                 <Icon name="book" size={15} /> {t('form.fromBank')}
               </button>
             </div>
