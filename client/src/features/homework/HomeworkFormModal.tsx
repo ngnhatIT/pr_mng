@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { homeworkApi, type QuizQuestionForm, type Rubric } from './homework.api';
 import { ClassItem, classesApi } from '../classes/classes.api';
-import { HomeworkItem, formatDate } from '../../shared/types';
+import { HomeworkItem, formatDate, todayVN, nowVN } from '../../shared/types';
 import { useToast } from '../../shared/ui/toast';
 import { Modal } from '../../shared/components/Modal';
 import { Field, useFieldErrors } from '../../shared/components/Form';
@@ -16,7 +16,8 @@ function quickDate(kind: 'today' | 'tomorrow' | 'weekend' | 'nextweek'): string 
   if (kind === 'tomorrow') d.setDate(d.getDate() + 1);
   if (kind === 'weekend') d.setDate(d.getDate() + ((7 - d.getDay()) % 7 || 7));
   if (kind === 'nextweek') d.setDate(d.getDate() + 7);
-  return d.toISOString().slice(0, 10);
+  // Giờ VN theo máy, xuất ra YYYY-MM-DD theo múi giờ VN (tránh lệch ngày UTC lúc 0:00-7:00)
+  return d.toLocaleDateString('en-CA', { timeZone: 'Asia/Ho_Chi_Minh' });
 }
 
 interface Attachment {
@@ -526,7 +527,7 @@ export function HomeworkFormModal({
               className="text-input"
               type="date"
               value={dueDate}
-              min={new Date().toISOString().slice(0, 10)}
+              min={todayVN()}
               onChange={(e) => setDueDate(e.target.value)}
             />
           </Field>
@@ -557,7 +558,7 @@ export function HomeworkFormModal({
               className="text-input"
               type="date"
               value={closeDate}
-              min={dueDate || new Date().toISOString().slice(0, 10)}
+              min={dueDate || todayVN()}
               onChange={(e) => {
                 setCloseDate(e.target.value);
                 clear('closeDate');
@@ -801,7 +802,7 @@ export function HomeworkFormModal({
                 className="text-input hw-mt-8"
                 type="datetime-local"
                 value={publishAt}
-                min={new Date().toISOString().slice(0, 16)}
+                min={nowVN()}
                 onChange={(e) => {
                   setPublishAt(e.target.value);
                   clear('publishAt');

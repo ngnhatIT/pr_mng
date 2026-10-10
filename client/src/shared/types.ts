@@ -188,6 +188,19 @@ export function formatDate(iso: string | null): string {
   return `${day}/${m}/${y}`;
 }
 
+/** Ngày hôm nay theo giờ Việt Nam (UTC+7, không DST), dạng YYYY-MM-DD.
+ * Dùng cho min của input date và so sánh hạn thay vì new Date().toISOString()
+ * (UTC) để không bị lệch 1 ngày trong khung 0:00-7:00 giờ VN. */
+export function todayVN(): string {
+  return new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Ho_Chi_Minh' });
+}
+
+/** Thời điểm hiện tại theo giờ VN cho input datetime-local (YYYY-MM-DDTHH:MM).
+ * VN không có DST nên cộng thẳng 7 giờ là đúng quanh năm. */
+export function nowVN(): string {
+  return new Date(Date.now() + 7 * 3600_000).toISOString().slice(0, 16);
+}
+
 /** Định dạng ngày giờ đầy đủ: "08/10/2026 14:30" */
 export function formatDateTime(iso: string | null): string {
   if (!iso) return '-';

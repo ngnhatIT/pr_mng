@@ -11,7 +11,7 @@ import { EmptyState } from '../../shared/components/EmptyState';
 import { TableSkeleton } from '../../shared/components/Skeleton';
 import { Pagination, type PaginationMeta } from '../../shared/components/Pagination';
 import { Icon } from '../../shared/components/icons';
-import { HomeworkItem, formatDate } from '../../shared/types';
+import { HomeworkItem, formatDate, todayVN } from '../../shared/types';
 import { useDebounce } from '../../shared/hooks/useDebounce';
 import './Homework.css';
 import { HomeworkFormModal } from './HomeworkFormModal';
@@ -23,7 +23,7 @@ import { AnalyticsModal } from './AnalyticsModal';
 
 function dueStatus(due: string | null, t: TFunction): { label: string; badge: string } | null {
   if (!due) return null;
-  const today = new Date().toISOString().slice(0, 10);
+  const today = todayVN(); // so sánh theo giờ VN, không dùng UTC
   const diff = Math.ceil((new Date(due).getTime() - new Date(today).getTime()) / 86400000);
   if (diff < 0) return { label: t('due.overdueDays', { count: -diff }), badge: 'badge-overdue' };
   if (diff === 0) return { label: t('due.today'), badge: 'badge-overdue' };
