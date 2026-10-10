@@ -136,7 +136,17 @@ export function TeacherGrades() {
       ) : !studentId ? (
         <EmptyState icon="cap" title={t('grades.noStudentTitle')} desc={t('grades.noStudentDesc')} />
       ) : grades.length === 0 ? (
-        <EmptyState icon="file" title={t('grades.noGradesTitle')} desc={t('grades.noGradesDesc')} />
+        <EmptyState
+          icon="file"
+          title={t('grades.noGradesTitle')}
+          desc={t('grades.noGradesDesc')}
+          action={
+            <button className="btn btn-primary btn-inline" onClick={() => setShowForm(true)}>
+              <Icon name="plus" size={14} />
+              {t('grades.add')}
+            </button>
+          }
+        />
       ) : (
         <div className="table-wrap">
           <table className="table">
@@ -146,7 +156,9 @@ export function TeacherGrades() {
                 <th scope="col">{t('grades.thScore')}</th>
                 <th scope="col">{t('grades.thComment')}</th>
                 <th scope="col">{t('grades.thDate')}</th>
-                <th scope="col" className="th-right">{t('grades.thActions')}</th>
+                <th scope="col" className="th-right">
+                  {t('grades.thActions')}
+                </th>
               </tr>
             </thead>
             <tbody>
