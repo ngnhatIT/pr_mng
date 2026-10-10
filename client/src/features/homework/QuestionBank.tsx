@@ -9,6 +9,32 @@ import { Pagination, type PaginationMeta } from '../../shared/components/Paginat
 import { Icon } from '../../shared/components/icons';
 import { useDebounce } from '../../shared/hooks/useDebounce';
 
+type QType = 'single' | 'multiple' | 'truefalse' | 'essay';
+type Difficulty = 'easy' | 'medium' | 'hard';
+
+/** Nhãn loại câu hỏi (dùng chung list + form). */
+function QTypeBadge({ qtype }: { qtype: QType }) {
+  const { t } = useTranslation('homework');
+  const labels: Record<QType, string> = {
+    single: t('bank.qtypeSingle'),
+    multiple: t('bank.qtypeMultiple'),
+    truefalse: t('bank.qtypeTruefalse'),
+    essay: t('bank.qtypeEssay'),
+  };
+  return <span className="badge badge-general">{labels[qtype] ?? qtype}</span>;
+}
+
+function DifficultyBadge({ difficulty }: { difficulty: Difficulty }) {
+  const { t } = useTranslation('homework');
+  const cls = difficulty === 'easy' ? 'badge-paid' : difficulty === 'hard' ? 'badge-overdue' : 'badge-late';
+  const labels: Record<Difficulty, string> = {
+    easy: t('bank.difficultyEasy'),
+    medium: t('bank.difficultyMedium'),
+    hard: t('bank.difficultyHard'),
+  };
+  return <span className={`badge ${cls}`}>{labels[difficulty] ?? difficulty}</span>;
+}
+
 /** Ngân hàng câu hỏi: quản lý + chọn import vào quiz. */
 export function QuestionBank({
   onClose,
@@ -23,8 +49,11 @@ export function QuestionBank({
   const toast = useToast();
   const [questions, setQuestions] = useState<BankQuestion[]>([]);
   const [tags, setTags] = useState<string[]>([]);
+  const [subjects, setSubjects] = useState<string[]>([]);
   const [search, setSearch] = useState('');
   const [tag, setTag] = useState('');
+  const [subject, setSubject] = useState('');
+  const [difficulty, setDifficulty] = useState('');
   const debouncedSearch = useDebounce(search, 300);
   const debouncedTag = useDebounce(tag, 300);
   const [deletingId, setDeletingId] = useState<number | null>(null);
@@ -32,38 +61,51 @@ export function QuestionBank({
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<BankQuestion | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [page, setPage] = useState(1);
   const [pagination, setPagination] = useState<PaginationMeta | null>(null);
+  // Phân bổ điểm khi import: giữ điểm gốc hoặc đặt mỗi câu = N điểm
+  const [pointsMode, setPointsMode] = useState<'keep' | 'set'>('keep');
+  const [pointsEach, setPointsEach] = useState('1');
   // Cache mọi câu hỏi đã thấy để giữ lựa chọn khi đổi filter
   const allSeen = useRef(new Map<number, BankQuestion>());
 
   const load = useCallback(async () => {
     setLoading(true);
+    setLoadError(null);
     try {
-      const res = await homeworkApi.bankList(debouncedSearch, debouncedTag, page);
+      const res = await homeworkApi.bankList(debouncedSearch, debouncedTag, page, 50, subject, difficulty);
       setQuestions(res.data);
       setTags(res.tags);
+      setSubjects(res.subjects ?? []);
       setPagination(res.pagination);
       res.data.forEach((q) => allSeen.current.set(q.id, q));
     } catch (err) {
-      toast(err instanceof Error ? err.message : t('bank.toast.loadFail'), 'error');
+      setLoadError(err instanceof Error ? err.message : t('bank.toast.loadFail'));
     } finally {
       setLoading(false);
     }
-  }, [debouncedSearch, debouncedTag, page, toast, t]);
+  }, [debouncedSearch, debouncedTag, page, subject, difficulty, t]);
 
   useEffect(() => {
     setPage(1);
-  }, [debouncedSearch, debouncedTag]);
+  }, [debouncedSearch, debouncedTag, subject, difficulty]);
 
   useEffect(() => {
     void load();
   }, [load]);
 
-  const filteringBank = search.trim() !== '' || tag !== '';
+  const filteringBank = search.trim() !== '' || tag !== '' || subject !== '' || difficulty !== '';
 
   const toggle = (id: number) =>
     setSelected((s) => (s.includes(id) ? s.filter((x) => x !== id) : [...s, id]));
+
+  // Chọn tất cả câu ở trang hiện tại (bỏ chọn nếu đã chọn hết)
+  const toggleSelectPage = () => {
+    const ids = questions.map((q) => q.id);
+    const allSelected = ids.length > 0 && ids.every((id) => selected.includes(id));
+    setSelected((s) => (allSelected ? s.filter((id) => !ids.includes(id)) : [...new Set([...s, ...ids])]));
+  };
 
   const doDelete = (id: number) => {
     setDeletingId(id);
@@ -75,23 +117,35 @@ export function QuestionBank({
     setDeletingId(null);
     try {
       await homeworkApi.bankDelete(id);
+      toast(t('bank.toast.deleted'), 'success');
+      setSelected((s) => s.filter((x) => x !== id));
+      allSeen.current.delete(id);
       void load();
     } catch (err) {
       toast(err instanceof Error ? err.message : t('bank.toast.deleteFail'), 'error');
     }
   };
 
+  const pointsEachNum = Number(pointsEach);
+  const pointsEachValid = pointsEachNum > 0 && pointsEachNum <= 1000;
+
   const doImport = () => {
     if (!onImport || !selected.length) return;
+    if (pointsMode === 'set' && !pointsEachValid) return;
     // Giữ lựa chọn theo ID độc lập với filter: lấy từ cache tất cả câu đã thấy
     const picked = selected.map((id) => allSeen.current.get(id)).filter((q): q is BankQuestion => !!q);
     if (picked.length < selected.length) {
       toast(t('bank.toast.staleSelection', { count: selected.length - picked.length }), 'error');
       return;
     }
-    onImport(picked);
+    const withPoints =
+      pointsMode === 'set' ? picked.map((q) => ({ ...q, points: pointsEachNum })) : picked;
+    onImport(withPoints);
     onClose();
   };
+
+  const pageIds = questions.map((q) => q.id);
+  const pageAllSelected = pageIds.length > 0 && pageIds.every((id) => selected.includes(id));
 
   return (
     <Modal title={t('bank.title')} onClose={onClose} wide>
@@ -131,6 +185,30 @@ export function QuestionBank({
             </option>
           ))}
         </select>
+        <select
+          aria-label={t('bank.subjectFilterLabel')}
+          className="text-input"
+          value={subject}
+          onChange={(e) => setSubject(e.target.value)}
+        >
+          <option value="">{t('bank.allSubjects')}</option>
+          {subjects.map((s) => (
+            <option key={s} value={s}>
+              {s}
+            </option>
+          ))}
+        </select>
+        <select
+          aria-label={t('bank.difficultyFilterLabel')}
+          className="text-input"
+          value={difficulty}
+          onChange={(e) => setDifficulty(e.target.value)}
+        >
+          <option value="">{t('bank.allDifficulties')}</option>
+          <option value="easy">{t('bank.difficultyEasy')}</option>
+          <option value="medium">{t('bank.difficultyMedium')}</option>
+          <option value="hard">{t('bank.difficultyHard')}</option>
+        </select>
         <button className="btn btn-primary hw-action-icon" onClick={() => setShowForm(true)}>
           <Icon name="plus" size={15} /> {t('bank.add')}
         </button>
@@ -154,6 +232,18 @@ export function QuestionBank({
 
       {loading ? (
         <p className="muted">{t('actions.loading', { ns: 'common' })}</p>
+      ) : loadError ? (
+        <EmptyState
+          icon="alert"
+          title={t('bank.loadErrorTitle')}
+          desc={loadError}
+          action={
+            <button className="btn btn-inline" onClick={() => void load()}>
+              <Icon name="rotate" size={16} />
+              {t('actions.retry', { ns: 'common' })}
+            </button>
+          }
+        />
       ) : questions.length === 0 ? (
         <EmptyState
           icon="file"
@@ -166,6 +256,8 @@ export function QuestionBank({
                 onClick={() => {
                   setSearch('');
                   setTag('');
+                  setSubject('');
+                  setDifficulty('');
                 }}
               >
                 <Icon name="x" size={14} />
@@ -187,6 +279,7 @@ export function QuestionBank({
                 <input
                   type="checkbox"
                   className="bank-check"
+                  aria-label={q.question}
                   checked={selected.includes(q.id)}
                   onChange={() => toggle(q.id)}
                 />
@@ -194,28 +287,33 @@ export function QuestionBank({
               <div className="bank-item-body">
                 <div className="bank-q">{q.question}</div>
                 <div className="muted bank-item-meta">
+                  <QTypeBadge qtype={q.qtype} />
+                  {q.subject && <span className="badge badge-general">{q.subject}</span>}
+                  <DifficultyBadge difficulty={q.difficulty} />
                   {q.tag && <span className="badge badge-general bank-tag-badge">{q.tag}</span>}
                   {t('bank.meta', { points: q.points, count: q.options.length })}
                 </div>
-                <BankCorrectAnswer q={q} />
+                <BankOptionsPreview q={q} />
               </div>
-              <span className="bank-item-actions">
-                <button
-                  type="button"
-                  className="btn btn-sm btn-ghost"
-                  onClick={() => {
-                    setEditing(q);
-                    setShowForm(false);
-                  }}
-                  title={t('bank.edit')}
-                >
-                  <Icon name="pencil" size={14} />
-                  {t('actions.edit', { ns: 'common' })}
-                </button>
-                <button className="btn btn-sm btn-danger-ghost" onClick={() => void doDelete(q.id)}>
-                  {t('actions.delete', { ns: 'common' })}
-                </button>
-              </span>
+              {!selectMode && (
+                <span className="bank-item-actions">
+                  <button
+                    type="button"
+                    className="btn btn-sm btn-ghost"
+                    onClick={() => {
+                      setEditing(q);
+                      setShowForm(false);
+                    }}
+                    title={t('bank.edit')}
+                  >
+                    <Icon name="pencil" size={14} />
+                    {t('actions.edit', { ns: 'common' })}
+                  </button>
+                  <button className="btn btn-sm btn-danger-ghost" onClick={() => void doDelete(q.id)}>
+                    {t('actions.delete', { ns: 'common' })}
+                  </button>
+                </span>
+              )}
             </div>
           ))}
         </div>
@@ -224,13 +322,57 @@ export function QuestionBank({
       {pagination && <Pagination pagination={pagination} onChange={(p) => setPage(p)} loading={loading} />}
 
       {selectMode && (
-        <div className="modal-actions">
+        <div className="modal-actions bank-select-footer">
+          <button type="button" className="btn btn-sm" onClick={toggleSelectPage} disabled={!questions.length}>
+            {pageAllSelected ? t('bank.deselectAllPage') : t('bank.selectAllPage')}
+          </button>
           <span className="muted">{t('bank.selected', { count: selected.length })}</span>
+          <span className="bank-points-mode" role="radiogroup" aria-label={t('bank.pointsEachPh')}>
+            <label className="bank-points-opt">
+              <input
+                type="radio"
+                name="bank-points-mode"
+                checked={pointsMode === 'keep'}
+                onChange={() => setPointsMode('keep')}
+              />
+              {t('bank.pointsModeKeep')}
+            </label>
+            <label className="bank-points-opt">
+              <input
+                type="radio"
+                name="bank-points-mode"
+                checked={pointsMode === 'set'}
+                onChange={() => setPointsMode('set')}
+              />
+              {t('bank.pointsModeSet')}
+            </label>
+            {pointsMode === 'set' && (
+              <input
+                type="number"
+                className="text-input input-sm bank-points-input"
+                aria-label={t('bank.pointsEachPh')}
+                min="0.5"
+                step="0.5"
+                value={pointsEach}
+                onChange={(e) => setPointsEach(e.target.value)}
+                aria-invalid={!pointsEachValid}
+              />
+            )}
+          </span>
+          {pointsMode === 'set' && !pointsEachValid && (
+            <span className="field-error" role="alert">
+              {t('bank.pointsInvalid')}
+            </span>
+          )}
           <span className="spacer" />
           <button className="btn" onClick={onClose}>
             {t('actions.cancel', { ns: 'common' })}
           </button>
-          <button className="btn btn-primary hw-action-icon" disabled={!selected.length} onClick={doImport}>
+          <button
+            className="btn btn-primary hw-action-icon"
+            disabled={!selected.length || (pointsMode === 'set' && !pointsEachValid)}
+            onClick={doImport}
+          >
             <Icon name="plus" size={15} /> {t('bank.import', { count: selected.length })}
           </button>
         </div>
@@ -248,20 +390,32 @@ export function QuestionBank({
   );
 }
 
-/** Dòng đáp án đúng của câu hỏi (phía giáo viên, không lộ gì). */
-function BankCorrectAnswer({ q }: { q: BankQuestion }) {
+/** Xem trước đầy đủ đáp án ngay ở list item, đánh dấu TẤT CẢ đáp án đúng. */
+function BankOptionsPreview({ q }: { q: BankQuestion }) {
   const { t } = useTranslation('homework');
-  const idx = q.options.findIndex((o) => o.is_correct);
-  if (idx < 0) return null;
+  if (q.qtype === 'essay') {
+    return <div className="muted bank-item-meta">{t('bank.essayHint')}</div>;
+  }
   return (
-    <div className="muted bank-item-meta">
-      {t('bank.correctAnswer')}:{' '}
-      <strong className="bank-correct">
-        {String.fromCharCode(65 + idx)}. {q.options[idx].text}
-      </strong>
-    </div>
+    <ul className="bank-opts-preview" aria-label={t('bank.correctAnswers')}>
+      {q.options.map((o, i) => (
+        <li key={o.id} className={o.is_correct ? 'is-correct' : undefined}>
+          <span className="bank-opt-letter">{String.fromCharCode(65 + i)}.</span> {o.text}
+          {o.is_correct && (
+            <span className="bank-opt-correct" aria-label={t('bank.correctAnswers')}>
+              <Icon name="check" size={13} />
+            </span>
+          )}
+        </li>
+      ))}
+    </ul>
   );
 }
+
+const BLANK_OPTIONS = [
+  { text: '', is_correct: true },
+  { text: '', is_correct: false },
+];
 
 function BankQuestionForm({
   tags,
@@ -277,34 +431,81 @@ function BankQuestionForm({
 }) {
   const { t } = useTranslation(['homework', 'common']);
   const toast = useToast();
+  const [qtype, setQtype] = useState<QType>(initial?.qtype ?? 'single');
   const [question, setQuestion] = useState(initial?.question ?? '');
   const [tag, setTag] = useState(initial?.tag ?? '');
   const [newTag, setNewTag] = useState('');
+  const [subject, setSubject] = useState(initial?.subject ?? '');
+  const [difficulty, setDifficulty] = useState<Difficulty>(initial?.difficulty ?? 'medium');
   const [points, setPoints] = useState(String(initial?.points ?? 1));
   const [options, setOptions] = useState(
-    initial?.options.map((o) => ({ text: o.text, is_correct: o.is_correct })) ?? [
-      { text: '', is_correct: true },
-      { text: '', is_correct: false },
-    ]
+    initial && initial.qtype !== 'essay'
+      ? initial.options.map((o) => ({ text: o.text, is_correct: o.is_correct }))
+      : BLANK_OPTIONS.map((o) => ({ ...o }))
   );
   const [busy, setBusy] = useState(false);
   // Lỗi inline dưới field (skill 8.2), focus vào field lỗi đầu tiên
-  const { errors, refFor, show, clear } = useFieldErrors<'question' | 'answers'>();
+  const { errors, refFor, show, clear } = useFieldErrors<'question' | 'points' | 'answers'>();
+
+  const changeQtype = (next: QType) => {
+    setQtype(next);
+    clear('answers');
+    // Câu Đúng/Sai: tạo sẵn 2 đáp án, giáo viên chỉ chọn đáp án đúng
+    if (next === 'truefalse') {
+      setOptions([
+        { text: t('bank.trueLabel'), is_correct: true },
+        { text: t('bank.falseLabel'), is_correct: false },
+      ]);
+    } else if (options.length === 0) {
+      setOptions(BLANK_OPTIONS.map((o) => ({ ...o })));
+    }
+  };
+
+  const toggleCorrect = (i: number) => {
+    if (qtype === 'single' || qtype === 'truefalse') {
+      // 1 đáp án đúng: chọn đáp án này, bỏ chọn các đáp án khác
+      setOptions((x) => x.map((y, j) => ({ ...y, is_correct: j === i })));
+    } else {
+      // nhiều đáp án đúng: bật/tắt từng đáp án
+      setOptions((x) => x.map((y, j) => (j === i ? { ...y, is_correct: !y.is_correct } : y)));
+    }
+    clear('answers');
+  };
 
   const save = async () => {
     if (busy) return;
-    const errs: { question?: string; answers?: string } = {};
+    const errs: { question?: string; points?: string; answers?: string } = {};
     if (!question.trim()) errs.question = t('bank.form.questionRequired');
-    if (options.length < 2 || !options.some((o) => o.is_correct && o.text.trim()))
-      errs.answers = t('bank.form.answersRequired');
+    const pointsNum = Number(points);
+    if (!Number.isFinite(pointsNum) || pointsNum <= 0 || pointsNum > 1000)
+      errs.points = t('bank.pointsInvalid');
+    // Lọc đáp án trống trước khi validate/gửi (không gửi đáp án trống lên server)
+    const filled = options
+      .map((o) => ({ text: o.text.trim(), is_correct: o.is_correct }))
+      .filter((o) => o.text);
+    if (qtype !== 'essay') {
+      if (qtype === 'truefalse') {
+        if (filled.length !== 2 || filled.filter((o) => o.is_correct).length !== 1)
+          errs.answers = t('bank.answersRequiredTruefalse');
+      } else if (filled.length < 2) {
+        errs.answers = t('bank.form.answersRequired');
+      } else if (qtype === 'single' && filled.filter((o) => o.is_correct).length !== 1) {
+        errs.answers = t('bank.form.answersRequired');
+      } else if (qtype === 'multiple' && !filled.some((o) => o.is_correct)) {
+        errs.answers = t('bank.answersRequiredMultiple');
+      }
+    }
     if (!show(errs)) return;
     setBusy(true);
     try {
       const payload = {
         tag: newTag.trim() || tag || null,
+        subject: subject.trim() || null,
+        difficulty,
+        qtype,
         question: question.trim(),
-        points: Number(points) || 1,
-        options: options.map((o) => ({ text: o.text.trim(), is_correct: o.is_correct })),
+        points: pointsNum,
+        options: qtype === 'essay' ? [] : filled,
       };
       if (initial) {
         await homeworkApi.bankUpdate(initial.id, payload);
@@ -323,7 +524,7 @@ function BankQuestionForm({
 
   return (
     <div className="bank-form">
-      <Field label={t('bank.form.question')} error={errors.question}>
+      <Field label={t('bank.form.question')} error={errors.question} required>
         <input
           ref={refFor('question')}
           className="text-input"
@@ -336,9 +537,41 @@ function BankQuestionForm({
         />
       </Field>
       <div className="form-grid">
+        <Field label={t('bank.qtype')}>
+          <select
+            className="text-input"
+            value={qtype}
+            onChange={(e) => changeQtype(e.target.value as QType)}
+          >
+            <option value="single">{t('bank.qtypeSingle')}</option>
+            <option value="multiple">{t('bank.qtypeMultiple')}</option>
+            <option value="truefalse">{t('bank.qtypeTruefalse')}</option>
+            <option value="essay">{t('bank.qtypeEssay')}</option>
+          </select>
+        </Field>
+        <Field label={t('bank.difficulty')}>
+          <select
+            className="text-input"
+            value={difficulty}
+            onChange={(e) => setDifficulty(e.target.value as Difficulty)}
+          >
+            <option value="easy">{t('bank.difficultyEasy')}</option>
+            <option value="medium">{t('bank.difficultyMedium')}</option>
+            <option value="hard">{t('bank.difficultyHard')}</option>
+          </select>
+        </Field>
         <Field label={t('bank.form.tag')}>
           <div className="bank-form-row">
-            <select className="text-input" value={tag} onChange={(e) => setTag(e.target.value)}>
+            <select
+              className="text-input"
+              aria-label={t('bank.form.tag')}
+              value={tag}
+              onChange={(e) => {
+                // Chọn tag có sẵn thì xóa ô tag mới (bên nào sửa sau thắng, hiện rõ trên UI)
+                setTag(e.target.value);
+                setNewTag('');
+              }}
+            >
               <option value="">{t('bank.form.chooseTag')}</option>
               {tags.map((tg) => (
                 <option key={tg} value={tg}>
@@ -348,63 +581,94 @@ function BankQuestionForm({
             </select>
             <input
               className="text-input"
+              aria-label={t('bank.form.newTagPh')}
               placeholder={t('bank.form.newTagPh')}
               value={newTag}
-              onChange={(e) => setNewTag(e.target.value)}
+              onChange={(e) => {
+                // Gõ tag mới thì xóa lựa chọn tag cũ
+                setNewTag(e.target.value);
+                if (e.target.value) setTag('');
+              }}
             />
           </div>
         </Field>
-        <Field label={t('bank.form.points')}>
+        <Field label={t('bank.subject')}>
           <input
             className="text-input"
-            type="number"
-            min="0.5"
-            step="0.5"
-            value={points}
-            onChange={(e) => setPoints(e.target.value)}
+            value={subject}
+            maxLength={100}
+            onChange={(e) => setSubject(e.target.value)}
+            placeholder={t('bank.subjectPh')}
           />
         </Field>
       </div>
-      <div ref={refFor('answers')} tabIndex={-1}>
-        <Field label={t('bank.form.answers')} error={errors.answers}>
-          {options.map((o, i) => (
-            <div key={i} className="quiz-opt bank-opt">
-              <button
-                type="button"
-                className={`quiz-correct ${o.is_correct ? 'active' : ''}`}
-                onClick={() => setOptions((x) => x.map((y, j) => ({ ...y, is_correct: j === i })))}
-              >
-                {o.is_correct ? '●' : '○'}
-              </button>
-              <input
-                className="text-input input-sm bank-opt-input"
-                value={o.text}
-                onChange={(e) => {
-                  setOptions((x) => x.map((y, j) => (j === i ? { ...y, text: e.target.value } : y)));
-                  clear('answers');
-                }}
-                placeholder={t('form.optionPh', { letter: String.fromCharCode(65 + i) })}
-              />
-              {options.length > 2 && (
+      <Field label={t('bank.form.points')} error={errors.points} required>
+        <input
+          ref={refFor('points')}
+          className="text-input"
+          type="number"
+          min="0.5"
+          step="0.5"
+          value={points}
+          onChange={(e) => {
+            setPoints(e.target.value);
+            clear('points');
+          }}
+        />
+      </Field>
+      {qtype === 'essay' ? (
+        <p className="muted">{t('bank.essayHint')}</p>
+      ) : (
+        <div ref={refFor('answers')} tabIndex={-1}>
+          <Field
+            label={t(qtype === 'multiple' ? 'bank.answersMultiple' : 'bank.form.answers')}
+            error={errors.answers}
+          >
+            {options.map((o, i) => (
+              <div key={i} className="quiz-opt bank-opt">
                 <button
                   type="button"
-                  className="btn btn-sm btn-danger-ghost"
-                  onClick={() => setOptions((x) => x.filter((_, j) => j !== i))}
+                  className={`quiz-correct ${o.is_correct ? 'active' : ''}`}
+                  onClick={() => toggleCorrect(i)}
+                  aria-label={t('bank.form.answers')}
+                  aria-pressed={o.is_correct}
                 >
-                  ×
+                  {qtype === 'multiple' ? (o.is_correct ? '☑' : '☐') : o.is_correct ? '●' : '○'}
                 </button>
-              )}
-            </div>
-          ))}
-          <button
-            type="button"
-            className="btn btn-sm"
-            onClick={() => setOptions((x) => [...x, { text: '', is_correct: false }])}
-          >
-            {t('form.addOption')}
-          </button>
-        </Field>
-      </div>
+                <input
+                  className="text-input input-sm bank-opt-input"
+                  value={o.text}
+                  disabled={qtype === 'truefalse'}
+                  onChange={(e) => {
+                    setOptions((x) => x.map((y, j) => (j === i ? { ...y, text: e.target.value } : y)));
+                    clear('answers');
+                  }}
+                  placeholder={t('form.optionPh', { letter: String.fromCharCode(65 + i) })}
+                />
+                {qtype !== 'truefalse' && options.length > 2 && (
+                  <button
+                    type="button"
+                    className="btn btn-sm btn-danger-ghost"
+                    onClick={() => setOptions((x) => x.filter((_, j) => j !== i))}
+                    aria-label={t('actions.delete', { ns: 'common' })}
+                  >
+                    ×
+                  </button>
+                )}
+              </div>
+            ))}
+            {qtype !== 'truefalse' && (
+              <button
+                type="button"
+                className="btn btn-sm"
+                onClick={() => setOptions((x) => [...x, { text: '', is_correct: false }])}
+              >
+                {t('form.addOption')}
+              </button>
+            )}
+          </Field>
+        </div>
+      )}
       <div className="bank-form-actions">
         <button type="button" className="btn" onClick={onClose}>
           {t('actions.cancel', { ns: 'common' })}

@@ -24,6 +24,7 @@ export interface HomeworkForm {
 export interface QuizQuestionForm {
   question: string;
   points: number;
+  qtype?: 'single' | 'multiple' | 'truefalse' | 'essay';
   options: { text: string; is_correct: boolean }[];
 }
 
@@ -119,14 +120,21 @@ export const homeworkApi = {
   // Analytics
   analytics: () => http.get<HomeworkAnalytics>('/homework/analytics'),
   // Question bank
-  bankList: (search = '', tag = '', page = 1, limit = 50) =>
-    http.get<{
+  bankList: (search = '', tag = '', page = 1, limit = 50, subject = '', difficulty = '') => {
+    const q = new URLSearchParams();
+    if (search) q.set('search', search);
+    if (tag) q.set('tag', tag);
+    if (subject) q.set('subject', subject);
+    if (difficulty) q.set('difficulty', difficulty);
+    q.set('page', String(page));
+    q.set('limit', String(limit));
+    return http.get<{
       data: BankQuestion[];
       tags: string[];
+      subjects: string[];
       pagination: { page: number; limit: number; total: number; totalPages: number };
-    }>(
-      `/homework/bank/questions?search=${encodeURIComponent(search)}&tag=${encodeURIComponent(tag)}&page=${page}&limit=${limit}`
-    ),
+    }>(`/homework/bank/questions?${q.toString()}`);
+  },
   bankCreate: (q: BankQuestionForm) => http.post<BankQuestion>('/homework/bank/questions', q),
   bankUpdate: (id: number, q: BankQuestionForm) =>
     http.put<BankQuestion>(`/homework/bank/questions/${id}`, q),
@@ -155,6 +163,9 @@ export interface HomeworkAnalytics {
 export interface BankQuestion {
   id: number;
   tag: string | null;
+  subject: string | null;
+  difficulty: 'easy' | 'medium' | 'hard';
+  qtype: 'single' | 'multiple' | 'truefalse' | 'essay';
   question: string;
   points: number;
   options: { id: number; text: string; is_correct: boolean }[];
@@ -162,6 +173,9 @@ export interface BankQuestion {
 
 export interface BankQuestionForm {
   tag?: string | null;
+  subject?: string | null;
+  difficulty?: 'easy' | 'medium' | 'hard';
+  qtype?: 'single' | 'multiple' | 'truefalse' | 'essay';
   question: string;
   points: number;
   options: { text: string; is_correct: boolean }[];
