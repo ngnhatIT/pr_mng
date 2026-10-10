@@ -58,7 +58,7 @@ function MySubmissionRow({ s }: { s: Submission }) {
   return (
     <div className="submission-item">
       <div style={{ flex: 1 }}>
-        <div className="muted" style={{ fontSize: 13 }}>
+        <div className="muted-sm">
           {t('submissions.submittedAt', { time: formatDateTime(s.submitted_at) })}
         </div>
         {s.note && <div style={{ marginTop: 6 }}>{s.note}</div>}

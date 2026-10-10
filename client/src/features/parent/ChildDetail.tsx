@@ -556,13 +556,10 @@ function HomeworkTab({ data, onChanged }: { data: ChildOverview; onChanged: () =
             {h.title}
             {renderScore(h)}
           </div>
-          <div className="muted" style={{ fontSize: 13 }}>
-            {h.class_name || ''}
-          </div>
+          <div className="muted-sm">{h.class_name || ''}</div>
           {h.content && (
             <div
               className="homework-content"
-              style={{ fontSize: 13 }}
               dangerouslySetInnerHTML={{ __html: renderMarkdown(h.content) }}
             />
           )}

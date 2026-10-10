@@ -78,7 +78,7 @@ export function RichTextarea({
             {tool.label}
           </button>
         ))}
-        <span className="muted" style={{ fontSize: 12, marginLeft: 'auto' }}>
+        <span className="muted-xs" style={{ marginLeft: 'auto' }}>
           {t('editor.markdownHint')}
         </span>
       </div>

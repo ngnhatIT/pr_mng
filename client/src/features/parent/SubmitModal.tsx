@@ -65,7 +65,7 @@ export function SubmitModal({
           <span>
             <strong>{t('submit.chooseFile')}</strong>
             <br />
-            <span className="muted" style={{ fontSize: 13 }}>
+            <span className="muted-sm">
               {file ? t('submit.fileChosen') : t('submit.tapToChoose')}
             </span>
           </span>

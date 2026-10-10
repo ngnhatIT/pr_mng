@@ -185,6 +185,15 @@ a {
 .muted {
   color: var(--text-muted);
 }
+/* Chữ phụ cỡ token (thay style={{ fontSize: 12/13 }} lẻ tẻ trong component) */
+.muted-xs {
+  color: var(--text-muted);
+  font-size: var(--font-size-xs);
+}
+.muted-sm {
+  color: var(--text-muted);
+  font-size: var(--font-size-sm);
+}
 .mono {
   font-family: Consolas, monospace;
 }
@@ -2891,6 +2900,7 @@ button.search-clear:active {
 .homework-content {
   white-space: pre-line;
   line-height: 1.6;
+  font-size: var(--font-size-sm);
   margin: 0 0 var(--sp-3);
 }
 

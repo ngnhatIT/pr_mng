@@ -142,13 +142,13 @@ export function QuizTaker({
       {/* Thông tin quiz + lịch sử làm bài */}
       {!result && !showReview && (
         <div className="quiz-info-bar">
-          <span className="muted" style={{ fontSize: 13 }}>
+          <span className="muted-sm">
             {t('quiz.questionCount', { count: questions.length })}
             {homework.max_score != null && ` ${t('quiz.maxScore', { score: homework.max_score })}`}
             {homework.due_date && ` ${t('quiz.dueDate', { date: formatDate(homework.due_date) })}`}
           </span>
           {history.length > 0 && (
-            <span className="muted" style={{ fontSize: 13 }}>
+            <span className="muted-sm">
               {t('quiz.attempted', { count: history.length })} · {t('quiz.bestScore')}{' '}
               <strong>
                 {t('quiz.bestScoreLine', {
@@ -184,7 +184,7 @@ export function QuizTaker({
               {pct.toFixed(0)}%
             </span>
             {result.attempt_no > 1 && (
-              <span className="muted" style={{ marginLeft: 8, fontSize: 13 }}>
+              <span className="muted-sm" style={{ marginLeft: 8 }}>
                 {t('quiz.attemptNo', { no: result.attempt_no })}
               </span>
             )}
@@ -236,12 +236,7 @@ export function QuizTaker({
                       <span className="opt-dot" aria-hidden="true" />
                     )}
                     <span>{o.text}</span>
-                    {o.chosen && (
-                      <span className="muted" style={{ fontSize: 12 }}>
-                        {' '}
-                        {t('quiz.youChose')}
-                      </span>
-                    )}
+                    {o.chosen && <span className="muted-xs"> {t('quiz.youChose')}</span>}
                   </div>
                 ))}
               </div>
@@ -286,7 +281,7 @@ export function QuizTaker({
               <span className="quiz-progress-label">
                 {t('quiz.progressLabel', { current: qIndex + 1, total: questions.length })}
               </span>
-              <span className="muted" style={{ fontSize: 13 }}>
+              <span className="muted-sm">
                 {t('quiz.answeredCount', { answered: Object.keys(answers).length, total: questions.length })}
               </span>
             </div>
