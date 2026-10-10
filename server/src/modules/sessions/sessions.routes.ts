@@ -1,22 +1,13 @@
 import { Router, Response } from 'express';
-import { AuthRequest, reqCenterId } from '../../middleware/auth';
+import { AuthRequest } from '../../middleware/auth';
 import { requirePermission } from '../authorization/authorization.middleware';
 import { asyncHandler } from '../../shared/http';
 import { validate, v, paramId } from '../../shared/validate';
 import * as sessionService from './sessions.service';
-import type { ScopeCtx } from './sessions.service';
+import { scopeOf } from '../../shared/scope';
 import { actorFromReq } from '../../shared/audit';
 
 const router = Router();
-
-/** Dựng context phân quyền cho service từ request. */
-function scopeOf(req: AuthRequest): ScopeCtx {
-  return {
-    centerId: reqCenterId(req),
-    role: req.user?.role || '',
-    teacherId: req.user?.teacher_id ?? null,
-  };
-}
 
 // Lấy danh sách buổi học của lớp (tự sinh từ lịch nếu chưa có)
 router.get(

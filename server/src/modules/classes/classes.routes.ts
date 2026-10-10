@@ -1,22 +1,13 @@
 import { Router, Response } from 'express';
-import { AuthRequest, reqCenterId } from '../../middleware/auth';
+import { AuthRequest } from '../../middleware/auth';
 import { requirePermission } from '../authorization/authorization.middleware';
 import { asyncHandler } from '../../shared/http';
 import { validate, v, paramId } from '../../shared/validate';
 import * as classService from './classes.service';
+import { scopeOf } from '../../shared/scope';
 import { actorFromReq } from '../../shared/audit';
-import type { ScopeCtx } from './classes.service';
 
 const router = Router();
-
-/** Dựng context phân quyền cho service từ request. */
-function scopeOf(req: AuthRequest): ScopeCtx {
-  return {
-    centerId: reqCenterId(req),
-    role: req.user?.role || '',
-    teacherId: req.user?.teacher_id ?? null,
-  };
-}
 
 router.get(
   '/',

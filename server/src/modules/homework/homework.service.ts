@@ -1,4 +1,5 @@
 import { db } from '../../db';
+import type { ScopeCtx } from '../../shared/scope';
 import { parsePagination, paginate, type PageOptions, type Paginated } from '../../shared/pagination';
 import { DAY_MS } from '../../shared/time';
 import { AppError } from '../../shared/errors';
@@ -37,12 +38,6 @@ export type HomeworkKind = (typeof HOMEWORK_KIND)[number];
 export type CompletedBy = 'parent' | 'teacher' | 'student';
 
 /** Context phân quyền tối thiểu mà service cần (tách khỏi AuthRequest). */
-export interface ScopeCtx {
-  centerId: number | null; // null = superadmin (thấy mọi trung tâm)
-  role: string;
-  teacherId: number | null;
-}
-
 export interface HomeworkRow {
   id: number;
   class_id: number;

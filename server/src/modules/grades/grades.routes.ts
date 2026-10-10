@@ -5,7 +5,8 @@ import { asyncHandler } from '../../shared/http';
 import { AppError } from '../../shared/errors';
 import { actorFromReq } from '../../shared/audit';
 import { paramId } from '../../shared/validate';
-import { listGrades, createGrade, deleteGrade, type ScopeCtx } from './grades.service';
+import { listGrades, createGrade, deleteGrade } from './grades.service';
+import { scopeOf } from '../../shared/scope';
 
 const router = Router();
 
@@ -25,12 +26,7 @@ router.get(
       page?: string;
       limit?: string;
     };
-    const ctx: ScopeCtx = {
-      centerId: reqCenterId(req),
-      role: req.user?.role || '',
-      teacherId: req.user?.teacher_id ?? null,
-    };
-    res.json(await listGrades(ctx, { student_id, class_id }, { page, limit }));
+    res.json(await listGrades(scopeOf(req), { student_id, class_id }, { page, limit }));
   })
 );
 

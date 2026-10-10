@@ -22,8 +22,8 @@ import {
   getHomeworkWithScope,
   filterValidTargets,
   getHomeworkSubmissions,
-  type ScopeCtx,
 } from './homework.service';
+import { scopeOf } from '../../shared/scope';
 import { listRubrics, getRubric, createRubric, deleteRubric } from './rubric.service';
 import { saveQuizQuestions, getAllAttempts, getQuizForStaff } from './quiz.service';
 import {
@@ -72,14 +72,6 @@ async function getScopedHomework(req: AuthRequest, id: number) {
   return hw;
 }
 
-function ctxFrom(req: AuthRequest): ScopeCtx {
-  return {
-    centerId: reqCenterId(req),
-    role: req.user?.role || '',
-    teacherId: req.user?.teacher_id ?? null,
-  };
-}
-
 /** Danh sách bài tập (filter: lớp, tìm kiếm, hạn, trạng thái, loại) */
 router.get(
   '/',
@@ -97,7 +89,7 @@ router.get(
     // Mặc định ẩn nháp? Không — staff thấy tất cả, phân biệt bằng status badge
     res.json(
       await listHomework(
-        ctxFrom(req),
+        scopeOf(req),
         {
           class_id,
           search,
@@ -116,7 +108,7 @@ router.get(
   '/stats',
   requirePermission('homework.view'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
-    res.json(await getHomeworkStats(ctxFrom(req)));
+    res.json(await getHomeworkStats(scopeOf(req)));
   })
 );
 
@@ -125,7 +117,7 @@ router.get(
   '/analytics',
   requirePermission('homework.view'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
-    res.json(await getHomeworkAnalytics(ctxFrom(req)));
+    res.json(await getHomeworkAnalytics(scopeOf(req)));
   })
 );
 

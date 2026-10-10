@@ -1,4 +1,5 @@
 import { db } from '../../db';
+import type { ScopeCtx } from '../../shared/scope';
 import { AppError } from '../../shared/errors';
 import { audit, type AuditActor } from '../../shared/audit';
 import { parsePagination, paginate, type PageOptions, type Paginated } from '../../shared/pagination';
@@ -13,12 +14,6 @@ function parseQueryId(v: string): number {
 /* ---------------------------------- Types ---------------------------------- */
 
 /** Context phân quyền tối thiểu mà service cần (tách khỏi AuthRequest). */
-export interface ScopeCtx {
-  centerId: number | null; // null = superadmin (thấy mọi trung tâm)
-  role: string;
-  teacherId: number | null;
-}
-
 export interface GradeRow {
   id: number;
   student_id: number;

@@ -1,4 +1,5 @@
 import crypto from 'crypto';
+import type { ScopeCtx } from '../../shared/scope';
 import { db, generateSessionsForClass, toISODate } from '../../db';
 import { notifyParents } from '../../services/notify';
 import { AppError } from '../../shared/errors';
@@ -10,12 +11,6 @@ const log = logger.scope('sessions');
 /* ---------------------------------- Types ---------------------------------- */
 
 /** Context phân quyền tối thiểu mà service cần (tách khỏi AuthRequest). */
-export interface ScopeCtx {
-  centerId: number | null; // null = superadmin (thấy mọi trung tâm)
-  role: string;
-  teacherId: number | null;
-}
-
 export const ATTENDANCE_STATUS = ['present', 'absent', 'late'] as const;
 
 export interface SessionInput {

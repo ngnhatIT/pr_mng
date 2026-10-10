@@ -1,4 +1,5 @@
 import { db, ScheduleEntry, DAY_NAMES } from '../../db';
+import type { ScopeCtx } from '../../shared/scope';
 import { getDefaultCenter } from '../../utils/plans';
 import { AppError } from '../../shared/errors';
 import { homeworkRepo } from '../homework/homework.repo';
@@ -8,12 +9,6 @@ import { audit, type AuditActor } from '../../shared/audit';
 /* ---------------------------------- Types ---------------------------------- */
 
 /** Context phân quyền tối thiểu mà service cần (tách khỏi AuthRequest). */
-export interface ScopeCtx {
-  centerId: number | null; // null = superadmin (thấy mọi trung tâm)
-  role: string;
-  teacherId: number | null;
-}
-
 export interface ClassInput {
   name?: string;
   teacher_id?: number | null;
