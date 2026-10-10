@@ -252,13 +252,7 @@
   border-bottom: none;
 }
 
-.perm-row:hover {
-  background: var(--bg-muted);
-}
-
-.perm-row.readonly:hover {
-  background: var(--bg-soft);
-}
+/* Hàng quyền không bấm được (chỉ nút scope bên trong): bỏ hover đổi nền (chống false affordance) */
 
 .perm-row.on {
   background: var(--primary-soft);
