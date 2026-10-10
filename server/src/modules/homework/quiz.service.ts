@@ -154,18 +154,27 @@ export async function submitQuiz(
     .all(homeworkId)) as { id: number; points: number }[];
   if (questions.length === 0) throw AppError.badRequest('Quiz chưa có câu hỏi');
 
+  // Chấm 40 câu = 1 query duy nhất thay vì 40 round-trip (hết N+1):
+  // tải toàn bộ đáp án đúng của quiz trước, chấm trong memory.
+  // Giữ đúng semantics cũ: đáp án phải đúng VÀ thuộc đúng câu hỏi
+  // (đáp án của câu khác, dù đúng, vẫn bị chấm sai).
+  const options = (await db
+    .prepare(
+      `SELECT id, question_id, is_correct FROM quiz_options WHERE question_id IN (${questions
+        .map(() => '?')
+        .join(',')})`
+    )
+    .all(...questions.map((q) => q.id))) as { id: number; question_id: number; is_correct: number }[];
+  const optionMap = new Map(options.map((o) => [o.id, o]));
+
   let score = 0;
   let maxScore = 0;
   const graded: { question_id: number; option_id: number | null; correct: boolean }[] = [];
   for (const q of questions) {
     maxScore += q.points;
     const optId = answerMap.get(q.id) ?? null;
-    const opt = optId
-      ? ((await db
-          .prepare('SELECT is_correct FROM quiz_options WHERE id = ? AND question_id = ?')
-          .get(optId, q.id)) as { is_correct: number } | undefined)
-      : undefined;
-    const correct = !!opt && opt.is_correct === 1;
+    const opt = optId ? optionMap.get(optId) : undefined;
+    const correct = !!opt && opt.question_id === q.id && opt.is_correct === 1;
     if (correct) score += q.points;
     graded.push({ question_id: q.id, option_id: optId, correct });
   }

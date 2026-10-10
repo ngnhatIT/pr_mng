@@ -80,6 +80,23 @@ export async function getSetting(key: string, fallback = ''): Promise<string> {
 
 /* --------------------- Cấu hình theo trung tâm --------------------- */
 
+/**
+ * Cache kết quả getCenterSettings — TTL 60s để đổi cấu hình có hiệu lực nhanh
+ * mà mỗi request không query DB lặp lại (mỗi lần tạo link thanh toán từng tốn
+ * tới 10 query tuần tự: 1 query chính + 1 query fallback cho mỗi key thiếu).
+ * Pattern giống cache permissions ở authorization.service.ts.
+ */
+const centerSettingsCache = new Map<string, { at: number; values: Map<string, string> }>();
+const CENTER_SETTINGS_TTL_MS = 60_000;
+
+/** Xóa cache cấu hình của 1 center — gọi sau mỗi lần setCenterSetting. */
+export function invalidateCenterSettings(centerId: number): void {
+  const prefix = `${centerId}::`;
+  for (const key of centerSettingsCache.keys()) {
+    if (key.startsWith(prefix)) centerSettingsCache.delete(key);
+  }
+}
+
 export async function getCenterSetting(centerId: number, key: string, fallback = ''): Promise<string> {
   const row = (await db
     .prepare('SELECT value FROM center_settings WHERE center_id = ? AND key = ?')
@@ -94,6 +111,7 @@ export async function setCenterSetting(centerId: number, key: string, value: str
       'INSERT INTO center_settings (center_id, key, value) VALUES (?, ?, ?) ON CONFLICT(center_id, key) DO UPDATE SET value = excluded.value'
     )
     .run(centerId, key, value);
+  invalidateCenterSettings(centerId); // đọc sau set phải thấy giá trị mới, không đọc cache cũ
 }
 
 /**
@@ -107,6 +125,10 @@ export async function getCenterSettings(
 ): Promise<Map<string, string>> {
   const out = new Map<string, string>();
   if (keys.length === 0) return out;
+  // Key cache gồm centerId + danh sách keys (sắp xếp để thứ tự truyền vào không ảnh hưởng).
+  const cacheKey = `${centerId}::${[...keys].sort().join(',')}`;
+  const hit = centerSettingsCache.get(cacheKey);
+  if (hit && Date.now() - hit.at < CENTER_SETTINGS_TTL_MS) return hit.values;
   const placeholders = keys.map(() => '?').join(',');
   const rows = (await db
     .prepare(`SELECT key, value FROM center_settings WHERE center_id = ? AND key IN (${placeholders})`)
@@ -117,6 +139,7 @@ export async function getCenterSettings(
   for (const k of keys) {
     if (!out.has(k)) out.set(k, await getSetting(k, fallback));
   }
+  centerSettingsCache.set(cacheKey, { at: Date.now(), values: out });
   return out;
 }
 
