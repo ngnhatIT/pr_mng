@@ -265,7 +265,12 @@ export function HomeworkFormModal({
       .map((c) => ({ name: c.name.trim(), max_score: Number(c.max_score) || 0 }))
       .filter((c) => c.name && c.max_score > 0);
     if (validCriteria.length === 0) rerrs.rubricCriteria = t('form.errors.rubricCriteriaRequired');
-    if (!show(rerrs)) return;
+    // P1-9: merge lỗi rubric vào map hiện có thay vì ghi đè toàn bộ lỗi form;
+    // chỉ chặn tạo rubric khi chính rubric có lỗi (lỗi form khác không liên quan).
+    if (Object.keys(rerrs).length > 0) {
+      show({ ...errors, ...rerrs });
+      return;
+    }
     setRubricBusy(true);
     try {
       const r = await homeworkApi.createRubric(newRubricName.trim(), validCriteria);

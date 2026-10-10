@@ -82,9 +82,15 @@ export function useFieldErrors<T extends string>() {
     return Object.keys(errs).length === 0;
   }, []);
 
-  // Xóa lỗi của 1 field khi user sửa lại
+  // Xóa lỗi của 1 field khi user sửa lại. Xóa hẳn key (thay vì gán undefined)
+  // để show() không đếm nhầm key đã xóa thành lỗi khi merge nhiều nguồn lỗi.
   const clear = useCallback((k: T) => {
-    setErrors((e) => (e[k] ? { ...e, [k]: undefined } : e));
+    setErrors((e) => {
+      if (!e[k]) return e;
+      const next = { ...e };
+      delete next[k];
+      return next;
+    });
   }, []);
 
   return { errors, refFor, show, clear };
