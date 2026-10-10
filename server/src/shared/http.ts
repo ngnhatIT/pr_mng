@@ -39,6 +39,19 @@ export function errorHandler(err: unknown, req: Request, res: Response, _next: N
     res.status(400).json({ error: 'File không hợp lệ', code: 'INVALID_FILE' });
     return;
   }
+  // Lỗi parse body từ express.json: JSON sai cú pháp → 400, payload >1mb → 413
+  // (không để rơi xuống 500 "Lỗi máy chủ" khiến client không phân biệt được)
+  const errType = (err as { type?: string })?.type;
+  if (errType === 'entity.parse.failed') {
+    res.status(400).json({ error: 'Dữ liệu JSON không hợp lệ', code: 'INVALID_JSON', request_id: requestId });
+    return;
+  }
+  if (errType === 'entity.too.large') {
+    res
+      .status(413)
+      .json({ error: 'Dữ liệu gửi lên vượt quá 1MB', code: 'PAYLOAD_TOO_LARGE', request_id: requestId });
+    return;
+  }
   // Lỗi PostgreSQL: dịch mã lỗi thành response thân thiện
   if (code === '23505') {
     res.status(409).json({ error: 'Dữ liệu đã tồn tại (trùng lặp)', code: 'DUPLICATE' });

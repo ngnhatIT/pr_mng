@@ -2,7 +2,7 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { AppError } from './errors';
-import { asyncHandler } from './http';
+import { asyncHandler, errorHandler } from './http';
 
 describe('AppError', () => {
   it('các factory tạo đúng statusCode và code', () => {
@@ -56,5 +56,82 @@ describe('asyncHandler', () => {
     );
     assert.equal(nextCalled, false);
     assert.deepEqual(jsonValue, { ok: true });
+  });
+});
+
+describe('errorHandler', () => {
+  const mockRes = () => {
+    const res = {
+      statusCode: 0,
+      body: null as unknown,
+      status(c: number) {
+        this.statusCode = c;
+        return this;
+      },
+      json(b: unknown) {
+        this.body = b;
+        return this;
+      },
+    };
+    return res;
+  };
+  const req = { requestId: 'test-req-1' } as never;
+  const noop = (() => {}) as never;
+
+  it('AppError → đúng status + code + request_id', () => {
+    const res = mockRes();
+    errorHandler(AppError.notFound('Không thấy'), req, res as never, noop);
+    assert.equal(res.statusCode, 404);
+    assert.deepEqual(res.body, { error: 'Không thấy', code: 'NOT_FOUND', request_id: 'test-req-1' });
+  });
+
+  it('JSON sai cú pháp → 400 INVALID_JSON (không phải 500)', () => {
+    const err = Object.assign(new SyntaxError('Unexpected token }'), {
+      type: 'entity.parse.failed',
+      status: 400,
+    });
+    const res = mockRes();
+    errorHandler(err, req, res as never, noop);
+    assert.equal(res.statusCode, 400);
+    assert.equal((res.body as { code: string }).code, 'INVALID_JSON');
+  });
+
+  it('payload >1mb → 413 PAYLOAD_TOO_LARGE (không phải 500)', () => {
+    const err = Object.assign(new Error('request entity too large'), {
+      type: 'entity.too.large',
+      status: 413,
+    });
+    const res = mockRes();
+    errorHandler(err, req, res as never, noop);
+    assert.equal(res.statusCode, 413);
+    assert.equal((res.body as { code: string }).code, 'PAYLOAD_TOO_LARGE');
+  });
+
+  it('multer LIMIT_FILE_SIZE → 413 FILE_TOO_LARGE', () => {
+    const res = mockRes();
+    errorHandler(
+      Object.assign(new Error('File too large'), { code: 'LIMIT_FILE_SIZE' }),
+      req,
+      res as never,
+      noop
+    );
+    assert.equal(res.statusCode, 413);
+  });
+
+  it('PostgreSQL 23505 → 409 DUPLICATE', () => {
+    const res = mockRes();
+    errorHandler(Object.assign(new Error('duplicate key'), { code: '23505' }), req, res as never, noop);
+    assert.equal(res.statusCode, 409);
+    assert.equal((res.body as { code: string }).code, 'DUPLICATE');
+  });
+
+  it('lỗi lạ → 500 INTERNAL_ERROR, không lộ stack, có request_id', () => {
+    const res = mockRes();
+    errorHandler(new Error('secret stack trace'), req, res as never, noop);
+    assert.equal(res.statusCode, 500);
+    const body = res.body as { error: string; code: string; request_id: string };
+    assert.equal(body.code, 'INTERNAL_ERROR');
+    assert.equal(body.request_id, 'test-req-1');
+    assert.ok(!body.error.includes('secret stack trace'));
   });
 });
