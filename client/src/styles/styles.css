@@ -578,6 +578,12 @@ textarea.text-input {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
   gap: 16px;
+  transition: opacity 0.15s ease-out;
+}
+/* Đang tải trang mới: giữ lưới card cũ hiển thị mờ thay vì thay bằng skeleton (không nhảy layout) */
+.card-grid[aria-busy='true'] {
+  opacity: 0.55;
+  pointer-events: none;
 }
 .class-card {
   margin-bottom: 0;

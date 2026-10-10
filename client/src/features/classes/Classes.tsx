@@ -107,7 +107,7 @@ export function Classes() {
         }
       />
 
-      {loading ? (
+      {loading && classes.length === 0 ? (
         <CardGridSkeleton />
       ) : classes.length === 0 ? (
         <EmptyState
@@ -122,7 +122,7 @@ export function Classes() {
           }
         />
       ) : (
-        <div className="card-grid">
+        <div className="card-grid" aria-busy={loading || undefined}>
           {classes.map((c) => {
             const pct =
               c.max_students > 0 ? Math.min(100, Math.round((c.student_count / c.max_students) * 100)) : 0;
@@ -181,7 +181,7 @@ export function Classes() {
         </div>
       )}
 
-      {pagination && <Pagination pagination={pagination} onChange={(p) => setPage(p)} />}
+      {pagination && <Pagination pagination={pagination} onChange={(p) => setPage(p)} loading={loading} />}
 
       {editing && (
         <ClassFormModal
