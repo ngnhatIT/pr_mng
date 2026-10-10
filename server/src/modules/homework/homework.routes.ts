@@ -221,6 +221,16 @@ router.post(
     const id = paramId(req.params);
     await requireHomework(req, id, 'homework.create');
     const created = await reuseHomework(id, req.user!.id, reqCenterId(req));
+    // P1-5: audit tái sử dụng (như các thao tác tạo khác)
+    await audit({
+      centerId: reqCenterId(req),
+      actor: actorFromReq(req),
+      action: 'create',
+      entity: 'homework',
+      entityId: created[0].id,
+      summary: `Tái sử dụng bài tập "${created[0].title}" thành nháp mới`,
+      meta: { title: created[0].title, source_id: id },
+    });
     res.status(201).json({ created: created[0], count: 1 });
   })
 );
@@ -575,23 +585,32 @@ router.put(
     if (body.publish_at && !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(body.publish_at)) {
       throw AppError.badRequest('Hẹn đăng không hợp lệ (YYYY-MM-DDTHH:mm)');
     }
-    res.json(
-      await updateHomework(
-        id,
-        {
-          title: body.title,
-          content: body.content,
-          // undefined = không gửi → giữ nguyên trong DB (P0-1)
-          due_date: body.due_date,
-          max_score: body.max_score != null ? Number(body.max_score) : null,
-          close_date: body.close_date,
-          status: body.status as 'draft' | 'scheduled' | 'published' | undefined,
-          publish_at: body.publish_at || null,
-          rubric_id: body.rubric_id != null ? Number(body.rubric_id) : null,
-        },
-        reqCenterId(req) // P1-1: validate rubric_id thuộc center
-      )
+    const updated = await updateHomework(
+      id,
+      {
+        title: body.title,
+        content: body.content,
+        // undefined = không gửi → giữ nguyên trong DB (P0-1)
+        due_date: body.due_date,
+        max_score: body.max_score != null ? Number(body.max_score) : null,
+        close_date: body.close_date,
+        status: body.status as 'draft' | 'scheduled' | 'published' | undefined,
+        publish_at: body.publish_at || null,
+        rubric_id: body.rubric_id != null ? Number(body.rubric_id) : null,
+      },
+      reqCenterId(req) // P1-1: validate rubric_id thuộc center
     );
+    // P1-5: audit sửa bài tập (như các thao tác update khác)
+    await audit({
+      centerId: reqCenterId(req),
+      actor: actorFromReq(req),
+      action: 'update',
+      entity: 'homework',
+      entityId: id,
+      summary: `Sửa bài tập "${updated.title}"`,
+      meta: { title: updated.title, status: updated.status },
+    });
+    res.json(updated);
   })
 );
 
