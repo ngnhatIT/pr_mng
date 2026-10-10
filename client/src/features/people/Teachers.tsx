@@ -112,7 +112,7 @@ export function Teachers() {
                   <td>
                     <span className="name-cell">
                       <span className="avatar avatar-sm" aria-hidden="true">
-                        {tch.name.charAt(0).toUpperCase()}
+                        <Icon name="user" size={15} />
                       </span>
                       {tch.name}
                     </span>

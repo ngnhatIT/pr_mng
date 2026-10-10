@@ -175,7 +175,7 @@ export function Students() {
                   <td>
                     <span className="name-cell">
                       <span className="avatar avatar-sm" aria-hidden="true">
-                        {s.name.charAt(0).toUpperCase()}
+                        <Icon name="user" size={15} />
                       </span>
                       <Link className="link" to={`/app/students/${s.id}`}>
                         {s.name}

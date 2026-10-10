@@ -99,7 +99,7 @@ export function Payroll() {
                   <td>
                     <span className="name-cell">
                       <span className="avatar avatar-sm" aria-hidden="true">
-                        {r.teacher_name.charAt(0).toUpperCase()}
+                        <Icon name="user" size={15} />
                       </span>
                       {r.teacher_name}
                     </span>
