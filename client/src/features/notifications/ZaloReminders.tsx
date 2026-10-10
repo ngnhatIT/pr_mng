@@ -205,7 +205,7 @@ export function ZaloReminders() {
                         placeholder={t('zalo.ph.centerName')}
                       />
                     </Field>
-                    <Field label={t('zalo.fields.oaId')}>
+                    <Field label={t('zalo.fields.oaId')} hint={t('zalo.fields.oaIdHint')}>
                       <input
                         className="text-input"
                         value={config.zalo_oa_id}
@@ -213,7 +213,7 @@ export function ZaloReminders() {
                         placeholder={t('zalo.ph.oaId')}
                       />
                     </Field>
-                    <Field label={t('zalo.fields.accessToken')} span>
+                    <Field label={t('zalo.fields.accessToken')} hint={t('zalo.fields.accessTokenHint')} span>
                       <input
                         className="text-input"
                         type="password"
@@ -236,7 +236,10 @@ export function ZaloReminders() {
                 <div className="zalo-form-group">
                   <h3 className="zalo-group-title">{t('zalo.groups.templates')}</h3>
                   <div className="form-grid">
-                    <Field label={t('zalo.fields.templateOverdue')}>
+                    <Field
+                      label={t('zalo.fields.templateOverdue')}
+                      hint={t('zalo.fields.templateOverdueHint')}
+                    >
                       <input
                         className="text-input"
                         value={config.zalo_template_overdue}
@@ -244,7 +247,10 @@ export function ZaloReminders() {
                         placeholder={t('zalo.ph.templateOverdue')}
                       />
                     </Field>
-                    <Field label={t('zalo.fields.templateUpcoming')}>
+                    <Field
+                      label={t('zalo.fields.templateUpcoming')}
+                      hint={t('zalo.fields.templateUpcomingHint')}
+                    >
                       <input
                         className="text-input"
                         value={config.zalo_template_upcoming}
@@ -264,6 +270,7 @@ export function ZaloReminders() {
                 </label>
                 <div className="modal-actions">
                   <button type="submit" className="btn btn-primary" disabled={saving}>
+                    {saving && <span className="spinner" aria-hidden="true" />}
                     {saving ? t('actions.saving', { ns: 'common' }) : t('zalo.saveConfig')}
                   </button>
                 </div>

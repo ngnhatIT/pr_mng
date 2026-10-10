@@ -330,12 +330,16 @@
     "enableDaily": "Bật nhắc học phí tự động mỗi ngày",
     "fields": {
       "accessToken": "Access Token",
+      "accessTokenHint": "Auth token for Zalo API calls; the system refreshes it automatically",
       "centerName": "Tên trung tâm",
       "hour": "Giờ gửi mỗi ngày",
       "oaId": "OA ID",
+      "oaIdHint": "Số ID của Official Account, xem trong trang quản trị Zalo OA",
       "overdueDays": "Nhắc khi quá hạn sau (ngày)",
       "templateOverdue": "Template ID - tin quá hạn",
+      "templateOverdueHint": "ID số của mẫu tin ZNS quá hạn đã được Zalo duyệt",
       "templateUpcoming": "Template ID - tin sắp đến hạn",
+      "templateUpcomingHint": "ID số của mẫu tin ZNS sắp đến hạn đã được Zalo duyệt",
       "upcomingDays": "Nhắc trước hạn (ngày)"
     },
     "groups": {

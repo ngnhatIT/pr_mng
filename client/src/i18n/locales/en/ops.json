@@ -330,12 +330,16 @@
     "enableDaily": "Enable automatic daily tuition reminders",
     "fields": {
       "accessToken": "Access Token",
+      "accessTokenHint": "Auth token for Zalo API calls; the system refreshes it automatically",
       "centerName": "Center name",
       "hour": "Daily send time",
       "oaId": "OA ID",
+      "oaIdHint": "Your Official Account numeric ID, found in the Zalo OA admin page",
       "overdueDays": "Remind after overdue (days)",
       "templateOverdue": "Template ID - overdue message",
+      "templateOverdueHint": "Numeric ID of the Zalo-approved overdue ZNS template",
       "templateUpcoming": "Template ID - upcoming message",
+      "templateUpcomingHint": "Numeric ID of the Zalo-approved upcoming ZNS template",
       "upcomingDays": "Remind before due (days)"
     },
     "groups": {
