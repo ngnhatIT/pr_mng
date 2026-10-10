@@ -1019,13 +1019,13 @@ textarea.text-input {
 .tabs {
   display: flex;
   gap: 4px;
-  margin-bottom: 18px;
+  margin-bottom: 16px;
   border-bottom: 2px solid var(--border);
 }
 .tab {
   border: none;
   background: none;
-  padding: 10px 18px;
+  padding: 12px 16px;
   font-size: 14px;
   font-weight: 600;
   color: var(--text-muted);
