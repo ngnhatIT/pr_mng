@@ -241,11 +241,11 @@
     },
     "title": "System - Center management",
     "toast": {
-      "createFail": "Creation failed",
+      "createFail": "Couldn't create the center, please try again",
       "created": "New center created",
       "loadFail": "Could not load center list",
       "planUpdated": "Plan updated",
-      "updateFail": "Update failed"
+      "updateFail": "Couldn't update the plan, please try again"
     }
   },
   "trials": {
@@ -383,10 +383,10 @@
       "loadConfigFail": "Could not load configuration",
       "loadHistoryFail": "Could not load history",
       "needPhone": "Please enter a phone number",
-      "runFail": "Run failed",
-      "saveFail": "Save failed",
+      "runFail": "Couldn't run the Zalo reminders, please try again",
+      "saveFail": "Couldn't save the Zalo config, please try again",
       "savedConfig": "Zalo configuration saved",
-      "sendFail": "Test send failed"
+      "sendFail": "Couldn't send the test message, please try again"
     },
     "view": {
       "dueDate": "Due date",

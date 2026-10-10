@@ -241,11 +241,11 @@
     },
     "title": "Hệ thống - Quản lý trung tâm",
     "toast": {
-      "createFail": "Tạo thất bại",
+      "createFail": "Không tạo được trung tâm mới, vui lòng thử lại",
       "created": "Đã tạo trung tâm mới",
       "loadFail": "Không tải được danh sách trung tâm",
       "planUpdated": "Đã cập nhật gói",
-      "updateFail": "Cập nhật thất bại"
+      "updateFail": "Không cập nhật được gói dịch vụ, vui lòng thử lại"
     }
   },
   "trials": {
@@ -383,10 +383,10 @@
       "loadConfigFail": "Không tải được cấu hình",
       "loadHistoryFail": "Không tải được lịch sử",
       "needPhone": "Vui lòng nhập số điện thoại",
-      "runFail": "Chạy thất bại",
-      "saveFail": "Lưu thất bại",
+      "runFail": "Không chạy được nhắc nhở Zalo, vui lòng thử lại",
+      "saveFail": "Không lưu được cấu hình Zalo, vui lòng thử lại",
       "savedConfig": "Đã lưu cấu hình Zalo",
-      "sendFail": "Gửi thử thất bại"
+      "sendFail": "Không gửi được tin nhắn thử, vui lòng thử lại"
     },
     "view": {
       "dueDate": "Hạn nộp",
