@@ -2,7 +2,7 @@
   "checkin": {
     "codeLabel": "Mã chấm công (6 số)",
     "desc": "Nhập mã 6 số do quản lý cấp cho buổi dạy để ghi nhận chấm công.",
-    "fail": "Chấm công thất bại",
+    "fail": "Không chấm công được, vui lòng thử lại",
     "invalidCode": "Mã chấm công gồm 6 chữ số",
     "submit": "Chấm công ngay",
     "submitting": "Đang chấm công...",
@@ -11,7 +11,7 @@
   },
   "grades": {
     "add": "Nhập điểm",
-    "deleteFail": "Xóa thất bại",
+    "deleteFail": "Không xóa được điểm, vui lòng thử lại",
     "deleteMessage": "Xóa điểm \"{{title}}\" ({{score}}/{{max}})?",
     "deleteTitle": "Xóa điểm",
     "deleted": "Đã xóa điểm",
@@ -26,7 +26,7 @@
     "noGradesTitle": "Chưa có điểm nào",
     "noStudentDesc": "Chọn lớp và học viên để xem / nhập điểm.",
     "noStudentTitle": "Chưa chọn học viên",
-    "saveFail": "Nhập điểm thất bại",
+    "saveFail": "Không nhập được điểm, vui lòng thử lại",
     "saved": "Đã nhập điểm",
     "selectClass": "- Chọn lớp học -",
     "selectStudent": "- Chọn học viên -",

@@ -2,7 +2,7 @@
   "checkin": {
     "codeLabel": "Check-in code (6 digits)",
     "desc": "Enter the 6-digit code from your manager to record attendance.",
-    "fail": "Check-in failed",
+    "fail": "Couldn't record the check-in, please try again",
     "invalidCode": "Check-in code must be 6 digits",
     "submit": "Check in now",
     "submitting": "Checking in...",
@@ -11,7 +11,7 @@
   },
   "grades": {
     "add": "Add grade",
-    "deleteFail": "Delete failed",
+    "deleteFail": "Couldn't delete the grade, please try again",
     "deleteMessage": "Delete grade \"{{title}}\" ({{score}}/{{max}})?",
     "deleteTitle": "Delete grade",
     "deleted": "Grade deleted",
@@ -26,7 +26,7 @@
     "noGradesTitle": "No grades yet",
     "noStudentDesc": "Select a class and student to view / enter grades.",
     "noStudentTitle": "No student selected",
-    "saveFail": "Couldn't save grade",
+    "saveFail": "Couldn't save the grade, please try again",
     "saved": "Grade saved",
     "selectClass": "- Select class -",
     "selectStudent": "- Select student -",
