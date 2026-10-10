@@ -168,7 +168,8 @@
       "endBeforeStart": "End date must be after start date",
       "feeInvalid": "Tuition fee must be a non-negative number",
       "maxStudentsInvalid": "Max students must be a whole number of 1 or more"
-    }
+    },
+    "dayOfWeekAria": "Day of week"
   },
   "rooms": {
     "add": "Add room",

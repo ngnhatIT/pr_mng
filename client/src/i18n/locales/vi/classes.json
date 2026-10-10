@@ -168,7 +168,8 @@
       "endBeforeStart": "Ngày kết thúc phải sau ngày bắt đầu",
       "feeInvalid": "Học phí phải là số không âm",
       "maxStudentsInvalid": "Sĩ số tối đa phải là số nguyên từ 1 trở lên"
-    }
+    },
+    "dayOfWeekAria": "Ngày trong tuần"
   },
   "rooms": {
     "add": "Thêm phòng",

@@ -499,7 +499,7 @@ function ClassFormModal({
           {form.schedule.map((s, i) => (
             <div key={i} className="schedule-row">
               <select
-                aria-label="Lọc theo trạng thái"
+                aria-label={t('form.dayOfWeekAria')}
                 className="text-input"
                 value={s.day}
                 onChange={(e) => updateSlot(i, { day: Number(e.target.value) })}
