@@ -203,6 +203,8 @@
     "good": "Khá tốt, cố gắng thêm nhé!",
     "grading": "Đang chấm...",
     "later": "Để sau",
+    "loadErrorTitle": "Không tải được đề thi",
+    "loadErrorDesc": "Có lỗi khi tải đề thi. Vui lòng kiểm tra kết nối mạng rồi thử lại.",
     "maxScore": "({{score}}đ)",
     "noQuestions": "Chưa có câu hỏi",
     "points": "({{points}}đ)",

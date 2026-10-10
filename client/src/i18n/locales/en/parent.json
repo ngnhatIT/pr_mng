@@ -203,6 +203,8 @@
     "good": "Good job, keep it up!",
     "grading": "Grading...",
     "later": "Later",
+    "loadErrorTitle": "Couldn't load the quiz",
+    "loadErrorDesc": "There was a problem loading the quiz. Please check your connection and try again.",
     "maxScore": "({{score}} pts)",
     "noQuestions": "No questions yet",
     "points": "({{points}} pts)",

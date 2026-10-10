@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { parentApi, type QuizQuestion, type QuizAttempt } from './parent.api';
 import { HomeworkItem, formatDate } from '../../shared/types';
@@ -35,6 +35,7 @@ export function QuizTaker({
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState('');
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [reviewLoading, setReviewLoading] = useState(false);
   const [result, setResult] = useState<{
     score: number;
@@ -53,16 +54,23 @@ export function QuizTaker({
       .catch(() => {});
   }, [homework.id, studentId]);
 
-  useEffect(() => {
+  // Tách riêng tải đề để nút "Thử lại" dùng lại được khi mất mạng
+  const loadQuiz = useCallback(() => {
+    setLoading(true);
+    setLoadError(null);
     parentApi
       .getQuiz(homework.id, studentId)
       .then((qs) => {
         setQuestions(qs);
         setQIndex(0);
       })
-      .catch((err: Error) => toast(err.message, 'error'))
+      .catch((err: Error) => setLoadError(err instanceof Error ? err.message : ''))
       .finally(() => setLoading(false));
   }, [homework.id, studentId]);
+
+  useEffect(() => {
+    loadQuiz();
+  }, [loadQuiz]);
 
   const [confirming, setConfirming] = useState(false);
 
@@ -248,6 +256,18 @@ export function QuizTaker({
             </button>
           </div>
         </div>
+      ) : loadError ? (
+        <EmptyState
+          icon="alert"
+          title={t('quiz.loadErrorTitle')}
+          desc={loadError || t('quiz.loadErrorDesc')}
+          action={
+            <button className="btn btn-inline" onClick={loadQuiz}>
+              <Icon name="rotate" size={16} />
+              {t('actions.retry', { ns: 'common' })}
+            </button>
+          }
+        />
       ) : questions.length === 0 ? (
         <EmptyState
           icon="file"
