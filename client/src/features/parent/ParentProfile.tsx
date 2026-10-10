@@ -59,7 +59,9 @@ export function ParentProfile() {
       <p className="muted">{t('profile.subtitle')}</p>
 
       <section className="card profile-card">
-        <div className="child-avatar child-avatar-lg">{(user?.name || 'P').charAt(0).toUpperCase()}</div>
+        <div className="child-avatar child-avatar-lg" aria-hidden="true">
+          <Icon name="user" size={26} />
+        </div>
         <h2 className="card-title">{user?.name || t('profile.parentFallback')}</h2>
         <p className="muted mono">{user?.username || ''}</p>
         {childCount !== null && (

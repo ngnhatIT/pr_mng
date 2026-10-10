@@ -107,7 +107,9 @@ export function ClassDetail() {
         {t('detail.back')}
       </Link>
       <div className="profile-head">
-        <div className="profile-avatar">{cls.name.charAt(0).toUpperCase()}</div>
+        <div className="profile-avatar" aria-hidden="true">
+          <Icon name="book" size={28} />
+        </div>
         <div className="profile-meta">
           <h1 className="page-title">{cls.name}</h1>
           <div className="profile-badges">

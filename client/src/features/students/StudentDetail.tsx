@@ -77,7 +77,9 @@ export function StudentDetail() {
         {t('detail.back')}
       </Link>
       <div className="profile-head">
-        <div className="profile-avatar">{student.name.charAt(0).toUpperCase()}</div>
+        <div className="profile-avatar" aria-hidden="true">
+          <Icon name="user" size={28} />
+        </div>
         <div className="profile-meta">
           <h1 className="page-title">
             {student.name} <span className="muted mono">({student.code})</span>
