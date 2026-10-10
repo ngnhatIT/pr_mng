@@ -69,7 +69,7 @@
     "selected_other": "{{count}} questions selected",
     "title": "Question bank",
     "toast": {
-      "deleteFail": "Delete failed",
+      "deleteFail": "Couldn't delete the question, please try again",
       "loadFail": "Could not load the bank",
       "staleSelection_one": "{{count}} selected question is no longer in the list",
       "staleSelection_other": "{{count}} selected questions are no longer in the list",
@@ -217,8 +217,8 @@
       "bankImported_one": "Added {{count}} question from the bank",
       "bankImported_other": "Added {{count}} questions from the bank",
       "rubricCreated": "Rubric created",
-      "rubricFail": "Failed to create rubric",
-      "saveFail": "Save failed",
+      "rubricFail": "Couldn't create the rubric, please try again",
+      "saveFail": "Couldn't save the assignment, please try again",
       "savedDraft": "Draft saved",
       "scheduled_one": "Scheduled for {{count}} class",
       "scheduled_other": "Scheduled for {{count}} classes",
@@ -264,7 +264,7 @@
       "invalidScore": "Invalid score",
       "loadFail": "Could not load the grade sheet",
       "overMax": "Score cannot exceed {{max}}",
-      "saveFail": "Failed to save score",
+      "saveFail": "Couldn't save the score, please try again",
       "saved": "Score saved"
     },
     "emptyDesc": "Enroll students in the class to grade them."
@@ -312,15 +312,15 @@
     "scheduled": "Scheduled"
   },
   "toast": {
-    "deleteFail": "Delete failed",
+    "deleteFail": "Couldn't delete the assignment, please try again",
     "deleted": "Homework deleted",
     "loadFail": "Could not load homework",
-    "publishFail": "Publish failed",
+    "publishFail": "Couldn't publish the assignment, please try again",
     "published": "Homework published",
-    "reuseFail": "Reuse failed",
+    "reuseFail": "Couldn't reuse the assignment, please try again",
     "reused": "Draft created from the old assignment - edit then publish",
     "unpublishConfirm": "Unpublish \"{{title}}\" to drafts? Parents will no longer see it.",
-    "unpublishFail": "Unpublish failed",
+    "unpublishFail": "Couldn't unpublish the assignment, please try again",
     "unpublished": "Moved back to drafts",
     "unpublishTitle": "Unpublish homework"
   }

@@ -67,7 +67,7 @@
     "selected": "Đã chọn {{count}} câu",
     "title": "Ngân hàng câu hỏi",
     "toast": {
-      "deleteFail": "Xóa thất bại",
+      "deleteFail": "Không xóa được câu hỏi, vui lòng thử lại",
       "loadFail": "Không tải được ngân hàng",
       "staleSelection": "Có {{count}} câu đã chọn không còn trong danh sách",
       "staleSelection_one": "Có {{count}} câu đã chọn không còn trong danh sách",
@@ -211,8 +211,8 @@
       "attRequired": "Nhập tên và link đính kèm",
       "bankImported": "Đã thêm {{count}} câu từ ngân hàng",
       "rubricCreated": "Đã tạo rubric",
-      "rubricFail": "Tạo rubric thất bại",
-      "saveFail": "Lưu thất bại",
+      "rubricFail": "Không tạo được rubric, vui lòng thử lại",
+      "saveFail": "Không lưu được bài tập, vui lòng thử lại",
       "savedDraft": "Đã lưu nháp",
       "scheduled": "Đã hẹn đăng {{count}} lớp",
       "updated": "Đã cập nhật",
@@ -264,7 +264,7 @@
       "invalidScore": "Điểm không hợp lệ",
       "loadFail": "Không tải được bảng điểm",
       "overMax": "Điểm không vượt quá {{max}}",
-      "saveFail": "Lưu điểm thất bại",
+      "saveFail": "Không lưu được điểm, vui lòng thử lại",
       "saved": "Đã lưu điểm"
     },
     "emptyDesc": "Ghi danh học viên vào lớp để chấm điểm."
@@ -312,15 +312,15 @@
     "scheduled": "Hẹn giờ"
   },
   "toast": {
-    "deleteFail": "Xóa thất bại",
+    "deleteFail": "Không xóa được bài tập, vui lòng thử lại",
     "deleted": "Đã xóa bài tập",
     "loadFail": "Không tải được bài tập",
-    "publishFail": "Đăng thất bại",
+    "publishFail": "Không đăng được bài tập, vui lòng thử lại",
     "published": "Đã đăng bài tập",
-    "reuseFail": "Tái sử dụng thất bại",
+    "reuseFail": "Không tái sử dụng được bài tập, vui lòng thử lại",
     "reused": "Đã tạo bản nháp từ bài tập cũ - chỉnh sửa rồi đăng",
     "unpublishConfirm": "Gỡ đăng \"{{title}}\" về nháp? Phụ huynh sẽ không thấy bài này nữa.",
-    "unpublishFail": "Gỡ đăng thất bại",
+    "unpublishFail": "Không gỡ đăng được bài tập, vui lòng thử lại",
     "unpublished": "Đã gỡ về nháp",
     "unpublishTitle": "Gỡ đăng bài tập"
   }
