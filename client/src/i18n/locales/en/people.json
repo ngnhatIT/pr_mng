@@ -76,5 +76,21 @@
     "deleted": "Teacher deleted",
     "loadError": "Could not load the list, please try again",
     "saved": "Teacher saved"
+  },
+  "reset": {
+    "title": "Password reset requests",
+    "desc": "Staff or parents who use Forgot password on the login screen appear here. Press Reset to generate a temporary password, then relay it to them by phone or in person.",
+    "empty": "No pending requests.",
+    "identifier": "Username / Phone",
+    "kind": "Account type",
+    "kindStaff": "Staff",
+    "kindParent": "Parent",
+    "requestedAt": "Requested at",
+    "process": "Reset",
+    "processError": "Could not reset the password, please try again.",
+    "confirmTitle": "Reset password for {{name}}?",
+    "confirmMessage": "The system will generate a new temporary password and sign this account out of all devices. This action is logged.",
+    "doneTitle": "Password reset",
+    "doneDesc": "Temporary password for {{name}}:"
   }
 }

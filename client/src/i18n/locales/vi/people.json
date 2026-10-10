@@ -76,5 +76,21 @@
     "deleted": "Đã xóa giáo viên",
     "loadError": "Không tải được danh sách, vui lòng thử lại",
     "saved": "Đã lưu giáo viên"
+  },
+  "reset": {
+    "title": "Yêu cầu đặt lại mật khẩu",
+    "desc": "Nhân sự hoặc phụ huynh gửi yêu cầu quên mật khẩu từ màn hình đăng nhập sẽ hiện ở đây. Bấm Đặt lại để sinh mật khẩu tạm, rồi báo lại cho họ qua điện thoại hoặc gặp trực tiếp.",
+    "empty": "Không có yêu cầu nào đang chờ.",
+    "identifier": "Tên đăng nhập / SĐT",
+    "kind": "Loại tài khoản",
+    "kindStaff": "Nhân sự",
+    "kindParent": "Phụ huynh",
+    "requestedAt": "Gửi lúc",
+    "process": "Đặt lại",
+    "processError": "Không đặt lại được mật khẩu, vui lòng thử lại.",
+    "confirmTitle": "Đặt lại mật khẩu cho {{name}}?",
+    "confirmMessage": "Hệ thống sẽ sinh mật khẩu tạm mới và đăng xuất tài khoản này khỏi mọi thiết bị. Hành động này được ghi vào nhật ký.",
+    "doneTitle": "Đã đặt lại mật khẩu",
+    "doneDesc": "Mật khẩu tạm của {{name}}:"
   }
 }

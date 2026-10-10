@@ -12,6 +12,7 @@ import { Icon } from '../../shared/components/icons';
 import { Teacher } from '../../shared/types';
 import './Teachers.css';
 import { EmptyCell } from '../../shared/components/EmptyCell';
+import { ResetRequestsSection } from './ResetRequests';
 
 export function Teachers() {
   const { t } = useTranslation(['people', 'common']);
@@ -155,6 +156,8 @@ export function Teachers() {
       )}
 
       {pagination && <Pagination pagination={pagination} onChange={(p) => setPage(p)} loading={loading} />}
+
+      <ResetRequestsSection />
 
       {editing && (
         <TeacherFormModal

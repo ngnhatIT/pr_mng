@@ -17,3 +17,28 @@
   gap: 10px;
   min-width: 0;
 }
+
+/* Yêu cầu đặt lại mật khẩu (P0 red-team) */
+.reset-requests {
+  margin-top: 32px;
+  padding-top: 24px;
+  border-top: 1px solid var(--color-border);
+}
+.reset-requests h2 {
+  font-size: 18px;
+  font-weight: 600;
+  margin: 0 0 4px;
+}
+.temp-password {
+  margin: 16px 0;
+  text-align: center;
+}
+.temp-password code {
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  padding: 12px 24px;
+  background: var(--color-muted);
+  border-radius: 10px;
+  display: inline-block;
+}
