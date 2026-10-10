@@ -79,7 +79,7 @@ export function ParentHome() {
           {[0, 1].map((i) => (
             <div key={i} className="card">
               <Skeleton width="50%" height={20} radius={8} />
-              <div style={{ marginTop: 10 }}>
+              <div style={{ marginTop: 12 }}>
                 <Skeleton width="30%" height={13} />
               </div>
             </div>
