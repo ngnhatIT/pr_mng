@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { homeworkApi, type QuizQuestionForm, type Rubric } from './homework.api';
 import { ClassItem, classesApi } from '../classes/classes.api';
@@ -12,6 +12,16 @@ import { QuestionBank } from './QuestionBank';
 import type { BankQuestion } from './homework.api';
 
 type QType = 'single' | 'multiple' | 'truefalse' | 'essay';
+
+/** URL http/https hợp lệ (dùng URL constructor thay vì regex tự chế). */
+export function isValidHttpUrl(s: string): boolean {
+  try {
+    const u = new URL(s.trim());
+    return u.protocol === 'http:' || u.protocol === 'https:';
+  } catch {
+    return false;
+  }
+}
 
 const BLANK_QTYPE_OPTIONS: { text: string; is_correct: boolean }[] = [
   { text: '', is_correct: true },
@@ -48,7 +58,7 @@ export function HomeworkFormModal({
   const toast = useToast();
   // Lỗi inline dưới field + focus field lỗi đầu tiên (skill 8.2).
   // Nút submit KHÔNG disable khi thiếu dữ liệu: bấm sẽ hiện lỗi inline thay vì im lặng.
-  type HwErrKey = 'classes' | 'title' | 'maxScore' | 'dueDate' | 'closeDate' | 'publishAt' | 'students' | 'quiz' | 'rubricName' | 'rubricCriteria';
+  type HwErrKey = 'classes' | 'title' | 'maxScore' | 'dueDate' | 'closeDate' | 'publishAt' | 'students' | 'quiz' | 'rubricName' | 'rubricCriteria' | 'attachment';
   const { errors, refFor, show, clear } = useFieldErrors<HwErrKey>();
   const [kind, setKind] = useState<'homework' | 'quiz'>(initial?.kind || 'homework');
   const [title, setTitle] = useState(initial?.title || '');
@@ -67,6 +77,8 @@ export function HomeworkFormModal({
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [attName, setAttName] = useState('');
   const [attUrl, setAttUrl] = useState('');
+  const attNameRef = useRef<HTMLInputElement>(null);
+  const attUrlRef = useRef<HTMLInputElement>(null);
   // Rubric
   const [rubrics, setRubrics] = useState<Rubric[]>([]);
   const [rubricId, setRubricId] = useState<string>(initial?.rubric_id?.toString() || '');
@@ -201,9 +213,16 @@ export function HomeworkFormModal({
       toast(t('form.toast.attRequired'), 'error');
       return;
     }
+    // P0-3: URL phải đúng định dạng http/https → lỗi inline dưới cụm đính kèm (không toast)
+    if (!isValidHttpUrl(attUrl)) {
+      show({ ...errors, attachment: t('form.errors.attUrlInvalid') });
+      attUrlRef.current?.focus();
+      return;
+    }
     setAttachments((a) => [...a, { name: attName.trim(), url: attUrl.trim(), kind: 'link' }]);
     setAttName('');
     setAttUrl('');
+    clear('attachment');
   };
 
   const createRubricNow = async () => {
@@ -688,7 +707,7 @@ export function HomeworkFormModal({
 
         {/* Đính kèm */}
         {kind === 'homework' && (
-          <Field label={t('form.attachments')}>
+          <Field label={t('form.attachments')} error={errors.attachment}>
             {attachments.map((a, i) => (
               <div key={i} className="att-row">
                 <Icon name="paperclip" size={14} />
@@ -705,12 +724,14 @@ export function HomeworkFormModal({
             ))}
             <div className="hw-flex">
               <input
+                ref={attNameRef}
                 className="text-input"
                 placeholder={t('form.attNamePh')}
                 value={attName}
                 onChange={(e) => setAttName(e.target.value)}
               />
               <input
+                ref={attUrlRef}
                 className="text-input"
                 placeholder={t('form.attUrlPh')}
                 value={attUrl}

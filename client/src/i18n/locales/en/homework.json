@@ -282,6 +282,7 @@
       "classRequired": "Please select at least 1 class",
       "titleRequired": "Please enter the homework title",
       "maxScoreInvalid": "Max score must be a non-negative number",
+      "attUrlInvalid": "Attachment link must start with http:// or https://",
       "closeBeforeDue": "Close date must be after the due date",
       "duePast": "Due date cannot be in the past",
       "publishAtRequired": "Please choose a publish time",
