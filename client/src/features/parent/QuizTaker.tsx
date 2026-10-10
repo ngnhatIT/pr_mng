@@ -258,17 +258,21 @@ export function QuizTaker({
                     {t('quiz.points', { points: q.points })}
                   </span>
                 </div>
-                {q.options.map((o) => (
-                  <button
-                    key={o.id}
-                    type="button"
-                    className={`quiz-take-opt ${answers[q.id] === o.id ? 'selected' : ''}`}
-                    onClick={() => setAnswers((a) => ({ ...a, [q.id]: o.id }))}
-                  >
-                    <span className="quiz-radio" aria-hidden="true" />
-                    <span>{o.text}</span>
-                  </button>
-                ))}
+                <div role="radiogroup" aria-label={q.question} className="quiz-take-opts">
+                  {q.options.map((o) => (
+                    <button
+                      key={o.id}
+                      type="button"
+                      role="radio"
+                      aria-checked={answers[q.id] === o.id}
+                      className={`quiz-take-opt ${answers[q.id] === o.id ? 'selected' : ''}`}
+                      onClick={() => setAnswers((a) => ({ ...a, [q.id]: o.id }))}
+                    >
+                      <span className="quiz-radio" aria-hidden="true" />
+                      <span>{o.text}</span>
+                    </button>
+                  ))}
+                </div>
               </div>
             );
           })()}
