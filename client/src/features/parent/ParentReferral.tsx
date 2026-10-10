@@ -56,7 +56,7 @@ export function ParentReferral() {
           {[0, 1, 2].map((i) => (
             <div key={i} className="stat-card">
               <Skeleton width="40%" height={26} />
-              <div style={{ marginTop: 10 }}>
+              <div style={{ marginTop: 8 }}>
                 <Skeleton width="70%" height={13} />
               </div>
             </div>

@@ -47,7 +47,7 @@ export function StudentDetail() {
           <Skeleton width={64} height={64} radius={18} />
           <div style={{ flex: 1 }}>
             <Skeleton width="40%" height={24} radius={8} />
-            <div style={{ marginTop: 10 }}>
+            <div style={{ marginTop: 8 }}>
               <Skeleton width="25%" height={14} />
             </div>
           </div>

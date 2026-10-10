@@ -85,7 +85,7 @@ export function PaymentConfig() {
             <div style={{ marginTop: 14 }}>
               <Skeleton height={12} />
             </div>
-            <div style={{ marginTop: 10 }}>
+            <div style={{ marginTop: 8 }}>
               <Skeleton height={40} radius={8} />
             </div>
           </section>

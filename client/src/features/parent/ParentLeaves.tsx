@@ -48,7 +48,7 @@ export function ParentLeaves() {
           {[0, 1].map((i) => (
             <div key={i} className="card">
               <Skeleton width="60%" height={18} radius={8} />
-              <div style={{ marginTop: 10 }}>
+              <div style={{ marginTop: 8 }}>
                 <Skeleton width="40%" height={13} />
               </div>
             </div>
