@@ -126,7 +126,7 @@
 }
 .quiz-take-opt {
   min-height: 56px;
-  padding: 14px 16px;
+  padding: 16px;
   font-size: 16px;
 }
 button.quiz-take-opt {
@@ -240,7 +240,7 @@ button.quiz-take-opt {
   align-items: center;
   gap: 12px;
   min-height: 72px;
-  padding: 14px 16px;
+  padding: 16px;
   border: 2px dashed var(--border-strong, #c3cddc);
   border-radius: var(--radius-md);
   background: var(--bg-soft, #fff);
@@ -323,14 +323,14 @@ button.quiz-take-opt {
 @media (max-width: 400px) {
   .quiz-take-opt {
     font-size: 15px;
-    padding: 12px 14px;
+    padding: 12px 16px;
   }
   .referral-code {
     letter-spacing: 2px;
     font-size: 26px;
   }
   .parent-tabs .tab {
-    padding: 9px 14px;
+    padding: 8px 16px;
   }
   /* Tên con dài thì khối tên co lại, không đẩy mũi tên tràn */
   .child-head-main {

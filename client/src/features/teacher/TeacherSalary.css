@@ -4,8 +4,8 @@
   background: var(--primary);
   color: #fff;
   border-radius: var(--radius-lg);
-  padding: 24px 22px;
-  margin-bottom: 14px;
+  padding: 24px;
+  margin-bottom: 16px;
   box-shadow: var(--shadow);
 }
 
@@ -34,7 +34,7 @@
 }
 
 .salary-breakdown {
-  padding: 6px 18px;
+  padding: 8px 16px;
 }
 
 .salary-row {
@@ -42,7 +42,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: 13px 0;
+  padding: 12px 0;
   border-bottom: 1px solid var(--border);
   font-size: 14px;
 }
