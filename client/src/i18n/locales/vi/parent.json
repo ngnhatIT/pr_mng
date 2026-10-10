@@ -212,6 +212,8 @@
     "confirmTitle": "Nộp bài kiểm tra?",
     "dueDate": "- Hạn: {{date}}",
     "excellent": "Xuất sắc!",
+    "expiredDesc": "Hạn chót nộp bài là {{date}}, không thể làm thêm.",
+    "expiredTitle": "Đã hết hạn nộp",
     "good": "Khá tốt, cố gắng thêm nhé!",
     "grading": "Đang chấm bài...",
     "later": "Để sau",

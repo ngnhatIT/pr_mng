@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { parentApi, type QuizQuestion, type QuizAttempt } from './parent.api';
-import { HomeworkItem, formatDate } from '../../shared/types';
+import { HomeworkItem, formatDate, todayVN } from '../../shared/types';
 import { useToast } from '../../shared/ui/toast';
 import { ConfirmDialog, Modal } from '../../shared/components/Modal';
 import { EmptyState } from '../../shared/components/EmptyState';
@@ -54,6 +54,10 @@ export function QuizTaker({
       .catch(() => {});
   }, [homework.id, studentId]);
 
+  // FIX 2: quiz đã qua hạn chót thì không cho mở làm, báo rõ ngay từ đầu
+  // (trước đây phụ huynh làm xong mới bị server chặn lúc nộp)
+  const isExpired = homework.close_date != null && homework.close_date < todayVN();
+
   // Tách riêng tải đề để nút "Thử lại" dùng lại được khi mất mạng
   const loadQuiz = useCallback(() => {
     setLoading(true);
@@ -69,8 +73,9 @@ export function QuizTaker({
   }, [homework.id, studentId]);
 
   useEffect(() => {
+    if (isExpired) return; // Đã hết hạn thì không tải đề
     loadQuiz();
-  }, [loadQuiz]);
+  }, [loadQuiz, isExpired]);
 
   const [confirming, setConfirming] = useState(false);
 
@@ -128,6 +133,10 @@ export function QuizTaker({
 
   // MEDIUM-12: làm lại quiz (server cho phép không giới hạn, giữ điểm cao nhất)
   const retry = () => {
+    if (homework.close_date != null && homework.close_date < todayVN()) {
+      toast(t('quiz.expiredTitle'), 'error'); // Hạn chót trôi qua giữa chừng thì khóa làm lại
+      return;
+    }
     setResult(null);
     setReview(null);
     setShowReview(false);
@@ -160,7 +169,18 @@ export function QuizTaker({
           )}
         </div>
       )}
-      {loading ? (
+      {isExpired && !result ? (
+        <EmptyState
+          icon="clock"
+          title={t('quiz.expiredTitle')}
+          desc={t('quiz.expiredDesc', { date: formatDate(homework.close_date) })}
+          action={
+            <button className="btn btn-inline" onClick={onClose}>
+              {t('actions.close', { ns: 'common' })}
+            </button>
+          }
+        />
+      ) : loading ? (
         <div aria-hidden="true">
           <Skeleton width="70%" height={20} radius={8} />
           <div style={{ marginTop: 16, display: 'grid', gap: 8 }}>

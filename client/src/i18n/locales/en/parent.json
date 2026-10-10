@@ -212,6 +212,8 @@
     "confirmTitle": "Submit the quiz?",
     "dueDate": "- Due: {{date}}",
     "excellent": "Excellent!",
+    "expiredDesc": "The deadline was {{date}}; this quiz can no longer be taken.",
+    "expiredTitle": "Submission closed",
     "good": "Good job, keep it up!",
     "grading": "Grading your quiz...",
     "later": "Later",
