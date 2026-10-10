@@ -53,7 +53,10 @@
     "title": "Đơn giá dạy - {{name}}",
     "unit": "Đơn giá mỗi buổi (đ)",
     "updateError": "Cập nhật thất bại",
-    "updated": "Đã cập nhật đơn giá cho {{name}}"
+    "updated": "Đã cập nhật đơn giá cho {{name}}",
+    "errors": {
+      "amountInvalid": "Đơn giá phải là số không âm"
+    }
   },
   "table": {
     "actions": "Thao tác",

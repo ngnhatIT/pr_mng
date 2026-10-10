@@ -53,7 +53,10 @@
     "title": "Teaching rate - {{name}}",
     "unit": "Rate per session (VND)",
     "updateError": "Update failed",
-    "updated": "Rate updated for {{name}}"
+    "updated": "Rate updated for {{name}}",
+    "errors": {
+      "amountInvalid": "Rate must be a non-negative number"
+    }
   },
   "table": {
     "actions": "Actions",

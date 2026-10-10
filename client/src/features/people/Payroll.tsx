@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { peopleApi } from './people.api';
 import { useToast } from '../../shared/ui/toast';
 import { Modal } from '../../shared/components/Modal';
-import { Field } from '../../shared/components/Form';
+import { Field, useFieldErrors } from '../../shared/components/Form';
 import { PageHeader } from '../../shared/components/PageHeader';
 import { EmptyState } from '../../shared/components/EmptyState';
 import { TableSkeleton } from '../../shared/components/Skeleton';
@@ -130,9 +130,15 @@ function RateModal({ row, onClose, onDone }: { row: PayrollRow; onClose: () => v
   const [amount, setAmount] = useState(String(row.per_session));
   const [busy, setBusy] = useState(false);
   const toast = useToast();
+  // Lỗi inline dưới field + focus field lỗi (skill 8.2); dữ liệu giữ nguyên khi lỗi
+  const { errors, refFor, show, clear } = useFieldErrors<'amount'>();
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
+    const amt = Number(amount);
+    const errs: { amount?: string } = {};
+    if (!amount.trim() || !Number.isFinite(amt) || amt < 0) errs.amount = t('rate.errors.amountInvalid');
+    if (!show(errs)) return;
     setBusy(true);
     try {
       await peopleApi.savePayRule(row.teacher_id, Number(amount));
@@ -148,14 +154,17 @@ function RateModal({ row, onClose, onDone }: { row: PayrollRow; onClose: () => v
   return (
     <Modal title={t('rate.title', { name: row.teacher_name })} onClose={onClose}>
       <form onSubmit={submit}>
-        <Field label={t('rate.unit')}>
+        <Field label={t('rate.unit')} error={errors.amount}>
           <input
+            ref={refFor('amount')}
             className="text-input"
             type="number"
             min={0}
             value={amount}
-            onChange={(e) => setAmount(e.target.value)}
-            required
+            onChange={(e) => {
+              setAmount(e.target.value);
+              clear('amount');
+            }}
           />
         </Field>
         <div className="modal-actions">
