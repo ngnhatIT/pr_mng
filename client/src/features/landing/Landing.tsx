@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { useDocumentTitle } from '../../shared/hooks/useDocumentTitle';
 import { useToast } from '../../shared/ui/toast';
 import { Field } from '../../shared/components/Form';
 import { Icon } from '../../shared/components/icons';
@@ -31,6 +32,7 @@ function Stars({ rating }: { rating: number }) {
 
 export function Landing() {
   const { t } = useTranslation(['landing', 'common']);
+  useDocumentTitle('');
   const [searchParams] = useSearchParams();
   const [center, setCenter] = useState<PublicCenter | null>(null);
   const [courses, setCourses] = useState<PublicClassItem[]>([]);

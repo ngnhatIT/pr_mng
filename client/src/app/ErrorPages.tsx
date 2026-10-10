@@ -1,10 +1,12 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Icon } from '../shared/components/icons';
+import { useDocumentTitle } from '../shared/hooks/useDocumentTitle';
 
 /** Trang 404 — thân thiện, có nút quay lại thay vì đá về landing lặng lẽ. */
 export function NotFound() {
   const { t } = useTranslation('common');
+  useDocumentTitle(t('notFound.title'));
   const navigate = useNavigate();
   return (
     <div className="empty-page">
@@ -28,6 +30,7 @@ export function NotFound() {
 /** Trang 403 — phân biệt rõ "không có quyền" với "không tồn tại". */
 export function Forbidden() {
   const { t } = useTranslation('common');
+  useDocumentTitle(t('forbidden.title'));
   const navigate = useNavigate();
   return (
     <div className="empty-page">

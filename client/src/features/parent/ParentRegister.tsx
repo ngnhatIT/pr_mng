@@ -6,10 +6,12 @@ import { Field, useFieldErrors } from '../../shared/components/Form';
 import { parentApi } from './parent.api';
 import { useToast } from '../../shared/ui/toast';
 import { isValidVNPhone } from '../../shared/validation';
+import { useDocumentTitle } from '../../shared/hooks/useDocumentTitle';
 import './parent.css';
 
 export function ParentRegister() {
   const { t } = useTranslation(['parent', 'common']);
+  useDocumentTitle(t('auth.registerTitle'));
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');

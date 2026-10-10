@@ -4,11 +4,13 @@ import { useTranslation } from 'react-i18next';
 import { api, setAuth, takePostLoginRedirect } from '../../shared/api/client';
 import { Field, useFieldErrors } from '../../shared/components/Form';
 import { ThemeLangSwitch } from '../../shared/ui/ThemeLangSwitch';
+import { useDocumentTitle } from '../../shared/hooks/useDocumentTitle';
 import { User } from '../../shared/types';
 import './Login.css';
 
 export function Login() {
   const { t } = useTranslation(['auth', 'common']);
+  useDocumentTitle('');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);

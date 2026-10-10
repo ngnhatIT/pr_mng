@@ -5,10 +5,12 @@ import { setAuth, takePostLoginRedirect } from '../../shared/api/client';
 import { Field, useFieldErrors } from '../../shared/components/Form';
 import { parentApi } from './parent.api';
 import { isValidVNPhone } from '../../shared/validation';
+import { useDocumentTitle } from '../../shared/hooks/useDocumentTitle';
 import './parent.css';
 
 export function ParentLogin() {
   const { t } = useTranslation(['parent', 'common']);
+  useDocumentTitle(t('auth.loginTitle'));
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
