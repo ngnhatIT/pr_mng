@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { Modal } from '../components/Modal';
 import type { InvoiceItem } from '../../features/tuition/tuition.api';
-import { formatVND } from '../../shared/types';
+import { formatVND, formatDate } from '../../shared/types';
 
 /**
  * Biên lai thu học phí — layout in A4.
@@ -16,8 +16,9 @@ export function ReceiptModal({
   centerName: string;
   onClose: () => void;
 }) {
-  const { t, i18n } = useTranslation('tuition');
-  const today = new Date().toLocaleDateString(i18n.language === 'vi' ? 'vi-VN' : 'en-US');
+  const { t } = useTranslation('tuition');
+  // Ngày in biên lai: dùng formatDate chung của app (dd/mm/yyyy), không toLocaleDateString lẻ.
+  const today = formatDate(new Date().toISOString().slice(0, 10));
 
   return (
     <Modal title={t('receipt.title')} onClose={onClose}>
