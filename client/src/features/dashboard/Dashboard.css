@@ -58,3 +58,17 @@
   color: var(--danger);
   white-space: nowrap;
 }
+
+/* ---------- Mobile 360px: không tràn ngang ---------- */
+@media (max-width: 480px) {
+  .dash-greet-title {
+    font-size: 22px;
+  }
+  /* Tên lớp/học viên dài thì tự xuống dòng, khối số tiền không bị ép tràn */
+  .dash-cols .list-item > div:first-child {
+    min-width: 0;
+  }
+  .dash-cols .debt-amount {
+    flex-shrink: 0;
+  }
+}
