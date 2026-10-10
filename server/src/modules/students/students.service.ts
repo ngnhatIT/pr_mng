@@ -4,6 +4,7 @@ import { escapeLike } from '../../shared/like';
 import { findByIdOr404 } from '../../shared/repository';
 import { parsePagination, paginate, type PageOptions, type Paginated } from '../../shared/pagination';
 import { audit, type AuditActor } from '../../shared/audit';
+import { deleteUploadFileByUrl } from '../../shared/upload';
 
 /* ---------------------------------- Types ---------------------------------- */
 
@@ -227,7 +228,6 @@ export async function deleteStudent(centerId: number | null, id: number, actor?:
     await tx.prepare('DELETE FROM students WHERE id = ?').run(id);
   });
   // Xóa file vật lý sau khi DB đã xóa thành công
-  const { deleteUploadFileByUrl } = await import('../../shared/upload');
   for (const f of submissionFiles) await deleteUploadFileByUrl(f.file_url);
   void audit({
     centerId,

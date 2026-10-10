@@ -15,6 +15,7 @@
 import { db } from '../../db/pg-compat';
 import type { AuthUser } from '../../middleware/auth';
 import { AppError } from '../../shared/errors';
+import { PERMISSIONS, SYSTEM_ROLES } from './permissions';
 
 export type Scope = 'own' | 'center' | 'all';
 
@@ -133,8 +134,6 @@ export async function canAccess(
 
 /** Seed permissions + system roles vào DB (idempotent). */
 export async function seedAuthorization(): Promise<void> {
-  const { PERMISSIONS, SYSTEM_ROLES } = await import('./permissions');
-
   for (const p of PERMISSIONS) {
     await db
       .prepare(

@@ -10,6 +10,7 @@ import { buildVnpayUrl } from '../../services/vnpay';
 import { normalizePhone } from '../../services/zalo';
 import { AppError } from '../../shared/errors';
 import { targetScopeCond } from '../homework/homework.helpers';
+import { v, validate } from '../../shared/validate';
 
 /* ---------------------------------- Types ---------------------------------- */
 
@@ -371,7 +372,6 @@ export async function claimPaid(
   parentId: number,
   invoiceId: number
 ): Promise<{ payment_id: number; status: string }> {
-  const { withAdvisoryLock } = await import('../../shared/advisoryLock');
   const outcome = await withAdvisoryLock(`claim-paid:${invoiceId}`, async () => {
     const inv = await getParentInvoice(parentId, invoiceId);
     const remaining = await remainingOrThrow(invoiceId, inv.amount);
@@ -475,7 +475,6 @@ export async function createLeave(
     throw AppError.badRequest('Ngày nghỉ phải có dạng YYYY-MM-DD');
   }
   // Validate ngày thật (tránh "2026-13-99" qua được regex)
-  const { v, validate } = await import('../../shared/validate');
   validate(
     { from_date, to_date },
     { from_date: v.date({ label: 'Ngày bắt đầu' }), to_date: v.date({ label: 'Ngày kết thúc' }) }

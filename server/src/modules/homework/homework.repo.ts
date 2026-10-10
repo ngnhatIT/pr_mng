@@ -1,5 +1,6 @@
 import { db } from '../../db';
 import type { HomeworkRow, HomeworkStatus } from './homework.service';
+import { deleteUploadFileByUrl } from '../../shared/upload';
 
 /**
  * Repository: lớp truy cập dữ liệu thuần cho homework.
@@ -134,7 +135,6 @@ export async function deleteHomeworkCascade(id: number): Promise<void> {
     await tx.prepare('DELETE FROM homework WHERE id = ?').run(id);
   });
   // Xóa file vật lý (sau khi DB đã xóa thành công)
-  const { deleteUploadFileByUrl } = await import('../../shared/upload');
   for (const f of files) await deleteUploadFileByUrl(f.url);
   for (const f of submissionFiles) await deleteUploadFileByUrl(f.file_url);
 }

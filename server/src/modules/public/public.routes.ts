@@ -4,7 +4,7 @@ import { publicRateLimit } from '../../middleware/rateLimit';
 import { resolvePublicCenter, hasFeature, effectivePlan, Center } from '../../utils/plans';
 import { normalizePhone } from '../../services/zalo';
 import { asyncHandler } from '../../shared/http';
-import { v } from '../../shared/validate';
+import { v, validate } from '../../shared/validate';
 
 const router = Router();
 
@@ -211,7 +211,6 @@ router.post(
     // Validate ngày thật (tránh "2026-13-99" lọt vào DB)
     let desiredDate: string | null = null;
     if (desiredDateRaw) {
-      const { validate } = await import('../../shared/validate');
       const parsed = validate({ d: desiredDateRaw }, { d: v.date({ label: 'Ngày mong muốn' }) });
       desiredDate = parsed.d ?? null;
     }

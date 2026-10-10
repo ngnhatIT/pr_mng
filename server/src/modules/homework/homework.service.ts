@@ -7,6 +7,7 @@ import { todayVN } from '../../shared/vnTime';
 import { homeworkRepo, deleteHomeworkCascade } from './homework.repo';
 import { eventBus } from '../../shared/events/eventBus';
 import { escapeLike } from '../../shared/like';
+import { getRubric } from './rubric.service';
 
 /** Chuyển thành ID hợp lệ, throw 400 nếu không phải số nguyên dương. */
 function toValidId(v: unknown): number {
@@ -307,7 +308,6 @@ export async function createHomeworkBatch(input: CreateHomeworkInput): Promise<H
 
   // Validate rubric_id thuộc cùng center (chống cross-tenant linkage)
   if (rubric_id) {
-    const { getRubric } = await import('./rubric.service');
     const rubric = await getRubric(rubric_id, centerId);
     if (!rubric) throw AppError.badRequest('Rubric không tồn tại hoặc không thuộc trung tâm này');
   }

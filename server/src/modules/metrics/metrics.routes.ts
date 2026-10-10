@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { requirePermission } from '../authorization/authorization.middleware';
 import { db, getPoolStats } from '../../db';
 import { asyncHandler } from '../../shared/http';
+import { logger } from '../../shared/logger';
 
 /**
  * Metrics endpoint — chuẩn observability enterprise.
@@ -40,7 +41,6 @@ router.get(
       tableCount = Number(tableRow?.c) || 0;
     } catch (err) {
       // Không để metrics hỏng vì lỗi DB — endpoint vẫn trả các metric còn lại
-      const { logger } = await import('../../shared/logger');
       logger.scope('metrics').warn('db metrics failed', { error: String(err) });
     }
 
