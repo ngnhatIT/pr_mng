@@ -255,7 +255,7 @@ export async function applyCreditToInvoice(
   if (status === 'paid') await afterInvoicePaid(invoiceId);
   // Audit: credits là tiền thật
   await audit({
-    centerId: null,
+    centerId: studentCenter?.center_id ?? null,
     action: 'apply_credit',
     entity: 'credits',
     entityId: creditId,
