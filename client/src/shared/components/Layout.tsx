@@ -231,7 +231,9 @@ export function Layout() {
         </nav>
         <div className="sidebar-foot">
           <div className="user-chip">
-            <div className="user-avatar">{(user?.name || 'U').charAt(0).toUpperCase()}</div>
+            <div className="user-avatar" aria-hidden="true">
+              <Icon name="user" size={18} />
+            </div>
             <div className="user-meta">
               <div className="user-name">{user?.name}</div>
               <div className="user-role">{t('roles.' + (user?.role || ''))}</div>
@@ -253,7 +255,9 @@ export function Layout() {
           <div className="spacer" />
           <ThemeLangSwitch />
           <div className="topbar-user">
-            <div className="topbar-avatar">{(user?.name || 'U').charAt(0).toUpperCase()}</div>
+            <div className="topbar-avatar" aria-hidden="true">
+              <Icon name="user" size={17} />
+            </div>
             <span>{user?.name}</span>
           </div>
           <button
