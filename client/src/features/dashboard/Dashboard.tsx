@@ -37,6 +37,9 @@ export function Dashboard() {
   // dùng làm sub-info cho hero; null khi không tải được hoặc không có quyền
   const [debtTotal, setDebtTotal] = useState<number | null>(null);
   const [debtsError, setDebtsError] = useState(false);
+  // Tài khoản bị giới hạn quyền tài chính (topDebts 403): ẩn hero công nợ
+  // thay vì hiện "0đ" gây hiểu nhầm — cùng cách widget "Công nợ cao nhất" xử lý
+  const [financeDenied, setFinanceDenied] = useState(false);
   const [loading, setLoading] = useState(true);  const toast = useToast();
   const user = getUser();
 
@@ -68,12 +71,14 @@ export function Dashboard() {
         setDebts(debt.data);
         setDebtTotal(debt.pagination.total);
         setDebtsError(false);
+        setFinanceDenied(false);
       } catch (err) {
         setDebts([]);
         setDebtTotal(null);
-        // 403 thiếu quyền (teacher): ẩn widget êm; lỗi khác mới báo + cho thử lại
+        // 403 thiếu quyền (teacher): ẩn widget + hero công nợ êm; lỗi khác mới báo + cho thử lại
         const code = err instanceof Error ? (err as Error & { code?: string }).code : undefined;
         setDebtsError(code !== 'FORBIDDEN');
+        setFinanceDenied(code === 'FORBIDDEN');
       }
     } catch (err) {
       toast(err instanceof Error ? err.message : t('loadError'), 'error');
@@ -197,20 +202,23 @@ export function Dashboard() {
 
       {/* Hero: học phí chưa thu, thứ chủ trung tâm nhìn đầu tiên.
           Sub-info duy nhất là số học viên còn nợ (pagination.total thật từ API),
-          không có thì ẩn, tuyệt đối không fake trend hay số ước lượng */}
-      <Link to="/app/tuition?tab=debt" className="dash-hero">
-        <span className="dash-hero-row">
-          <span className="dash-hero-label">
-            <Icon name="alert" size={18} className="dash-hero-icon" />
-            {t('stats.debt')}
+          không có thì ẩn, tuyệt đối không fake trend hay số ước lượng.
+          Ẩn hẳn khi tài khoản không có quyền tài chính (server trả 0 khi scope own) */}
+      {!financeDenied && (
+        <Link to="/app/tuition?tab=debt" className="dash-hero">
+          <span className="dash-hero-row">
+            <span className="dash-hero-label">
+              <Icon name="alert" size={18} className="dash-hero-icon" />
+              {t('stats.debt')}
+            </span>
+            <Icon name="arrow-right" size={16} className="dash-hero-chev" />
           </span>
-          <Icon name="arrow-right" size={16} className="dash-hero-chev" />
-        </span>
-        <span className="dash-hero-value">{formatVND(data.unpaidTotal)}</span>
-        {debtTotal !== null && (
-          <span className="dash-hero-sub">{t('hero.debtors', { total: debtTotal })}</span>
-        )}
-      </Link>
+          <span className="dash-hero-value">{formatVND(data.unpaidTotal)}</span>
+          {debtTotal !== null && (
+            <span className="dash-hero-sub">{t('hero.debtors', { total: debtTotal })}</span>
+          )}
+        </Link>
+      )}
 
       {/* 3 số còn lại: strip chia cột, không phải 4 card giống nhau */}
       <div className="dash-strip">
