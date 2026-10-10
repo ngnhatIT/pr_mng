@@ -114,7 +114,7 @@ export function Leads() {
         </div>
       ) : leads.length === 0 ? (
         <EmptyState
-          icon="filter"
+          icon="inbox"
           title={t('leads.empty.title')}
           desc={t('leads.empty.desc')}
           action={
