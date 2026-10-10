@@ -134,7 +134,13 @@
     "teacherUnassigned": "Unassigned",
     "tuitionFee": "Tuition (VND) *",
     "weeklySchedule": "Schedule",
-    "roomCapacity": " ({{capacity}} seats)"
+    "roomCapacity": " ({{capacity}} seats)",
+    "errors": {
+      "nameRequired": "Please enter the class name",
+      "endBeforeStart": "End date must be after start date",
+      "feeInvalid": "Tuition fee must be a non-negative number",
+      "maxStudentsInvalid": "Max students must be a whole number of 1 or more"
+    }
   },
   "rooms": {
     "add": "Add room",

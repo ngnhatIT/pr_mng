@@ -5,7 +5,7 @@ import { classesApi, roomsApi, ClassItem, Room } from './classes.api';
 import { peopleApi } from '../people/people.api';
 import { useToast } from '../../shared/ui/toast';
 import { Modal, ConfirmDialog } from '../../shared/components/Modal';
-import { Field } from '../../shared/components/Form';
+import { Field, useFieldErrors } from '../../shared/components/Form';
 import { PageHeader } from '../../shared/components/PageHeader';
 import { EmptyState } from '../../shared/components/EmptyState';
 import { CardGridSkeleton } from '../../shared/components/Skeleton';
@@ -228,6 +228,10 @@ function ClassFormModal({
   }));
   const [busy, setBusy] = useState(false);
   const toast = useToast();
+  // Lỗi inline dưới field + focus field lỗi đầu tiên (skill 8.2); dữ liệu giữ nguyên khi lỗi
+  const { errors, refFor, show, clear } = useFieldErrors<
+    'name' | 'start_date' | 'end_date' | 'tuition_fee' | 'max_students'
+  >();
 
   useEffect(() => {
     Promise.all([
@@ -241,8 +245,11 @@ function ClassFormModal({
       .catch((err: Error) => toast(err.message, 'error'));
   }, [toast]);
 
-  const set = (k: keyof ClassForm) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
+  const set = (k: keyof ClassForm) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setForm((f) => ({ ...f, [k]: e.target.value }));
+    if (k === 'name' || k === 'start_date' || k === 'end_date' || k === 'tuition_fee' || k === 'max_students')
+      clear(k);
+  };
 
   const addSlot = () => {
     setForm((f) => ({ ...f, schedule: [...f.schedule, { day: 2, start: '18:00', end: '20:00' }] }));
@@ -260,6 +267,16 @@ function ClassFormModal({
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (busy) return;
+    const errs: Record<string, string> = {};
+    if (!form.name.trim()) errs.name = t('form.errors.nameRequired');
+    if (form.start_date && form.end_date && form.end_date < form.start_date)
+      errs.end_date = t('form.errors.endBeforeStart');
+    const fee = Number(form.tuition_fee);
+    if (!form.tuition_fee || !Number.isFinite(fee) || fee < 0) errs.tuition_fee = t('form.errors.feeInvalid');
+    const maxS = Number(form.max_students);
+    if (form.max_students && (!Number.isInteger(maxS) || maxS < 1))
+      errs.max_students = t('form.errors.maxStudentsInvalid');
+    if (!show(errs)) return;
     setBusy(true);
     try {
       await onSave(form, initial?.id);
@@ -272,8 +289,8 @@ function ClassFormModal({
     <Modal title={initial ? t('form.editTitle') : t('form.addTitle')} onClose={onClose} wide>
       <form onSubmit={submit}>
         <div className="form-grid">
-          <Field label={t('form.name')} span>
-            <input className="text-input" value={form.name} onChange={set('name')} required />
+          <Field label={t('form.name')} span error={errors.name}>
+            <input ref={refFor('name')} className="text-input" value={form.name} onChange={set('name')} />
           </Field>
           <Field label={t('form.teacher')}>
             <select className="text-input" value={form.teacher_id} onChange={set('teacher_id')}>
@@ -302,24 +319,37 @@ function ClassFormModal({
               ))}
             </select>
           </Field>
-          <Field label={t('form.startDate')}>
-            <input className="text-input" type="date" value={form.start_date} onChange={set('start_date')} />
-          </Field>
-          <Field label={t('form.endDate')}>
-            <input className="text-input" type="date" value={form.end_date} onChange={set('end_date')} />
-          </Field>
-          <Field label={t('form.tuitionFee')}>
+          <Field label={t('form.startDate')} error={errors.start_date}>
             <input
+              ref={refFor('start_date')}
+              className="text-input"
+              type="date"
+              value={form.start_date}
+              onChange={set('start_date')}
+            />
+          </Field>
+          <Field label={t('form.endDate')} error={errors.end_date}>
+            <input
+              ref={refFor('end_date')}
+              className="text-input"
+              type="date"
+              value={form.end_date}
+              onChange={set('end_date')}
+            />
+          </Field>
+          <Field label={t('form.tuitionFee')} error={errors.tuition_fee}>
+            <input
+              ref={refFor('tuition_fee')}
               className="text-input"
               type="number"
               min={0}
               value={form.tuition_fee}
               onChange={set('tuition_fee')}
-              required
             />
           </Field>
-          <Field label={t('form.maxStudents')}>
+          <Field label={t('form.maxStudents')} error={errors.max_students}>
             <input
+              ref={refFor('max_students')}
               className="text-input"
               type="number"
               min={1}
