@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { useSearchParams, Link } from 'react-router-dom';
+import { useSearchParams, useLocation, Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { classesApi, sessionsApi, ClassItem, SessionItem, AttendanceRow } from './classes.api';
 import { rolesApi } from '../system/roles.api';
@@ -18,6 +18,10 @@ type Status = 'present' | 'absent' | 'late';
 export function Attendance() {
   const { t } = useTranslation(['classes', 'common']);
   const [searchParams, setSearchParams] = useSearchParams();
+  const location = useLocation();
+  // Trang điểm danh dùng chung cho portal giáo viên (/teacher) và quản trị (/app):
+  // route /app/classes chỉ tồn tại ở layout quản trị nên ẩn link này với giáo viên
+  const isTeacherPortal = location.pathname.startsWith('/teacher');
   const [classes, setClasses] = useState<ClassItem[]>([]);
   const [sessions, setSessions] = useState<SessionItem[]>([]);
   const [rows, setRows] = useState<AttendanceRow[]>([]);
@@ -297,10 +301,12 @@ export function Attendance() {
               title={t('attendance.emptyTitle')}
               desc={t('attendance.emptyDesc')}
               action={
-                <Link className="btn btn-primary btn-inline" to={`/app/classes/${classId}`}>
-                  <Icon name="plus" size={14} />
-                  {t('detail.enroll.add')}
-                </Link>
+                !isTeacherPortal && (
+                  <Link className="btn btn-primary btn-inline" to={`/app/classes/${classId}`}>
+                    <Icon name="plus" size={14} />
+                    {t('detail.enroll.add')}
+                  </Link>
+                )
               }
             />
           ) : (
