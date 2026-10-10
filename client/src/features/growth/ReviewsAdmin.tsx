@@ -96,7 +96,7 @@ export function ReviewsAdmin() {
         </button>
       </div>
 
-      {loading ? (
+      {loading && reviews.length === 0 ? (
         <CardGridSkeleton count={3} />
       ) : reviews.length === 0 ? (
         <EmptyState
@@ -105,7 +105,7 @@ export function ReviewsAdmin() {
           desc={tab === 'pending' ? t('reviews.empty.pendingDesc') : t('reviews.empty.approvedDesc')}
         />
       ) : (
-        <div className="card-grid">
+        <div className="card-grid" aria-busy={loading || undefined}>
           {reviews.map((r) => (
             <div key={r.id} className="card review-card">
               <div className="review-head">
@@ -146,7 +146,7 @@ export function ReviewsAdmin() {
         </div>
       )}
 
-      {pagination && <Pagination pagination={pagination} onChange={(p) => setPage(p)} />}
+      {pagination && <Pagination pagination={pagination} onChange={(p) => setPage(p)} loading={loading} />}
 
       {deleting && (
         <ConfirmDialog
