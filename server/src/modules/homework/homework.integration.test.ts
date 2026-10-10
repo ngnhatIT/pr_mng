@@ -921,6 +921,37 @@ describe('validate điểm câu hỏi (P1-7)', () => {
   });
 });
 
+describe('bank check đáp án trùng (P1-8)', () => {
+  beforeEach(async () => {
+    await resetDb();
+  });
+
+  it('addBankQuestion đáp án trùng text → 400 (như quiz)', async () => {
+    await assert.rejects(
+      () =>
+        addBankQuestion(null, 1, {
+          question: 'Q?',
+          points: 1,
+          options: [
+            { text: 'A', is_correct: true },
+            { text: ' a ', is_correct: false },
+          ],
+        }),
+      /trùng nhau/
+    );
+    // Không trùng thì qua
+    const q = await addBankQuestion(null, 1, {
+      question: 'Q?',
+      points: 1,
+      options: [
+        { text: 'A', is_correct: true },
+        { text: 'B', is_correct: false },
+      ],
+    });
+    assert.equal(q.options.length, 2);
+  });
+});
+
 describe('questionBank trả row trực tiếp (P1-4)', () => {
   beforeEach(async () => {
     await resetDb();

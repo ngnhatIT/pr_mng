@@ -3,7 +3,7 @@ import { AppError } from '../../shared/errors';
 import { todayVN } from '../../shared/vnTime';
 import { eventBus } from '../../shared/events/eventBus';
 import { QuizSubmittedEvent } from '../../shared/events/homework.events';
-import { sumQuestionPoints, normalizePoints } from './homework.helpers';
+import { sumQuestionPoints, normalizePoints, assertUniqueOptionTexts } from './homework.helpers';
 
 /* ---------------------------------- Types ---------------------------------- */
 
@@ -51,9 +51,7 @@ export function validateQuizQuestions(questions: QuizQuestionInput[]): void {
       throw AppError.badRequest(`Câu ${qi + 1} chưa chọn đáp án đúng`);
     // P1-7: điểm âm/khổng lồ/không phải số → 400, không clamp im lặng
     normalizePoints(q?.points, `Điểm câu ${qi + 1}`);
-    const texts = q.options.map((o) => String(o.text).trim().toLowerCase());
-    if (new Set(texts).size !== texts.length)
-      throw AppError.badRequest(`Câu ${qi + 1} có đáp án trùng nhau`);
+    assertUniqueOptionTexts(q.options, `Câu ${qi + 1} có đáp án trùng nhau`);
     q.options.forEach((o, oi) => {
       if (typeof o.text !== 'string' || !o.text.trim())
         throw AppError.badRequest(`Câu ${qi + 1}: đáp án ${oi + 1} trống`);

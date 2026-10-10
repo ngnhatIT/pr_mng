@@ -2,7 +2,7 @@ import { db } from '../../db';
 import { AppError } from '../../shared/errors';
 import { escapeLike } from '../../shared/like';
 import { countQuizAttempts } from './quiz.service';
-import { sumQuestionPoints, normalizePoints } from './homework.helpers';
+import { sumQuestionPoints, normalizePoints, assertUniqueOptionTexts } from './homework.helpers';
 
 /* ---------------------------------- Types ---------------------------------- */
 
@@ -120,6 +120,8 @@ function validateBankInput(input: BankQuestionInput): {
   const options = Array.isArray(input.options) ? input.options : [];
   if (options.length < 2) throw AppError.badRequest('Cần ít nhất 2 đáp án');
   if (!options.some((o) => o.is_correct)) throw AppError.badRequest('Chưa chọn đáp án đúng');
+  // P1-8: bank cũng check đáp án trùng text như quiz
+  assertUniqueOptionTexts(options, 'Có đáp án trùng nhau');
   options.forEach((o, i) => {
     if (typeof o?.text !== 'string' || !o.text.trim())
       throw AppError.badRequest(`Đáp án ${i + 1} trống`);

@@ -58,6 +58,20 @@ export function sumQuestionPoints(questions: { points?: number | null }[]): numb
   return questions.reduce((s, q) => s + normalizePoints(q?.points), 0);
 }
 
+/**
+ * Chặn đáp án trùng text (so sánh sau trim + lowercase) — dùng chung cho
+ * quiz (quiz.service) và ngân hàng câu hỏi (questionBank.service). P1-8.
+ */
+export function assertUniqueOptionTexts(
+  options: { text?: unknown }[] | undefined | null,
+  message: string
+): void {
+  const texts = (options ?? []).map((o) => String(o?.text ?? '').trim().toLowerCase());
+  if (new Set(texts).size !== texts.length) {
+    throw AppError.badRequest(message);
+  }
+}
+
 /** Validate cặp hạn nộp / hạn chót cứng. */
 export function assertValidDates(
   dueDate: string | null | undefined,
