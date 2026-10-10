@@ -8,6 +8,7 @@ import { todayVN } from '../../shared/vnTime';
 import { homeworkRepo, deleteHomeworkCascade } from './homework.repo';
 import { eventBus } from '../../shared/events/eventBus';
 import { escapeLike } from '../../shared/like';
+import { copyUploadedFileByUrl } from '../../shared/upload';
 import { getRubric } from './rubric.service';
 
 /** Chuyển thành ID hợp lệ, throw 400 nếu không phải số nguyên dương. */
@@ -384,7 +385,14 @@ export async function reuseHomework(
     max_score: src.max_score,
     kind: src.kind,
     rubric_id: src.rubric_id,
-    attachments: (src.attachments || []).map((a) => ({ name: a.name, url: a.url, kind: a.kind })),
+    // P1-3: attachment loại file được COPY vật lý sang tên mới — bản copy sở hữu
+    // file riêng, xóa bài gốc không làm bài copy mất file. Link giữ nguyên URL.
+    // Copy lỗi (hiếm) → giữ URL cũ để bản nháp không mất tham chiếu (log ở helper).
+    attachments: (src.attachments || []).map((a) => ({
+      name: a.name,
+      url: a.kind === 'file' ? (copyUploadedFileByUrl(a.url) ?? a.url) : a.url,
+      kind: a.kind,
+    })),
   });
   // Copy câu hỏi quiz nếu có — bọc transaction (tránh bài mới thiếu câu hỏi/đáp án)
   if (src.kind === 'quiz') {

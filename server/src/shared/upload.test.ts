@@ -80,3 +80,31 @@ describe('assertSafeUpload', () => {
     assert.ok(!fs.existsSync(f.path));
   });
 });
+
+describe('copyUploadedFileByUrl (P1-3)', () => {
+  let dir: string;
+  before(() => {
+    dir = fs.mkdtempSync(path.join(os.tmpdir(), 'upload-copy-test-'));
+  });
+  after(() => {
+    fs.rmSync(dir, { recursive: true, force: true });
+  });
+
+  it('copy sang tên mới CSPRNG, nội dung giống, file gốc còn nguyên', async () => {
+    const { copyUploadedFileByUrl } = await import('./upload');
+    fs.writeFileSync(path.join(dir, 'hw_abc123.pdf'), 'NOI-DUNG-GOC');
+    const newUrl = copyUploadedFileByUrl('/uploads/hw_abc123.pdf', dir);
+    assert.ok(newUrl && newUrl.startsWith('/uploads/hw_') && newUrl.endsWith('.pdf'));
+    assert.notEqual(newUrl, '/uploads/hw_abc123.pdf');
+    assert.equal(fs.readFileSync(path.join(dir, path.basename(newUrl!)), 'utf8'), 'NOI-DUNG-GOC');
+    assert.ok(fs.existsSync(path.join(dir, 'hw_abc123.pdf'))); // file gốc không bị động
+  });
+
+  it('URL lạ / file không tồn tại / path traversal → null', async () => {
+    const { copyUploadedFileByUrl } = await import('./upload');
+    assert.equal(copyUploadedFileByUrl('https://x.com/a.pdf', dir), null);
+    assert.equal(copyUploadedFileByUrl('/uploads/khong-co.pdf', dir), null);
+    assert.equal(copyUploadedFileByUrl('/uploads/../secret.txt', dir), null);
+    assert.equal(copyUploadedFileByUrl(null, dir), null);
+  });
+});

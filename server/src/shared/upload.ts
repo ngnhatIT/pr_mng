@@ -146,6 +146,26 @@ export function isValidUploadFilename(filename: string): boolean {
 }
 
 /**
+ * Copy file upload sang tên mới (CSPRNG như lúc upload) — dùng khi reuse bài tập
+ * để bản copy sở hữu file riêng: 2 bản ghi không trỏ chung 1 file vật lý,
+ * xóa bài gốc không làm bài copy mất file. Trả về URL mới, null nếu copy thất bại.
+ */
+export function copyUploadedFileByUrl(url: string | null | undefined, dir: string = getUploadDir()): string | null {
+  if (!url || !url.startsWith('/uploads/')) return null;
+  const filename = path.basename(url);
+  // Chống path traversal: chỉ copy trong upload dir
+  if (!/^[a-zA-Z0-9._-]+$/.test(filename)) return null;
+  try {
+    const ext = path.extname(filename).toLowerCase();
+    const dest = `hw_${crypto.randomUUID()}${ext}`;
+    fs.copyFileSync(path.join(dir, filename), path.join(dir, dest));
+    return `/uploads/${dest}`;
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Xóa file vật lý theo URL lưu trong DB (vd: '/uploads/hw_xxx.pdf').
  * Dùng khi xóa bản ghi (homework, submission, student...) để không để lại file mồ côi.
  */
