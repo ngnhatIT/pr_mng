@@ -14,7 +14,7 @@
     "message": "Bạn có chắc muốn xóa giáo viên \"{{name}}\"? Các lớp đang phân công sẽ chuyển thành \"Chưa phân công\".",
     "title": "Xóa giáo viên"
   },
-  "desc": "Quản lý giáo viên và tạo tài khoản đăng nhập cho họ",
+  "desc": "Quản lý giáo viên và tạo tài khoản đăng nhập cho họ.",
   "empty": {
     "desc": "Thêm giáo viên và tạo tài khoản để họ chấm công, điểm danh và giao bài tập.",
     "title": "Chưa có giáo viên nào"
@@ -34,7 +34,7 @@
   },
   "payroll": {
     "desc": "Tính lương giáo viên theo số buổi đã dạy trong tháng",
-    "emptyDesc": "Chưa có dữ liệu lương cho tháng này.",
+    "emptyDesc": "Bảng lương sẽ hiện ở đây khi có buổi dạy được ghi nhận trong tháng.",
     "emptyTitle": "Không có dữ liệu lương",
     "loadError": "Không tải được bảng lương",
     "month": "Tháng",

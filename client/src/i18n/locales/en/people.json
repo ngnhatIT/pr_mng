@@ -14,7 +14,7 @@
     "message": "Are you sure you want to delete teacher \"{{name}}\"? Assigned classes will become \"Unassigned\".",
     "title": "Delete teacher"
   },
-  "desc": "Manage teachers and create login accounts for them",
+  "desc": "Manage teachers and create login accounts for them.",
   "empty": {
     "desc": "Add teachers and create accounts so they can check in, take attendance and assign homework.",
     "title": "No teachers yet"
@@ -34,7 +34,7 @@
   },
   "payroll": {
     "desc": "Calculate teacher pay based on sessions taught this month",
-    "emptyDesc": "No payroll data for this month.",
+    "emptyDesc": "Payroll will appear here once teaching sessions are recorded this month.",
     "emptyTitle": "No payroll data",
     "loadError": "Could not load payroll",
     "month": "Month",
