@@ -727,6 +727,7 @@ describe('homework.service - update và reuse', () => {
       { close_date: 'abc' }, // format sai
       { close_date: '2026-02-30' }, // ngày không có thật
       { due_date: '2026-12-10', close_date: '2026-12-05' }, // close trước due
+      { close_date: '2026-11-01' }, // P0-1: chỉ gửi close < due_date đang lưu trong DB
     ];
     for (const d of bad) {
       await assert.rejects(
@@ -744,6 +745,13 @@ describe('homework.service - update và reuse', () => {
       close_date: string;
     };
     assert.equal(row.close_date, '2026-12-10');
+    // P0-1: field không gửi thì giữ nguyên trong DB, không reset về null
+    await homeworkService.updateHomework(hw.id, { title: 'Date test' });
+    const kept = (await db
+      .prepare('SELECT due_date, close_date FROM homework WHERE id = ?')
+      .get(hw.id)) as { due_date: string; close_date: string };
+    assert.equal(kept.due_date, '2026-12-01');
+    assert.equal(kept.close_date, '2026-12-10');
   });
 
   it('reuse copy targets sang bài mới', async () => {

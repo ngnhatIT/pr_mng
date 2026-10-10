@@ -568,9 +568,10 @@ router.put(
       await updateHomework(id, {
         title: body.title as string,
         content: body.content,
-        due_date: body.due_date || null,
+        // undefined = không gửi → giữ nguyên trong DB (P0-1)
+        due_date: body.due_date,
         max_score: body.max_score != null ? Number(body.max_score) : null,
-        close_date: body.close_date || null,
+        close_date: body.close_date,
         status: body.status as 'draft' | 'scheduled' | 'published' | undefined,
         publish_at: body.publish_at || null,
         rubric_id: body.rubric_id != null ? Number(body.rubric_id) : null,

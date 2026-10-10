@@ -472,8 +472,22 @@ export async function updateHomework(
   }
 ): Promise<HomeworkRow> {
   if (!data.title.trim()) throw AppError.badRequest('Vui lòng nhập tiêu đề bài tập');
+  // P0-1: merge với ngày hiện tại trong DB trước khi check cặp ngày.
+  // Route truyền undefined cho field không gửi (không reset về null) → tránh
+  // lọt close_date < due_date khi client chỉ gửi 1 field.
+  const current = (await db
+    .prepare('SELECT due_date, close_date, kind, max_score FROM homework WHERE id = ?')
+    .get(id)) as {
+    due_date: string | null;
+    close_date: string | null;
+    kind: string;
+    max_score: number | null;
+  } | undefined;
+  if (!current) throw AppError.notFound('Không tìm thấy bài tập');
+  const due_date = data.due_date !== undefined ? data.due_date : current.due_date;
+  const close_date = data.close_date !== undefined ? data.close_date : current.close_date;
   // Validate format + logic ngày (date có thật, close_date sau due_date)
-  assertValidDates(data.due_date, data.close_date);
+  assertValidDates(due_date, close_date);
   if (data.status === 'scheduled' && !data.publish_at) {
     throw AppError.badRequest('Hẹn giờ đăng cần chọn thời gian');
   }
@@ -505,9 +519,9 @@ export async function updateHomework(
     .run(
       data.title.trim(),
       data.content?.trim() || null,
-      data.due_date || null,
+      due_date || null,
       maxScore,
-      data.close_date || null,
+      close_date || null,
       status,
       data.publish_at || null,
       data.rubric_id ?? null,
