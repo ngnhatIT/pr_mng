@@ -96,6 +96,30 @@
   scroll-margin-top: 84px;
 }
 
+/* Trạng thái lỗi tải dữ liệu: nền tint nhạt + icon, không vạch màu một cạnh */
+.landing-load-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 32px 24px;
+  border-radius: 14px;
+  background: var(--danger-soft, #fef2f2);
+  color: var(--text-strong);
+  text-align: center;
+}
+.landing-load-error p {
+  margin: 0;
+  color: var(--text-muted);
+}
+.landing-load-error .btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
 /* Card khóa học: thông tin gọn, CTA rõ */
 .course-card {
   border-radius: var(--radius-lg);

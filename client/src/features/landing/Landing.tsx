@@ -1,10 +1,11 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useDocumentTitle } from '../../shared/hooks/useDocumentTitle';
 import { useToast } from '../../shared/ui/toast';
 import { Field } from '../../shared/components/Form';
 import { Icon } from '../../shared/components/icons';
+import { Skeleton } from '../../shared/components/Skeleton';
 import { ThemeLangSwitch } from '../../shared/ui/ThemeLangSwitch';
 import { http } from '../../shared/api/client';
 import { PublicCenter, PublicClassItem, PublicTeacher, PublicReview, formatVND } from '../../shared/types';
@@ -31,6 +32,46 @@ function Stars({ rating }: { rating: number }) {
   );
 }
 
+/** Khung 3 trạng thái loading / error / empty dùng chung cho khối khóa học và giáo viên. */
+function SectionState({
+  status,
+  isEmpty,
+  emptyText,
+  skeleton,
+  onRetry,
+  children,
+}: {
+  status: 'loading' | 'error' | 'ready';
+  isEmpty: boolean;
+  emptyText: string;
+  skeleton: React.ReactNode;
+  onRetry: () => void;
+  children: React.ReactNode;
+}) {
+  const { t } = useTranslation(['landing', 'common']);
+  if (status === 'loading') return <>{skeleton}</>;
+  if (status === 'error') {
+    return (
+      <div className="landing-load-error" role="alert">
+        <Icon name="alert" size={20} aria-hidden="true" />
+        <p>{t('loadError')}</p>
+        <button className="btn btn-primary btn-sm" onClick={onRetry}>
+          <Icon name="rotate" size={14} aria-hidden="true" />
+          {t('actions.retry', { ns: 'common' })}
+        </button>
+      </div>
+    );
+  }
+  if (isEmpty) {
+    return (
+      <p className="muted" style={{ textAlign: 'center' }}>
+        {emptyText}
+      </p>
+    );
+  }
+  return <>{children}</>;
+}
+
 export function Landing() {
   const { t } = useTranslation(['landing', 'common']);
   useDocumentTitle('');
@@ -43,25 +84,43 @@ export function Landing() {
   const trialRef = useRef<HTMLDivElement>(null);
   // Khóa học user vừa bấm "Đăng ký học thử" trên thẻ khóa học -> preselect trong TrialForm
   const [trialClassId, setTrialClassId] = useState<number | null>(null);
+  // Phân biệt loading / error / empty cho từng khối (trước đây catch nuốt lỗi,
+  // khối khóa học/giáo viên treo "Đang tải..." vĩnh viễn khi API lỗi)
+  const [coursesStatus, setCoursesStatus] = useState<'loading' | 'error' | 'ready'>('loading');
+  const [teachersStatus, setTeachersStatus] = useState<'loading' | 'error' | 'ready'>('loading');
+
+  const loadPublic = useCallback(async () => {
+    setCoursesStatus('loading');
+    setTeachersStatus('loading');
+    // Thông tin trung tâm + đánh giá: lỗi thì dùng fallback tĩnh, không chặn trang
+    const [c, r] = await Promise.allSettled([
+      getJSON<PublicCenter>('/public/center'),
+      getJSON<{ avg: number; total: number; items: PublicReview[] }>('/public/reviews'),
+    ]);
+    if (c.status === 'fulfilled') setCenter(c.value);
+    if (r.status === 'fulfilled') setReviews(r.value);
+    // Khóa học + giáo viên: lỗi phải hiện thông báo + nút thử lại, không treo loading
+    const [cls, te] = await Promise.allSettled([
+      getJSON<PublicClassItem[]>('/public/classes'),
+      getJSON<PublicTeacher[]>('/public/teachers'),
+    ]);
+    if (cls.status === 'fulfilled') {
+      setCourses(cls.value);
+      setCoursesStatus('ready');
+    } else {
+      setCoursesStatus('error');
+    }
+    if (te.status === 'fulfilled') {
+      setTeachers(te.value);
+      setTeachersStatus('ready');
+    } else {
+      setTeachersStatus('error');
+    }
+  }, []);
 
   useEffect(() => {
-    void (async () => {
-      try {
-        const [c, cls, te, r] = await Promise.all([
-          getJSON<PublicCenter>('/public/center'),
-          getJSON<PublicClassItem[]>('/public/classes'),
-          getJSON<PublicTeacher[]>('/public/teachers'),
-          getJSON<{ avg: number; total: number; items: PublicReview[] }>('/public/reviews'),
-        ]);
-        setCenter(c);
-        setCourses(cls);
-        setTeachers(te);
-        setReviews(r);
-      } catch {
-        /* trang public vẫn hiển thị phần tĩnh */
-      }
-    })();
-  }, []);
+    void loadPublic();
+  }, [loadPublic]);
 
   // Mỗi CTA cuộn tới đúng form của nó (tư vấn vs học thử là 2 form khác nhau).
   const scrollTo = (ref: React.RefObject<HTMLDivElement | null>) => {
@@ -127,11 +186,21 @@ export function Landing() {
           <h2>{t('courses.title')}</h2>
           <p>{t('courses.sub')}</p>
         </div>
-        {courses.length === 0 ? (
-          <p className="muted" style={{ textAlign: 'center' }}>
-            {t('courses.empty')}
-          </p>
-        ) : (
+        <SectionState
+          status={coursesStatus}
+          isEmpty={courses.length === 0}
+          emptyText={t('courses.empty')}
+          onRetry={() => void loadPublic()}
+          skeleton={
+            <div className="course-grid" aria-hidden="true">
+              {[0, 1, 2].map((i) => (
+                <div key={i} className="card">
+                  <Skeleton height={150} radius={10} />
+                </div>
+              ))}
+            </div>
+          }
+        >
           <div className="course-grid">
             {courses.map((c) => (
               <div key={c.id} className="card course-card">
@@ -160,7 +229,7 @@ export function Landing() {
               </div>
             ))}
           </div>
-        )}
+        </SectionState>
       </section>
 
       <section className="landing-section landing-alt" id="giao-vien">
@@ -168,11 +237,27 @@ export function Landing() {
           <h2>{t('teachers.title')}</h2>
           <p>{t('teachers.sub')}</p>
         </div>
-        {teachers.length === 0 ? (
-          <p className="muted" style={{ textAlign: 'center' }}>
-            {t('teachers.empty')}
-          </p>
-        ) : (
+        <SectionState
+          status={teachersStatus}
+          isEmpty={teachers.length === 0}
+          emptyText={t('teachers.empty')}
+          onRetry={() => void loadPublic()}
+          skeleton={
+            <div className="teacher-list" aria-hidden="true">
+              {[0, 1, 2].map((i) => (
+                <div key={i} className="teacher-row">
+                  <Skeleton width={48} height={48} radius={24} />
+                  <div style={{ flex: 1 }}>
+                    <Skeleton width="40%" height={16} radius={6} />
+                    <div style={{ marginTop: 6 }}>
+                      <Skeleton width="60%" height={13} radius={6} />
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          }
+        >
           <div className="teacher-list">
             {teachers.map((te, i) => (
               <div key={i} className="teacher-row">
@@ -186,7 +271,7 @@ export function Landing() {
               </div>
             ))}
           </div>
-        )}
+        </SectionState>
       </section>
 
       <section className="landing-section" id="danh-gia">

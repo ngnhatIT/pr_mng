@@ -32,6 +32,7 @@
       "loadError": "Could not load grades",
       "saveError": "Couldn't save the grade, please try again",
       "saved": "Grade saved",
+      "scoreTooHigh": "Score cannot exceed the max score ({{max}}).",
       "table": {
         "actions": "Actions",
         "class": "Class",

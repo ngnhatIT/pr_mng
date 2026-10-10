@@ -32,6 +32,7 @@
       "loadError": "Không tải được điểm số",
       "saveError": "Không lưu được điểm, vui lòng thử lại",
       "saved": "Đã nhập điểm",
+      "scoreTooHigh": "Điểm không được vượt quá thang điểm ({{max}}).",
       "table": {
         "actions": "Thao tác",
         "class": "Lớp",
