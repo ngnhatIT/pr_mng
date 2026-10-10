@@ -83,7 +83,16 @@ export function ChildDetail() {
   if (!data)
     return (
       <div className="parent-page">
-        <EmptyState icon="user" title={t('child.notFoundTitle')} desc={t('child.notFoundDesc')} />
+        <EmptyState
+          icon="user"
+          title={t('child.notFoundTitle')}
+          desc={t('child.notFoundDesc')}
+          action={
+            <Link className="btn btn-primary btn-inline" to="/parent">
+              {t('error.home', { ns: 'common' })}
+            </Link>
+          }
+        />
       </div>
     );
 
@@ -132,7 +141,7 @@ function ScheduleTab({ data }: { data: ChildOverview }) {
       <section className="card">
         <h3 className="card-title">{t('child.schedule.title')}</h3>
         {data.classes.length === 0 ? (
-          <EmptyState icon="book" title={t('child.schedule.empty')} />
+          <EmptyState icon="book" title={t('child.schedule.empty')} desc={t('child.schedule.emptyDesc')} />
         ) : (
           data.classes.map((c) => (
             <div key={c.id} className="class-info-card">
@@ -152,7 +161,11 @@ function ScheduleTab({ data }: { data: ChildOverview }) {
       <section className="card">
         <h3 className="card-title">{t('child.schedule.upcoming')}</h3>
         {data.upcomingSessions.length === 0 ? (
-          <EmptyState icon="calendar" title={t('child.schedule.upcomingEmpty')} />
+          <EmptyState
+            icon="calendar"
+            title={t('child.schedule.upcomingEmpty')}
+            desc={t('child.schedule.upcomingEmptyDesc')}
+          />
         ) : (
           <ul className="list">
             {data.upcomingSessions.map((s) => (
@@ -208,7 +221,7 @@ function TuitionTab({ data, onPaid }: { data: ChildOverview; onPaid: () => void 
     <section className="card">
       <h3 className="card-title">{t('child.tuition.title')}</h3>
       {data.invoices.length === 0 ? (
-        <EmptyState icon="banknote" title={t('child.tuition.empty')} />
+        <EmptyState icon="banknote" title={t('child.tuition.empty')} desc={t('child.tuition.emptyDesc')} />
       ) : (
         <div className="invoice-list">
           {data.invoices.map((inv) => {
@@ -369,7 +382,7 @@ function GradesTab({ data }: { data: ChildOverview }) {
     <section className="card">
       <h3 className="card-title">{t('child.grades.title')}</h3>
       {grades.length === 0 ? (
-        <EmptyState icon="cap" title={t('child.grades.empty')} />
+        <EmptyState icon="cap" title={t('child.grades.empty')} desc={t('child.grades.emptyDesc')} />
       ) : (
         <>
           <div className="progress-line">
@@ -571,7 +584,7 @@ function HomeworkTab({ data, onChanged }: { data: ChildOverview; onChanged: () =
       <h3 className="card-title">{t('child.homework.title')}</h3>
       <p className="card-desc">{t('child.homework.desc')}</p>
       {data.homework.length === 0 ? (
-        <EmptyState icon="file" title={t('child.homework.empty')} />
+        <EmptyState icon="file" title={t('child.homework.empty')} desc={t('child.homework.emptyDesc')} />
       ) : (
         <>
           {todo.length > 0 && (

@@ -48,7 +48,8 @@
       "empty": "No grades yet",
       "score": "Score",
       "test": "Test",
-      "title": "Grades"
+      "title": "Grades",
+      "emptyDesc": "Scores will appear here once the teacher enters them."
     },
     "homework": {
       "actionError": "Couldn't complete the action, please try again",
@@ -67,7 +68,8 @@
       "title": "Homework",
       "todo": "To do ({{count}})",
       "unmark": "Unmark as done",
-      "viewSubmissions": "Submitted work"
+      "viewSubmissions": "Submitted work",
+      "emptyDesc": "Homework will appear here once the teacher assigns it."
     },
     "loadError": "Couldn't load the details",
     "notFoundDesc": "Student record not found.",
@@ -99,7 +101,9 @@
       "teacherLabel": "Teacher: {{name}}",
       "title": "Current classes",
       "upcoming": "Upcoming sessions",
-      "upcomingEmpty": "No upcoming sessions"
+      "upcomingEmpty": "No upcoming sessions",
+      "emptyDesc": "When the center enrolls your child in a class, the schedule will appear here.",
+      "upcomingEmptyDesc": "Upcoming sessions will appear here once scheduled."
     },
     "tabs": {
       "attendance": "Attendance",
@@ -116,7 +120,8 @@
       "payNow": "Pay {{amount}}",
       "remain": "Balance",
       "title": "Tuition invoices",
-      "tuitionFallback": "Tuition"
+      "tuitionFallback": "Tuition",
+      "emptyDesc": "Tuition invoices will appear here once the center creates them."
     }
   },
   "home": {

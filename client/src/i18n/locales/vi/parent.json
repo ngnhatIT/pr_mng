@@ -48,7 +48,8 @@
       "empty": "Chưa có điểm số nào",
       "score": "Điểm",
       "test": "Bài kiểm tra",
-      "title": "Điểm số"
+      "title": "Điểm số",
+      "emptyDesc": "Điểm số sẽ hiện ở đây sau khi giáo viên nhập."
     },
     "homework": {
       "actionError": "Không thực hiện được thao tác, vui lòng thử lại",
@@ -67,7 +68,8 @@
       "title": "Bài tập về nhà",
       "todo": "Cần làm ({{count}})",
       "unmark": "Bỏ đánh dấu đã làm xong",
-      "viewSubmissions": "Bài đã nộp"
+      "viewSubmissions": "Bài đã nộp",
+      "emptyDesc": "Bài tập về nhà sẽ hiện ở đây khi giáo viên giao."
     },
     "loadError": "Không tải được thông tin",
     "notFoundDesc": "Không tìm thấy thông tin học viên.",
@@ -99,7 +101,9 @@
       "teacherLabel": "GV: {{name}}",
       "title": "Các lớp đang học",
       "upcoming": "Buổi học sắp tới",
-      "upcomingEmpty": "Chưa có buổi học nào sắp diễn ra"
+      "upcomingEmpty": "Chưa có buổi học nào sắp diễn ra",
+      "emptyDesc": "Khi trung tâm ghi danh con vào lớp, lịch học sẽ hiện ở đây.",
+      "upcomingEmptyDesc": "Buổi học sắp tới sẽ hiện ở đây khi có lịch."
     },
     "tabs": {
       "attendance": "Điểm danh",
@@ -116,7 +120,8 @@
       "payNow": "Thanh toán {{amount}}",
       "remain": "Còn lại",
       "title": "Phiếu thu học phí",
-      "tuitionFallback": "Học phí"
+      "tuitionFallback": "Học phí",
+      "emptyDesc": "Phiếu thu học phí sẽ hiện ở đây khi trung tâm tạo."
     }
   },
   "home": {
