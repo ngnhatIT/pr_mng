@@ -89,14 +89,9 @@ export function System() {
                   </td>
                   <td className="td-right">
                     <span className="row-actions">
-                      <button
-                        type="button"
-                        className="icon-btn"
-                        title={t('system.editPlan')}
-                        aria-label={t('system.editPlan')}
-                        onClick={() => setEditing(c)}
-                      >
+                      <button type="button" className="btn btn-sm btn-ghost" onClick={() => setEditing(c)}>
                         <Icon name="pencil" size={15} />
+                        {t('system.editPlan')}
                       </button>
                     </span>
                   </td>

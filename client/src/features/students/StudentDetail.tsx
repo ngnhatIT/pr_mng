@@ -252,12 +252,11 @@ function GradesSection({ studentId }: { studentId: number }) {
                     <span className="row-actions">
                       <button
                         type="button"
-                        className="icon-btn icon-btn-danger"
-                        title={t('actions.delete', { ns: 'common' })}
-                        aria-label={t('actions.delete', { ns: 'common' })}
+                        className="btn btn-sm btn-danger-ghost"
                         onClick={() => setDeleting(g)}
                       >
                         <Icon name="trash" size={15} />
+                        {t('actions.delete', { ns: 'common' })}
                       </button>
                     </span>
                   </td>

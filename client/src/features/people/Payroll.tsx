@@ -111,14 +111,9 @@ export function Payroll() {
                   </td>
                   <td className="td-right">
                     <span className="row-actions">
-                      <button
-                        type="button"
-                        className="icon-btn"
-                        title={t('payroll.rate')}
-                        aria-label={t('payroll.rate')}
-                        onClick={() => setEditing(r)}
-                      >
+                      <button type="button" className="btn btn-sm btn-ghost" onClick={() => setEditing(r)}>
                         <Icon name="pencil" size={15} />
+                        {t('payroll.rate')}
                       </button>
                     </span>
                   </td>
