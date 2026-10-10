@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
 import { homeworkApi, type HomeworkStats, type HomeworkFilters } from './homework.api';
+import { getUser } from '../../shared/api/client';
 import { ClassItem } from '../classes/classes.api';
 import { useToast } from '../../shared/ui/toast';
 import { ConfirmDialog } from '../../shared/components/Modal';
@@ -53,6 +54,8 @@ export function Homework() {
   const [page, setPage] = useState(1);
   const [pagination, setPagination] = useState<PaginationMeta | null>(null);
   const toast = useToast();
+  // Portal giáo viên (/teacher/bai-tap): ẩn tab/nút quản trị, chỉ giữ luồng giao bài nhanh
+  const isTeacher = getUser()?.role === 'teacher';
 
   const STATUS_BADGE: Record<string, { label: string; cls: string }> = {
     draft: { label: t('status.draft'), cls: 'badge-general' },
@@ -164,12 +167,13 @@ export function Homework() {
     setPage(1);
   };
 
+  // Giáo viên không thấy tab quản trị Bản nháp / Đã lên lịch
   const tabs: { id: StatusTab; label: string }[] = [
     { id: '', label: t('tabs.all') },
     { id: 'published', label: t('tabs.published') },
     { id: 'scheduled', label: t('tabs.scheduled') },
     { id: 'draft', label: t('tabs.draft') },
-  ];
+  ].filter((tab) => !isTeacher || (tab.id !== 'scheduled' && tab.id !== 'draft'));
 
   return (
     <div className="page">
@@ -178,12 +182,16 @@ export function Homework() {
         desc={t('page.desc')}
         actions={
           <>
-            <button className="btn hw-action-icon" onClick={() => setShowAnalytics(true)}>
-              <Icon name="chart" size={15} /> {t('actions.analytics')}
-            </button>
-            <button className="btn hw-action-icon" onClick={() => setShowBank(true)}>
-              <Icon name="book" size={15} /> {t('actions.questionBank')}
-            </button>
+            {!isTeacher && (
+              <>
+                <button className="btn hw-action-icon" onClick={() => setShowAnalytics(true)}>
+                  <Icon name="chart" size={15} /> {t('actions.analytics')}
+                </button>
+                <button className="btn hw-action-icon" onClick={() => setShowBank(true)}>
+                  <Icon name="book" size={15} /> {t('actions.questionBank')}
+                </button>
+              </>
+            )}
             <button className="btn btn-primary hw-action-icon" onClick={() => setEditing('new')}>
               <Icon name="plus" size={15} /> {t('actions.create')}
             </button>
@@ -220,15 +228,17 @@ export function Homework() {
             <div className="stat-value">{stats.overdue}</div>
             <div className="stat-label">{t('stats.overdue')}</div>
           </div>
-          <div className="stat-card tone-violet">
-            <div className="stat-top">
-              <div className="stat-icon">
-                <Icon name="file" size={20} />
+          {!isTeacher && (
+            <div className="stat-card tone-violet">
+              <div className="stat-top">
+                <div className="stat-icon">
+                  <Icon name="file" size={20} />
+                </div>
               </div>
+              <div className="stat-value">{stats.drafts}</div>
+              <div className="stat-label">{t('stats.drafts')}</div>
             </div>
-            <div className="stat-value">{stats.drafts}</div>
-            <div className="stat-label">{t('stats.drafts')}</div>
-          </div>
+          )}
         </div>
       )}
 
