@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { peopleApi } from './people.api';
 import { useToast } from '../../shared/ui/toast';
@@ -67,7 +68,17 @@ export function Payroll() {
       {loading ? (
         <TableSkeleton cols={5} />
       ) : rows.length === 0 ? (
-        <EmptyState icon="banknote" title={t('payroll.emptyTitle')} desc={t('payroll.emptyDesc')} />
+        <EmptyState
+          icon="banknote"
+          title={t('payroll.emptyTitle')}
+          desc={t('payroll.emptyDesc')}
+          action={
+            <Link className="btn btn-primary btn-inline" to="/app/attendance">
+              <Icon name="check" size={14} />
+              {t('payroll.viewAttendance')}
+            </Link>
+          }
+        />
       ) : (
         <div className="table-wrap sticky">
           <table className="table">

@@ -47,7 +47,8 @@
       "total": "Tổng lương"
     },
     "title": "Lương giáo viên",
-    "totalSpent": "Tổng chi"
+    "totalSpent": "Tổng chi",
+    "viewAttendance": "Ghi nhận buổi dạy"
   },
   "rate": {
     "title": "Đơn giá dạy - {{name}}",

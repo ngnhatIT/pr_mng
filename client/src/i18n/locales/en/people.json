@@ -47,7 +47,8 @@
       "total": "Total pay"
     },
     "title": "Teacher payroll",
-    "totalSpent": "Total payout"
+    "totalSpent": "Total payout",
+    "viewAttendance": "Record teaching sessions"
   },
   "rate": {
     "title": "Teaching rate - {{name}}",
