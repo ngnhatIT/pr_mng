@@ -55,8 +55,7 @@
   cursor: pointer;
   transition:
     border-color 150ms ease-out,
-    box-shadow 150ms ease-out,
-    transform 150ms ease-out;
+    box-shadow 150ms ease-out;
   width: 100%;
   font: inherit;
   color: inherit;
@@ -64,7 +63,6 @@
 
 .role-card:hover {
   border-color: var(--primary);
-  transform: translateY(-1px);
   box-shadow: var(--shadow-sm);
 }
 
