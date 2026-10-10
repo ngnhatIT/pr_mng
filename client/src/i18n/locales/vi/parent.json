@@ -200,7 +200,6 @@
     "good": "Khá tốt, cố gắng thêm nhé!",
     "grading": "Đang chấm...",
     "later": "Để sau",
-    "loadingQuiz": "Đang tải đề...",
     "maxScore": "({{score}}đ)",
     "noQuestions": "Chưa có câu hỏi",
     "points": "({{points}}đ)",
@@ -215,7 +214,8 @@
     "unanswered": "Còn {{count}} câu chưa trả lời",
     "viewAnswers": "Xem đáp án",
     "youChose": "(bạn chọn)",
-    "retry": "Làm lại"
+    "retry": "Làm lại",
+    "noQuestionsDesc": "Đề chưa có câu hỏi nào. Vui lòng thử lại sau hoặc liên hệ trung tâm."
   },
   "referral": {
     "copied": "Đã sao chép",

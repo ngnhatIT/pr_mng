@@ -200,7 +200,6 @@
     "good": "Good job, keep it up!",
     "grading": "Grading...",
     "later": "Later",
-    "loadingQuiz": "Loading the quiz...",
     "maxScore": "({{score}} pts)",
     "noQuestions": "No questions yet",
     "points": "({{points}} pts)",
@@ -215,7 +214,8 @@
     "unanswered": "{{count}} questions unanswered",
     "viewAnswers": "View answers",
     "youChose": "(your choice)",
-    "retry": "Retry"
+    "retry": "Retry",
+    "noQuestionsDesc": "This quiz has no questions yet. Please try again later or contact the center."
   },
   "referral": {
     "copied": "Copied",

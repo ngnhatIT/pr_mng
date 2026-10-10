@@ -5,6 +5,7 @@ import { HomeworkItem, formatDate } from '../../shared/types';
 import { useToast } from '../../shared/ui/toast';
 import { ConfirmDialog, Modal } from '../../shared/components/Modal';
 import { EmptyState } from '../../shared/components/EmptyState';
+import { Skeleton } from '../../shared/components/Skeleton';
 import { Icon } from '../../shared/components/icons';
 import './parent.css';
 
@@ -33,6 +34,8 @@ export function QuizTaker({
   const [qIndex, setQIndex] = useState(0);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState('');
+  const [reviewLoading, setReviewLoading] = useState(false);
   const [result, setResult] = useState<{
     score: number;
     max_score: number;
@@ -59,7 +62,7 @@ export function QuizTaker({
       })
       .catch((err: Error) => toast(err.message, 'error'))
       .finally(() => setLoading(false));
-  }, [homework.id]);
+  }, [homework.id, studentId]);
 
   const [confirming, setConfirming] = useState(false);
 
@@ -75,6 +78,7 @@ export function QuizTaker({
   const doSubmit = async () => {
     setConfirming(false);
     setSubmitting(true);
+    setSubmitError(''); // bai lam giu nguyen, loi hien ngay duoi nut nop
     try {
       const res = await parentApi.submitQuiz(
         homework.id,
@@ -94,19 +98,23 @@ export function QuizTaker({
         ...h,
       ]);
     } catch (err) {
-      toast(err instanceof Error ? err.message : t('quiz.submitError'), 'error');
+      setSubmitError(err instanceof Error ? err.message : t('quiz.submitError'));
     } finally {
       setSubmitting(false);
     }
   };
 
   const loadReview = async (attemptId: number) => {
+    if (reviewLoading) return;
+    setReviewLoading(true);
     try {
       const r = await parentApi.getAttemptReview(attemptId, studentId);
       setReview(r);
       setShowReview(true);
     } catch (err) {
       toast(err instanceof Error ? err.message : t('quiz.reviewError'), 'error');
+    } finally {
+      setReviewLoading(false);
     }
   };
 
@@ -145,7 +153,14 @@ export function QuizTaker({
         </div>
       )}
       {loading ? (
-        <p className="muted">{t('quiz.loadingQuiz')}</p>
+        <div aria-hidden="true">
+          <Skeleton width="70%" height={20} radius={8} />
+          <div style={{ marginTop: 16, display: 'grid', gap: 8 }}>
+            {[0, 1, 2, 3].map((i) => (
+              <Skeleton key={i} height={44} radius={10} />
+            ))}
+          </div>
+        </div>
       ) : result ? (
         <div className="quiz-result">
           <div className={`quiz-result-ic ${pct >= 80 ? 'good' : pct >= 50 ? 'mid' : 'bad'}`}>
@@ -170,7 +185,12 @@ export function QuizTaker({
             {pct >= 80 ? t('quiz.excellent') : pct >= 50 ? t('quiz.good') : t('quiz.tryHarder')}
           </p>
           <div style={{ display: 'flex', gap: 8, justifyContent: 'center' }}>
-            <button className="btn" onClick={() => void loadReview(result.attempt_id)}>
+            <button
+              className="btn"
+              disabled={reviewLoading}
+              onClick={() => void loadReview(result.attempt_id)}
+            >
+              {reviewLoading && <span className="spinner" aria-hidden="true" />}
               {t('quiz.viewAnswers')}
             </button>
             <button className="btn" onClick={retry}>
@@ -229,7 +249,16 @@ export function QuizTaker({
           </div>
         </div>
       ) : questions.length === 0 ? (
-        <EmptyState icon="file" title={t('quiz.noQuestions')} />
+        <EmptyState
+          icon="file"
+          title={t('quiz.noQuestions')}
+          desc={t('quiz.noQuestionsDesc')}
+          action={
+            <button className="btn btn-inline" onClick={onClose}>
+              {t('actions.close', { ns: 'common' })}
+            </button>
+          }
+        />
       ) : (
         <>
           <div className="quiz-progress">
@@ -306,6 +335,11 @@ export function QuizTaker({
               </button>
             )}
           </div>
+          {submitError && (
+            <p className="field-error" role="alert" style={{ marginTop: 8 }}>
+              {submitError}
+            </p>
+          )}
         </>
       )}
       {confirming && (
