@@ -11,6 +11,7 @@ import { TableSkeleton } from '../../shared/components/Skeleton';
 import { Pagination, type PaginationMeta } from '../../shared/components/Pagination';
 import { Icon } from '../../shared/components/icons';
 import { HomeworkItem, formatDate } from '../../shared/types';
+import { useDebounce } from '../../shared/hooks/useDebounce';
 import './Homework.css';
 import { HomeworkFormModal } from './HomeworkFormModal';
 import { GradeModal } from './GradeModal';
@@ -38,6 +39,7 @@ export function Homework() {
   const [stats, setStats] = useState<HomeworkStats | null>(null);
   const [filters, setFilters] = useState<HomeworkFilters>({});
   const [search, setSearch] = useState('');
+  const debouncedSearch = useDebounce(search, 400);
   const [statusTab, setStatusTab] = useState<StatusTab>('');
   const [loading, setLoading] = useState(false);
   const [editing, setEditing] = useState<HomeworkItem | null | 'new'>(null);
@@ -83,12 +85,9 @@ export function Homework() {
   }, [filters, statusTab, page, toast, t]);
 
   useEffect(() => {
-    const tm = setTimeout(() => {
-      setFilters((f) => ({ ...f, search: search.trim() || undefined }));
-      setPage(1);
-    }, 400);
-    return () => clearTimeout(tm);
-  }, [search]);
+    setFilters((f) => ({ ...f, search: debouncedSearch.trim() || undefined }));
+    setPage(1);
+  }, [debouncedSearch]);
 
   useEffect(() => {
     void load();

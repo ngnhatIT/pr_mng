@@ -6,6 +6,7 @@ import { Modal, ConfirmDialog } from '../../shared/components/Modal';
 import { Field } from '../../shared/components/Form';
 import { EmptyState } from '../../shared/components/EmptyState';
 import { Icon } from '../../shared/components/icons';
+import { useDebounce } from '../../shared/hooks/useDebounce';
 
 /** Ngân hàng câu hỏi: quản lý + chọn import vào quiz. */
 export function QuestionBank({
@@ -23,6 +24,8 @@ export function QuestionBank({
   const [tags, setTags] = useState<string[]>([]);
   const [search, setSearch] = useState('');
   const [tag, setTag] = useState('');
+  const debouncedSearch = useDebounce(search, 300);
+  const debouncedTag = useDebounce(tag, 300);
   const [deletingId, setDeletingId] = useState<number | null>(null);
   const [selected, setSelected] = useState<number[]>([]);
   const [showForm, setShowForm] = useState(false);
@@ -45,9 +48,8 @@ export function QuestionBank({
   };
 
   useEffect(() => {
-    const tm = setTimeout(() => void load(), 300);
-    return () => clearTimeout(tm);
-  }, [search, tag]);
+    void load();
+  }, [debouncedSearch, debouncedTag]);
 
   const filteringBank = search.trim() !== '' || tag !== '';
 
