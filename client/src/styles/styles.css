@@ -398,6 +398,11 @@ a {
   outline: 2px solid var(--primary);
   outline-offset: 2px;
 }
+/* Focus ring trên nền tối (sidebar): primary-400 sáng hơn để đủ tương phản WCAG AA */
+.sidebar :focus-visible,
+.btn-ghost-dark:focus-visible {
+  outline-color: var(--primary-400);
+}
 /* Phản hồi nhấn vật lý cho mọi nút không dùng class .btn (skill 8.1): scale 0.98 khi :active */
 .chip:active,
 .seg-btn:active,
