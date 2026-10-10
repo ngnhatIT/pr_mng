@@ -60,7 +60,11 @@ export function Landing() {
     })();
   }, []);
 
-  const scrollToForm = () => formRef.current?.scrollIntoView({ behavior: 'smooth' });
+  const scrollToForm = () => {
+    // Tôn trọng người dùng yêu cầu giảm chuyển động (WCAG 2.3.3)
+    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    formRef.current?.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth' });
+  };
 
   return (
     <main className="landing">
