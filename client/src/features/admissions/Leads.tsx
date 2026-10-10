@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { leadsApi, LeadForm } from './admissions.api';
 import { useToast } from '../../shared/ui/toast';
 import { Modal, ConfirmDialog } from '../../shared/components/Modal';
-import { Field } from '../../shared/components/Form';
+import { Field, useFieldErrors } from '../../shared/components/Form';
 import { PageHeader } from '../../shared/components/PageHeader';
 import { EmptyState } from '../../shared/components/EmptyState';
 import { Skeleton } from '../../shared/components/Skeleton';
@@ -258,10 +258,20 @@ function LeadFormModal({
   const [phone, setPhone] = useState(initial?.phone || '');
   const [note, setNote] = useState(initial?.note || '');
   const [busy, setBusy] = useState(false);
+  const { errors, refFor, show, clear } = useFieldErrors<'name' | 'phone'>();
+
+  const validate = () => {
+    const errs: { name?: string; phone?: string } = {};
+    if (!name.trim()) errs.name = t('leads.form.errors.nameRequired');
+    if (!phone.trim()) errs.phone = t('leads.form.errors.phoneRequired');
+    else if (!/^\+?[0-9][0-9\s.-]{6,13}[0-9]$/.test(phone.trim()))
+      errs.phone = t('leads.form.errors.phoneInvalid');
+    return show(errs);
+  };
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (busy) return;
+    if (busy || !validate()) return;
     setBusy(true);
     try {
       await onSave({ name, phone, note }, initial?.id);
@@ -274,11 +284,28 @@ function LeadFormModal({
     <Modal title={initial ? t('leads.form.titleEdit') : t('leads.form.titleNew')} onClose={onClose}>
       <form onSubmit={submit}>
         <div className="form-grid">
-          <Field label={t('leads.form.name')} span>
-            <input className="text-input" value={name} onChange={(e) => setName(e.target.value)} required />
+          <Field label={t('leads.form.name')} span error={errors.name}>
+            <input
+              className="text-input"
+              value={name}
+              onChange={(e) => {
+                setName(e.target.value);
+                clear('name');
+              }}
+              ref={refFor('name')}
+            />
           </Field>
-          <Field label={t('leads.form.phone')} span>
-            <input className="text-input" value={phone} onChange={(e) => setPhone(e.target.value)} required />
+          <Field label={t('leads.form.phone')} span error={errors.phone}>
+            <input
+              className="text-input"
+              value={phone}
+              onChange={(e) => {
+                setPhone(e.target.value);
+                clear('phone');
+              }}
+              ref={refFor('phone')}
+              inputMode="tel"
+            />
           </Field>
           <Field label={t('leads.form.note')} span>
             <textarea

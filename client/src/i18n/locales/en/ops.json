@@ -63,7 +63,12 @@
       "note": "Notes",
       "phone": "Phone number *",
       "titleEdit": "Edit lead",
-      "titleNew": "Add lead"
+      "titleNew": "Add lead",
+      "errors": {
+        "nameRequired": "Please enter the name",
+        "phoneRequired": "Please enter the phone number",
+        "phoneInvalid": "Phone number format is invalid"
+      }
     },
     "moveNext": "Move to {{label}}",
     "moveNextAria": "Move {{name}} to {{label}}",

@@ -62,7 +62,12 @@
       "note": "Ghi chú",
       "phone": "Số điện thoại *",
       "titleEdit": "Sửa lead",
-      "titleNew": "Thêm lead"
+      "titleNew": "Thêm lead",
+      "errors": {
+        "nameRequired": "Vui lòng nhập họ tên",
+        "phoneRequired": "Vui lòng nhập số điện thoại",
+        "phoneInvalid": "Số điện thoại chưa đúng định dạng"
+      }
     },
     "moveNext": "Chuyển sang {{label}}",
     "moveNextAria": "Chuyển {{name}} sang {{label}}",
