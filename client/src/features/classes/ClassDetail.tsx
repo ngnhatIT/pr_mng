@@ -215,7 +215,9 @@ export function ClassDetail() {
                 .map((s) => (
                   <li key={s.id} className="list-item">
                     <div>
-                      <div className="list-title">{formatDate(s.date)}</div>
+                      <Link className="link" to={`/app/attendance?class=${cls.id}&session=${s.id}`}>
+                        {formatDate(s.date)}
+                      </Link>
                       <div className="list-sub">
                         {s.topic || t('detail.noTopic')}
                         <span className="muted">
@@ -224,6 +226,13 @@ export function ClassDetail() {
                         </span>
                       </div>
                     </div>
+                    <Link
+                      className="btn btn-sm btn-inline"
+                      to={`/app/attendance?class=${cls.id}&session=${s.id}`}
+                    >
+                      <Icon name="clipboard" size={14} />
+                      {t('detail.takeAttendance')}
+                    </Link>
                   </li>
                 ))}
             </ul>
