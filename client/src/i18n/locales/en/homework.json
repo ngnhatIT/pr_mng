@@ -228,6 +228,8 @@
     "saveChanges": "Save changes",
     "saveDraft": "Save draft",
     "saveRubric": "Save rubric",
+    "selectClassToPublish": "Select classes to publish",
+    "selectClassToSchedule": "Select classes to schedule",
     "scheduleFor_one": "Schedule ({{count}} class)",
     "scheduleFor_other": "Schedule ({{count}} classes)",
     "searchClass": "Search classes...",

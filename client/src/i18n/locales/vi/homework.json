@@ -276,6 +276,8 @@
     "publishFor_other": "Giao cho {{count}} lớp",
     "quizQuestions_one": "{{count}} câu trắc nghiệm, tổng {{total}} điểm",
     "quizQuestions_other": "{{count}} câu trắc nghiệm, tổng {{total}} điểm",
+    "selectClassToPublish": "Chọn lớp để đăng",
+    "selectClassToSchedule": "Chọn lớp để lên lịch",
     "scheduleFor_one": "Lên lịch ({{count}} lớp)",
     "scheduleFor_other": "Lên lịch ({{count}} lớp)",
     "selectedCount_one": "Đã chọn {{count}} học viên",

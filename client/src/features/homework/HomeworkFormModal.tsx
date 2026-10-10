@@ -1126,8 +1126,12 @@ export function HomeworkFormModal({
                 {busy
                   ? t('form.submitting')
                   : publishMode === 'schedule'
-                    ? t('form.scheduleFor', { count: selectedClasses.length })
-                    : t('form.publishFor', { count: selectedClasses.length })}
+                    ? selectedClasses.length === 0
+                      ? t('form.selectClassToSchedule')
+                      : t('form.scheduleFor', { count: selectedClasses.length })
+                    : selectedClasses.length === 0
+                      ? t('form.selectClassToPublish')
+                      : t('form.publishFor', { count: selectedClasses.length })}
               </button>
             </>
           )}
