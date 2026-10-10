@@ -25,7 +25,12 @@
     "email": "Email",
     "name": "Họ tên *",
     "phone": "Điện thoại",
-    "subject": "Môn dạy"
+    "subject": "Môn dạy",
+    "errors": {
+      "nameRequired": "Vui lòng nhập họ tên giáo viên",
+      "phoneInvalid": "Số điện thoại không đúng định dạng",
+      "emailInvalid": "Email không đúng định dạng"
+    }
   },
   "payroll": {
     "desc": "Tính lương giáo viên theo số buổi đã dạy trong tháng",
@@ -58,7 +63,10 @@
     "phone": "Điện thoại",
     "subject": "Môn dạy"
   },
-  "teachers": { "createAccount": "Tạo tài khoản", "title": "Giáo viên" },
+  "teachers": {
+    "createAccount": "Tạo tài khoản",
+    "title": "Giáo viên"
+  },
   "title": "Giáo viên",
   "toast": {
     "deleted": "Đã xóa giáo viên",

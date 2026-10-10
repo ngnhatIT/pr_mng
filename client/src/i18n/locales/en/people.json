@@ -25,7 +25,12 @@
     "email": "Email",
     "name": "Full name *",
     "phone": "Phone",
-    "subject": "Subject"
+    "subject": "Subject",
+    "errors": {
+      "nameRequired": "Please enter the teacher name",
+      "phoneInvalid": "Invalid phone number",
+      "emailInvalid": "Invalid email address"
+    }
   },
   "payroll": {
     "desc": "Calculate teacher pay based on sessions taught this month",
@@ -58,7 +63,14 @@
     "phone": "Phone",
     "subject": "Subject"
   },
-  "teachers": { "createAccount": "Create account", "title": "Teachers" },
+  "teachers": {
+    "createAccount": "Create account",
+    "title": "Teachers"
+  },
   "title": "Teachers",
-  "toast": { "deleted": "Teacher deleted", "loadError": "Could not load the list", "saved": "Teacher saved" }
+  "toast": {
+    "deleted": "Teacher deleted",
+    "loadError": "Could not load the list",
+    "saved": "Teacher saved"
+  }
 }

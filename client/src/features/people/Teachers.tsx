@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { peopleApi, TeacherForm } from './people.api';
 import { useToast } from '../../shared/ui/toast';
 import { Modal, ConfirmDialog } from '../../shared/components/Modal';
-import { Field } from '../../shared/components/Form';
+import { Field, useFieldErrors } from '../../shared/components/Form';
 import { PageHeader } from '../../shared/components/PageHeader';
 import { EmptyState } from '../../shared/components/EmptyState';
 import { TableSkeleton } from '../../shared/components/Skeleton';
@@ -246,12 +246,23 @@ function TeacherFormModal({
     subject: initial?.subject || '',
   });
   const [busy, setBusy] = useState(false);
-  const set = (k: keyof TeacherForm) => (e: React.ChangeEvent<HTMLInputElement>) =>
+  // Lỗi inline dưới field + focus field lỗi đầu tiên (skill 8.2); dữ liệu giữ nguyên khi lỗi
+  const { errors, refFor, show, clear } = useFieldErrors<'name' | 'phone' | 'email'>();
+  const set = (k: keyof TeacherForm) => (e: React.ChangeEvent<HTMLInputElement>) => {
     setForm((f) => ({ ...f, [k]: e.target.value }));
+    if (k === 'name' || k === 'phone' || k === 'email') clear(k);
+  };
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (busy) return;
+    const errs: { name?: string; phone?: string; email?: string } = {};
+    if (!form.name.trim()) errs.name = t('form.errors.nameRequired');
+    if (form.phone.trim() && !/^\+?[0-9][0-9\s.-]{6,13}[0-9]$/.test(form.phone.trim()))
+      errs.phone = t('form.errors.phoneInvalid');
+    if (form.email.trim() && !/^\S+@\S+\.\S+$/.test(form.email.trim()))
+      errs.email = t('form.errors.emailInvalid');
+    if (!show(errs)) return;
     setBusy(true);
     try {
       await onSave(form, initial?.id);
@@ -264,17 +275,31 @@ function TeacherFormModal({
     <Modal title={initial ? t('form.editTitle') : t('form.addTitle')} onClose={onClose}>
       <form onSubmit={submit}>
         <div className="form-grid">
-          <Field label={t('form.name')} span>
-            <input className="text-input" value={form.name} onChange={set('name')} required />
+          <Field label={t('form.name')} span error={errors.name}>
+            <input ref={refFor('name')} className="text-input" value={form.name} onChange={set('name')} />
           </Field>
           <Field label={t('form.subject')}>
             <input className="text-input" value={form.subject} onChange={set('subject')} />
           </Field>
-          <Field label={t('form.phone')}>
-            <input className="text-input" value={form.phone} onChange={set('phone')} />
+          <Field label={t('form.phone')} error={errors.phone}>
+            <input
+              ref={refFor('phone')}
+              className="text-input"
+              value={form.phone}
+              onChange={set('phone')}
+              inputMode="tel"
+              autoComplete="tel"
+            />
           </Field>
-          <Field label={t('form.email')} span>
-            <input className="text-input" type="email" value={form.email} onChange={set('email')} />
+          <Field label={t('form.email')} span error={errors.email}>
+            <input
+              ref={refFor('email')}
+              className="text-input"
+              type="email"
+              value={form.email}
+              onChange={set('email')}
+              autoComplete="email"
+            />
           </Field>
         </div>
         <div className="modal-actions">
