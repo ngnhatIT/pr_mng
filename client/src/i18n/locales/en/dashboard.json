@@ -30,12 +30,12 @@
   },
   "stats": {
     "classes": "Open classes",
-    "classesSub": "{{total}} teachers",
+    "classesSub": "{{total}} teachers currently teaching",
     "debt": "Outstanding debt",
     "revenue": "This month's revenue",
     "revenueSub": "collected payments",
     "students": "Active students",
-    "studentsSub": "{{total}} total students"
+    "studentsSub": "out of {{total}} students in total"
   },
   "today": {
     "attendance": "Take attendance",

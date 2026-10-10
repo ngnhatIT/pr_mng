@@ -30,12 +30,12 @@
   },
   "stats": {
     "classes": "Lớp đang mở",
-    "classesSub": "{{total}} giáo viên",
+    "classesSub": "{{total}} giáo viên đang giảng dạy",
     "debt": "Công nợ cần thu",
     "revenue": "Doanh thu tháng này",
     "revenueSub": "từ các khoản đã thu",
     "students": "Học viên đang học",
-    "studentsSub": "{{total}} học viên tổng"
+    "studentsSub": "trên tổng số {{total}} học viên"
   },
   "today": {
     "attendance": "Điểm danh",
