@@ -32,14 +32,13 @@
 }
 
 .quick-action-chev {
-  color: var(--text-faint);
+  color: var(--primary);
   flex: none;
   transition: transform 0.15s ease;
 }
 
 .quick-action:hover .quick-action-chev {
   transform: translateX(3px);
-  color: var(--primary);
 }
 
 .dash-cols {
