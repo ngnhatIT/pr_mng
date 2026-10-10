@@ -546,7 +546,8 @@ router.put(
     const id = paramId(req.params);
     await requireHomework(req, id, 'homework.create');
     const body = validate(req.body, {
-      title: v.string({ min: 1, max: 200, label: 'Tiêu đề' }),
+      // P0-2: title bắt buộc — thiếu thì 400, tránh trim() trên undefined gây 500
+      title: v.string({ required: true, min: 1, max: 200, label: 'Tiêu đề' }),
       content: v.string({ max: 5000, label: 'Nội dung' }),
       due_date: v.string({ label: 'Hạn nộp' }),
       max_score: v.number({ label: 'Điểm tối đa' }),
@@ -566,7 +567,7 @@ router.put(
     }
     res.json(
       await updateHomework(id, {
-        title: body.title as string,
+        title: body.title,
         content: body.content,
         // undefined = không gửi → giữ nguyên trong DB (P0-1)
         due_date: body.due_date,
