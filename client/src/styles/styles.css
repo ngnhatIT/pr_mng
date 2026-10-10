@@ -1038,6 +1038,11 @@ textarea.text-input {
   cursor: pointer;
   color: var(--text-muted);
   min-height: 40px; /* touch target chuẩn nội bộ */
+  transition: background-color 0.15s ease-out;
+}
+/* Nút seg bấm được phải có dấu hiệu hover (chỉ khi chưa active) */
+.seg-btn:not(.active):not(:disabled):hover {
+  background: var(--bg-muted);
 }
 .seg-btn + .seg-btn {
   border-left: 1px solid var(--border);
