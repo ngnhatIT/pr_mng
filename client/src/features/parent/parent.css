@@ -352,6 +352,19 @@ button.quiz-take-opt {
   font-weight: 600;
 }
 
+/* ---------- 560px: 5 tab pill wrap, không cuộn ngang ---------- */
+@media (max-width: 560px) {
+  /* 5 tab pill chi tiết con xếp 2 hàng gọn, không tràn ở 401-560px */
+  .parent-tabs {
+    overflow-x: visible;
+    flex-wrap: wrap;
+  }
+  .parent-tabs .tab {
+    flex: 1 1 calc(50% - 4px);
+    justify-content: center;
+  }
+}
+
 /* ---------- 360px: không tràn ---------- */
 @media (max-width: 400px) {
   .quiz-take-opt {
@@ -369,15 +382,6 @@ button.quiz-take-opt {
   .child-head-main {
     min-width: 0;
     overflow-wrap: break-word;
-  }
-  /* 5 tab pill xếp 2 hàng gọn, không cuộn ngang */
-  .parent-tabs {
-    overflow-x: visible;
-    flex-wrap: wrap;
-  }
-  .parent-tabs .tab {
-    flex: 1 1 calc(50% - 4px);
-    justify-content: center;
   }
 }
 
