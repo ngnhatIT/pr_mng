@@ -261,7 +261,7 @@ a {
   font-weight: 500;
   font-size: var(--font-size-md);
   transition:
-    background 0.13s ease,
+    background-color 0.13s ease,
     color 0.13s ease;
 }
 .nav-link:hover {
@@ -376,7 +376,7 @@ a {
   cursor: pointer;
   white-space: nowrap;
   transition:
-    background 0.15s ease,
+    background-color 0.15s ease,
     border-color 0.15s ease,
     box-shadow 0.15s ease,
     transform 0.12s ease;
@@ -620,7 +620,7 @@ textarea.text-input {
   color: var(--text);
 }
 .table tbody tr {
-  transition: background 0.12s ease;
+  transition: background-color 0.12s ease;
 }
 .table tbody tr:hover {
   background: var(--primary-soft);
@@ -1869,7 +1869,7 @@ textarea.text-input {
   box-shadow: 0 1px 0 var(--border);
 }
 .table tbody tr {
-  transition: background 0.12s ease;
+  transition: background-color 0.12s ease;
 }
 
 /* ---------- Forms ---------- */
@@ -2256,7 +2256,7 @@ textarea.text-input {
   white-space: nowrap;
   min-height: 40px;
   transition:
-    background 0.15s ease,
+    background-color 0.15s ease,
     color 0.15s ease,
     border-color 0.15s ease;
 }
