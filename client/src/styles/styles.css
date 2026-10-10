@@ -238,12 +238,6 @@ a {
   flex-shrink: 0;
   box-shadow: 0 2px 8px rgba(36, 86, 224, 0.4);
 }
-.brand-logo-lg {
-  width: 54px;
-  height: 54px;
-  font-size: 28px;
-  margin: 0 auto 10px;
-}
 .brand-name {
   font-weight: 700;
   font-size: 16px;
@@ -651,12 +645,6 @@ textarea.text-input {
 .td-right {
   text-align: right;
 }
-.empty-cell {
-  text-align: center;
-  color: var(--text-muted);
-  padding: 24px !important;
-}
-
 .list {
   list-style: none;
   margin: 0;
@@ -889,10 +877,6 @@ textarea.text-input {
 .tone-blue .stat-icon {
   background: var(--primary-soft);
   color: var(--primary-dark);
-}
-.tone-green .stat-icon {
-  background: var(--success-soft);
-  color: var(--success);
 }
 .tone-violet .stat-icon {
   background: #e2e8f0;
@@ -1257,12 +1241,6 @@ textarea.text-input {
   color: var(--text-strong);
   margin: 0 0 12px;
 }
-.landing-section-sub {
-  text-align: center;
-  color: var(--text-muted);
-  max-width: 640px;
-  margin: 0 auto 32px;
-}
 .landing-alt {
   max-width: none;
   background: var(--bg);
@@ -1568,7 +1546,6 @@ textarea.text-input {
 .leave-reason {
   margin: 8px 0 0;
 }
-.homework-item .list-sub,
 .homework-content {
   white-space: pre-wrap;
   color: var(--text);
@@ -1866,22 +1843,6 @@ textarea.text-input {
     transform: rotate(360deg);
   }
 }
-.btn-loading {
-  position: relative;
-  pointer-events: none;
-  color: transparent !important;
-}
-.btn-loading::after {
-  content: '';
-  position: absolute;
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
-  border: 2px solid rgba(255, 255, 255, 0.35);
-  border-top-color: #fff;
-  animation: spin 0.7s linear infinite;
-}
-
 /* ---------- Cards ---------- */
 /* ---------- Tables ---------- */
 .table-wrap.sticky {
@@ -2550,21 +2511,9 @@ textarea.text-input {
 .course-card {
   overflow: hidden;
 }
-.course-card-top {
-  height: 6px;
-  background: var(--primary);
-  margin: -18px -18px 14px;
-}
 .testimonial {
   display: flex;
   flex-direction: column;
-}
-.testimonial-quote {
-  font-size: 44px;
-  line-height: 0.6;
-  color: var(--primary-200);
-  font-family: Georgia, serif;
-  margin-bottom: 8px;
 }
 .testimonial .review-comment {
   font-style: normal;
@@ -2576,18 +2525,6 @@ textarea.text-input {
   align-items: center;
   gap: 10px;
   margin-top: 12px;
-}
-.testimonial-avatar {
-  width: 38px;
-  height: 38px;
-  border-radius: 50%;
-  background: var(--primary);
-  color: #fff;
-  font-weight: 700;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
 }
 .landing-footer-inner {
   width: 100%;
@@ -2709,12 +2646,6 @@ textarea.text-input {
 }
 .pay-option svg {
   flex-shrink: 0;
-}
-.sticky-pay {
-  position: sticky;
-  bottom: 76px;
-  z-index: 10;
-  margin-top: 12px;
 }
 .profile-card {
   text-align: center;
@@ -3314,10 +3245,6 @@ textarea.text-input {
 }
 
 /* Placeholder o trong: gach ngang mo, thay em-dash */
-.empty-val {
-  color: var(--text-faint);
-}
-
 /* Hang key-value cho trang chi tiet */
 .kv {
   display: grid;
@@ -3352,11 +3279,6 @@ textarea.text-input {
   height: 32px;
   font-size: 13px;
 }
-.avatar-md {
-  width: 40px;
-  height: 40px;
-  font-size: 15px;
-}
 .avatar-lg {
   width: 56px;
   height: 56px;
@@ -3390,17 +3312,6 @@ a:focus-visible,
 }
 
 /* Card co the bam: hover doi vien + bong, khong nang len */
-.card-clickable {
-  cursor: pointer;
-  transition:
-    border-color 0.15s ease,
-    box-shadow 0.15s ease;
-}
-.card-clickable:hover {
-  border-color: var(--border-strong);
-  box-shadow: var(--shadow-md);
-}
-
 /* Khoang cach toolbar tren mobile */
 @media (max-width: 640px) {
   .kv {
