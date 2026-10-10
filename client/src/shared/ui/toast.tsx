@@ -1,4 +1,5 @@
 import { createContext, useCallback, useContext, useState, ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 import i18n from '../../i18n';
 import { Icon } from '../../shared/components/icons';
 
@@ -48,25 +49,42 @@ const TOAST_ICON = {
 
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [toasts, setToasts] = useState<ToastItem[]>([]);
+  const { t } = useTranslation('common');
 
   const push = useCallback((message: string, type: ToastType = 'info') => {
     const id = nextId++;
     setToasts((prev) => [...prev, { id, message, type }]);
-    window.setTimeout(() => {
-      setToasts((prev) => prev.filter((t) => t.id !== id));
-    }, 3200);
+    // Toast lỗi ở lại lâu hơn để user kịp đọc
+    window.setTimeout(
+      () => {
+        setToasts((prev) => prev.filter((t) => t.id !== id));
+      },
+      type === 'error' ? 6000 : 3200
+    );
+  }, []);
+
+  const dismiss = useCallback((id: number) => {
+    setToasts((prev) => prev.filter((t) => t.id !== id));
   }, []);
 
   return (
     <ToastContext.Provider value={push}>
       {children}
       <div className="toast-wrap" aria-live="polite">
-        {toasts.map((t) => (
-          <div key={t.id} className={`toast toast-${t.type}`} role="status">
+        {toasts.map((item) => (
+          <div key={item.id} className={`toast toast-${item.type}`} role="status">
             <span className="toast-icon">
-              <Icon name={TOAST_ICON[t.type]} size={18} />
+              <Icon name={TOAST_ICON[item.type]} size={18} />
             </span>
-            <span>{t.message}</span>
+            <span className="toast-msg">{item.message}</span>
+            <button
+              type="button"
+              className="toast-close"
+              onClick={() => dismiss(item.id)}
+              aria-label={t('actions.close')}
+            >
+              <Icon name="x" size={14} />
+            </button>
           </div>
         ))}
       </div>

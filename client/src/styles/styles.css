@@ -2439,6 +2439,39 @@ textarea.text-input {
   display: flex;
   flex-shrink: 0;
 }
+.toast-msg {
+  flex: 1;
+  min-width: 0;
+}
+/* Nút đóng toast thủ công (nền tối): ghost, phản hồi nhấn rõ */
+.toast-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.75);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease,
+    transform 0.12s ease;
+}
+.toast-close:hover {
+  background: rgba(255, 255, 255, 0.15);
+  color: #fff;
+}
+.toast-close:active {
+  transform: scale(0.9);
+}
+.toast-close:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 1px;
+}
 .toast-success {
   background: #14532d;
 }
