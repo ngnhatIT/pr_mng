@@ -16,7 +16,7 @@ router.get(
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const tid = await effTeacherId(req);
     if (!tid) {
-      res.status(403).json({ error: 'Tài khoản chưa gắn với giáo viên nào', code: 'BAD_REQUEST' });
+      res.status(403).json({ error: 'Tài khoản chưa gắn với giáo viên nào', code: 'FORBIDDEN' });
       return;
     }
     res.json(await getTodaySessions(tid));
@@ -48,7 +48,7 @@ router.get(
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const tid = await effTeacherId(req);
     if (!tid) {
-      res.status(403).json({ error: 'Tài khoản chưa gắn với giáo viên nào', code: 'BAD_REQUEST' });
+      res.status(403).json({ error: 'Tài khoản chưa gắn với giáo viên nào', code: 'FORBIDDEN' });
       return;
     }
     const q = String((req.query as { month?: string }).month || '');

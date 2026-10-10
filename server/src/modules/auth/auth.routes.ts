@@ -44,7 +44,7 @@ router.post(
     if (!user || !passwordOk) {
       // Log failed login để phát hiện brute-force (không log password)
       log.warn('Đăng nhập thất bại', { username, ip: reqMeta(req).ip });
-      res.status(401).json({ error: 'Tên đăng nhập hoặc mật khẩu không đúng', code: 'BAD_REQUEST' });
+      res.status(401).json({ error: 'Tên đăng nhập hoặc mật khẩu không đúng', code: 'UNAUTHORIZED' });
       return;
     }
     const payload: AuthUser = {

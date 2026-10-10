@@ -129,7 +129,7 @@ router.post(
   asyncHandler(async (req: Request, res: Response) => {
     const center = await resolvePublicCenter(req);
     if (!center) {
-      res.status(404).json({ error: 'Không xác định được trung tâm', code: 'BAD_REQUEST' });
+      res.status(404).json({ error: 'Không xác định được trung tâm', code: 'NOT_FOUND' });
       return;
     }
     const body = req.body as Record<string, unknown> | undefined;
@@ -165,7 +165,7 @@ router.post(
   asyncHandler(async (req: Request, res: Response) => {
     const center = await resolvePublicCenter(req);
     if (!center) {
-      res.status(404).json({ error: 'Không xác định được trung tâm', code: 'BAD_REQUEST' });
+      res.status(404).json({ error: 'Không xác định được trung tâm', code: 'NOT_FOUND' });
       return;
     }
     const body = req.body as Record<string, unknown> | undefined;
