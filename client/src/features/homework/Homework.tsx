@@ -249,15 +249,35 @@ export function Homework() {
       </div>
 
       <div className="toolbar hw-toolbar">
-        <input
-          className="text-input search-input"
-          aria-label={t('filters.searchPlaceholder')}
-          placeholder={t('filters.searchPlaceholder')}
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
+        <span className={`search-wrap${search ? ' has-clear' : ''}`}>
+          <span className="search-icon">
+            <Icon name="search" size={15} />
+          </span>
+          <input
+            className="text-input search-input"
+            aria-label={t('filters.searchPlaceholder')}
+            placeholder={t('filters.searchPlaceholder')}
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+          {search !== '' &&
+            (loading || (search.trim() || undefined) !== filters.search ? (
+              <span className="search-clear" aria-hidden="true">
+                <span className="spinner spinner-dark" />
+              </span>
+            ) : (
+              <button
+                type="button"
+                className="search-clear"
+                onClick={() => setSearch('')}
+                aria-label={t('filters.clearSearch')}
+              >
+                <Icon name="x" size={14} />
+              </button>
+            ))}
+        </span>
         <select
-          aria-label="Lọc theo trạng thái"
+          aria-label={t('filters.classFilterLabel')}
           className="text-input"
           value={filters.class_id || ''}
           onChange={(e) => setFilter({ class_id: e.target.value || undefined })}
@@ -270,7 +290,7 @@ export function Homework() {
           ))}
         </select>
         <select
-          aria-label="Lọc theo lớp"
+          aria-label={t('filters.kindFilterLabel')}
           className="text-input"
           value={filters.kind || ''}
           onChange={(e) => setFilter({ kind: (e.target.value || undefined) as HomeworkFilters['kind'] })}
@@ -280,7 +300,7 @@ export function Homework() {
           <option value="quiz">{t('filters.kindQuiz')}</option>
         </select>
         <select
-          aria-label="Lọc theo môn"
+          aria-label={t('filters.dueFilterLabel')}
           className="text-input"
           value={filters.due || ''}
           onChange={(e) => setFilter({ due: (e.target.value || undefined) as HomeworkFilters['due'] })}

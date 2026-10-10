@@ -194,41 +194,6 @@ a:hover .submission-thumb {
   line-height: 1.45;
 }
 
-/* ---------- Question bank: ô tìm kiếm có icon + nút xóa ---------- */
-.hw-search-wrap {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-}
-.hw-search-wrap > svg {
-  position: absolute;
-  left: 10px;
-  color: var(--text-muted);
-  pointer-events: none;
-}
-.hw-search-wrap .text-input {
-  padding-left: 34px;
-  padding-right: 32px;
-}
-.hw-search-clear {
-  position: absolute;
-  right: 4px;
-  width: 26px;
-  height: 26px;
-  border: none;
-  background: transparent;
-  border-radius: 6px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--text-muted);
-  cursor: pointer;
-}
-.hw-search-clear:hover {
-  background: var(--bg-muted);
-  color: var(--text);
-}
-
 /* ---------- Analytics: progress đặc thay gradient ---------- */
 .hw-analytics .progress-fill {
   background: var(--success);

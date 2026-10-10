@@ -85,8 +85,10 @@ export function QuestionBank({
   return (
     <Modal title={t('bank.title')} onClose={onClose} wide>
       <div className="toolbar">
-        <div className="hw-search-wrap">
-          <Icon name="search" size={15} />
+        <div className={`search-wrap${search ? ' has-clear' : ''}`}>
+          <span className="search-icon">
+            <Icon name="search" size={15} />
+          </span>
           <input
             className="text-input search-input"
             aria-label={t('bank.searchPh')}
@@ -97,7 +99,7 @@ export function QuestionBank({
           {search && (
             <button
               type="button"
-              className="hw-search-clear"
+              className="search-clear"
               onClick={() => setSearch('')}
               aria-label={t('bank.clearSearch')}
             >
@@ -106,7 +108,7 @@ export function QuestionBank({
           )}
         </div>
         <select
-          aria-label="Lọc theo thẻ"
+          aria-label={t('bank.tagFilterLabel')}
           className="text-input"
           value={tag}
           onChange={(e) => setTag(e.target.value)}
