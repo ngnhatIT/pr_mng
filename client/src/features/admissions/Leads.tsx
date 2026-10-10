@@ -213,11 +213,12 @@ export function Leads() {
                           <span className="badge badge-enrolled">{t('leads.status.enrolled')}</span>
                         )}
                         <button
-                          className="btn btn-sm"
+                          className="btn btn-sm btn-ghost"
                           onClick={() => setEditing(l)}
                           title={t('leads.editTitle')}
                         >
                           <Icon name="pencil" size={14} />
+                          {t('actions.edit', { ns: 'common' })}
                         </button>
                         <button
                           className="btn btn-sm btn-danger-ghost"
@@ -225,6 +226,7 @@ export function Leads() {
                           title={t('leads.deleteTitle')}
                         >
                           <Icon name="trash" size={14} />
+                          {t('actions.delete', { ns: 'common' })}
                         </button>
                         {NEXT_STATUS[col] && (
                           <button
