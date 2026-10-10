@@ -41,7 +41,7 @@ export function HomeworkFormModal({
   const toast = useToast();
   // Lỗi inline dưới field + focus field lỗi đầu tiên (skill 8.2).
   // Nút submit KHÔNG disable khi thiếu dữ liệu: bấm sẽ hiện lỗi inline thay vì im lặng.
-  type HwErrKey = 'classes' | 'title' | 'maxScore' | 'closeDate' | 'publishAt' | 'students' | 'quiz';
+  type HwErrKey = 'classes' | 'title' | 'maxScore' | 'dueDate' | 'closeDate' | 'publishAt' | 'students' | 'quiz';
   const { errors, refFor, show, clear } = useFieldErrors<HwErrKey>();
   const [kind, setKind] = useState<'homework' | 'quiz'>(initial?.kind || 'homework');
   const [title, setTitle] = useState(initial?.title || '');
@@ -270,6 +270,8 @@ export function HomeworkFormModal({
       if (!Number.isFinite(m) || m < 0) errs.maxScore = t('form.errors.maxScoreInvalid');
     }
     if (dueDate && closeDate && closeDate < dueDate) errs.closeDate = t('form.errors.closeBeforeDue');
+    // Hạn quá khứ chỉ cấm khi tạo mới; khi sửa được giữ hạn cũ (bài đã quá hạn vẫn lưu được)
+    if (!initial && dueDate && dueDate < todayVN()) errs.dueDate = t('form.errors.duePast');
     if (!initial && publishMode === 'schedule' && !publishAt)
       errs.publishAt = t('form.errors.publishAtRequired');
     if (!initial && targetMode === 'selected' && selectedStudents.length === 0)
@@ -522,13 +524,17 @@ export function HomeworkFormModal({
               placeholder={t('form.maxScorePh')}
             />
           </Field>
-          <Field label={t('form.dueDate')}>
+          <Field label={t('form.dueDate')} error={errors.dueDate}>
             <input
+              ref={refFor('dueDate')}
               className="text-input"
               type="date"
               value={dueDate}
-              min={todayVN()}
-              onChange={(e) => setDueDate(e.target.value)}
+              min={initial ? undefined : todayVN()}
+              onChange={(e) => {
+                setDueDate(e.target.value);
+                clear('dueDate');
+              }}
             />
           </Field>
         </div>
@@ -558,7 +564,7 @@ export function HomeworkFormModal({
               className="text-input"
               type="date"
               value={closeDate}
-              min={dueDate || todayVN()}
+              min={initial ? undefined : dueDate || todayVN()}
               onChange={(e) => {
                 setCloseDate(e.target.value);
                 clear('closeDate');

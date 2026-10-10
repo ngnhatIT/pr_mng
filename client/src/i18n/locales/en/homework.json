@@ -242,6 +242,7 @@
       "titleRequired": "Please enter the homework title",
       "maxScoreInvalid": "Max score must be a non-negative number",
       "closeBeforeDue": "Close date must be after the due date",
+      "duePast": "Due date cannot be in the past",
       "publishAtRequired": "Please choose a publish time",
       "studentsRequired": "Please select at least 1 student",
       "quizInvalid": "{{count}} question(s) are missing options or a correct answer"

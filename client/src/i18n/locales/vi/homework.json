@@ -242,6 +242,7 @@
       "titleRequired": "Vui lòng nhập tiêu đề bài tập",
       "maxScoreInvalid": "Điểm tối đa phải là số không âm",
       "closeBeforeDue": "Hạn chót phải sau hạn nộp",
+      "duePast": "Hạn nộp không được là ngày đã qua",
       "publishAtRequired": "Vui lòng chọn thời gian đăng",
       "studentsRequired": "Vui lòng chọn ít nhất 1 học viên",
       "quizInvalid": "Còn {{count}} câu hỏi chưa đủ đáp án hoặc chưa có đáp án đúng"
