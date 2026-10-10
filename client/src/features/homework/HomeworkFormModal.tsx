@@ -1107,7 +1107,7 @@ export function HomeworkFormModal({
             {showPreview ? t('form.hidePreview') : t('form.preview')}
           </button>
           <span className="spacer" />
-          <button type="button" className="btn" onClick={tryClose}>
+          <button type="button" className="btn" onClick={tryClose} disabled={busy}>
             {t('actions.cancel', { ns: 'common' })}
           </button>
           {initial ? (
