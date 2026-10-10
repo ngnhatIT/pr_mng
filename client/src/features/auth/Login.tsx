@@ -81,6 +81,7 @@ export function Login() {
           />
         </label>
         <button className="btn btn-primary btn-block btn-lg" type="submit" disabled={busy}>
+          {busy && <span className="spinner" aria-hidden="true" />}
           {busy ? t('submitting') : t('submit')}
         </button>
         <p className="login-hint">{t('demoHint')}</p>
