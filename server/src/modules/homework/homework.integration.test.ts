@@ -991,6 +991,44 @@ describe('importFromBank dedupe + giữ thứ tự (P1-9)', () => {
   });
 });
 
+describe('PUT quiz re-sync max_score theo đề (P1-11)', () => {
+  beforeEach(async () => {
+    await resetDb();
+  });
+
+  it('PUT không set được max_score tùy ý trên quiz — luôn = tổng điểm đề', async () => {
+    const [hw] = await homeworkService.createHomeworkBatch({
+      class_ids: [classId],
+      title: 'Quiz điểm',
+      created_by: 1,
+      centerId: null,
+      status: 'draft',
+      kind: 'quiz',
+    });
+    await quizService.saveQuizQuestions(hw.id, VALID_QUESTIONS); // 2 + 3 = 5
+    await homeworkService.updateHomework(hw.id, { title: 'Quiz điểm', max_score: 100 });
+    const row = (await db.prepare('SELECT max_score FROM homework WHERE id = ?').get(hw.id)) as {
+      max_score: number;
+    };
+    assert.equal(Number(row.max_score), 5);
+  });
+
+  it('bài thường vẫn set max_score tùy ý được', async () => {
+    const [hw] = await homeworkService.createHomeworkBatch({
+      class_ids: [classId],
+      title: 'BT thường',
+      created_by: 1,
+      centerId: null,
+      max_score: 10,
+    });
+    await homeworkService.updateHomework(hw.id, { title: 'BT thường', max_score: 20 });
+    const row = (await db.prepare('SELECT max_score FROM homework WHERE id = ?').get(hw.id)) as {
+      max_score: number;
+    };
+    assert.equal(Number(row.max_score), 20);
+  });
+});
+
 describe('bank global chỉ superadmin được sửa/xóa (P1-10)', () => {
   beforeEach(async () => {
     await resetDb();

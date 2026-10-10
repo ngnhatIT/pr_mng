@@ -561,7 +561,16 @@ export async function updateHomework(
   // P0-3(c): PUT đổi status sang published cũng phải có câu hỏi (như nút Đăng)
   if (status === 'published') await requireQuizPublishable(id);
   // Validate max_score > 0
-  const maxScore = data.max_score ?? null;
+  let maxScore = data.max_score ?? null;
+  if (current.kind === 'quiz') {
+    // P1-11: quiz có 1 thang điểm duy nhất = tổng điểm đề (đồng bộ với
+    // saveQuizQuestions) — PUT không được set max_score tùy ý gây lệch tổng đề.
+    // Đề trống thì giữ nguyên điểm cũ (tránh 400 oan khi chỉ sửa tiêu đề).
+    const total = (await db
+      .prepare('SELECT COALESCE(SUM(points), 0) as t FROM quiz_questions WHERE homework_id = ?')
+      .get(id)) as { t: number };
+    maxScore = total.t > 0 ? total.t : current.max_score;
+  }
   if (maxScore !== null && (!Number.isFinite(maxScore) || maxScore <= 0)) {
     throw AppError.badRequest('Điểm tối đa phải lớn hơn 0');
   }
