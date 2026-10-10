@@ -18,13 +18,10 @@ export function Login() {
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (busy) return;
-    if (
-      !show({
-        ...(username.trim() ? {} : { username: t('usernameRequired') }),
-        ...(password ? {} : { password: t('passwordRequired') }),
-      })
-    )
-      return;
+    const errs: { username?: string; password?: string } = {};
+    if (!username.trim()) errs.username = t('usernameRequired');
+    if (!password) errs.password = t('passwordRequired');
+    if (!show(errs)) return;
     setBusy(true);
     try {
       const data = await api<{ token: string; user: User }>('/auth/login', {
@@ -55,7 +52,7 @@ export function Login() {
       <div className="login-topbar">
         <ThemeLangSwitch />
       </div>
-      <form className="login-card" onSubmit={submit} noValidate={false}>
+      <form className="login-card" onSubmit={submit}>
         <div className="login-logo">E</div>
         <h1 className="login-title">{t('brand')}</h1>
         <p className="login-sub">{t('sub')}</p>
