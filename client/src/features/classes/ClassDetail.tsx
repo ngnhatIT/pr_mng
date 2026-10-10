@@ -156,6 +156,12 @@ export function ClassDetail() {
               icon="users"
               title={t('detail.emptyStudentsTitle')}
               desc={t('detail.emptyStudentsDesc')}
+              action={
+                <button className="btn btn-primary btn-inline" onClick={() => setShowEnroll(true)}>
+                  <Icon name="plus" size={14} />
+                  {t('detail.enroll.add')}
+                </button>
+              }
             />
           ) : (
             <ul className="list">
@@ -190,6 +196,12 @@ export function ClassDetail() {
               icon="calendar"
               title={t('detail.emptySessionsTitle')}
               desc={t('detail.emptySessionsDesc')}
+              action={
+                <Link className="btn btn-primary btn-inline" to={`/app/attendance?class=${cls.id}`}>
+                  {t('attendance.title')}
+                  <Icon name="arrow-right" size={14} />
+                </Link>
+              }
             />
           ) : (
             <ul className="list">
