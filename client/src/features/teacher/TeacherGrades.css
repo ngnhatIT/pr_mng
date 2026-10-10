@@ -2,9 +2,9 @@
 
 .grades-toolbar {
   display: flex;
-  gap: 10px;
+  gap: 8px;
   flex-wrap: wrap;
-  margin-bottom: 14px;
+  margin-bottom: 16px;
 }
 
 .grades-toolbar .text-input {
