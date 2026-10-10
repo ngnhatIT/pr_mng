@@ -38,7 +38,8 @@
     "empty": "Chưa có ai làm bài",
     "title": "Kết quả quiz: {{title}}",
     "attempts_one": "lượt nộp",
-    "attempts_other": "lượt nộp"
+    "attempts_other": "lượt nộp",
+    "emptyDesc": "Kết quả sẽ hiện ở đây khi học viên làm quiz."
   },
   "bank": {
     "add": "Thêm câu hỏi",
@@ -76,7 +77,12 @@
     "import_one": "Thêm {{count}} câu vào quiz",
     "import_other": "Thêm {{count}} câu vào quiz",
     "selected_one": "Đã chọn {{count}} câu",
-    "selected_other": "Đã chọn {{count}} câu"
+    "selected_other": "Đã chọn {{count}} câu",
+    "emptyFiltered": {
+      "title": "Không tìm thấy câu hỏi",
+      "desc": "Thử từ khóa khác hoặc xóa bộ lọc.",
+      "clear": "Xóa bộ lọc"
+    }
   },
   "delete": {
     "message": "Xóa bài tập \"{{title}}\"?",
@@ -260,7 +266,8 @@
       "overMax": "Điểm không vượt quá {{max}}",
       "saveFail": "Lưu điểm thất bại",
       "saved": "Đã lưu điểm"
-    }
+    },
+    "emptyDesc": "Ghi danh học viên vào lớp để chấm điểm."
   },
   "page": {
     "desc": "Giao bài tập và quiz cho các lớp, chấm điểm và theo dõi bài nộp",

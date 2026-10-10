@@ -41,16 +41,22 @@ export function QuizAttemptsModal({ homework, onClose }: { homework: HomeworkIte
       {loading ? (
         <TableSkeleton rows={5} cols={4} />
       ) : rows.length === 0 ? (
-        <EmptyState icon="file" title={t('attempts.empty')} />
+        <EmptyState icon="file" title={t('attempts.empty')} desc={t('attempts.emptyDesc')} />
       ) : (
         <div className="table-wrap">
           <table className="table">
             <thead>
               <tr>
                 <th scope="col">{t('attempts.col.student')}</th>
-                <th scope="col" className="th-right">{t('attempts.col.score')}</th>
-                <th scope="col" className="th-right">{t('attempts.col.rate')}</th>
-                <th scope="col" className="th-right">{t('attempts.col.submittedAt')}</th>
+                <th scope="col" className="th-right">
+                  {t('attempts.col.score')}
+                </th>
+                <th scope="col" className="th-right">
+                  {t('attempts.col.rate')}
+                </th>
+                <th scope="col" className="th-right">
+                  {t('attempts.col.submittedAt')}
+                </th>
               </tr>
             </thead>
             <tbody>

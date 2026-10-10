@@ -124,7 +124,7 @@ export function GradeModal({ homework, onClose }: { homework: HomeworkItem; onCl
       {loading ? (
         <TableSkeleton rows={5} cols={4} />
       ) : rows.length === 0 ? (
-        <EmptyState icon="users" title={t('grade.empty')} />
+        <EmptyState icon="users" title={t('grade.empty')} desc={t('grade.emptyDesc')} />
       ) : (
         <div className="grade-layout">
           {/* Vùng trái: danh sách học viên */}

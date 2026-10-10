@@ -38,7 +38,8 @@
     },
     "empty": "No attempts yet",
     "title": "Quiz results: {{title}}",
-    "attempts": "Attempts"
+    "attempts": "Attempts",
+    "emptyDesc": "Results will appear here once students take the quiz."
   },
   "bank": {
     "add": "Add question",
@@ -76,7 +77,12 @@
     },
     "import": "Add {{count}} questions to quiz",
     "selected": "{{count}} selected",
-    "deleteTitle": "Delete question"
+    "deleteTitle": "Delete question",
+    "emptyFiltered": {
+      "title": "No questions match your filters",
+      "desc": "Try a different keyword or clear the filters.",
+      "clear": "Clear filters"
+    }
   },
   "delete": {
     "message": "Delete \"{{title}}\"?",
@@ -260,7 +266,8 @@
       "overMax": "Score cannot exceed {{max}}",
       "saveFail": "Failed to save score",
       "saved": "Score saved"
-    }
+    },
+    "emptyDesc": "Enroll students in the class to grade them."
   },
   "page": {
     "desc": "Assign homework and quizzes to classes, grade and track submissions",

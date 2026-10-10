@@ -49,6 +49,8 @@ export function QuestionBank({
     return () => clearTimeout(tm);
   }, [search, tag]);
 
+  const filteringBank = search.trim() !== '' || tag !== '';
+
   const toggle = (id: number) =>
     setSelected((s) => (s.includes(id) ? s.filter((x) => x !== id) : [...s, id]));
 
@@ -135,7 +137,30 @@ export function QuestionBank({
       {loading ? (
         <p className="muted">{t('actions.loading', { ns: 'common' })}</p>
       ) : questions.length === 0 ? (
-        <EmptyState icon="file" title={t('bank.empty')} desc={t('bank.emptyDesc')} />
+        <EmptyState
+          icon="file"
+          title={t(filteringBank ? 'bank.emptyFiltered.title' : 'bank.empty')}
+          desc={t(filteringBank ? 'bank.emptyFiltered.desc' : 'bank.emptyDesc')}
+          action={
+            filteringBank ? (
+              <button
+                className="btn btn-secondary btn-inline"
+                onClick={() => {
+                  setSearch('');
+                  setTag('');
+                }}
+              >
+                <Icon name="x" size={14} />
+                {t('bank.emptyFiltered.clear')}
+              </button>
+            ) : (
+              <button className="btn btn-primary btn-inline" onClick={() => setShowForm(true)}>
+                <Icon name="plus" size={14} />
+                {t('bank.add')}
+              </button>
+            )
+          }
+        />
       ) : (
         <div className="bank-list">
           {questions.map((q) => (
