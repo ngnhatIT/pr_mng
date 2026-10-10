@@ -5,6 +5,15 @@ import { Icon } from './icons';
 // Stack modal đang mở (để modal lồng nhau: chỉ modal trên cùng xử lý Escape)
 const modalStack: HTMLDivElement[] = [];
 
+// Liệt kê element focus được trong modal (bỏ qua element đang ẩn).
+function getFocusables(root: HTMLElement): HTMLElement[] {
+  return Array.from(
+    root.querySelectorAll<HTMLElement>(
+      'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])'
+    )
+  ).filter((el) => el.getClientRects().length > 0);
+}
+
 export function Modal({
   title,
   onClose,
@@ -24,10 +33,12 @@ export function Modal({
   useEffect(() => {
     // Nhớ element đang focus để trả lại khi đóng modal.
     previouslyFocused.current = document.activeElement as HTMLElement | null;
-    // Chuyển focus vào modal khi mở.
-    dialogRef.current?.focus();
-    // Đăng ký vào stack (modal mở sau = trên cùng)
+    // Chuyển focus vào control đầu tiên trong modal (rơi lại khung modal nếu không có).
     const root = dialogRef.current;
+    const firstFocusable = root ? getFocusables(root)[0] : undefined;
+    if (firstFocusable) firstFocusable.focus();
+    else root?.focus();
+    // Đăng ký vào stack (modal mở sau = trên cùng)
     if (root) modalStack.push(root);
     // Khóa scroll nền khi modal mở (đặc biệt quan trọng trên mobile).
     const prevOverflow = document.body.style.overflow;
@@ -47,11 +58,7 @@ export function Modal({
       // Focus trap: giữ Tab/Shift+Tab xoay vòng trong modal.
       const root = dialogRef.current;
       if (!root) return;
-      const focusables = Array.from(
-        root.querySelectorAll<HTMLElement>(
-          'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])'
-        )
-      ).filter((el) => el.getClientRects().length > 0);
+      const focusables = getFocusables(root);
       if (focusables.length === 0) {
         e.preventDefault();
         return;
