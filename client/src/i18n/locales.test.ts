@@ -66,4 +66,21 @@ describe('i18n locales', () => {
     for (const [ns, d] of Object.entries(vi)) walk(d as Record<string, unknown>, ns, '');
     expect(bad).toEqual([]);
   });
+
+  it('không emoji, không em-dash trong mọi chuỗi locale', () => {
+    const bad: string[] = [];
+    const walkAll = (o: Record<string, unknown>, ns: string, path: string) => {
+      for (const [k, v] of Object.entries(o)) {
+        const p = path ? `${path}.${k}` : k;
+        if (v !== null && typeof v === 'object' && !Array.isArray(v)) {
+          walkAll(v as Record<string, unknown>, ns, p);
+        } else if (typeof v === 'string' && (v.includes('—') || /[\u{1F300}-\u{1FAFF}]/u.test(v))) {
+          bad.push(`${ns}.${p}`);
+        }
+      }
+    };
+    for (const [ns, d] of Object.entries(vi)) walkAll(d as Record<string, unknown>, ns, '');
+    for (const [ns, d] of Object.entries(en)) walkAll(d as Record<string, unknown>, ns, '');
+    expect(bad).toEqual([]);
+  });
 });
