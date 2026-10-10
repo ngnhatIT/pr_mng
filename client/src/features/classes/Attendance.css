@@ -65,3 +65,9 @@
     flex: 1 1 100%;
   }
 }
+
+/* Thông báo không khớp từ khóa tìm kiếm trong danh sách điểm danh */
+.att-no-match {
+  margin: 12px 0;
+  text-align: center;
+}

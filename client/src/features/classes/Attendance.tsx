@@ -23,6 +23,7 @@ export function Attendance() {
   const [topic, setTopic] = useState('');
   const [classId, setClassId] = useState(searchParams.get('class') || '');
   const [sessionId, setSessionId] = useState(searchParams.get('session') || '');
+  const [rowSearch, setRowSearch] = useState('');
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState('');
@@ -87,6 +88,7 @@ export function Attendance() {
     setClassId(cid);
     setSessionId('');
     setRows([]);
+    setRowSearch('');
     const p = new URLSearchParams(searchParams);
     if (cid) p.set('class', cid);
     else p.delete('class');
@@ -96,6 +98,7 @@ export function Attendance() {
 
   const pickSession = (sid: string) => {
     setSessionId(sid);
+    setRowSearch('');
     const p = new URLSearchParams(searchParams);
     if (sid) p.set('session', sid);
     else p.delete('session');
@@ -135,6 +138,12 @@ export function Attendance() {
   const presentCount = rows.filter((r) => (r.status || 'present') === 'present').length;
   const lateCount = rows.filter((r) => r.status === 'late').length;
   const absentCount = rows.filter((r) => r.status === 'absent').length;
+
+  // Lọc tức thì trên danh sách đã tải (không gọi API): tìm theo tên hoặc mã học viên
+  const q = rowSearch.trim().toLowerCase();
+  const visibleRows = q
+    ? rows.filter((r) => r.name.toLowerCase().includes(q) || r.code.toLowerCase().includes(q))
+    : rows;
 
   const makeCheckinCode = async () => {
     if (!sessionId) return;
@@ -191,6 +200,30 @@ export function Attendance() {
             {t('attendance.createSession')}
           </button>
         )}
+        {sessionId && (
+          <span className={`search-wrap${rowSearch ? ' has-clear' : ''}`}>
+            <span className="search-icon">
+              <Icon name="search" size={15} />
+            </span>
+            <input
+              className="text-input search-input"
+              aria-label={t('attendance.searchPlaceholder')}
+              placeholder={t('attendance.searchPlaceholder')}
+              value={rowSearch}
+              onChange={(e) => setRowSearch(e.target.value)}
+            />
+            {rowSearch !== '' && (
+              <button
+                type="button"
+                className="search-clear"
+                onClick={() => setRowSearch('')}
+                aria-label={t('attendance.clearSearch')}
+              >
+                <Icon name="x" size={14} />
+              </button>
+            )}
+          </span>
+        )}
       </div>
 
       {sessionId && (
@@ -215,7 +248,7 @@ export function Attendance() {
             </div>
           </div>
 
-          {loading ? (
+          {loading && rows.length === 0 ? (
             <div className="att-list" aria-hidden="true">
               {Array.from({ length: 6 }).map((_, i) => (
                 <div key={i} className="att-item">
@@ -243,8 +276,8 @@ export function Attendance() {
             />
           ) : (
             <>
-              <div className="att-list">
-                {rows.map((r) => {
+              <div className="att-list" aria-busy={loading || undefined}>
+                {visibleRows.map((r) => {
                   const st = (r.status || 'present') as Status;
                   return (
                     <div key={r.id} className={`att-item${st === 'present' ? '' : ` att-${st}`}`}>
@@ -281,6 +314,9 @@ export function Attendance() {
                   );
                 })}
               </div>
+              {visibleRows.length === 0 && rows.length > 0 && (
+                <p className="muted att-no-match">{t('attendance.noMatch')}</p>
+              )}
               <div className="att-savebar">
                 <span className="att-summary">
                   <span>

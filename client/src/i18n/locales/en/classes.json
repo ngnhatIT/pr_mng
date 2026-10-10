@@ -40,6 +40,9 @@
       "students": "students"
     },
     "title": "Attendance",
+    "searchPlaceholder": "Find a student in this session...",
+    "clearSearch": "Clear search",
+    "noMatch": "No students match your search.",
     "toast": {
       "attendanceError": "Could not load attendance, please try again",
       "createError": "Couldn't create the session, please try again",

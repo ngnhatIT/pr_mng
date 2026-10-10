@@ -40,6 +40,9 @@
       "students": "học viên"
     },
     "title": "Điểm danh",
+    "searchPlaceholder": "Tìm học viên trong buổi này...",
+    "clearSearch": "Xóa từ khóa tìm kiếm",
+    "noMatch": "Không tìm thấy học viên nào khớp từ khóa.",
     "toast": {
       "attendanceError": "Không tải được điểm danh, vui lòng thử lại",
       "createError": "Không tạo được buổi học, vui lòng thử lại",

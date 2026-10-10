@@ -2117,6 +2117,12 @@ button.search-clear:active {
   flex-direction: column;
   gap: 10px;
   margin-bottom: 12px;
+  transition: opacity 0.15s ease-out;
+}
+/* Đang tải buổi khác: giữ danh sách cũ hiển thị mờ thay vì thay bằng skeleton (không nhảy layout) */
+.att-list[aria-busy='true'] {
+  opacity: 0.55;
+  pointer-events: none;
 }
 .att-item {
   display: flex;
