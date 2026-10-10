@@ -162,7 +162,9 @@ export function Landing() {
           <div className="teacher-list">
             {teachers.map((te, i) => (
               <div key={i} className="teacher-row">
-                <div className="teacher-avatar">{te.name.charAt(0).toUpperCase()}</div>
+                <div className="teacher-avatar" aria-hidden="true">
+                  <Icon name="user" size={22} />
+                </div>
                 <div>
                   <div className="teacher-name">{te.name}</div>
                   <div className="muted">{te.subject || t('teachers.fallback')}</div>
@@ -190,7 +192,7 @@ export function Landing() {
               <Stars rating={r.rating} />
               <p className="review-comment">{r.comment || '-'}</p>
               <div className="testimonial-foot">
-                <div className="testimonial-avatar">{(r.parent_name || 'P').charAt(0).toUpperCase()}</div>
+                <Icon name="user" size={15} aria-hidden="true" />
                 <div className="muted">{r.parent_name || t('reviews.fallbackName')}</div>
               </div>
             </div>

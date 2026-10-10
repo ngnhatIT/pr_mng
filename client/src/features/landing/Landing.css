@@ -63,6 +63,13 @@
   color: var(--text-strong);
 }
 
+.testimonial-foot {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-muted);
+}
+
 /* Mobile: ẩn anchor nav, giữ 2 CTA; hero xếp chồng */
 @media (max-width: 640px) {
   .landing-nav {

@@ -84,7 +84,9 @@ export function ParentHome() {
           {children.map((c) => (
             <Link key={c.id} className="child-card" to={`/parent/children/${c.id}`}>
               <div className="child-card-head">
-                <div className="child-avatar">{c.name.charAt(0).toUpperCase()}</div>
+                <div className="child-avatar" aria-hidden="true">
+                  <Icon name="user" size={20} />
+                </div>
                 <div>
                   <div className="child-name">{c.name}</div>
                   <div className="muted mono child-code">{t('home.codeLabel', { code: c.code })}</div>
