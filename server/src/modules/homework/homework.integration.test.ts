@@ -876,6 +876,37 @@ describe('validate field bắt buộc bank/rubric (P1-3)', () => {
   });
 });
 
+describe('questionBank trả row trực tiếp (P1-4)', () => {
+  beforeEach(async () => {
+    await resetDb();
+  });
+
+  const twoOptions = [
+    { text: 'A', is_correct: true },
+    { text: 'B', is_correct: false },
+  ];
+
+  it('add/updateBankQuestion trả đúng row mới khi bank > 20 câu', async () => {
+    for (let i = 0; i < 21; i++) {
+      await addBankQuestion(null, 1, { question: `Q${i}`, points: 1, options: twoOptions });
+    }
+    const q = await addBankQuestion(null, 1, {
+      question: 'Q mới nhất',
+      points: 2,
+      options: twoOptions,
+    });
+    assert.equal(q.question, 'Q mới nhất');
+    assert.equal(q.options.length, 2);
+    const u = await updateBankQuestion(q.id, null, {
+      question: 'Q đã sửa',
+      points: 3,
+      options: twoOptions,
+    });
+    assert.equal(u.question, 'Q đã sửa');
+    assert.equal(u.options.length, 2);
+  });
+});
+
 describe('prepareCreateInput validate publish_at (P1-2)', () => {
   it('publish_at sai format → 400', () => {
     assert.throws(

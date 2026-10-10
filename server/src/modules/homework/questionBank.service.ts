@@ -68,6 +68,28 @@ export async function listBankQuestions(
   return paginate(questions, total, page, limit);
 }
 
+/**
+ * Lấy 1 câu hỏi bank kèm đáp án, đọc trực tiếp theo id (không qua trang 1 của
+ * listBankQuestions) — P1-4: bank > 20 câu thì find() trong page 1 trả undefined.
+ */
+async function getBankQuestion(id: number, centerId: number | null): Promise<BankQuestion | null> {
+  const params: unknown[] = [id];
+  let cond = 'id = ?';
+  if (centerId !== null) {
+    cond += ' AND (center_id = ? OR center_id IS NULL)';
+    params.push(centerId);
+  }
+  const r = (await db.prepare(`SELECT * FROM question_bank WHERE ${cond}`).get(...params)) as
+    { id: number; tag: string | null; question: string; points: number } | undefined;
+  if (!r) return null;
+  const options = (await db
+    .prepare(
+      'SELECT id, text, is_correct FROM question_bank_options WHERE question_id = ? ORDER BY position'
+    )
+    .all(r.id)) as { id: number; text: string; is_correct: boolean }[];
+  return { ...r, options };
+}
+
 /** Các tag đã dùng (để filter). */
 export async function listBankTags(centerId: number | null): Promise<string[]> {
   const params: unknown[] = [];
@@ -129,7 +151,8 @@ export async function addBankQuestion(
     }
     return qid;
   });
-  return (await listBankQuestions(centerId)).data.find((q) => q.id === qid)!;
+  // P1-4: trả row vừa insert trực tiếp, không find lại trong page 1
+  return (await getBankQuestion(qid, centerId))!;
 }
 
 /** Sửa câu hỏi trong ngân hàng: validate trước, update + thay toàn bộ đáp án trong 1 transaction. */
@@ -161,7 +184,8 @@ export async function updateBankQuestion(
       await stmt.run(id, i, o.text.trim(), o.is_correct ? 1 : 0);
     }
   });
-  return (await listBankQuestions(centerId)).data.find((r) => r.id === id)!;
+  // P1-4: trả row vừa update trực tiếp, không find lại trong page 1
+  return (await getBankQuestion(id, centerId))!;
 }
 
 /** Xóa câu hỏi khỏi ngân hàng (kiểm tra center để chống cross-tenant). */
