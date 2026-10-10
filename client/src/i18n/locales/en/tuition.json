@@ -47,7 +47,7 @@
     "title": "Apply credits to invoice"
   },
   "debt": {
-    "emptyDesc": "All students have paid in full. Great!",
+    "emptyDesc": "All students have paid in full.",
     "emptyTitle": "No outstanding debts",
     "loadError": "Could not load debts",
     "noInvoices": "No invoices found to remind",

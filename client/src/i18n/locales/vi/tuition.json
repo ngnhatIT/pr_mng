@@ -47,7 +47,7 @@
     "title": "Áp dụng credits vào hóa đơn"
   },
   "debt": {
-    "emptyDesc": "Tất cả học viên đã thanh toán đầy đủ. Tuyệt vời!",
+    "emptyDesc": "Tất cả học viên đã thanh toán đầy đủ.",
     "emptyTitle": "Không còn công nợ",
     "loadError": "Không tải được công nợ",
     "noInvoices": "Không tìm thấy hóa đơn cần nhắc",

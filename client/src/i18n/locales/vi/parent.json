@@ -57,7 +57,7 @@
       "dueLabel": "Hạn: {{date}}",
       "empty": "Chưa có bài tập nào",
       "mark": "Đánh dấu đã làm xong",
-      "markedDone": "Tuyệt vời! Đã đánh dấu hoàn thành",
+      "markedDone": "Đã đánh dấu hoàn thành",
       "overdue": "Quá hạn ({{count}})",
       "overdueLabel": "Quá hạn: {{date}}",
       "submit": "Nộp bài",

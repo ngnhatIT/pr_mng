@@ -57,7 +57,7 @@
       "dueLabel": "Due: {{date}}",
       "empty": "No homework yet",
       "mark": "Mark as done",
-      "markedDone": "Great! Marked as done",
+      "markedDone": "Marked as done",
       "overdue": "Overdue ({{count}})",
       "overdueLabel": "Overdue: {{date}}",
       "submit": "Submit",
