@@ -187,21 +187,19 @@ export async function submitQuiz(
     );
     for (const g of graded) await aStmt.run(attemptId, g.question_id, g.option_id);
 
-    // Đồng bộ điểm: giữ điểm CAO NHẤT; không ghi đè điểm giáo viên chấm tay
-    const existing = (await tx
-      .prepare('SELECT score, graded_by FROM homework_scores WHERE homework_id = ? AND student_id = ?')
-      .get(homeworkId, studentId)) as { score: number | null; graded_by: number | null } | undefined;
-    const teacherGraded = existing && existing.graded_by !== null;
-    const bestScore = Math.max(score, existing?.score ?? 0);
-    if (!teacherGraded) {
-      await tx
-        .prepare(
-          `INSERT INTO homework_scores (homework_id, student_id, score, graded_at, graded_by)
+    // Đồng bộ điểm: giữ điểm CAO NHẤT — atomic bằng GREATEST ngay trong SQL,
+    // không đọc-then-ghi từ snapshot nên 2 lần nộp đồng thời không ghi đè
+    // điểm cao bằng điểm thấp (lost-update); không chạm điểm giáo viên chấm tay.
+    await tx
+      .prepare(
+        `INSERT INTO homework_scores (homework_id, student_id, score, graded_at, graded_by)
          VALUES (?, ?, ?, datetime('now'), NULL)
-         ON CONFLICT(homework_id, student_id) DO UPDATE SET score = ?, graded_at = datetime('now')`
-        )
-        .run(homeworkId, studentId, bestScore, bestScore);
-    }
+         ON CONFLICT(homework_id, student_id) DO UPDATE SET
+           score = GREATEST(homework_scores.score, excluded.score),
+           graded_at = datetime('now')
+         WHERE homework_scores.graded_by IS NULL`
+      )
+      .run(homeworkId, studentId, score);
 
     // Đánh dấu hoàn thành
     await tx
