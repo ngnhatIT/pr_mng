@@ -388,7 +388,13 @@ function PayModal({
             <dt>{t('child.pay.addInfo')}</dt>
             <dd className="mono">{qr.addInfo}</dd>
           </dl>
-          <button className="btn btn-block" onClick={() => setMode('menu')}>
+          <button
+            className="btn btn-block"
+            onClick={() => {
+              setMode('menu');
+              setPayError(''); // Về menu thì xóa lỗi bước QR cũ, tránh báo nhầm
+            }}
+          >
             {t('child.pay.otherMethod')}
           </button>
         </div>
