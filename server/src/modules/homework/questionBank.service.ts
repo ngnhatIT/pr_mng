@@ -2,6 +2,7 @@ import { db } from '../../db';
 import { AppError } from '../../shared/errors';
 import { escapeLike } from '../../shared/like';
 import { countQuizAttempts } from './quiz.service';
+import { sumQuestionPoints } from './homework.helpers';
 
 /* ---------------------------------- Types ---------------------------------- */
 
@@ -181,15 +182,14 @@ export async function importFromBank(
       for (const [oi, o] of opts.entries()) await oStmt.run(nqid, oi, o.text, o.is_correct);
       n++;
     }
-    // Cập nhật lại max_score của bài tập = tổng điểm các câu hỏi
-    const total = (
-      (await tx
-        .prepare('SELECT COALESCE(SUM(points), 0) as t FROM quiz_questions WHERE homework_id = ?')
-        .get(homeworkId)) as { t: number }
-    ).t;
+    // Đồng bộ max_score của bài = tổng điểm TẤT CẢ câu hỏi (cũ + mới import),
+    // giữ điểm lẻ 0.5, không làm tròn
+    const allPoints = (await tx
+      .prepare('SELECT points FROM quiz_questions WHERE homework_id = ?')
+      .all(homeworkId)) as { points: number }[];
     await tx
       .prepare('UPDATE homework SET max_score = ? WHERE id = ?')
-      .run(Math.round(Number(total)), homeworkId);
+      .run(sumQuestionPoints(allPoints), homeworkId);
     return n;
   });
   return count;

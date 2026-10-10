@@ -37,6 +37,15 @@ export function assignedCountExpr(homeworkAlias = 'h', classAlias = 'h'): string
   );
 }
 
+/**
+ * Tổng điểm tối đa từ danh sách câu hỏi — KHÔNG làm tròn (giữ điểm lẻ 0.5).
+ * Quy ước chuẩn hoá điểm/câu dùng chung cho tạo quiz, lưu đề và import từ
+ * ngân hàng: điểm mỗi câu tối thiểu 0.5, thiếu/sai → 1.
+ */
+export function sumQuestionPoints(questions: { points?: number | null }[]): number {
+  return questions.reduce((s, q) => s + Math.max(0.5, Number(q?.points) || 1), 0);
+}
+
 /** Validate cặp hạn nộp / hạn chót cứng. */
 export function assertValidDates(
   dueDate: string | null | undefined,

@@ -3,7 +3,7 @@ import type { ScopeCtx } from '../../shared/scope';
 import { parsePagination, paginate, type PageOptions, type Paginated } from '../../shared/pagination';
 import { DAY_MS } from '../../shared/time';
 import { AppError } from '../../shared/errors';
-import { nowVNMinute, assignedCountExpr, assertValidDates } from './homework.helpers';
+import { nowVNMinute, assignedCountExpr, assertValidDates, sumQuestionPoints } from './homework.helpers';
 import { todayVN } from '../../shared/vnTime';
 import { homeworkRepo, deleteHomeworkCascade } from './homework.repo';
 import { eventBus } from '../../shared/events/eventBus';
@@ -246,10 +246,7 @@ export function prepareCreateInput(raw: Record<string, unknown>): PreparedHomewo
   // Quiz: max_score tự tính từ tổng điểm câu hỏi (1 thang điểm duy nhất)
   let max_score: number | null = null;
   if (kind === 'quiz') {
-    max_score = (questions as { points?: number }[]).reduce(
-      (s, q) => s + Math.max(0.5, Number(q.points) || 1),
-      0
-    );
+    max_score = sumQuestionPoints(questions as { points?: number }[]);
   } else if (raw.max_score !== null && raw.max_score !== undefined && raw.max_score !== '') {
     max_score = Number(raw.max_score);
     if (!Number.isFinite(max_score) || max_score < 0) throw AppError.badRequest('Điểm tối đa không hợp lệ');

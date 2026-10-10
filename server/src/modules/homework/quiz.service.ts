@@ -3,6 +3,7 @@ import { AppError } from '../../shared/errors';
 import { todayVN } from '../../shared/vnTime';
 import { eventBus } from '../../shared/events/eventBus';
 import { QuizSubmittedEvent } from '../../shared/events/homework.events';
+import { sumQuestionPoints } from './homework.helpers';
 
 /* ---------------------------------- Types ---------------------------------- */
 
@@ -88,6 +89,10 @@ export async function saveQuizQuestions(homeworkId: number, questions: QuizQuest
         await oStmt.run(qid, oi, o.text.trim(), o.is_correct ? 1 : 0);
       }
     }
+    // Đồng bộ max_score của bài theo đề mới (giữ điểm lẻ 0.5, không làm tròn)
+    await tx
+      .prepare('UPDATE homework SET max_score = ? WHERE id = ?')
+      .run(sumQuestionPoints(questions), homeworkId);
   });
 }
 

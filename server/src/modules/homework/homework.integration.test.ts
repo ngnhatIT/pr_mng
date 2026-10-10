@@ -767,3 +767,72 @@ describe('homework.service - update và reuse', () => {
     );
   });
 });
+
+describe('quiz.service - đồng bộ max_score (P1-5)', () => {
+  beforeEach(async () => {
+    await resetDb();
+  });
+
+  const HALF_QUESTIONS = [
+    {
+      question: 'Câu nửa điểm 1',
+      points: 0.5,
+      options: [
+        { text: 'A', is_correct: true },
+        { text: 'B', is_correct: false },
+      ],
+    },
+    {
+      question: 'Câu nửa điểm 2',
+      points: 1.5,
+      options: [
+        { text: 'A', is_correct: false },
+        { text: 'B', is_correct: true },
+      ],
+    },
+  ];
+
+  async function createQuiz(): Promise<number> {
+    const [hw] = await homeworkService.createHomeworkBatch({
+      class_ids: [classId],
+      title: 'Quiz điểm lẻ',
+      created_by: 1,
+      centerId: null,
+      kind: 'quiz',
+      max_score: null,
+    });
+    return hw.id;
+  }
+
+  async function maxScoreOf(id: number): Promise<number> {
+    const row = (await db.prepare('SELECT max_score FROM homework WHERE id = ?').get(id)) as {
+      max_score: number;
+    };
+    return Number(row.max_score);
+  }
+
+  it('saveQuizQuestions cập nhật max_score = tổng điểm, giữ điểm lẻ 0.5', async () => {
+    const id = await createQuiz();
+    await quizService.saveQuizQuestions(id, HALF_QUESTIONS);
+    assert.equal(await maxScoreOf(id), 2); // 0.5 + 1.5, không bị round
+    // Sửa đề lần 2 → max_score đồng bộ lại theo đề mới
+    await quizService.saveQuizQuestions(id, [HALF_QUESTIONS[0]]);
+    assert.equal(await maxScoreOf(id), 0.5);
+  });
+
+  it('importFromBank cộng dồn và không làm tròn điểm lẻ', async () => {
+    const id = await createQuiz();
+    await quizService.saveQuizQuestions(id, [HALF_QUESTIONS[0]]); // 0.5
+    const { addBankQuestion, importFromBank } = await import('./questionBank.service');
+    const bq = await addBankQuestion(null, 1, {
+      question: 'Câu bank nửa điểm',
+      points: 1.5,
+      options: [
+        { text: 'A', is_correct: true },
+        { text: 'B', is_correct: false },
+      ],
+    });
+    await importFromBank(id, [bq.id], null);
+    assert.equal(await maxScoreOf(id), 2); // 0.5 + 1.5, không Math.round
+  });
+});
