@@ -92,5 +92,30 @@
     "confirmMessage": "The system will generate a new temporary password and sign this account out of all devices. This action is logged.",
     "doneTitle": "Password reset",
     "doneDesc": "Temporary password for {{name}}:"
+  },
+  "teacherDetail": {
+    "back": "Back",
+    "backToTeachers": "Back to teachers",
+    "breadcrumbLabel": "Teacher page navigation",
+    "breadcrumbStaff": "Staff",
+    "breadcrumbTeachers": "Teachers",
+    "classCount": "Classes teaching",
+    "createdAt": "Created on",
+    "email": "Email",
+    "info": "Teacher info",
+    "loadErrorDesc": "Something went wrong, please try again.",
+    "loadErrorTitle": "Could not load teacher info",
+    "noClassesDesc": "This teacher is not assigned to any class yet.",
+    "noClassesTitle": "No classes assigned",
+    "notFoundDesc": "This teacher may have been deleted or you do not have permission to view them.",
+    "notFoundTitle": "Teacher not found",
+    "phone": "Phone",
+    "retry": "Retry",
+    "subject": "Subject",
+    "tableName": "Class",
+    "tableStatus": "Status",
+    "tableStudents": "Students",
+    "teachingClasses": "Classes teaching",
+    "viewClasses": "View class list"
   }
 }

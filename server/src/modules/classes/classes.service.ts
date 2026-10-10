@@ -272,18 +272,23 @@ function normalizeInput(input: ClassInput): {
 
 export async function listClasses(
   ctx: ScopeCtx,
-  query: { search?: string } = {},
+  query: { search?: string; teacherId?: number } = {},
   pageOpts: PageOptions = {}
 ): Promise<Paginated<unknown>> {
   const scope = classScopeWhere(ctx);
   // Tìm theo tên lớp: escape wildcard để %, _ trong input không match toàn bộ DB
   const { search = '' } = query;
   const searchClause = search ? " AND c.name LIKE ? ESCAPE '\\'" : '';
-  const params = [...scope.params, ...(search ? [`%${escapeLike(search)}%`] : [])];
+  const teacherClause = query.teacherId !== undefined ? ' AND c.teacher_id = ?' : '';
+  const params = [
+    ...scope.params,
+    ...(search ? [`%${escapeLike(search)}%`] : []),
+    ...(query.teacherId !== undefined ? [query.teacherId] : []),
+  ];
   const { page, limit, offset } = parsePagination(pageOpts);
   const total = (
     (await db
-      .prepare(`SELECT COUNT(*) as c FROM classes c WHERE 1=1${scope.clause}${searchClause}`)
+      .prepare(`SELECT COUNT(*) as c FROM classes c WHERE 1=1${scope.clause}${searchClause}${teacherClause}`)
       .get(...params)) as {
       c: number;
     }
@@ -294,7 +299,7 @@ export async function listClasses(
          (SELECT COUNT(*) FROM enrollments e WHERE e.class_id = c.id AND e.status = 'active') as student_count
        FROM classes c LEFT JOIN teachers t ON t.id = c.teacher_id
        LEFT JOIN rooms r ON r.id = c.room_id
-       WHERE 1=1${scope.clause}${searchClause}
+       WHERE 1=1${scope.clause}${searchClause}${teacherClause}
        ORDER BY c.id DESC LIMIT ? OFFSET ?`
     )
     .all(...params, limit, offset)) as unknown[];

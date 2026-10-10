@@ -92,5 +92,30 @@
     "confirmMessage": "Hệ thống sẽ sinh mật khẩu tạm mới và đăng xuất tài khoản này khỏi mọi thiết bị. Hành động này được ghi vào nhật ký.",
     "doneTitle": "Đã đặt lại mật khẩu",
     "doneDesc": "Mật khẩu tạm của {{name}}:"
+  },
+  "teacherDetail": {
+    "back": "Quay lại",
+    "backToTeachers": "Về danh sách giáo viên",
+    "breadcrumbLabel": "Điều hướng trang giáo viên",
+    "breadcrumbStaff": "Nhân sự",
+    "breadcrumbTeachers": "Giáo viên",
+    "classCount": "Số lớp đang dạy",
+    "createdAt": "Ngày tạo",
+    "email": "Email",
+    "info": "Thông tin giáo viên",
+    "loadErrorDesc": "Đã có lỗi xảy ra, vui lòng thử lại.",
+    "loadErrorTitle": "Không tải được thông tin giáo viên",
+    "noClassesDesc": "Giáo viên này hiện chưa được phân công lớp học nào.",
+    "noClassesTitle": "Chưa dạy lớp nào",
+    "notFoundDesc": "Giáo viên này có thể đã bị xóa hoặc bạn không có quyền xem.",
+    "notFoundTitle": "Không tìm thấy giáo viên",
+    "phone": "Điện thoại",
+    "retry": "Thử lại",
+    "subject": "Môn dạy",
+    "tableName": "Lớp học",
+    "tableStatus": "Trạng thái",
+    "tableStudents": "Học viên",
+    "teachingClasses": "Lớp đang dạy",
+    "viewClasses": "Xem danh sách lớp"
   }
 }

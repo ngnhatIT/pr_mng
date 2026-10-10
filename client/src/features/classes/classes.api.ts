@@ -73,9 +73,10 @@ export interface Room {
 }
 
 export const classesApi = {
-  list: (search = '', page?: PageParams) => {
+  list: (search = '', page?: PageParams, teacherId?: number) => {
     const q = new URLSearchParams();
     if (search) q.set('search', search);
+    if (teacherId) q.set('teacher_id', String(teacherId));
     if (page?.page) q.set('page', String(page.page));
     if (page?.limit) q.set('limit', String(page.limit));
     const qs = q.toString();

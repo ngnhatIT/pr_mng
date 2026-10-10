@@ -5,7 +5,7 @@ import { AuthRequest, reqCenterId } from '../../middleware/auth';
 import { requirePermission } from '../authorization/authorization.middleware';
 import { asyncHandler } from '../../shared/http';
 import { validate, v, paramId } from '../../shared/validate';
-import { listTeachers } from './teachers.service';
+import { listTeachers, getTeacherDetail } from './teachers.service';
 import { audit, actorFromReq } from '../../shared/audit';
 import { assertStrongPassword, BCRYPT_ROUNDS } from '../../shared/password';
 
@@ -17,6 +17,14 @@ router.get(
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const { page, limit } = req.query as { page?: string; limit?: string };
     res.json(await listTeachers(reqCenterId(req), { page, limit }));
+  })
+);
+
+router.get(
+  '/:id',
+  requirePermission('teachers.view'),
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    res.json(await getTeacherDetail(reqCenterId(req), paramId(req.params)));
   })
 );
 

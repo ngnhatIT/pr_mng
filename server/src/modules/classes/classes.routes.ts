@@ -14,7 +14,13 @@ router.get(
   requirePermission('classes.view'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const { page, limit, search } = req.query as { page?: string; limit?: string; search?: string };
-    res.json(await classService.listClasses(scopeOf(req), { search }, { page, limit }));
+    // teacher_id optional: lọc lớp theo giáo viên (dùng cho trang chi tiết giáo viên)
+    const { teacher_id } = validate(req.query, {
+      teacher_id: v.number({ required: false, integer: true, min: 1, label: 'Giáo viên' }),
+    });
+    res.json(
+      await classService.listClasses(scopeOf(req), { search, teacherId: teacher_id }, { page, limit })
+    );
   })
 );
 

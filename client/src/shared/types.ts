@@ -29,6 +29,7 @@ export interface Teacher {
   email: string | null;
   subject: string | null;
   class_count?: number;
+  created_at: string;
 }
 
 export interface ScheduleEntry {
@@ -432,4 +433,3 @@ export interface TeacherTodayItem {
   attendance_count: number;
   checked_in: boolean;
 }
-

@@ -2,6 +2,25 @@
 
 /* .btn-inline đã gom về styles.css (dùng chung toàn app) */
 
+/* Breadcrumb trang chi tiet (pattern giong InvoiceDetail, scope theo feature) */
+.detail-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+  font-size: var(--font-size-sm);
+  color: var(--text-muted);
+}
+
+.detail-breadcrumb-sep {
+  color: var(--text-muted);
+}
+
+.detail-breadcrumb [aria-current='page'] {
+  color: var(--text-strong);
+  font-weight: 600;
+}
+
 /* Nhom nut thao tac trong o bang: thay cho style inline */
 .row-actions {
   display: inline-flex;

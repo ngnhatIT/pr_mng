@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { peopleApi, TeacherForm } from './people.api';
 import { useToast } from '../../shared/ui/toast';
@@ -116,7 +117,9 @@ export function Teachers() {
                       <span className="avatar avatar-sm" aria-hidden="true">
                         <Icon name="user" size={15} />
                       </span>
-                      {tch.name}
+                      <Link className="link" to={`/app/teachers/${tch.id}`}>
+                        {tch.name}
+                      </Link>
                     </span>
                   </td>
                   <td>{tch.subject || <EmptyCell />}</td>

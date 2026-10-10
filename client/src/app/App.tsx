@@ -46,6 +46,7 @@ const Tuition = lazyPage(() => import('../features/tuition/Tuition'), 'Tuition')
 const InvoiceDetail = lazyPage(() => import('../features/tuition/InvoiceDetail'), 'InvoiceDetail');
 const ZaloReminders = lazyPage(() => import('../features/notifications/ZaloReminders'), 'ZaloReminders');
 const Teachers = lazyPage(() => import('../features/people/Teachers'), 'Teachers');
+const TeacherDetail = lazyPage(() => import('../features/people/TeacherDetail'), 'TeacherDetail');
 const Rooms = lazyPage(() => import('../features/classes/Rooms'), 'Rooms');
 const Payroll = lazyPage(() => import('../features/people/Payroll'), 'Payroll');
 const LeavesAdmin = lazyPage(() => import('../features/leaves/LeavesAdmin'), 'LeavesAdmin');
@@ -182,6 +183,7 @@ export default function App() {
             <Route path="gioi-thieu" element={<ReferralsAdmin />} />
             <Route path="zalo-reminders" element={<ZaloReminders />} />
             <Route path="teachers" element={<Teachers />} />
+            <Route path="teachers/:id" element={<TeacherDetail />} />
             <Route path="cau-hinh-thanh-toan" element={<PaymentConfig />} />
             <Route path="system" element={<System />} />
             <Route path="nhat-ky" element={<AuditLogs />} />

@@ -19,6 +19,7 @@ export const peopleApi = {
     const qs = q.toString();
     return http.get<Paginated<Teacher>>(qs ? `/teachers?${qs}` : '/teachers');
   },
+  getTeacherDetail: (id: number | string) => http.get<Teacher>(`/teachers/${id}`),
   createTeacher: (form: TeacherForm) => http.post<Teacher>('/teachers', form),
   updateTeacher: (id: number, form: TeacherForm) => http.put<Teacher>(`/teachers/${id}`, form),
   deleteTeacher: (id: number) => http.del<{ ok: boolean }>(`/teachers/${id}`),
