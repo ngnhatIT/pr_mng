@@ -281,7 +281,8 @@
     "desc": "Trial signups from the landing page - review and convert to students",
     "empty": {
       "desc": "When parents register for a trial on the landing page, it will appear here.",
-      "title": "No trial registrations"
+      "title": "No trial registrations",
+      "action": "View leads pipeline"
     },
     "filterLabel": "Filter by status",
     "quickStatus": "Quick status change",

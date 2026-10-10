@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { trialsApi } from './admissions.api';
 import { ClassItem } from '../classes/classes.api';
@@ -100,7 +101,11 @@ export function Trials() {
                 <Icon name="x" size={14} />
                 {t('trials.emptyFiltered.clear')}
               </button>
-            ) : undefined
+            ) : (
+              <Link className="btn btn-primary btn-inline" to="/app/leads">
+                {t('trials.empty.action')}
+              </Link>
+            )
           }
         />
       ) : (

@@ -281,7 +281,8 @@
     "desc": "Đăng ký học thử từ landing page - duyệt và chuyển thành học viên",
     "empty": {
       "desc": "Khi phụ huynh đăng ký học thử trên landing page, thông tin sẽ hiện ở đây.",
-      "title": "Không có đăng ký học thử nào"
+      "title": "Không có đăng ký học thử nào",
+      "action": "Xem pipeline lead"
     },
     "filterLabel": "Lọc theo trạng thái",
     "quickStatus": "Chuyển trạng thái nhanh",
