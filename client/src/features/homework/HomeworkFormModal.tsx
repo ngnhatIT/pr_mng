@@ -798,6 +798,7 @@ export function HomeworkFormModal({
           </button>
           {initial ? (
             <button type="submit" className="btn btn-primary" disabled={!canSubmit || busy}>
+              {busy && <span className="spinner" aria-hidden="true" />}
               {busy ? t('actions.saving', { ns: 'common' }) : t('form.saveChanges')}
             </button>
           ) : (
@@ -808,9 +809,11 @@ export function HomeworkFormModal({
                 disabled={!canSubmit || busy}
                 onClick={() => void submit('draft')}
               >
+                {busy && <span className="spinner spinner-dark" aria-hidden="true" />}
                 {t('form.saveDraft')}
               </button>
               <button type="submit" className="btn btn-primary" disabled={!canSubmit || busy}>
+                {busy && <span className="spinner" aria-hidden="true" />}
                 {busy
                   ? t('form.submitting')
                   : publishMode === 'schedule'

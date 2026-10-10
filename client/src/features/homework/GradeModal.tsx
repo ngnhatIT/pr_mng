@@ -178,7 +178,7 @@ export function GradeModal({ homework, onClose }: { homework: HomeworkItem; onCl
                     disabled={busy}
                     onClick={() => void save(current.student_id)}
                   >
-                    <Icon name="check" size={15} />{' '}
+                    <Icon name="check" size={15} /> {busy && <span className="spinner" aria-hidden="true" />}
                     {busy ? t('actions.saving', { ns: 'common' }) : t('grade.saveScore')}
                   </button>
                 </div>

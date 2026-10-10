@@ -317,6 +317,7 @@ function BankQuestionForm({
           {t('actions.cancel', { ns: 'common' })}
         </button>
         <button type="button" className="btn btn-primary" disabled={busy} onClick={save}>
+          {busy && <span className="spinner" aria-hidden="true" />}
           {busy ? t('actions.saving', { ns: 'common' }) : t('bank.form.save')}
         </button>
       </div>

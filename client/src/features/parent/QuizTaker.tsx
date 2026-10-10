@@ -294,6 +294,7 @@ export function QuizTaker({
               </button>
             ) : (
               <button className="btn btn-primary" disabled={submitting} onClick={submit}>
+                {submitting && <span className="spinner" aria-hidden="true" />}
                 {submitting ? t('quiz.grading') : t('quiz.submitQuiz')}
               </button>
             )}
