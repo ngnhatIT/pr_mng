@@ -139,6 +139,11 @@ export async function importFromBank(
   centerId: number | null
 ): Promise<number> {
   if (!bankIds.length) throw AppError.badRequest('Chưa chọn câu hỏi để import');
+  // Chỉ import vào bài loại quiz — import vào bài thường sẽ ghi đè max_score sai nghĩa
+  const hw = (await db.prepare('SELECT kind FROM homework WHERE id = ?').get(homeworkId)) as
+    { kind: string } | undefined;
+  if (!hw) throw AppError.notFound('Không tìm thấy bài tập');
+  if (hw.kind !== 'quiz') throw AppError.badRequest('Chỉ được import câu hỏi vào bài quiz');
   // Chặn import khi đã có học viên làm bài (đồng nhất với saveQuizQuestions)
   if ((await countQuizAttempts(homeworkId)) > 0) {
     throw AppError.badRequest('Đã có học viên làm bài, không thể thêm câu hỏi. Hãy tạo quiz mới.');

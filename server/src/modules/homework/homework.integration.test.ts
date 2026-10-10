@@ -836,3 +836,34 @@ describe('quiz.service - đồng bộ max_score (P1-5)', () => {
     assert.equal(await maxScoreOf(id), 2); // 0.5 + 1.5, không Math.round
   });
 });
+
+describe('questionBank.service - chặn import sai loại bài (P1-7)', () => {
+  beforeEach(async () => {
+    await resetDb();
+  });
+
+  it('import vào bài thường → 400, không đụng max_score', async () => {
+    const [hw] = await homeworkService.createHomeworkBatch({
+      class_ids: [classId],
+      title: 'Bài thường',
+      created_by: 1,
+      centerId: null,
+      kind: 'homework',
+      max_score: 10,
+    });
+    const { addBankQuestion, importFromBank } = await import('./questionBank.service');
+    const bq = await addBankQuestion(null, 1, {
+      question: 'Câu bank',
+      points: 2,
+      options: [
+        { text: 'A', is_correct: true },
+        { text: 'B', is_correct: false },
+      ],
+    });
+    await assert.rejects(() => importFromBank(hw.id, [bq.id], null), /Chỉ được import câu hỏi vào bài quiz/);
+    const row = (await db.prepare('SELECT max_score FROM homework WHERE id = ?').get(hw.id)) as {
+      max_score: number;
+    };
+    assert.equal(Number(row.max_score), 10); // max_score giữ nguyên
+  });
+});
