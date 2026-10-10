@@ -811,6 +811,29 @@ describe('homework.service - update validate rubric thuộc center (P1-1)', () =
   });
 });
 
+describe('prepareCreateInput validate publish_at (P1-2)', () => {
+  it('publish_at sai format → 400', () => {
+    assert.throws(
+      () =>
+        homeworkService.prepareCreateInput({
+          class_ids: [1],
+          title: 'T',
+          status: 'scheduled',
+          publish_at: '2026/10/10 10:00',
+        }),
+      /Hẹn đăng không hợp lệ/
+    );
+    // Format đúng thì qua
+    const ok = homeworkService.prepareCreateInput({
+      class_ids: [1],
+      title: 'T',
+      status: 'scheduled',
+      publish_at: '2026-10-10T10:00',
+    });
+    assert.equal(ok.publish_at, '2026-10-10T10:00');
+  });
+});
+
 describe('homework.service - publish quiz phải có câu hỏi (P0-3)', () => {
   beforeEach(async () => {
     await resetDb();

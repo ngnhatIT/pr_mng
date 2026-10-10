@@ -252,6 +252,11 @@ export function prepareCreateInput(raw: Record<string, unknown>): PreparedHomewo
   if (!(HOMEWORK_STATUS as readonly string[]).includes(status))
     throw AppError.badRequest('Trạng thái không hợp lệ');
   const publish_at = raw.publish_at ? String(raw.publish_at) : null;
+  // P1-2: validate format hẹn đăng ngay khi tạo (như PUT) — sai format thì 400,
+  // tránh bài scheduled kẹt vĩnh viễn vì publish_at không bao giờ khớp giờ
+  if (publish_at && !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(publish_at)) {
+    throw AppError.badRequest('Hẹn đăng không hợp lệ (YYYY-MM-DDTHH:mm)');
+  }
   if (status === 'scheduled' && !publish_at) throw AppError.badRequest('Hẹn giờ đăng cần chọn thời gian');
 
   const kind: HomeworkKind = raw.kind === 'quiz' ? 'quiz' : 'homework';
