@@ -75,6 +75,13 @@
     "title": "Xóa lớp học"
   },
   "desc": "Tạo lớp, xếp lịch, phân công giáo viên và ghi danh",
+  "searchPlaceholder": "Tìm theo tên lớp...",
+  "clearSearch": "Xóa từ khóa tìm kiếm",
+  "emptyFiltered": {
+    "title": "Không tìm thấy lớp học",
+    "desc": "Thử từ khóa khác hoặc xóa bộ lọc để xem toàn bộ danh sách.",
+    "clear": "Xóa bộ lọc"
+  },
   "detail": {
     "back": "Danh sách lớp học",
     "dateRange": "Thời gian",
@@ -99,7 +106,7 @@
       "removeFromClass": "Xóa khỏi lớp",
       "removed": "Đã xóa học viên khỏi lớp"
     },
-    "loadError": "Không tải được chi tiết lớp",
+    "loadError": "Không tải được chi tiết lớp, vui lòng thử lại",
     "noRoom": "Chưa gán phòng",
     "noTeacher": "Chưa phân công",
     "notFoundDesc": "Lớp học không tồn tại hoặc đã bị xóa.",
@@ -154,7 +161,7 @@
       "title": "Xóa phòng học"
     },
     "deleted": "Đã xóa phòng học",
-    "desc": "Xếp phòng cho các lớp. Hệ thống tự cảnh báo khi trùng lịch.",
+    "desc": "Mỗi phòng một thẻ: chứa được bao nhiêu học viên và đang có mấy lớp dùng.",
     "empty": {
       "desc": "Thêm phòng học để xếp lịch cho các lớp.",
       "title": "Chưa có phòng học nào"
@@ -170,7 +177,7 @@
         "capacityInvalid": "Sức chứa phải là số nguyên dương"
       }
     },
-    "loadError": "Không tải được danh sách phòng",
+    "loadError": "Không tải được danh sách phòng, vui lòng thử lại",
     "saved": "Đã lưu phòng học",
     "status": {
       "idle": "Trống",

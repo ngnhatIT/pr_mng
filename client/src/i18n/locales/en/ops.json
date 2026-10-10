@@ -51,7 +51,7 @@
       "title": "Delete lead"
     },
     "deleteTitle": "Delete lead",
-    "desc": "Track prospects from first contact to enrollment",
+    "desc": "Move each prospect across the columns, from first contact to enrollment.",
     "editTitle": "Edit lead",
     "empty": {
       "desc": "Leads from the landing page signup form will flow in here automatically.",
@@ -115,10 +115,10 @@
       "student": "Student",
       "toDate": "To date"
     },
-    "desc": "Review student leave requests",
+    "desc": "Student leave requests: approving one suggests a makeup session right away.",
     "empty": {
       "desc": "There are no leave requests to process yet.",
-      "title": "No leave requests"
+      "title": "No leave requests yet"
     },
     "filterLabel": "Filter by request status",
     "makeupHint": "Suggested makeup sessions:",
@@ -153,10 +153,10 @@
       "status": "Status",
       "referrer": "Referrer"
     },
-    "desc": "Track referrals and credit rewards",
+    "desc": "Who referred whom, how much they earned, and whether the reward was paid.",
     "empty": {
       "desc": "No parent has referred friends yet.",
-      "title": "No referrals"
+      "title": "No referrals yet"
     },
     "filterLabel": "Filter by status",
     "noName": "No name yet",
@@ -181,7 +181,7 @@
       "message": "Delete this review from the public page?",
       "title": "Delete review"
     },
-    "desc": "Approve reviews to show publicly on the landing page",
+    "desc": "Reviews from parents: only approved ones appear on the landing page.",
     "empty": {
       "approvedDesc": "No reviews have been approved yet.",
       "pendingDesc": "No reviews are waiting for approval.",
@@ -278,10 +278,10 @@
       "loadFail": "Could not load the class list, please try again"
     },
     "convertTitle": "Convert \"{{name}}\" to student",
-    "desc": "Trial signups from the landing page - review and convert to students",
+    "desc": "Fresh trial signups from parents: review them, then convert to students.",
     "empty": {
       "desc": "When parents register for a trial on the landing page, it will appear here.",
-      "title": "No trial registrations",
+      "title": "No trial registrations yet",
       "action": "View leads pipeline"
     },
     "filterLabel": "Filter by status",
@@ -368,7 +368,7 @@
     },
     "reminderStatus": {
       "demo": "Demo",
-      "failed": "Failed",
+      "failed": "Not sent",
       "sent": "Sent"
     },
     "runNow": "Run once now",

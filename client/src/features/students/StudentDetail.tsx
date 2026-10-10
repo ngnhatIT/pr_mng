@@ -333,7 +333,7 @@ function StudentGradeFormModal({
   useEffect(() => {
     // HIGH-2: GET /classes trả envelope {data, pagination}, phải lấy .data trước khi filter
     classesApi
-      .list({ limit: 100 })
+      .list("", { limit: 100 })
       .then((r) => setClasses(r.data.filter((x) => x.status === 'active')))
       .catch((err: Error) => toast(err.message, 'error'));
   }, [toast]);

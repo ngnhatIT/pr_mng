@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { classesApi, roomsApi, ClassItem, Room } from './classes.api';
 import { peopleApi } from '../people/people.api';
+import { useDebounce } from '../../shared/hooks/useDebounce';
 import { useToast } from '../../shared/ui/toast';
 import { Modal, ConfirmDialog } from '../../shared/components/Modal';
 import { Field, useFieldErrors } from '../../shared/components/Form';
@@ -33,9 +34,17 @@ export function Classes() {
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState<ClassItem | null | 'new'>(null);
   const [deleting, setDeleting] = useState<ClassItem | null>(null);
+  const [search, setSearch] = useState('');
+  const setSearchReset = (v: string) => {
+    setSearch(v);
+    setPage(1);
+  };
   const [page, setPage] = useState(1);
   const [pagination, setPagination] = useState<PaginationMeta | null>(null);
   const toast = useToast();
+
+  const debouncedSearch = useDebounce(search);
+  const filtering = search.trim() !== '';
 
   /** Localized schedule text (shared formatScheduleText is Vietnamese-only) */
   const formatSchedule = (scheduleJson: string) => {
@@ -50,7 +59,7 @@ export function Classes() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await classesApi.list({ page });
+      const res = await classesApi.list(debouncedSearch, { page });
       setClasses(res.data);
       setPagination(res.pagination);
     } catch (err) {
@@ -58,7 +67,7 @@ export function Classes() {
     } finally {
       setLoading(false);
     }
-  }, [page, toast, t]);
+  }, [debouncedSearch, page, toast, t]);
 
   useEffect(() => {
     void load();
@@ -108,18 +117,55 @@ export function Classes() {
         }
       />
 
+      <div className="toolbar">
+        <span className={`search-wrap${search ? ' has-clear' : ''}`}>
+          <span className="search-icon">
+            <Icon name="search" size={15} />
+          </span>
+          <input
+            className="text-input search-input"
+            aria-label={t('searchPlaceholder')}
+            placeholder={t('searchPlaceholder')}
+            value={search}
+            onChange={(e) => setSearchReset(e.target.value)}
+          />
+          {search !== '' &&
+            (loading || search !== debouncedSearch ? (
+              <span className="search-clear" aria-hidden="true">
+                <span className="spinner spinner-dark" />
+              </span>
+            ) : (
+              <button
+                type="button"
+                className="search-clear"
+                onClick={() => setSearchReset('')}
+                aria-label={t('clearSearch')}
+              >
+                <Icon name="x" size={14} />
+              </button>
+            ))}
+        </span>
+      </div>
+
       {loading && classes.length === 0 ? (
         <CardGridSkeleton />
       ) : classes.length === 0 ? (
         <EmptyState
           icon="book"
-          title={t('empty.title')}
-          desc={t('empty.desc')}
+          title={t(filtering ? 'emptyFiltered.title' : 'empty.title')}
+          desc={t(filtering ? 'emptyFiltered.desc' : 'empty.desc')}
           action={
-            <button className="btn btn-primary btn-inline" onClick={() => setEditing('new')}>
-              <Icon name="plus" size={14} />
-              {t('add')}
-            </button>
+            filtering ? (
+              <button className="btn btn-secondary btn-inline" onClick={() => setSearchReset('')}>
+                <Icon name="x" size={14} />
+                {t('emptyFiltered.clear')}
+              </button>
+            ) : (
+              <button className="btn btn-primary btn-inline" onClick={() => setEditing('new')}>
+                <Icon name="plus" size={14} />
+                {t('add')}
+              </button>
+            )
           }
         />
       ) : (

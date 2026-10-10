@@ -3,7 +3,7 @@
     "create": "Create account",
     "createError": "Couldn't create the teacher account, please try again",
     "created": "Account \"{{username}}\" created for teacher {{name}}",
-    "creating": "Creating...",
+    "creating": "Creating account...",
     "desc": "The teacher will use this account to sign in to the teacher portal (view sessions, take attendance, check in...).",
     "password": "Password *",
     "title": "Create login account - {{name}}",
@@ -14,7 +14,7 @@
     "message": "Are you sure you want to delete teacher \"{{name}}\"? Assigned classes will become \"Unassigned\".",
     "title": "Delete teacher"
   },
-  "desc": "Manage teachers and create login accounts for them.",
+  "desc": "Who teaches which class and subject, plus their login accounts.",
   "empty": {
     "desc": "Add teachers and create accounts so they can check in, take attendance and assign homework.",
     "title": "No teachers yet"
@@ -36,7 +36,7 @@
     "desc": "Calculate teacher pay based on sessions taught this month",
     "emptyDesc": "Payroll will appear here once teaching sessions are recorded this month.",
     "emptyTitle": "No payroll data",
-    "loadError": "Could not load payroll",
+    "loadError": "Could not load payroll, please try again",
     "month": "Month",
     "rate": "Rate",
     "table": {

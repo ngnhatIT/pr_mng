@@ -17,7 +17,7 @@
       "RATE_LIMITED": "Thao tác quá nhanh, vui lòng thử lại sau",
       "DUPLICATE": "Dữ liệu đã tồn tại",
       "CONFLICT": "Dữ liệu đã tồn tại hoặc đang được sử dụng",
-      "INTERNAL_ERROR": "Lỗi hệ thống, vui lòng thử lại sau",
+      "INTERNAL_ERROR": "Hệ thống đang bận, vui lòng thử lại sau",
       "PAYLOAD_TOO_LARGE": "Dữ liệu gửi lên quá lớn",
       "WEAK_PASSWORD": "Mật khẩu quá yếu",
       "WRONG_PASSWORD": "Mật khẩu hiện tại không đúng",
@@ -106,7 +106,7 @@
     "deleteSuccess": "Đã xóa",
     "empty": "Chưa có dữ liệu",
     "error": "Có lỗi xảy ra",
-    "loadError": "Không tải được dữ liệu",
+    "loadError": "Không tải được dữ liệu, vui lòng thử lại",
     "loading": "Đang tải...",
     "noData": "Không có dữ liệu",
     "saveError": "Không lưu được, vui lòng thử lại",
@@ -133,7 +133,7 @@
   },
   "error": {
     "title": "Đã xảy ra lỗi",
-    "message": "Rất tiếc, có lỗi khi hiển thị trang này. Bạn có thể thử tải lại hoặc quay về trang chủ.",
+    "message": "Không hiển thị được trang này. Thử tải lại trang hoặc quay về trang chủ.",
     "retry": "Thử lại",
     "home": "Về trang chủ"
   },

@@ -6,7 +6,7 @@ import { Modal, ConfirmDialog } from '../../shared/components/Modal';
 import { Field, useFieldErrors } from '../../shared/components/Form';
 import { PageHeader } from '../../shared/components/PageHeader';
 import { EmptyState } from '../../shared/components/EmptyState';
-import { TableSkeleton } from '../../shared/components/Skeleton';
+import { CardGridSkeleton } from '../../shared/components/Skeleton';
 import { Pagination, type PaginationMeta } from '../../shared/components/Pagination';
 import { Icon } from '../../shared/components/icons';
 import './Rooms.css';
@@ -81,7 +81,7 @@ export function Rooms() {
       />
 
       {loading ? (
-        <TableSkeleton cols={4} />
+        <CardGridSkeleton count={4} />
       ) : rooms.length === 0 ? (
         <EmptyState
           icon="building"
@@ -95,52 +95,47 @@ export function Rooms() {
           }
         />
       ) : (
-        <div className="table-wrap sticky">
-          <table className="table">
-            <thead>
-              <tr>
-                <th scope="col">{t('rooms.table.name')}</th>
-                <th scope="col">{t('rooms.table.capacity')}</th>
-                <th scope="col">{t('rooms.table.classesUsing')}</th>
-                <th scope="col">{t('rooms.table.status')}</th>
-                <th scope="col" className="th-right">
-                  {t('rooms.table.actions')}
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {rooms.map((r) => (
-                <tr key={r.id}>
-                  <td className="room-name">{r.name}</td>
-                  <td className="num">{r.capacity ?? '-'}</td>
-                  <td className="num">{r.class_count ?? 0}</td>
-                  <td>
-                    {(r.class_count ?? 0) > 0 ? (
-                      <span className="badge badge-active">{t('rooms.status.inUse')}</span>
-                    ) : (
-                      <span className="badge badge-idle">{t('rooms.status.idle')}</span>
-                    )}
-                  </td>
-                  <td className="td-right">
-                    <span className="row-actions">
-                      <button type="button" className="btn btn-sm btn-ghost" onClick={() => setEditing(r)}>
-                        <Icon name="pencil" size={15} />
-                        {t('actions.edit', { ns: 'common' })}
-                      </button>
-                      <button
-                        type="button"
-                        className="btn btn-sm btn-danger-ghost"
-                        onClick={() => setDeleting(r)}
-                      >
-                        <Icon name="trash" size={15} />
-                        {t('actions.delete', { ns: 'common' })}
-                      </button>
-                    </span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <div className="card-grid" aria-busy={loading || undefined}>
+          {rooms.map((r) => (
+            <article key={r.id} className="card room-card">
+              <div className="room-card-head">
+                <h3 className="room-card-name" title={r.name}>
+                  {r.name}
+                </h3>
+                {(r.class_count ?? 0) > 0 ? (
+                  <span className="badge badge-active">{t('rooms.status.inUse')}</span>
+                ) : (
+                  <span className="badge badge-idle">{t('rooms.status.idle')}</span>
+                )}
+              </div>
+              <div className="room-card-meta">
+                <div className="room-meta-row">
+                  <Icon name="users" size={15} />
+                  {t('rooms.table.capacity')}
+                  <span className="room-meta-value">{r.capacity ?? '-'}</span>
+                </div>
+                <div className="room-meta-row">
+                  <Icon name="calendar" size={15} />
+                  {t('rooms.table.classesUsing')}
+                  <span className="room-meta-value">{r.class_count ?? 0}</span>
+                </div>
+              </div>
+              <div className="card-foot">
+                <button type="button" className="btn btn-sm btn-ghost" onClick={() => setEditing(r)}>
+                  <Icon name="pencil" size={15} />
+                  {t('actions.edit', { ns: 'common' })}
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-sm btn-danger-ghost"
+                  onClick={() => setDeleting(r)}
+                >
+                  <Icon name="trash" size={15} />
+                  {t('actions.delete', { ns: 'common' })}
+                </button>
+              </div>
+            </article>
+          ))}
         </div>
       )}
 

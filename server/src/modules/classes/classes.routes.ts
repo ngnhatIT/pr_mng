@@ -13,8 +13,8 @@ router.get(
   '/',
   requirePermission('classes.view'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
-    const { page, limit } = req.query as { page?: string; limit?: string };
-    res.json(await classService.listClasses(scopeOf(req), { page, limit }));
+    const { page, limit, search } = req.query as { page?: string; limit?: string; search?: string };
+    res.json(await classService.listClasses(scopeOf(req), { search }, { page, limit }));
   })
 );
 

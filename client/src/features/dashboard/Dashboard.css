@@ -19,6 +19,121 @@
   font-size: var(--font-size-md);
 }
 
+/* ---------- Hero: học phí chưa thu ---------- */
+/* Treatment khác hẳn stat card: type lớn trên nền tint cảnh báo, không clone card */
+.dash-hero {
+  display: block;
+  margin-top: var(--sp-5);
+  padding: var(--sp-5) var(--sp-6);
+  background: var(--warning-soft);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  text-decoration: none;
+  color: inherit;
+  cursor: pointer;
+  transition: border-color 0.15s ease-out, transform 0.1s ease-out;
+}
+
+.dash-hero:hover {
+  border-color: var(--border-strong);
+}
+
+.dash-hero:active {
+  transform: scale(0.98);
+}
+
+.dash-hero-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.dash-hero-label {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  font-size: var(--font-size-md);
+  font-weight: 700;
+  color: var(--text-strong);
+}
+
+.dash-hero-icon {
+  color: var(--warning);
+  flex: none;
+}
+
+.dash-hero-chev {
+  color: var(--warning);
+  flex: none;
+  transition: transform 0.15s ease-out;
+}
+
+.dash-hero:hover .dash-hero-chev {
+  transform: translateX(3px);
+}
+
+.dash-hero-value {
+  display: block;
+  margin-top: var(--sp-3);
+  font-size: 38px;
+  line-height: 1.15;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--text-strong);
+  font-variant-numeric: tabular-nums;
+}
+
+.dash-hero-sub {
+  display: block;
+  margin-top: var(--sp-2);
+  font-size: var(--font-size-sm);
+  color: var(--text-muted);
+}
+
+/* ---------- Strip: 3 số còn lại, chia cột bằng divider, không dùng card ---------- */
+.dash-strip {
+  display: flex;
+  margin-top: var(--sp-4);
+}
+
+.dash-stat {
+  flex: 1;
+  min-width: 0;
+  padding: var(--sp-2) var(--sp-5);
+}
+
+.dash-stat:first-child {
+  padding-left: 0;
+}
+
+.dash-stat + .dash-stat {
+  border-left: 1px solid var(--border);
+}
+
+.dash-stat-label {
+  display: block;
+  font-size: var(--font-size-sm);
+  color: var(--text-muted);
+}
+
+.dash-stat-value {
+  display: block;
+  margin-top: var(--sp-1);
+  font-size: 22px;
+  line-height: 1.25;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--text-strong);
+  font-variant-numeric: tabular-nums;
+}
+
+.dash-stat-sub {
+  display: block;
+  margin-top: 2px;
+  font-size: var(--font-size-sm);
+  color: var(--text-muted);
+}
+
 .dash-section-label {
   font-size: var(--font-size-md);
   font-weight: 700;
@@ -69,5 +184,22 @@
   }
   .dash-cols .debt-amount {
     flex-shrink: 0;
+  }
+  /* Hero và strip 360px: hero thu nhỏ type, strip xếp dọc ngăn bằng divider ngang */
+  .dash-hero {
+    padding: var(--sp-4) var(--sp-5);
+  }
+  .dash-hero-value {
+    font-size: 30px;
+  }
+  .dash-strip {
+    flex-direction: column;
+  }
+  .dash-stat {
+    padding: var(--sp-3) 0;
+  }
+  .dash-stat + .dash-stat {
+    border-left: none;
+    border-top: 1px solid var(--border);
   }
 }

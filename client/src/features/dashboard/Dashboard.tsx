@@ -7,8 +7,7 @@ import { useToast } from '../../shared/ui/toast';
 import { DashboardData, formatVND } from '../../shared/types';
 import { getUser } from '../../shared/api/client';
 import { PageHeader } from '../../shared/components/PageHeader';
-import { StatCard } from '../../shared/components/StatCard';
-import { StatGridSkeleton, Skeleton } from '../../shared/components/Skeleton';
+import { Skeleton } from '../../shared/components/Skeleton';
 import { EmptyState } from '../../shared/components/EmptyState';
 import { Icon, IconName } from '../../shared/components/icons';
 import './Dashboard.css';
@@ -34,6 +33,9 @@ export function Dashboard() {
   const { t, i18n } = useTranslation(['dashboard', 'common']);
   const [data, setData] = useState<DashboardData | null>(null);
   const [debts, setDebts] = useState<DebtRow[]>([]);
+  // Tổng số học viên còn nợ (pagination.total từ /invoices/debt): số liệu thật
+  // dùng làm sub-info cho hero; null khi không tải được hoặc không có quyền
+  const [debtTotal, setDebtTotal] = useState<number | null>(null);
   const [debtsError, setDebtsError] = useState(false);
   const [loading, setLoading] = useState(true);
   const toast = useToast();
@@ -65,9 +67,11 @@ export function Dashboard() {
         // Teacher không có quyền invoices.view → 403, bỏ qua (không vỡ dashboard)
         const debt = await dashboardApi.topDebts({ limit: 5 });
         setDebts(debt.data);
+        setDebtTotal(debt.pagination.total);
         setDebtsError(false);
       } catch (err) {
         setDebts([]);
+        setDebtTotal(null);
         // 403 thiếu quyền (teacher): ẩn widget êm; lỗi khác mới báo + cho thử lại
         const code = err instanceof Error ? (err as Error & { code?: string }).code : undefined;
         setDebtsError(code !== 'FORBIDDEN');
@@ -93,7 +97,20 @@ export function Dashboard() {
             <Skeleton width="32%" height={16} radius={6} />
           </div>
         </div>
-        <StatGridSkeleton />
+        {/* Skeleton đúng từng khối: hero + strip 3 số, không phải 4 card đều nhau */}
+        <div aria-hidden="true" style={{ marginTop: 20 }}>
+          <Skeleton width="100%" height={124} radius={16} />
+          <div className="dash-strip" style={{ marginTop: 16 }}>
+            {[0, 1, 2].map((i) => (
+              <div key={i} className="dash-stat">
+                <Skeleton width="55%" height={13} radius={6} />
+                <div style={{ marginTop: 8 }}>
+                  <Skeleton width="80%" height={26} radius={8} />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
         <div className="dash-section-label" aria-hidden="true">
           <Skeleton width={180} height={18} radius={6} />
         </div>
@@ -145,34 +162,21 @@ export function Dashboard() {
     );
   }
 
-  const stats = [
-    {
-      label: t('stats.students'),
-      value: data.studyingStudents,
-      sub: t('stats.studentsSub', { total: data.totalStudents }),
-      tone: 'blue' as const,
-      icon: 'users' as IconName,
-    },
-    {
-      label: t('stats.classes'),
-      value: data.activeClasses,
-      sub: t('stats.classesSub', { total: data.totalTeachers }),
-      tone: 'green' as const,
-      icon: 'book' as IconName,
-    },
+  const stripStats = [
     {
       label: t('stats.revenue'),
       value: formatVND(data.revenueThisMonth),
       sub: t('stats.revenueSub'),
-      tone: 'violet' as const,
-      icon: 'wallet' as IconName,
     },
     {
-      label: t('stats.debt'),
-      value: formatVND(data.unpaidTotal),
-      sub: t('stats.debtSub'),
-      tone: 'amber' as const,
-      icon: 'alert' as IconName,
+      label: t('stats.students'),
+      value: String(data.studyingStudents),
+      sub: t('stats.studentsSub', { total: data.totalStudents }),
+    },
+    {
+      label: t('stats.classes'),
+      value: String(data.activeClasses),
+      sub: t('stats.classesSub', { total: data.totalTeachers }),
     },
   ];
 
@@ -192,9 +196,31 @@ export function Dashboard() {
         </div>
       </div>
 
-      <div className="stat-grid">
-        {stats.map((s) => (
-          <StatCard key={s.label} icon={s.icon} value={s.value} label={s.label} sub={s.sub} tone={s.tone} />
+      {/* Hero: học phí chưa thu, thứ chủ trung tâm nhìn đầu tiên.
+          Sub-info duy nhất là số học viên còn nợ (pagination.total thật từ API),
+          không có thì ẩn, tuyệt đối không fake trend hay số ước lượng */}
+      <Link to="/app/tuition?tab=debt" className="dash-hero">
+        <span className="dash-hero-row">
+          <span className="dash-hero-label">
+            <Icon name="alert" size={18} className="dash-hero-icon" />
+            {t('stats.debt')}
+          </span>
+          <Icon name="arrow-right" size={16} className="dash-hero-chev" />
+        </span>
+        <span className="dash-hero-value">{formatVND(data.unpaidTotal)}</span>
+        {debtTotal !== null && (
+          <span className="dash-hero-sub">{t('hero.debtors', { total: debtTotal })}</span>
+        )}
+      </Link>
+
+      {/* 3 số còn lại: strip chia cột, không phải 4 card giống nhau */}
+      <div className="dash-strip">
+        {stripStats.map((s) => (
+          <div key={s.label} className="dash-stat">
+            <span className="dash-stat-label">{s.label}</span>
+            <span className="dash-stat-value">{s.value}</span>
+            <span className="dash-stat-sub">{s.sub}</span>
+          </div>
         ))}
       </div>
 

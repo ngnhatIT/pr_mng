@@ -1,7 +1,7 @@
 {
   "courses": {
     "capacity": "Class size",
-    "empty": "Courses coming soon...",
+    "empty": "Loading courses...",
     "schedule": "Schedule",
     "students": "{{count}} students",
     "sub": "Find the right course for your child's level and goals",
@@ -38,7 +38,7 @@
     "success": "Consultation request sent. We'll contact you soon!",
     "title": "Book a consultation"
   },
-  "loadError": "Couldn't load data",
+  "loadError": "Couldn't load the data, please try again",
   "nav": {
     "courses": "Courses",
     "login": "Sign in",
@@ -56,7 +56,7 @@
   },
   "sending": "Sending...",
   "teachers": {
-    "empty": "Coming soon...",
+    "empty": "Loading teachers...",
     "fallback": "Teacher",
     "sub": "Dedicated, experienced teachers",
     "title": "Our teachers"
@@ -65,7 +65,7 @@
     "desc": "Try one class free before deciding.",
     "fail": "Couldn't send the trial request, please try again",
     "submit": "Book trial class",
-    "success": "Trial class booked!",
+    "success": "Trial class booked. We'll contact you to confirm.",
     "title": "Book a trial class"
   }
 }

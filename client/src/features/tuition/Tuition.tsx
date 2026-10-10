@@ -286,8 +286,18 @@ function InvoiceList() {
           <option value="paid">{t('invoiceStatus.paid')}</option>
         </select>
         <span className="spacer" />
-        <span className="debt-pill" aria-live="polite">
-          {t('invoices.totalDebt')} <strong className="debt-amount">{formatVND(totalDebt)}</strong>
+        <span className="debt-pill" aria-live="polite" title={t('invoices.debtStripTitle')}>
+          <Icon name="alert" size={14} />
+          {debtSummary ? (
+            t('invoices.debtStrip', {
+              count: debtSummary.debtorCount,
+              total: formatVND(debtSummary.totalDebt),
+            })
+          ) : (
+            <>
+              {t('invoices.totalDebt')} <strong className="debt-amount">{formatVND(totalDebt)}</strong>
+            </>
+          )}
         </span>
         <button className="btn btn-primary btn-inline" onClick={() => setShowCreate(true)}>
           <Icon name="plus" size={14} />
@@ -564,7 +574,7 @@ function InvoiceFormModal({ onClose, onDone }: { onClose: () => void; onDone: ()
   useEffect(() => {
     Promise.all([
       studentsApi.list('', 'studying', { limit: 100 }),
-      classesApi.list({ limit: 100 }).then((r) => r.data),
+      classesApi.list("", { limit: 100 }).then((r) => r.data),
     ])
       .then(([s, c]) => {
         setStudents(s.data);

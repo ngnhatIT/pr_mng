@@ -10,6 +10,9 @@
     "midday": "Good afternoon",
     "morning": "Good morning"
   },
+  "hero": {
+    "debtors": "{{total}} students with outstanding balances"
+  },
   "loadError": "Couldn't load data",
   "loadErrorDesc": "Check your network connection, then try loading the data again.",
   "pageDesc": "Center activity today",
@@ -29,7 +32,6 @@
     "classes": "Open classes",
     "classesSub": "{{total}} teachers",
     "debt": "Outstanding debt",
-    "debtSub": "from unpaid invoices",
     "revenue": "This month's revenue",
     "revenueSub": "collected payments",
     "students": "Active students",

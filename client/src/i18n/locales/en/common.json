@@ -17,7 +17,7 @@
       "RATE_LIMITED": "Too many requests, please try again later",
       "DUPLICATE": "Data already exists",
       "CONFLICT": "Data already exists or is in use",
-      "INTERNAL_ERROR": "System error, please try again later",
+      "INTERNAL_ERROR": "The system is busy right now, please try again later",
       "PAYLOAD_TOO_LARGE": "Uploaded data is too large",
       "WEAK_PASSWORD": "Password is too weak",
       "WRONG_PASSWORD": "Current password is incorrect",
@@ -106,7 +106,7 @@
     "deleteSuccess": "Deleted",
     "empty": "No data yet",
     "error": "Something went wrong",
-    "loadError": "Failed to load data",
+    "loadError": "Couldn't load the data, please try again",
     "loading": "Loading...",
     "noData": "No data",
     "saveError": "Couldn't save, please try again",
@@ -133,7 +133,7 @@
   },
   "error": {
     "title": "Something went wrong",
-    "message": "Sorry, this page failed to load. You can try again or go back home.",
+    "message": "This page couldn't be displayed. Try reloading or go back home.",
     "retry": "Try again",
     "home": "Go home"
   },

@@ -35,7 +35,7 @@ export function Attendance() {
   useEffect(() => {
     // MEDIUM-4: dropdown lớp phải thấy hết lớp, không chỉ 20 lớp đầu (default limit)
     classesApi
-      .list({ limit: 200 })
+      .list("", { limit: 200 })
       .then((r) => setClasses(r.data.filter((x) => x.status === 'active')))
       .catch((err: Error) => toast(err.message, 'error'));
   }, [toast]);

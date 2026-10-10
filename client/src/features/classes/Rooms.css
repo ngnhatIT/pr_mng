@@ -1,21 +1,69 @@
-/* Rooms - phòng học.
- * Cột tình trạng giúp quét nhanh phòng nào đang dùng, phòng nào trống.
+/* Rooms - phòng học dạng card lưới.
+ * Design read: dữ liệu thưa, mỗi phòng là 1 thẻ nhìn là biết sức chứa và tình trạng dùng.
+ * Tái dùng .card/.card-grid/.card-foot chung, chỉ thêm phần riêng của phòng.
  */
 
-.room-name {
+.room-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 0; /* trong lưới card, khoảng cách do gap của .card-grid quyết định */
+}
+
+/* Hover chỉ đổi viền, không nâng card (luật 3b) */
+.room-card:hover {
+  border-color: var(--primary);
+}
+
+.room-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.room-card-name {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--text-strong);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.room-card-meta {
+  display: grid;
+  gap: 8px;
+}
+
+.room-meta-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: var(--text-muted);
+}
+
+.room-meta-row svg {
+  flex-shrink: 0;
+}
+
+.room-meta-value {
+  margin-left: auto;
   font-weight: 600;
+  color: var(--text-strong);
+  font-variant-numeric: tabular-nums;
+}
+
+.room-card .card-foot {
+  margin-top: auto;
 }
 
 .badge-idle {
   background: var(--bg-soft);
   color: var(--text-muted);
   border: 1px solid var(--border);
-}
-
-/* Nhóm nút thao tác trong ô bảng */
-.row-actions {
-  display: inline-flex;
-  gap: 6px;
-  flex-wrap: wrap;
-  justify-content: flex-end;
 }

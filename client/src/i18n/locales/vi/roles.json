@@ -21,8 +21,8 @@
   "disableScope": "Tắt quyền này",
   "edit": "Sửa",
   "emptySearch": {
-    "desc": "Thử từ khóa khác.",
-    "title": "Không tìm thấy"
+    "desc": "Thử tìm với từ khóa khác.",
+    "title": "Không tìm thấy vai trò"
   },
   "forbidden": {
     "desc": "Tài khoản của bạn không được xem trang phân quyền. Liên hệ quản trị viên nếu cần.",
@@ -91,7 +91,7 @@
     "desc": "Chọn vai trò ở danh sách bên trái để xem và chỉnh sửa quyền.",
     "title": "Chọn một vai trò"
   },
-  "systemNote": "Vai trò hệ thống: không sửa, không xóa",
+  "systemNote": "Vai trò hệ thống không thể sửa hay xóa",
   "title": "Phân quyền",
   "toast": {
     "created": "Đã tạo vai trò mới",

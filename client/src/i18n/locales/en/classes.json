@@ -75,6 +75,13 @@
     "title": "Delete class"
   },
   "desc": "Create classes, schedule sessions, assign teachers and enroll students",
+  "searchPlaceholder": "Search classes by name...",
+  "clearSearch": "Clear search",
+  "emptyFiltered": {
+    "title": "No classes found",
+    "desc": "Try a different keyword or clear the search to see the full list.",
+    "clear": "Clear search"
+  },
   "detail": {
     "back": "Class list",
     "dateRange": "Duration",
@@ -99,7 +106,7 @@
       "removeFromClass": "Remove from class",
       "removed": "Student removed from class"
     },
-    "loadError": "Could not load class details",
+    "loadError": "Could not load class details, please try again",
     "noRoom": "No room assigned",
     "noTeacher": "Unassigned",
     "notFoundDesc": "The class does not exist or has been deleted.",
@@ -154,7 +161,7 @@
       "title": "Delete room"
     },
     "deleted": "Room deleted",
-    "desc": "Assign rooms to classes. The system warns about schedule conflicts.",
+    "desc": "One card per room: its capacity and how many classes are using it.",
     "empty": {
       "desc": "Add rooms to schedule classes.",
       "title": "No rooms yet"
@@ -170,7 +177,7 @@
         "capacityInvalid": "Capacity must be a positive whole number"
       }
     },
-    "loadError": "Could not load room list",
+    "loadError": "Could not load the room list, please try again",
     "saved": "Room saved",
     "status": {
       "idle": "Available",

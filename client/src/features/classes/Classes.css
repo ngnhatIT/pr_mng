@@ -69,3 +69,14 @@
     flex-wrap: wrap;
   }
 }
+
+/* Toolbar tìm kiếm: mobile full-width, không tràn ngang ở 360px */
+@media (max-width: 640px) {
+  .search-wrap,
+  .search-wrap .text-input {
+    width: 100%;
+  }
+  .search-wrap .text-input {
+    min-width: 0;
+  }
+}

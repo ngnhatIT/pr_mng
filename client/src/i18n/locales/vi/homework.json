@@ -21,8 +21,8 @@
       "class": "Lớp",
       "published": "Bài đã đăng"
     },
-    "noData": "Chưa có dữ liệu.",
-    "noRecent": "Chưa có bài nào.",
+    "noData": "Chưa có dữ liệu để phân tích.",
+    "noRecent": "Chưa có bài tập nào được đăng.",
     "recent": "Bài mới nhất",
     "title": "Phân tích bài tập"
   },
@@ -35,7 +35,7 @@
       "student": "Học viên",
       "submittedAt": "Nộp lúc"
     },
-    "empty": "Chưa có ai làm bài",
+    "empty": "Chưa có lượt làm bài nào",
     "title": "Kết quả quiz: {{title}}",
     "attempts_one": "lượt nộp",
     "attempts_other": "lượt nộp",
@@ -159,7 +159,7 @@
     "maxScore": "Điểm tối đa",
     "maxScorePh": "VD: 10 (trống = không chấm)",
     "newRubric": "+ Tạo mới",
-    "noResults": "Không tìm thấy",
+    "noResults": "Không tìm thấy kết quả",
     "noRubric": "Không dùng rubric",
     "noTitle": "(Chưa có tiêu đề)",
     "optionPh": "Đáp án {{letter}}",
@@ -188,7 +188,7 @@
     "selectAll": "Chọn tất cả",
     "selectClass": "Chọn lớp ({{count}} đã chọn) *",
     "selectedCount": "Đã chọn {{count}} em",
-    "submitting": "Đang xử lý...",
+    "submitting": "Đang lưu bài tập...",
     "templates": [
       {
         "content": "1. Học thuộc 20 từ vựng mới trong bài\n2. Viết mỗi từ 3 lần vào vở\n3. Đặt câu với 5 từ bất kỳ",
@@ -213,7 +213,7 @@
     "titlePhQuiz": "VD: Quiz từ vựng Unit 5",
     "toast": {
       "assigned": "Đã giao cho {{count}} lớp",
-      "attRequired": "Nhập tên và link đính kèm",
+      "attRequired": "Vui lòng nhập tên và link đính kèm",
       "bankImported": "Đã thêm {{count}} câu từ ngân hàng",
       "rubricCreated": "Đã tạo rubric",
       "rubricFail": "Không tạo được rubric, vui lòng thử lại",
@@ -248,7 +248,7 @@
     }
   },
   "grade": {
-    "empty": "Chưa có học viên",
+    "empty": "Chưa có học viên để chấm",
     "feedback": "Nhận xét",
     "feedbackPh": "Nhận xét cho học viên...",
     "pickStudent": "Chọn học viên để chấm",
@@ -323,7 +323,7 @@
     "publishFail": "Không đăng được bài tập, vui lòng thử lại",
     "published": "Đã đăng bài tập",
     "reuseFail": "Không tái sử dụng được bài tập, vui lòng thử lại",
-    "reused": "Đã tạo bản nháp từ bài tập cũ - chỉnh sửa rồi đăng",
+    "reused": "Đã tạo bản nháp từ bài tập cũ, chỉnh sửa rồi đăng",
     "unpublishConfirm": "Gỡ đăng \"{{title}}\" về nháp? Phụ huynh sẽ không thấy bài này nữa.",
     "unpublishFail": "Không gỡ đăng được bài tập, vui lòng thử lại",
     "unpublished": "Đã gỡ về nháp",

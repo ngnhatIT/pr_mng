@@ -5,7 +5,7 @@
     "message": "Bạn có chắc muốn xóa học viên \"{{name}}\"? Toàn bộ dữ liệu liên quan (ghi danh, điểm danh, hóa đơn) cũng sẽ bị xóa.",
     "title": "Xóa học viên"
   },
-  "desc": "Quản lý hồ sơ và trạng thái học viên",
+  "desc": "Bấm vào tên học viên để xem hồ sơ chi tiết, điểm danh và học phí.",
   "detail": {
     "address": "Địa chỉ",
     "back": "Danh sách học viên",
@@ -30,7 +30,7 @@
       },
       "formTitle": "Nhập điểm",
       "loadError": "Không tải được điểm số",
-      "saveError": "Không nhập được điểm, vui lòng thử lại",
+      "saveError": "Không lưu được điểm, vui lòng thử lại",
       "saved": "Đã nhập điểm",
       "table": {
         "actions": "Thao tác",

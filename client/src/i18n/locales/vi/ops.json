@@ -50,7 +50,7 @@
       "title": "Xóa lead"
     },
     "deleteTitle": "Xóa lead",
-    "desc": "Theo dõi khách hàng tiềm năng từ lúc liên hệ đến khi đăng ký",
+    "desc": "Kéo từng khách hàng qua các cột, từ lần đầu liên hệ đến khi ghi danh.",
     "editTitle": "Sửa lead",
     "empty": {
       "desc": "Lead từ form đăng ký trên landing page sẽ tự động chảy vào đây.",
@@ -115,10 +115,10 @@
       "student": "Học viên",
       "toDate": "Đến ngày"
     },
-    "desc": "Duyệt đơn xin nghỉ phép của học viên",
+    "desc": "Đơn xin nghỉ của học viên: duyệt xong gợi ý ngay buổi học bù phù hợp.",
     "empty": {
       "desc": "Chưa có đơn xin nghỉ phép nào cần xử lý.",
-      "title": "Không có đơn xin nghỉ phép nào"
+      "title": "Chưa có đơn xin nghỉ phép nào"
     },
     "filterLabel": "Lọc theo trạng thái đơn",
     "makeupHint": "Gợi ý các buổi học bù phù hợp:",
@@ -153,10 +153,10 @@
       "status": "Trạng thái",
       "referrer": "Người giới thiệu"
     },
-    "desc": "Theo dõi lượt giới thiệu và thưởng credits",
+    "desc": "Ai giới thiệu ai, được thưởng bao nhiêu và đã trao thưởng hay chưa.",
     "empty": {
       "desc": "Chưa có phụ huynh nào giới thiệu bạn bè.",
-      "title": "Không có lượt giới thiệu nào"
+      "title": "Chưa có lượt giới thiệu nào"
     },
     "filterLabel": "Lọc theo trạng thái",
     "noName": "Chưa có tên",
@@ -181,7 +181,7 @@
       "message": "Xóa đánh giá này khỏi trang public?",
       "title": "Xóa đánh giá"
     },
-    "desc": "Duyệt đánh giá để hiển thị công khai trên landing page",
+    "desc": "Đánh giá phụ huynh gửi về: chỉ bài được duyệt mới hiện trên trang chủ.",
     "empty": {
       "approvedDesc": "Chưa có đánh giá nào được duyệt.",
       "pendingDesc": "Chưa có đánh giá nào đang chờ duyệt.",
@@ -278,10 +278,10 @@
       "loadFail": "Không tải được danh sách lớp, vui lòng thử lại"
     },
     "convertTitle": "Chuyển \"{{name}}\" thành học viên",
-    "desc": "Đăng ký học thử từ landing page - duyệt và chuyển thành học viên",
+    "desc": "Lịch học thử phụ huynh mới đăng ký: duyệt nhanh rồi chuyển thành học viên.",
     "empty": {
       "desc": "Khi phụ huynh đăng ký học thử trên landing page, thông tin sẽ hiện ở đây.",
-      "title": "Không có đăng ký học thử nào",
+      "title": "Chưa có đăng ký học thử nào",
       "action": "Xem pipeline lead"
     },
     "filterLabel": "Lọc theo trạng thái",
@@ -331,7 +331,7 @@
     "enableDaily": "Bật nhắc học phí tự động mỗi ngày",
     "fields": {
       "accessToken": "Access Token",
-      "accessTokenHint": "Auth token for Zalo API calls; the system refreshes it automatically",
+      "accessTokenHint": "Token dùng để gọi API Zalo, hệ thống sẽ tự làm mới khi hết hạn",
       "centerName": "Tên trung tâm",
       "hour": "Giờ gửi mỗi ngày",
       "oaId": "OA ID",
@@ -368,7 +368,7 @@
     },
     "reminderStatus": {
       "demo": "Demo",
-      "failed": "Thất bại",
+      "failed": "Chưa gửi được",
       "sent": "Đã gửi"
     },
     "runNow": "Chạy ngay một lần",

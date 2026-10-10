@@ -21,7 +21,7 @@
       "class": "Class",
       "published": "Published"
     },
-    "noData": "No data yet.",
+    "noData": "No data to analyze yet.",
     "noRecent": "No assignments yet.",
     "recent": "Latest assignments",
     "title": "Homework analytics"
@@ -159,7 +159,7 @@
     "maxScore": "Max score",
     "maxScorePh": "E.g. 10 (empty = no grading)",
     "newRubric": "+ New",
-    "noResults": "No results",
+    "noResults": "No matching results",
     "noRubric": "No rubric",
     "noTitle": "(No title yet)",
     "optionPh": "Answer {{letter}}",
@@ -192,7 +192,7 @@
     "selectClass": "Select classes ({{count}} selected) *",
     "selectedCount_one": "{{count}} student selected",
     "selectedCount_other": "{{count}} students selected",
-    "submitting": "Processing...",
+    "submitting": "Saving assignment...",
     "templates": [
       {
         "content": "1. Memorize 20 new words from the unit\n2. Write each word 3 times\n3. Make sentences with any 5 words",
@@ -218,7 +218,7 @@
     "toast": {
       "assigned_one": "Assigned to {{count}} class",
       "assigned_other": "Assigned to {{count}} classes",
-      "attRequired": "Enter attachment name and link",
+      "attRequired": "Please enter the attachment name and link",
       "bankImported_one": "Added {{count}} question from the bank",
       "bankImported_other": "Added {{count}} questions from the bank",
       "rubricCreated": "Rubric created",
@@ -248,7 +248,7 @@
     }
   },
   "grade": {
-    "empty": "No students yet",
+    "empty": "No students to grade",
     "feedback": "Feedback",
     "feedbackPh": "Feedback for the student...",
     "pickStudent": "Pick a student to grade",
@@ -323,7 +323,7 @@
     "publishFail": "Couldn't publish the assignment, please try again",
     "published": "Homework published",
     "reuseFail": "Couldn't reuse the assignment, please try again",
-    "reused": "Draft created from the old assignment - edit then publish",
+    "reused": "Draft created from the old assignment; edit it, then publish",
     "unpublishConfirm": "Unpublish \"{{title}}\" to drafts? Parents will no longer see it.",
     "unpublishFail": "Couldn't unpublish the assignment, please try again",
     "unpublished": "Moved back to drafts",

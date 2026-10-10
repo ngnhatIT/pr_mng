@@ -1,7 +1,7 @@
 {
   "courses": {
     "capacity": "Sĩ số",
-    "empty": "Đang cập nhật khóa học...",
+    "empty": "Đang tải danh sách khóa học...",
     "schedule": "Lịch học",
     "students": "{{count}} học viên",
     "sub": "Chọn khóa học phù hợp với trình độ và mục tiêu của con bạn",
@@ -35,10 +35,10 @@
     "desc": "Để lại thông tin, trung tâm sẽ gọi lại tư vấn khóa học phù hợp.",
     "fail": "Không gửi được thông tin tư vấn, vui lòng thử lại",
     "submit": "Gửi đăng ký tư vấn",
-    "success": "Đã gửi đăng ký tư vấn. Chúng tôi sẽ liên hệ sớm!",
+    "success": "Đã gửi đăng ký tư vấn. Trung tâm sẽ gọi lại tư vấn trong thời gian sớm nhất.",
     "title": "Đăng ký tư vấn"
   },
-  "loadError": "Không tải được dữ liệu",
+  "loadError": "Không tải được dữ liệu, vui lòng thử lại",
   "nav": {
     "courses": "Khóa học",
     "login": "Đăng nhập",
@@ -56,7 +56,7 @@
   },
   "sending": "Đang gửi...",
   "teachers": {
-    "empty": "Đang cập nhật...",
+    "empty": "Đang tải thông tin giáo viên...",
     "fallback": "Giáo viên",
     "sub": "Giáo viên tận tâm, giàu kinh nghiệm đồng hành cùng học viên",
     "title": "Đội ngũ giáo viên"
@@ -65,7 +65,7 @@
     "desc": "Trải nghiệm một buổi học miễn phí trước khi quyết định.",
     "fail": "Không gửi được đăng ký học thử, vui lòng thử lại",
     "submit": "Đăng ký học thử",
-    "success": "Đã đăng ký học thử thành công!",
+    "success": "Đã đăng ký học thử. Trung tâm sẽ liên hệ xác nhận với bạn.",
     "title": "Đăng ký học thử"
   }
 }

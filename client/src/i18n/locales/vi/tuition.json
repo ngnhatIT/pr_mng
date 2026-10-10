@@ -44,7 +44,7 @@
     "applied": "Đã áp dụng {{amount}} credits vào hóa đơn",
     "apply": "Áp dụng",
     "applyError": "Không áp dụng được credits, vui lòng thử lại",
-    "applying": "Đang áp dụng...",
+    "applying": "Đang áp dụng credits...",
     "applyTitle": "Áp dụng credits của phụ huynh vào hóa đơn",
     "confirmText": "{{name}} ({{code}}) - còn nợ <strong>{{amount}}</strong>",
     "help": "Nhập <strong>ID credits</strong> của phụ huynh (xem trong trang Giới thiệu của phụ huynh). Hệ thống sẽ trừ credits khả dụng vào số tiền còn nợ của hóa đơn.",
@@ -57,11 +57,11 @@
     "emptyDesc": "Tất cả học viên đã thanh toán đầy đủ.",
     "emptyTitle": "Không còn công nợ",
     "loadError": "Không tải được công nợ, vui lòng thử lại",
-    "noInvoices": "Không tìm thấy hóa đơn cần nhắc",
-    "remindResult": "Nhắc Zalo cho {{name}}: {{sent}} đã gửi, {{demo}} demo, {{failed}} thất bại",
+    "noInvoices": "Không có hóa đơn nào cần nhắc lúc này",
+    "remindResult": "Nhắc Zalo cho {{name}}: {{sent}} đã gửi, {{demo}} ở chế độ demo, {{failed}} chưa gửi được",
     "remindTitle": "Gửi nhắc học phí qua Zalo cho các hóa đơn chưa thanh toán",
     "remindZalo": "Nhắc Zalo",
-    "sending": "Đang gửi...",
+    "sending": "Đang gửi nhắc Zalo...",
     "summary": "{{count}} học viên còn nợ. Tổng: <strong>{{total}}</strong>",
     "tab": "Công nợ",
     "table": {
@@ -73,7 +73,7 @@
       "total": "Tổng phải thu"
     }
   },
-  "desc": "Phiếu thu, công nợ và duyệt thanh toán online",
+  "desc": "Phiếu thu cần thu, khoản phụ huynh báo đã chuyển và công nợ còn lại.",
   "invoice": {
     "create": "Tạo phiếu thu",
     "creating": "Đang tạo...",
@@ -81,7 +81,7 @@
     "remindError": "Không gửi được nhắc nhở học phí, vui lòng thử lại",
     "remindTitle": "Gửi nhắc học phí qua Zalo",
     "remindZalo": "Nhắc Zalo",
-    "sending": "Đang gửi...",
+    "sending": "Đang gửi nhắc Zalo...",
     "table": {
       "actions": "Thao tác",
       "amount": "Số tiền",
@@ -128,12 +128,14 @@
       "title": "Không tìm thấy hóa đơn",
       "desc": "Thử từ khóa khác hoặc xóa bộ lọc để xem toàn bộ danh sách.",
       "clear": "Xóa bộ lọc"
-    }
+    },
+    "debtStrip": "{count} học viên còn nợ, tổng {total}",
+    "debtStripTitle": "Tổng công nợ chưa thu của toàn trung tâm"
   },
   "pay": {
     "amount": "Số tiền thu (đ) *",
     "collect": "Thu tiền",
-    "collecting": "Đang lưu...",
+    "collecting": "Đang lưu thanh toán...",
     "confirm": "Xác nhận thu",
     "confirmText": "{{name}} - còn nợ <strong>{{debt}}</strong>",
     "method": "Phương thức",

@@ -3,7 +3,7 @@
     "create": "Tạo tài khoản",
     "createError": "Không tạo được tài khoản giáo viên, vui lòng thử lại",
     "created": "Đã tạo tài khoản \"{{username}}\" cho giáo viên {{name}}",
-    "creating": "Đang tạo...",
+    "creating": "Đang tạo tài khoản...",
     "desc": "Giáo viên sẽ dùng tài khoản này để đăng nhập vào cổng giáo viên (xem buổi dạy, điểm danh, chấm công...).",
     "password": "Mật khẩu *",
     "title": "Tạo tài khoản đăng nhập - {{name}}",
@@ -14,7 +14,7 @@
     "message": "Bạn có chắc muốn xóa giáo viên \"{{name}}\"? Các lớp đang phân công sẽ chuyển thành \"Chưa phân công\".",
     "title": "Xóa giáo viên"
   },
-  "desc": "Quản lý giáo viên và tạo tài khoản đăng nhập cho họ.",
+  "desc": "Giáo viên đứng lớp nào, dạy môn gì, và tài khoản để họ điểm danh, nhập điểm.",
   "empty": {
     "desc": "Thêm giáo viên và tạo tài khoản để họ chấm công, điểm danh và giao bài tập.",
     "title": "Chưa có giáo viên nào"
@@ -36,7 +36,7 @@
     "desc": "Tính lương giáo viên theo số buổi đã dạy trong tháng",
     "emptyDesc": "Bảng lương sẽ hiện ở đây khi có buổi dạy được ghi nhận trong tháng.",
     "emptyTitle": "Không có dữ liệu lương",
-    "loadError": "Không tải được bảng lương",
+    "loadError": "Không tải được bảng lương, vui lòng thử lại",
     "month": "Tháng",
     "rate": "Đơn giá",
     "table": {
