@@ -153,7 +153,7 @@ export function Attendance() {
     <div className="page">
       <PageHeader title={t('attendance.title')} desc={t('attendance.desc')} />
 
-      <div className="toolbar">
+      <div className="toolbar att-toolbar">
         <select
           className="text-input"
           value={classId}

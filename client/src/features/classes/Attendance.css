@@ -60,4 +60,8 @@
   .att-savebar {
     bottom: 8px;
   }
+  /* Toolbar chọn lớp/buổi: xếp chồng full-width, không chen nhau */
+  .att-toolbar > select.text-input {
+    flex: 1 1 100%;
+  }
 }
