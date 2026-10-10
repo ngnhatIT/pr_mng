@@ -775,11 +775,14 @@ textarea.text-input {
   gap: 8px;
   font-size: 14px;
   margin: 10px 0;
+  cursor: pointer; /* cả dòng label đều bấm được */
+  user-select: none;
 }
 .checkbox-row input[type='checkbox'] {
   width: 16px;
   height: 16px;
   accent-color: var(--primary);
+  cursor: pointer;
 }
 .message-preview {
   white-space: pre-wrap;
