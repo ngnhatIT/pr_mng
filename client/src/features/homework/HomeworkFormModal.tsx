@@ -5,7 +5,7 @@ import { ClassItem, classesApi } from '../classes/classes.api';
 import { HomeworkItem, formatDate } from '../../shared/types';
 import { useToast } from '../../shared/ui/toast';
 import { Modal } from '../../shared/components/Modal';
-import { Field } from '../../shared/components/Form';
+import { Field, useFieldErrors } from '../../shared/components/Form';
 import { Icon } from '../../shared/components/icons';
 import { RichTextarea } from '../../shared/components/RichTextarea';
 import { QuestionBank } from './QuestionBank';
@@ -38,6 +38,10 @@ export function HomeworkFormModal({
 }) {
   const { t } = useTranslation(['homework', 'common']);
   const toast = useToast();
+  // Lỗi inline dưới field + focus field lỗi đầu tiên (skill 8.2).
+  // Nút submit KHÔNG disable khi thiếu dữ liệu: bấm sẽ hiện lỗi inline thay vì im lặng.
+  type HwErrKey = 'classes' | 'title' | 'maxScore' | 'closeDate' | 'publishAt' | 'students' | 'quiz';
+  const { errors, refFor, show, clear } = useFieldErrors<HwErrKey>();
   const [kind, setKind] = useState<'homework' | 'quiz'>(initial?.kind || 'homework');
   const [title, setTitle] = useState(initial?.title || '');
   const [content, setContent] = useState(initial?.content || '');
@@ -172,10 +176,14 @@ export function HomeworkFormModal({
     [students, studentSearch]
   );
 
-  const toggleClass = (id: number) =>
+  const toggleClass = (id: number) => {
+    clear('classes');
     setSelectedClasses((s) => (s.includes(id) ? s.filter((x) => x !== id) : [...s, id]));
-  const toggleStudent = (id: number) =>
+  };
+  const toggleStudent = (id: number) => {
+    clear('students');
     setSelectedStudents((s) => (s.includes(id) ? s.filter((x) => x !== id) : [...s, id]));
+  };
 
   const addAttachment = () => {
     if (!attName.trim() || !attUrl.trim()) {
@@ -219,8 +227,10 @@ export function HomeworkFormModal({
         ],
       },
     ]);
-  const updateQuestion = (i: number, patch: Partial<QuizQuestionForm>) =>
+  const updateQuestion = (i: number, patch: Partial<QuizQuestionForm>) => {
+    clear('quiz');
     setQuestions((qs) => qs.map((q, j) => (j === i ? { ...q, ...patch } : q)));
+  };
   const addOption = (qi: number) =>
     setQuestions((qs) =>
       qs.map((q, j) => (j === qi ? { ...q, options: [...q.options, { text: '', is_correct: false }] } : q))
@@ -246,20 +256,32 @@ export function HomeworkFormModal({
   const selectedRubric = rubrics.find((r) => String(r.id) === rubricId);
   const quizTotal = questions.reduce((s, q) => s + (Number(q.points) || 0), 0);
 
-  const canSubmit =
-    title.trim().length > 0 &&
-    (initial ? true : selectedClasses.length > 0) &&
-    (publishMode !== 'schedule' || publishAt) &&
-    (targetMode !== 'selected' || selectedStudents.length > 0) &&
-    (kind !== 'quiz' ||
-      questions.every(
-        (q) =>
-          q.question.trim() && q.options.length >= 2 && q.options.some((o) => o.is_correct && o.text.trim())
-      ));
+  const quizInvalidCount = questions.filter(
+    (q) => !q.question.trim() || q.options.length < 2 || !q.options.some((o) => o.is_correct && o.text.trim())
+  ).length;
+
+  const validate = () => {
+    const errs: Partial<Record<HwErrKey, string>> = {};
+    if (!initial && selectedClasses.length === 0) errs.classes = t('form.errors.classRequired');
+    if (!title.trim()) errs.title = t('form.errors.titleRequired');
+    if (maxScore) {
+      const m = Number(maxScore);
+      if (!Number.isFinite(m) || m < 0) errs.maxScore = t('form.errors.maxScoreInvalid');
+    }
+    if (dueDate && closeDate && closeDate < dueDate) errs.closeDate = t('form.errors.closeBeforeDue');
+    if (!initial && publishMode === 'schedule' && !publishAt)
+      errs.publishAt = t('form.errors.publishAtRequired');
+    if (!initial && targetMode === 'selected' && selectedStudents.length === 0)
+      errs.students = t('form.errors.studentsRequired');
+    if (kind === 'quiz' && quizInvalidCount > 0)
+      errs.quiz = t('form.errors.quizInvalid', { count: quizInvalidCount });
+    return show(errs);
+  };
 
   const submit = async (publishOverride?: 'now' | 'draft' | 'schedule') => {
     const mode = publishOverride || publishMode;
-    if (!canSubmit || busy) return;
+    if (busy) return;
+    if (!validate()) return;
     setBusy(true);
     try {
       const status = mode === 'now' ? 'published' : mode === 'draft' ? 'draft' : 'scheduled';
@@ -344,8 +366,9 @@ export function HomeworkFormModal({
       >
         {/* Chọn lớp */}
         {!initial && (
-          <Field label={t('form.selectClass', { count: selectedClasses.length })}>
+          <Field label={t('form.selectClass', { count: selectedClasses.length })} error={errors.classes}>
             <input
+              ref={refFor('classes')}
               className="text-input hw-mb-8"
               placeholder={t('form.searchClass')}
               value={classSearch}
@@ -384,7 +407,7 @@ export function HomeworkFormModal({
 
         {/* Đối tượng */}
         {!initial && (
-          <Field label={t('form.assignTo')}>
+          <Field label={t('form.assignTo')} error={errors.students}>
             <div className="hw-flex hw-mb-8">
               <button
                 type="button"
@@ -404,6 +427,7 @@ export function HomeworkFormModal({
             {targetMode === 'selected' && (
               <>
                 <input
+                  ref={refFor('students')}
                   className="text-input hw-mb-8"
                   placeholder={t('form.searchStudent')}
                   value={studentSearch}
@@ -455,14 +479,17 @@ export function HomeworkFormModal({
           </Field>
         )}
 
-        <Field label={t('form.title')}>
+        <Field label={t('form.title')} error={errors.title}>
           <input
+            ref={refFor('title')}
             className="text-input"
             value={title}
-            onChange={(e) => setTitle(e.target.value)}
+            onChange={(e) => {
+              setTitle(e.target.value);
+              clear('title');
+            }}
             placeholder={kind === 'quiz' ? t('form.titlePhQuiz') : t('form.titlePhHw')}
             maxLength={200}
-            required
           />
         </Field>
 
@@ -479,14 +506,18 @@ export function HomeworkFormModal({
 
         {/* Điểm + Hạn */}
         <div className="form-grid">
-          <Field label={t('form.maxScore')}>
+          <Field label={t('form.maxScore')} error={errors.maxScore}>
             <input
+              ref={refFor('maxScore')}
               className="text-input"
               type="number"
               min="0"
               step="0.5"
               value={maxScore}
-              onChange={(e) => setMaxScore(e.target.value)}
+              onChange={(e) => {
+                setMaxScore(e.target.value);
+                clear('maxScore');
+              }}
               placeholder={t('form.maxScorePh')}
             />
           </Field>
@@ -520,13 +551,17 @@ export function HomeworkFormModal({
               )}
             </div>
           </Field>
-          <Field label={t('form.hardDeadline')}>
+          <Field label={t('form.hardDeadline')} error={errors.closeDate}>
             <input
+              ref={refFor('closeDate')}
               className="text-input"
               type="date"
               value={closeDate}
               min={dueDate || new Date().toISOString().slice(0, 10)}
-              onChange={(e) => setCloseDate(e.target.value)}
+              onChange={(e) => {
+                setCloseDate(e.target.value);
+                clear('closeDate');
+              }}
             />
             <div className="muted hw-text-12">{t('form.hardDeadlineHint')}</div>
           </Field>
@@ -657,7 +692,10 @@ export function HomeworkFormModal({
 
         {/* Quiz builder */}
         {kind === 'quiz' && (
-          <Field label={t('form.quizQuestions', { count: questions.length, total: quizTotal })}>
+          <Field
+            label={t('form.quizQuestions', { count: questions.length, total: quizTotal })}
+            error={errors.quiz}
+          >
             {quizLocked && (
               <div className="alert alert-warning alert-with-icon hw-mb-12">
                 <Icon name="alert" size={16} />
@@ -738,7 +776,7 @@ export function HomeworkFormModal({
 
         {/* Xuất bản */}
         {!initial && (
-          <Field label={t('form.publishSection')}>
+          <Field label={t('form.publishSection')} error={errors.publishAt}>
             <div className="publish-options">
               {(
                 [
@@ -759,11 +797,15 @@ export function HomeworkFormModal({
             </div>
             {publishMode === 'schedule' && (
               <input
+                ref={refFor('publishAt')}
                 className="text-input hw-mt-8"
                 type="datetime-local"
                 value={publishAt}
                 min={new Date().toISOString().slice(0, 16)}
-                onChange={(e) => setPublishAt(e.target.value)}
+                onChange={(e) => {
+                  setPublishAt(e.target.value);
+                  clear('publishAt');
+                }}
               />
             )}
           </Field>
@@ -797,22 +839,17 @@ export function HomeworkFormModal({
             {t('actions.cancel', { ns: 'common' })}
           </button>
           {initial ? (
-            <button type="submit" className="btn btn-primary" disabled={!canSubmit || busy}>
+            <button type="submit" className="btn btn-primary" disabled={busy}>
               {busy && <span className="spinner" aria-hidden="true" />}
               {busy ? t('actions.saving', { ns: 'common' }) : t('form.saveChanges')}
             </button>
           ) : (
             <>
-              <button
-                type="button"
-                className="btn"
-                disabled={!canSubmit || busy}
-                onClick={() => void submit('draft')}
-              >
+              <button type="button" className="btn" disabled={busy} onClick={() => void submit('draft')}>
                 {busy && <span className="spinner spinner-dark" aria-hidden="true" />}
                 {t('form.saveDraft')}
               </button>
-              <button type="submit" className="btn btn-primary" disabled={!canSubmit || busy}>
+              <button type="submit" className="btn btn-primary" disabled={busy}>
                 {busy && <span className="spinner" aria-hidden="true" />}
                 {busy
                   ? t('form.submitting')

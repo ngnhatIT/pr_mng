@@ -225,7 +225,16 @@
     "publishFor": "Publish to {{count}} classes",
     "quizQuestions": "Quiz questions ({{count}} questions, {{total}} pts total)",
     "scheduleFor": "Schedule ({{count}} classes)",
-    "selectedCount": "{{count}} selected"
+    "selectedCount": "{{count}} selected",
+    "errors": {
+      "classRequired": "Please select at least 1 class",
+      "titleRequired": "Please enter the homework title",
+      "maxScoreInvalid": "Max score must be a non-negative number",
+      "closeBeforeDue": "Close date must be after the due date",
+      "publishAtRequired": "Please choose a publish time",
+      "studentsRequired": "Please select at least 1 student",
+      "quizInvalid": "{{count}} question(s) are missing options or a correct answer"
+    }
   },
   "grade": {
     "empty": "No students yet",

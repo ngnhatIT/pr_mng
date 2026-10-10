@@ -131,10 +131,7 @@
     "correctAnswer": "Đáp án đúng",
     "criterion": "Tiêu chí",
     "criterionScore": "{{score}}đ",
-    "defaultCriteria": [
-      "Phát âm",
-      "Từ vựng"
-    ],
+    "defaultCriteria": ["Phát âm", "Từ vựng"],
     "deselectAll": "Bỏ chọn",
     "dueDate": "Hạn nộp",
     "dueNextWeek": "Tuần sau",
@@ -228,7 +225,16 @@
     "scheduleFor_one": "Lên lịch ({{count}} lớp)",
     "scheduleFor_other": "Lên lịch ({{count}} lớp)",
     "selectedCount_one": "Đã chọn {{count}} học viên",
-    "selectedCount_other": "Đã chọn {{count}} học viên"
+    "selectedCount_other": "Đã chọn {{count}} học viên",
+    "errors": {
+      "classRequired": "Vui lòng chọn ít nhất 1 lớp",
+      "titleRequired": "Vui lòng nhập tiêu đề bài tập",
+      "maxScoreInvalid": "Điểm tối đa phải là số không âm",
+      "closeBeforeDue": "Hạn chót phải sau hạn nộp",
+      "publishAtRequired": "Vui lòng chọn thời gian đăng",
+      "studentsRequired": "Vui lòng chọn ít nhất 1 học viên",
+      "quizInvalid": "Còn {{count}} câu hỏi chưa đủ đáp án hoặc chưa có đáp án đúng"
+    }
   },
   "grade": {
     "empty": "Chưa có học viên",
