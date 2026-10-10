@@ -149,7 +149,7 @@ export function TeacherGrades() {
           }
         />
       ) : (
-        <div className="table-wrap">
+        <div className="table-wrap sticky">
           <table className="table">
             <thead>
               <tr>

@@ -28,7 +28,7 @@ export function AnalyticsModal({ onClose }: { onClose: () => void }) {
           {data.byClass.length === 0 ? (
             <p className="muted">{t('analytics.noData')}</p>
           ) : (
-            <div className="table-wrap">
+            <div className="table-wrap sticky">
               <table className="table">
                 <thead>
                   <tr>

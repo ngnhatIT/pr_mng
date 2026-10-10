@@ -87,7 +87,7 @@ export function ReferralsAdmin() {
           {referrals.length === 0 ? (
             <EmptyState icon="gift" title={t('referrals.empty.title')} desc={t('referrals.empty.desc')} />
           ) : (
-            <div className="table-wrap">
+            <div className="table-wrap sticky">
               <table className="table">
                 <thead>
                   <tr>

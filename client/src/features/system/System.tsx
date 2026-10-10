@@ -58,7 +58,7 @@ export function System() {
       ) : centers.length === 0 ? (
         <EmptyState icon="building" title={t('system.empty.title')} desc={t('system.empty.desc')} />
       ) : (
-        <div className="table-wrap">
+        <div className="table-wrap sticky">
           <table className="table">
             <thead>
               <tr>

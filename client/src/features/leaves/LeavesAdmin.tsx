@@ -95,7 +95,7 @@ export function LeavesAdmin() {
       ) : leaves.length === 0 ? (
         <EmptyState icon="calendar-x" title={t('leaves.empty.title')} desc={t('leaves.empty.desc')} />
       ) : (
-        <div className="table-wrap">
+        <div className="table-wrap sticky">
           <table className="table">
             <thead>
               <tr>

@@ -417,7 +417,7 @@ function GradesTab({ data }: { data: ChildOverview }) {
           <div className="progress-line">
             <ProgressChart grades={grades} />
           </div>
-          <div className="table-wrap">
+          <div className="table-wrap sticky">
             <table className="table">
               <thead>
                 <tr>

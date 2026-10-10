@@ -43,7 +43,7 @@ export function QuizAttemptsModal({ homework, onClose }: { homework: HomeworkIte
       ) : rows.length === 0 ? (
         <EmptyState icon="file" title={t('attempts.empty')} desc={t('attempts.emptyDesc')} />
       ) : (
-        <div className="table-wrap">
+        <div className="table-wrap sticky">
           <table className="table">
             <thead>
               <tr>

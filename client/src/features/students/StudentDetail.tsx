@@ -138,7 +138,7 @@ export function StudentDetail() {
         {data.invoices.length === 0 ? (
           <EmptyState icon="banknote" title={t('detail.noInvoices')} />
         ) : (
-          <div className="table-wrap">
+          <div className="table-wrap sticky">
             <table className="table">
               <thead>
                 <tr>
@@ -222,7 +222,7 @@ function GradesSection({ studentId }: { studentId: number }) {
       ) : grades.length === 0 ? (
         <EmptyState icon="cap" title={t('detail.grades.emptyTitle')} desc={t('detail.grades.emptyDesc')} />
       ) : (
-        <div className="table-wrap">
+        <div className="table-wrap sticky">
           <table className="table">
             <thead>
               <tr>

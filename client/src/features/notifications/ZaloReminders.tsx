@@ -370,7 +370,7 @@ export function ZaloReminders() {
           />
         ) : (
           <>
-            <div className="table-wrap">
+            <div className="table-wrap sticky">
               <table className="table">
                 <thead>
                   <tr>
