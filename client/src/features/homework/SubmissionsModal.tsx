@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { homeworkApi, type Submission } from './homework.api';
 import { Modal } from '../../shared/components/Modal';
+import { TableSkeleton } from '../../shared/components/Skeleton';
 import { EmptyState } from '../../shared/components/EmptyState';
 import { Icon } from '../../shared/components/icons';
 import { formatDateTime } from '../../shared/types';
@@ -25,22 +26,40 @@ export function SubmissionsModal({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const res = await homeworkApi.getSubmissions(homeworkId);
+      setSubs(res.data);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t('states.loadError', { ns: 'common' }));
+    } finally {
+      setLoading(false);
+    }
+  }, [homeworkId, t]);
+
   useEffect(() => {
-    homeworkApi
-      .getSubmissions(homeworkId)
-      .then((res) => setSubs(res.data))
-      .catch((err: Error) => setError(err.message))
-      .finally(() => setLoading(false));
-  }, [homeworkId]);
+    void load();
+  }, [load]);
 
   const isImage = (url: string | null) => !!url && /\.(jpg|jpeg|png|gif|webp)$/i.test(url);
 
   return (
     <Modal title={t('submissions.title', { title })} onClose={onClose} wide>
       {loading ? (
-        <p className="muted">{t('actions.loading', { ns: 'common' })}</p>
+        <TableSkeleton rows={4} cols={3} />
       ) : error ? (
-        <p className="error-text">{error}</p>
+        <EmptyState
+          icon="alert"
+          title={t('states.error', { ns: 'common' })}
+          desc={error}
+          action={
+            <button className="btn btn-secondary btn-inline" onClick={() => void load()}>
+              <Icon name="rotate" size={14} /> {t('actions.retry', { ns: 'common' })}
+            </button>
+          }
+        />
       ) : subs.length === 0 ? (
         <EmptyState icon="file" title={t('submissions.empty')} desc={t('submissions.emptyDesc')} />
       ) : (
