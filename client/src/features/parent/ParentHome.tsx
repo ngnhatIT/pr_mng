@@ -1,10 +1,10 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { getUser } from '../../shared/api/client';
 import { parentApi } from './parent.api';
 import { useToast } from '../../shared/ui/toast';
-import { Field } from '../../shared/components/Form';
+import { Field, useFieldErrors } from '../../shared/components/Form';
 import { EmptyState } from '../../shared/components/EmptyState';
 import { Skeleton } from '../../shared/components/Skeleton';
 import { Icon } from '../../shared/components/icons';
@@ -18,6 +18,9 @@ export function ParentHome() {
   const [code, setCode] = useState('');
   const [dob, setDob] = useState('');
   const [linking, setLinking] = useState(false);
+  const { errors, refFor, show, clear } = useFieldErrors<'code' | 'dob'>();
+  const linkCardRef = useRef<HTMLElement | null>(null);
+  const codeInputRef = useRef<HTMLInputElement | null>(null);
   const toast = useToast();
   const user = getUser();
 
@@ -39,14 +42,11 @@ export function ParentHome() {
 
   const linkChild = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!code.trim()) {
-      toast(t('home.codeRequired'), 'error');
-      return;
-    }
-    if (!dob) {
-      toast(t('home.dobRequired'), 'error');
-      return;
-    }
+    // Lỗi form hiện inline dưới field, đồng bộ với 2 màn đăng nhập (skill 8.2)
+    const errs: { code?: string; dob?: string } = {};
+    if (!code.trim()) errs.code = t('home.codeRequired');
+    if (!dob) errs.dob = t('home.dobRequired');
+    if (!show(errs)) return;
     setLinking(true);
     try {
       const r = await parentApi.linkChild(code.trim(), dob);
@@ -55,10 +55,18 @@ export function ParentHome() {
       setDob('');
       void load();
     } catch (err) {
-      toast(err instanceof Error ? err.message : t('home.linkError'), 'error');
+      // Lỗi liên kết (sai mã/ngày sinh): hiện dưới ô mã, focus để nhập lại
+      show({ code: err instanceof Error ? err.message : t('home.linkError') });
     } finally {
       setLinking(false);
     }
+  };
+
+  // Empty state "chưa có con": nút hành động cuộn tới form liên kết và focus ô mã
+  const focusLinkForm = () => {
+    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    linkCardRef.current?.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'center' });
+    codeInputRef.current?.focus({ preventScroll: true });
   };
 
   return (
@@ -78,7 +86,16 @@ export function ParentHome() {
           ))}
         </div>
       ) : children.length === 0 ? (
-        <EmptyState icon="users" title={t('home.emptyTitle')} desc={t('home.emptyDesc')} />
+        <EmptyState
+          icon="users"
+          title={t('home.emptyTitle')}
+          desc={t('home.emptyDesc')}
+          action={
+            <button className="btn btn-primary btn-inline" onClick={focusLinkForm}>
+              {t('home.linkAction')}
+            </button>
+          }
+        />
       ) : (
         <div className="child-list">
           {children.map((c) => (
@@ -111,20 +128,36 @@ export function ParentHome() {
         </div>
       )}
 
-      <section className="card parent-link-card">
+      <section className="card parent-link-card" ref={linkCardRef}>
         <h3 className="card-title">{t('home.linkTitle')}</h3>
         <p className="card-desc">{t('home.linkDesc')}</p>
         <form onSubmit={linkChild}>
-          <Field label={t('home.codeField')}>
+          <Field label={t('home.codeField')} error={errors.code} required>
             <input
               className="text-input"
               value={code}
-              onChange={(e) => setCode(e.target.value)}
+              onChange={(e) => {
+                setCode(e.target.value);
+                clear('code');
+              }}
               placeholder={t('home.codePlaceholder')}
+              ref={(el) => {
+                codeInputRef.current = el;
+                refFor('code')(el);
+              }}
             />
           </Field>
-          <Field label={t('home.dobField')}>
-            <input className="text-input" type="date" value={dob} onChange={(e) => setDob(e.target.value)} />
+          <Field label={t('home.dobField')} error={errors.dob} required>
+            <input
+              className="text-input"
+              type="date"
+              value={dob}
+              onChange={(e) => {
+                setDob(e.target.value);
+                clear('dob');
+              }}
+              ref={refFor('dob')}
+            />
           </Field>
           <button className="btn btn-primary btn-block" type="submit" disabled={linking}>
             {linking ? t('home.linking') : t('home.linkAction')}
