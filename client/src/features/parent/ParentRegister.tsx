@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { setAuth, api } from '../../shared/api/client';
@@ -15,6 +15,10 @@ export function ParentRegister() {
   const [confirm, setConfirm] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  // Lỗi validation hiện ngay dưới field + focus vào field đó (skill 8.2)
+  const [fieldError, setFieldError] = useState<'password' | 'confirm' | null>(null);
+  const passwordRef = useRef<HTMLInputElement>(null);
+  const confirmRef = useRef<HTMLInputElement>(null);
   const [center, setCenter] = useState<{ id: number; name: string } | null>(null);
   const navigate = useNavigate();
   const toast = useToast();
@@ -29,17 +33,20 @@ export function ParentRegister() {
     e.preventDefault();
     if (busy) return;
     if (password !== confirm) {
-      const msg = t('auth.passwordMismatch');
-      setError(msg);
-      toast(msg, 'error');
+      setError('');
+      setFieldError('confirm');
+      toast(t('auth.passwordMismatch'), 'error');
+      confirmRef.current?.focus();
       return;
     }
     if (password.length < 8) {
-      const msg = t('auth.passwordTooShort');
-      setError(msg);
-      toast(msg, 'error');
+      setError('');
+      setFieldError('password');
+      toast(t('auth.passwordTooShort'), 'error');
+      passwordRef.current?.focus();
       return;
     }
+    setFieldError(null);
     if (!center) {
       const msg = t('auth.centerRequired');
       setError(msg);
@@ -104,11 +111,21 @@ export function ParentRegister() {
             className="text-input"
             type="password"
             value={password}
-            onChange={(e) => setPassword(e.target.value)}
+            ref={passwordRef}
+            onChange={(e) => {
+              setPassword(e.target.value);
+              setFieldError(null);
+            }}
             autoComplete="new-password"
             placeholder={t('auth.passwordHint')}
             required
+            aria-invalid={fieldError === 'password'}
           />
+          {fieldError === 'password' && (
+            <span className="field-error" role="alert">
+              {t('auth.passwordTooShort')}
+            </span>
+          )}
         </label>
         <label className="field">
           <span className="field-label">{t('auth.confirmPassword')}</span>
@@ -116,13 +133,24 @@ export function ParentRegister() {
             className="text-input"
             type="password"
             value={confirm}
-            onChange={(e) => setConfirm(e.target.value)}
+            ref={confirmRef}
+            onChange={(e) => {
+              setConfirm(e.target.value);
+              setFieldError(null);
+            }}
             autoComplete="new-password"
             placeholder={t('auth.confirmPlaceholder')}
             required
+            aria-invalid={fieldError === 'confirm'}
           />
+          {fieldError === 'confirm' && (
+            <span className="field-error" role="alert">
+              {t('auth.passwordMismatch')}
+            </span>
+          )}
         </label>
         <button className="btn btn-primary btn-block btn-lg" type="submit" disabled={busy}>
+          {busy && <span className="spinner" aria-hidden="true" />}
           {busy ? t('auth.registering') : t('auth.registerAction')}
         </button>
         <p className="login-hint">
