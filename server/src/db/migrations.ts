@@ -400,6 +400,61 @@ export const MIGRATIONS: Migration[] = [
       await tx.exec('ALTER TABLE homework_submissions DROP CONSTRAINT IF EXISTS uq_submissions_hw_student');
     },
   },
+  {
+    version: 20,
+    name: 'question_qtype_subject_difficulty',
+    up: async (tx) => {
+      // Đa loại câu hỏi (single/multiple/truefalse/essay) + phân loại môn/mức độ
+      // cho ngân hàng và quiz. quiz_answers: 1 câu multiple có thể chọn nhiều
+      // đáp án → gỡ unique (attempt_id, question_id), thay bằng unique
+      // (attempt_id, question_id, option_id); thêm answer_text để lưu bài tự luận.
+      await tx.exec(`DO $$
+        BEGIN
+          IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'question_bank' AND column_name = 'qtype') THEN
+            ALTER TABLE question_bank ADD COLUMN qtype TEXT NOT NULL DEFAULT 'single'
+              CONSTRAINT chk_qbank_qtype CHECK (qtype IN ('single','multiple','truefalse','essay'));
+          END IF;
+          IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'question_bank' AND column_name = 'subject') THEN
+            ALTER TABLE question_bank ADD COLUMN subject TEXT;
+          END IF;
+          IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'question_bank' AND column_name = 'difficulty') THEN
+            ALTER TABLE question_bank ADD COLUMN difficulty TEXT NOT NULL DEFAULT 'medium'
+              CONSTRAINT chk_qbank_difficulty CHECK (difficulty IN ('easy','medium','hard'));
+          END IF;
+          IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'quiz_questions' AND column_name = 'qtype') THEN
+            ALTER TABLE quiz_questions ADD COLUMN qtype TEXT NOT NULL DEFAULT 'single'
+              CONSTRAINT chk_qq_qtype CHECK (qtype IN ('single','multiple','truefalse','essay'));
+          END IF;
+          IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'quiz_answers' AND column_name = 'answer_text') THEN
+            ALTER TABLE quiz_answers ADD COLUMN answer_text TEXT;
+          END IF;
+          IF EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'quiz_answers_attempt_id_question_id_key') THEN
+            ALTER TABLE quiz_answers DROP CONSTRAINT quiz_answers_attempt_id_question_id_key;
+          END IF;
+          IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'uq_quiz_answers_choice') THEN
+            ALTER TABLE quiz_answers ADD CONSTRAINT uq_quiz_answers_choice
+              UNIQUE (attempt_id, question_id, option_id);
+          END IF;
+        END $$;`);
+    },
+    down: async (tx) => {
+      // Đảo ngược v20: câu multiple đã chọn nhiều đáp án sẽ chặn việc khôi phục
+      // unique cũ (không gộp được như v19) — down chỉ dùng khi chưa có dữ liệu mới.
+      await tx.exec('ALTER TABLE quiz_answers DROP CONSTRAINT IF EXISTS uq_quiz_answers_choice');
+      await tx.exec(`DO $$
+        BEGIN
+          IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'quiz_answers_attempt_id_question_id_key') THEN
+            ALTER TABLE quiz_answers ADD CONSTRAINT quiz_answers_attempt_id_question_id_key
+              UNIQUE (attempt_id, question_id);
+          END IF;
+        END $$;`);
+      await tx.exec('ALTER TABLE quiz_answers DROP COLUMN IF EXISTS answer_text');
+      await tx.exec('ALTER TABLE quiz_questions DROP COLUMN IF EXISTS qtype');
+      await tx.exec('ALTER TABLE question_bank DROP COLUMN IF EXISTS qtype');
+      await tx.exec('ALTER TABLE question_bank DROP COLUMN IF EXISTS subject');
+      await tx.exec('ALTER TABLE question_bank DROP COLUMN IF EXISTS difficulty');
+    },
+  },
 ];
 
 /** Version migration cao nhất mà code hiện tại biết (để test đối chiếu). */

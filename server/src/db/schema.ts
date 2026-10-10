@@ -425,6 +425,7 @@ export const TABLE_DOCS: Record<string, TableDoc> = {
       id: 'Khóa chính.',
       homework_id: 'Quiz chứa (homework.kind=quiz). CASCADE khi xóa bài.',
       position: 'Thứ tự câu hỏi (>= 0).',
+      qtype: 'Loại câu hỏi: single/multiple/truefalse/essay (mặc định single).',
       question: 'Nội dung câu hỏi.',
       points: 'Số điểm của câu (> 0).',
       updated_at: 'Tự động cập nhật bởi trigger.',
@@ -458,7 +459,8 @@ export const TABLE_DOCS: Record<string, TableDoc> = {
     columns: {
       attempt_id: 'Lượt làm. CASCADE khi xóa lượt.',
       question_id: 'Câu hỏi. CASCADE khi xóa câu hỏi.',
-      option_id: 'Đáp án đã chọn (NULL = bỏ trống). SET NULL khi xóa đáp án.',
+      option_id: 'Đáp án đã chọn (NULL = bỏ trống/tự luận). SET NULL khi xóa đáp án.',
+      answer_text: 'Bài làm tự luận (chỉ câu essay, chờ chấm tay).',
     },
   },
   homework_scores: {
@@ -638,6 +640,9 @@ export const TABLE_DOCS: Record<string, TableDoc> = {
       id: 'Khóa chính.',
       center_id: 'Trung tâm. RESTRICT khi xóa center.',
       tag: 'Nhãn/chủ đề để tìm nhanh.',
+      subject: 'Môn học (vd: Toán, Tiếng Anh). NULL = chưa phân loại.',
+      difficulty: 'Mức độ: easy/medium/hard (mặc định medium).',
+      qtype: 'Loại câu hỏi: single/multiple/truefalse/essay (mặc định single).',
       question: 'Nội dung câu hỏi.',
       points: 'Số điểm mặc định khi đưa vào quiz (> 0).',
       created_by: 'Người tạo (users.id). SET NULL khi xóa user.',
@@ -1207,6 +1212,8 @@ CREATE TABLE IF NOT EXISTS quiz_questions (
     CONSTRAINT fk_qq_hw REFERENCES homework(id) ON DELETE CASCADE,
   position INTEGER NOT NULL DEFAULT 0
     CONSTRAINT chk_qq_pos CHECK (position >= 0),
+  qtype TEXT NOT NULL DEFAULT 'single'
+    CONSTRAINT chk_qq_qtype CHECK (qtype IN ('single','multiple','truefalse','essay')),
   question TEXT NOT NULL,
   points DOUBLE PRECISION NOT NULL DEFAULT 1
     CONSTRAINT chk_qq_points CHECK (points > 0),
@@ -1246,7 +1253,8 @@ CREATE TABLE IF NOT EXISTS quiz_answers (
     CONSTRAINT fk_qans_question REFERENCES quiz_questions(id) ON DELETE CASCADE,
   option_id INTEGER
     CONSTRAINT fk_qans_option REFERENCES quiz_options(id) ON DELETE SET NULL,
-  UNIQUE(attempt_id, question_id)
+  answer_text TEXT,
+  CONSTRAINT uq_quiz_answers_choice UNIQUE (attempt_id, question_id, option_id)
 );
 
 CREATE TABLE IF NOT EXISTS question_bank (
@@ -1254,6 +1262,11 @@ CREATE TABLE IF NOT EXISTS question_bank (
   center_id INTEGER
     CONSTRAINT fk_qbank_center REFERENCES centers(id) ON DELETE RESTRICT,
   tag TEXT,
+  subject TEXT,
+  difficulty TEXT NOT NULL DEFAULT 'medium'
+    CONSTRAINT chk_qbank_difficulty CHECK (difficulty IN ('easy','medium','hard')),
+  qtype TEXT NOT NULL DEFAULT 'single'
+    CONSTRAINT chk_qbank_qtype CHECK (qtype IN ('single','multiple','truefalse','essay')),
   question TEXT NOT NULL,
   points DOUBLE PRECISION NOT NULL DEFAULT 1
     CONSTRAINT chk_qbank_points CHECK (points > 0),
