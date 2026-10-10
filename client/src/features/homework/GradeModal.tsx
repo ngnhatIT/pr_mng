@@ -4,6 +4,7 @@ import { homeworkApi, type HomeworkScoreRow, type Rubric } from './homework.api'
 import { HomeworkItem } from '../../shared/types';
 import { useToast } from '../../shared/ui/toast';
 import { Modal } from '../../shared/components/Modal';
+import { useFieldErrors } from '../../shared/components/Form';
 import { TableSkeleton } from '../../shared/components/Skeleton';
 import { EmptyState } from '../../shared/components/EmptyState';
 import { Icon } from '../../shared/components/icons';
@@ -18,6 +19,8 @@ export function GradeModal({ homework, onClose }: { homework: HomeworkItem; onCl
   const [score, setScore] = useState('');
   const [feedback, setFeedback] = useState('');
   const [busy, setBusy] = useState(false);
+  // Lỗi inline dưới field điểm + focus (skill 8.2); dữ liệu giữ nguyên khi lỗi
+  const { errors, refFor, show, clear } = useFieldErrors<'score'>();
 
   const rowStatus = (r: HomeworkScoreRow) => {
     if (r.score !== null) return <span className="badge badge-paid">{t('grade.status.graded')}</span>;
@@ -56,6 +59,7 @@ export function GradeModal({ homework, onClose }: { homework: HomeworkItem; onCl
   }, [homework.id]);
 
   const selectRow = (row: HomeworkScoreRow) => {
+    clear('score');
     setSelected(row.student_id);
   };
 
@@ -69,17 +73,15 @@ export function GradeModal({ homework, onClose }: { homework: HomeworkItem; onCl
   }, [selected, rows]);
 
   const save = async (studentId: number) => {
+    // Validate inline dưới field điểm (thay vì chỉ toast) + focus vào field
+    const s = score === '' ? null : Number(score);
+    const errs: { score?: string } = {};
+    if (s !== null && (!Number.isFinite(s) || s < 0)) errs.score = t('grade.toast.invalidScore');
+    else if (homework.max_score != null && s !== null && s > homework.max_score)
+      errs.score = t('grade.toast.overMax', { max: homework.max_score });
+    if (!show(errs)) return;
     setBusy(true);
     try {
-      const s = score === '' ? null : Number(score);
-      if (s !== null && (!Number.isFinite(s) || s < 0)) {
-        toast(t('grade.toast.invalidScore'), 'error');
-        return;
-      }
-      if (homework.max_score != null && s !== null && s > homework.max_score) {
-        toast(t('grade.toast.overMax', { max: homework.max_score }), 'error');
-        return;
-      }
       await homeworkApi.grade(homework.id, studentId, s, feedback);
       toast(t('grade.toast.saved'), 'success');
       void load(true);
@@ -153,17 +155,27 @@ export function GradeModal({ homework, onClose }: { homework: HomeworkItem; onCl
                 </div>
                 <div className="grade-score-row">
                   <input
+                    ref={refFor('score')}
                     className="text-input grade-score-input"
                     type="number"
                     min="0"
                     step="0.5"
                     value={score}
-                    onChange={(e) => setScore(e.target.value)}
+                    onChange={(e) => {
+                      setScore(e.target.value);
+                      clear('score');
+                    }}
                     placeholder={t('grade.score')}
                     aria-label={t('grade.score')}
+                    aria-invalid={errors.score ? true : undefined}
                   />
                   {homework.max_score != null && <span className="muted">/ {homework.max_score}</span>}
                 </div>
+                {errors.score && (
+                  <span className="field-error" role="alert">
+                    {errors.score}
+                  </span>
+                )}
                 <textarea
                   className="text-input"
                   rows={3}
