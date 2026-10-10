@@ -301,22 +301,6 @@ button.quiz-take-opt {
   font-size: 16px;
   min-height: 50px;
 }
-.auth-error {
-  display: flex;
-  align-items: flex-start;
-  gap: 8px;
-  padding: 10px 12px;
-  margin-bottom: 12px;
-  font-size: 14px;
-  color: var(--danger);
-  background: var(--danger-soft);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-}
-.auth-error svg {
-  flex-shrink: 0;
-  margin-top: 1px;
-}
 
 /* ---------- Thanh toán ---------- */
 .payment-result .result-icon {

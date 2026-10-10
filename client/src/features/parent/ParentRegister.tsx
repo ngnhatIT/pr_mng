@@ -1,10 +1,10 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { setAuth, api } from '../../shared/api/client';
+import { Field, useFieldErrors } from '../../shared/components/Form';
 import { parentApi } from './parent.api';
 import { useToast } from '../../shared/ui/toast';
-import { Icon } from '../../shared/components/icons';
 import './parent.css';
 
 export function ParentRegister() {
@@ -14,11 +14,7 @@ export function ParentRegister() {
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState('');
-  // Lỗi validation hiện ngay dưới field + focus vào field đó (skill 8.2)
-  const [fieldError, setFieldError] = useState<'password' | 'confirm' | null>(null);
-  const passwordRef = useRef<HTMLInputElement>(null);
-  const confirmRef = useRef<HTMLInputElement>(null);
+  const { errors, refFor, show, clear } = useFieldErrors<'phone' | 'password' | 'confirm'>();
   const [center, setCenter] = useState<{ id: number; name: string } | null>(null);
   const navigate = useNavigate();
   const toast = useToast();
@@ -32,38 +28,26 @@ export function ParentRegister() {
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (busy) return;
-    if (password !== confirm) {
-      setError('');
-      setFieldError('confirm');
-      toast(t('auth.passwordMismatch'), 'error');
-      confirmRef.current?.focus();
-      return;
-    }
-    if (password.length < 8) {
-      setError('');
-      setFieldError('password');
-      toast(t('auth.passwordTooShort'), 'error');
-      passwordRef.current?.focus();
-      return;
-    }
-    setFieldError(null);
+    const errs: { phone?: string; password?: string; confirm?: string } = {};
+    if (!phone.trim()) errs.phone = t('auth.phoneEmpty');
+    if (!password) errs.password = t('auth.passwordEmpty');
+    else if (password.length < 8) errs.password = t('auth.passwordTooShort');
+    if (password && password !== confirm) errs.confirm = t('auth.passwordMismatch');
+    if (!show(errs)) return;
     if (!center) {
-      const msg = t('auth.centerRequired');
-      setError(msg);
-      toast(msg, 'error');
+      // Không gắn với field nào: báo 1 kênh duy nhất qua toast, bỏ banner trùng lặp
+      toast(t('auth.centerRequired'), 'error');
       return;
     }
     setBusy(true);
-    setError('');
     try {
       const data = await parentApi.register(phone, password, name, center.id);
       setAuth(data.token, { ...data.parent, role: 'parent', username: data.parent.phone });
       toast(t('auth.registerSuccess'), 'success');
       navigate('/parent');
     } catch (err) {
-      const msg = err instanceof Error ? err.message : t('auth.registerError');
-      setError(msg);
-      toast(msg, 'error');
+      // Lỗi đăng ký (thường do SĐT đã dùng): hiện inline dưới ô SĐT, focus để sửa
+      show({ phone: err instanceof Error ? err.message : t('auth.registerError') });
     } finally {
       setBusy(false);
     }
@@ -76,79 +60,57 @@ export function ParentRegister() {
         <h1 className="login-title">{t('auth.registerTitle')}</h1>
         <p className="login-sub">{t('auth.registerSub')}</p>
         {center && <p className="login-sub">{t('auth.registerAtCenter', { name: center.name })}</p>}
-        {error && (
-          <div className="auth-error" role="alert">
-            <Icon name="alert" size={16} />
-            <span>{error}</span>
-          </div>
-        )}
-        <label className="field">
-          <span className="field-label">{t('auth.fullName')}</span>
+        <Field label={t('auth.fullName')}>
           <input
             className="text-input"
             value={name}
             onChange={(e) => setName(e.target.value)}
             autoComplete="name"
             placeholder={t('auth.namePlaceholder')}
-            required
           />
-        </label>
-        <label className="field">
-          <span className="field-label">{t('auth.phoneRequired')}</span>
+        </Field>
+        <Field label={t('auth.phone')} error={errors.phone} required>
           <input
             className="text-input"
             value={phone}
-            onChange={(e) => setPhone(e.target.value)}
+            onChange={(e) => {
+              setPhone(e.target.value);
+              clear('phone');
+            }}
             autoComplete="tel"
             inputMode="tel"
             placeholder={t('auth.phonePlaceholder')}
-            required
+            ref={refFor('phone')}
           />
-        </label>
-        <label className="field">
-          <span className="field-label">{t('auth.passwordRequired')}</span>
+        </Field>
+        <Field label={t('auth.password')} error={errors.password} required>
           <input
             className="text-input"
             type="password"
             value={password}
-            ref={passwordRef}
             onChange={(e) => {
               setPassword(e.target.value);
-              setFieldError(null);
+              clear('password');
             }}
             autoComplete="new-password"
             placeholder={t('auth.passwordHint')}
-            required
-            aria-invalid={fieldError === 'password'}
+            ref={refFor('password')}
           />
-          {fieldError === 'password' && (
-            <span className="field-error" role="alert">
-              {t('auth.passwordTooShort')}
-            </span>
-          )}
-        </label>
-        <label className="field">
-          <span className="field-label">{t('auth.confirmPassword')}</span>
+        </Field>
+        <Field label={t('auth.confirmPassword')} error={errors.confirm} required>
           <input
             className="text-input"
             type="password"
             value={confirm}
-            ref={confirmRef}
             onChange={(e) => {
               setConfirm(e.target.value);
-              setFieldError(null);
+              clear('confirm');
             }}
             autoComplete="new-password"
             placeholder={t('auth.confirmPlaceholder')}
-            required
-            aria-invalid={fieldError === 'confirm'}
+            ref={refFor('confirm')}
           />
-          {fieldError === 'confirm' && (
-            <span className="field-error" role="alert">
-              {t('auth.passwordMismatch')}
-            </span>
-          )}
-        </label>
+        </Field>
         <button className="btn btn-primary btn-block btn-lg" type="submit" disabled={busy}>
           {busy && <span className="spinner" aria-hidden="true" />}
           {busy ? t('auth.registering') : t('auth.registerAction')}
