@@ -66,6 +66,10 @@ function assertPositiveAmount(amount: unknown): number {
 
 /* --------------------------------- Service --------------------------------- */
 
+// Tổng đã thu (status='confirmed') theo từng hóa đơn — JOIN subquery GROUP BY 1 lần
+// thay vì correlated subquery chạy mỗi dòng hóa đơn. Dùng chung cho mọi query công nợ.
+const confirmedPaidJoin = `LEFT JOIN (SELECT invoice_id, SUM(amount) as paid FROM payments WHERE status = 'confirmed' GROUP BY invoice_id) pp ON pp.invoice_id = i.id`;
+
 export async function listInvoices(
   centerId: number | null,
   query: { status?: string; search?: string },
@@ -118,7 +122,7 @@ export async function getDebtReport(
     params.push(centerId);
   }
   const { page, limit, offset } = parsePagination(pageOpts);
-  const base = `FROM invoices i JOIN students s ON s.id = i.student_id WHERE ${conds.join(' AND ')}`;
+  const base = `FROM invoices i JOIN students s ON s.id = i.student_id ${confirmedPaidJoin} WHERE ${conds.join(' AND ')}`;
   const total = (
     (await db.prepare(`SELECT COUNT(*) as c FROM (SELECT s.id ${base} GROUP BY s.id)`).get(...params)) as {
       c: number;
@@ -128,11 +132,11 @@ export async function getDebtReport(
     .prepare(
       `SELECT s.id, s.code, s.name, s.phone,
          SUM(i.amount) as total,
-         COALESCE(SUM((SELECT SUM(amount) FROM payments p WHERE p.invoice_id = i.id AND p.status = 'confirmed')), 0) as paid,
+         COALESCE(SUM(pp.paid), 0) as paid,
          STRING_AGG(i.id || ':' || COALESCE(i.due_date, ''), ',' ORDER BY i.id) as invoice_dues
        ${base}
        GROUP BY s.id, s.code, s.name, s.phone
-       ORDER BY (SUM(i.amount) - COALESCE(SUM((SELECT SUM(amount) FROM payments p WHERE p.invoice_id = i.id AND p.status = 'confirmed')), 0)) DESC
+       ORDER BY (SUM(i.amount) - COALESCE(SUM(pp.paid), 0)) DESC
        LIMIT ? OFFSET ?`
     )
     .all(...params, limit, offset)) as Omit<DebtRow, 'debt'>[];
@@ -153,9 +157,10 @@ export async function getDebtSummary(
   const row = (await db
     .prepare(
       `SELECT
-         COALESCE(SUM(i.amount - COALESCE((SELECT SUM(amount) FROM payments p WHERE p.invoice_id = i.id AND p.status = 'confirmed'), 0)), 0) as totalDebt,
+         COALESCE(SUM(i.amount - COALESCE(pp.paid, 0)), 0) as totalDebt,
          COUNT(DISTINCT s.id) as debtorCount
        FROM invoices i JOIN students s ON s.id = i.student_id
+       ${confirmedPaidJoin}
        WHERE ${conds.join(' AND ')}`
     )
     .get(...params)) as { totalDebt: number; debtorCount: number };

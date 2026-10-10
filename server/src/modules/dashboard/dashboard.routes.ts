@@ -7,12 +7,25 @@ import { asyncHandler } from '../../shared/http';
 
 const router = Router();
 
+/**
+ * Đầu tháng hiện tại và đầu tháng sau, dạng 'YYYY-MM-DD'.
+ * Dùng so sánh range trên paid_at (text ISO 'YYYY-MM-DD HH24:MI:SS', thứ tự chuỗi
+ * = thứ tự thời gian) thay cho substr(paid_at,1,7) — planner dùng được index btree.
+ */
+export function monthRange(today: string): [string, string] {
+  const monthStart = today.slice(0, 7) + '-01';
+  const y = Number(today.slice(0, 4));
+  const m = Number(today.slice(5, 7));
+  const next = m === 12 ? `${y + 1}-01-01` : `${y}-${String(m + 1).padStart(2, '0')}-01`;
+  return [monthStart, next];
+}
+
 router.get(
   '/',
   requirePermission('reports.view'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const today = toISODate(new Date());
-    const monthPrefix = today.slice(0, 7); // YYYY-MM
+    const [monthStart, nextMonthStart] = monthRange(today);
     const cid = reqCenterId(req);
 
     // Điều kiện lọc theo trung tâm (superadmin: không lọc)
@@ -55,14 +68,15 @@ router.get(
           `SELECT COALESCE(SUM(p.amount),0) as s FROM payments p
          JOIN invoices i ON i.id = p.invoice_id
          JOIN students s ON s.id = i.student_id
-         WHERE substr(p.paid_at,1,7) = ? AND p.status = 'confirmed' ${cid ? 'AND s.center_id = ?' : ''}`
+         WHERE p.paid_at >= ? AND p.paid_at < ? AND p.status = 'confirmed' ${cid ? 'AND s.center_id = ?' : ''}`
         )
-        .get(monthPrefix, ...p(cid))
+        .get(monthStart, nextMonthStart, ...p(cid))
         .then((r) => (r as { s: number }).s),
       db
         .prepare(
-          `SELECT COALESCE(SUM(i.amount - COALESCE((SELECT SUM(amount) FROM payments p WHERE p.invoice_id = i.id AND p.status = 'confirmed'),0)),0) as s
+          `SELECT COALESCE(SUM(i.amount - COALESCE(pp.paid,0)),0) as s
          FROM invoices i JOIN students s ON s.id = i.student_id
+         LEFT JOIN (SELECT invoice_id, SUM(amount) as paid FROM payments WHERE status = 'confirmed' GROUP BY invoice_id) pp ON pp.invoice_id = i.id
          WHERE i.status != 'paid' ${cid ? 'AND s.center_id = ?' : ''}`
         )
         .get(...p(cid))

@@ -38,6 +38,17 @@ npm start
 # → http://localhost:4000
 ```
 
+**Chạy nhiều worker (khuyến nghị production):** dùng PM2 cluster 2 worker để
+tận dụng multi-core, tăng ~1,8x throughput:
+
+```bash
+npm install -g pm2
+pm2 start ecosystem.config.js --env production
+```
+
+> Rate-limit và permission cache là in-memory nên tách theo worker. Ở 2 worker
+> chấp nhận được; scale xa hơn thì cần Redis.
+
 Lần chạy đầu tiên tự tạo schema PostgreSQL + chạy migrations theo version.
 Seed demo **mặc định TẮT** (`SEED_DEMO=false`) — chỉ bật cho môi trường dev/test.
 

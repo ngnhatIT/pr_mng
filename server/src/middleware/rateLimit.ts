@@ -1,4 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
+import jwt from 'jsonwebtoken';
+import type { AuthRequest, AuthUser } from './auth';
 import { env } from '../config/env';
 
 /**
@@ -50,7 +52,7 @@ export interface RateLimitOptions {
   max: number;
   /** Thông điệp khi bị chặn (tiếng Việt). */
   message?: string;
-  /** Hàm sinh key — mặc định theo IP. */
+  /** Hàm sinh key — mặc định: user đã auth → theo tài khoản, còn lại theo IP. */
   keyFn?: (req: Request) => string;
 }
 
@@ -69,6 +71,33 @@ function trustedClientIp(req: Request): string {
 }
 
 /**
+ * Verify Bearer token nếu có, không throw. Cần vì v1.use(apiRateLimit) mount TRƯỚC
+ * requireAuth của từng route nên req.user chưa được gán khi limiter chạy.
+ * Token giả/hết hạn → undefined → fallback IP (attacker không tự chọn được bucket).
+ */
+function tokenUser(req: Request): AuthUser | undefined {
+  const header = req.headers.authorization;
+  if (!header || !header.startsWith('Bearer ')) return undefined;
+  try {
+    // Giữ đồng bộ với JWT_VERIFY_OPTS trong middleware/auth.ts
+    return jwt.verify(header.slice(7), env.JWT_SECRET, { algorithms: ['HS256'] }) as AuthUser;
+  } catch {
+    return undefined;
+  }
+}
+
+/**
+ * Key mặc định: đã đăng nhập (req.user hoặc Bearer token hợp lệ) → `u:<kind>:<id>`
+ * (namespace kind vì parent/staff có thể trùng id số); anonymous → theo IP như cũ.
+ * Văn phòng nhiều staff chung 1 IP NAT không còn chia quota 300 req/15ph.
+ */
+function defaultRateLimitKey(req: Request): string {
+  const user = (req as AuthRequest).user ?? tokenUser(req);
+  if (user?.id != null) return `u:${user.kind ?? 'x'}:${user.id}`;
+  return trustedClientIp(req);
+}
+
+/**
  * Factory tạo rate limiter dùng sliding window (chính xác hơn fixed counter).
  * - Headers chuẩn: X-RateLimit-Limit / X-RateLimit-Remaining / X-RateLimit-Reset (epoch giây)
  * - Khi bị chặn: 429 + header Retry-After + message tiếng Việt
@@ -77,7 +106,7 @@ function trustedClientIp(req: Request): string {
 export function createRateLimit(opts: RateLimitOptions) {
   const { windowMs, max } = opts;
   const message = opts.message ?? 'Bạn thao tác quá nhanh, vui lòng thử lại sau ít phút.';
-  const keyFn = opts.keyFn ?? trustedClientIp;
+  const keyFn = opts.keyFn ?? defaultRateLimitKey;
   // key -> timestamps của các request trong cửa sổ (sliding window)
   const hits = new Map<string, number[]>();
 
@@ -118,21 +147,21 @@ export function createRateLimit(opts: RateLimitOptions) {
   };
 }
 
-/** 300 requests / 15 phút / IP — áp dụng global cho /api/v1. */
+/** 300 requests / 15 phút / tài khoản (IP nếu chưa đăng nhập) — áp dụng global cho /api/v1. */
 export const apiRateLimit = createRateLimit({
   windowMs: 15 * 60 * 1000,
   max: 300,
   message: 'Bạn gửi quá nhiều yêu cầu, vui lòng thử lại sau ít phút.',
 });
 
-/** 60 requests / 15 phút / IP — cho các thao tác ghi (POST/PUT/PATCH/DELETE). */
+/** 60 requests / 15 phút / tài khoản (IP nếu chưa đăng nhập) — cho các thao tác ghi (POST/PUT/PATCH/DELETE). */
 export const writeRateLimit = createRateLimit({
   windowMs: 15 * 60 * 1000,
   max: 60,
   message: 'Bạn thao tác ghi quá nhanh, vui lòng thử lại sau ít phút.',
 });
 
-/** 200 requests / 15 phút / IP — cho cổng phụ huynh (mobile). */
+/** 200 requests / 15 phút / tài khoản (IP nếu chưa đăng nhập) — cho cổng phụ huynh (mobile). */
 export const parentRateLimit = createRateLimit({
   windowMs: 15 * 60 * 1000,
   max: 200,
@@ -140,8 +169,8 @@ export const parentRateLimit = createRateLimit({
 });
 
 /**
- * 5 requests / 15 phút / IP — cho thao tác tốn tiền thật (gửi Zalo ZNS, sweep nhắc nợ).
- * Chống đốt tiền khi token staff bị lộ.
+ * 5 requests / 15 phút / tài khoản (IP nếu chưa đăng nhập) — cho thao tác tốn tiền thật
+ * (gửi Zalo ZNS, sweep nhắc nợ). Chống đốt tiền khi token staff bị lộ.
  */
 export const costlyOpRateLimit = createRateLimit({
   windowMs: 15 * 60 * 1000,
@@ -149,7 +178,7 @@ export const costlyOpRateLimit = createRateLimit({
   message: 'Thao tác này bị giới hạn 5 lần / 15 phút để tránh phát sinh chi phí. Vui lòng thử lại sau.',
 });
 
-/** 100 requests / 15 phút / IP — cho phục vụ file (chống cạn băng thông). */
+/** 100 requests / 15 phút / tài khoản (IP nếu chưa đăng nhập) — cho phục vụ file (chống cạn băng thông). */
 export const fileServeRateLimit = createRateLimit({
   windowMs: 15 * 60 * 1000,
   max: 100,

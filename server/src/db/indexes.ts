@@ -68,6 +68,8 @@ CREATE INDEX IF NOT EXISTS idx_attendance_student ON attendance(student_id, stat
 CREATE INDEX IF NOT EXISTS idx_invoices_student ON invoices(student_id, status);
 CREATE INDEX IF NOT EXISTS idx_invoices_due ON invoices(due_date, status);
 CREATE INDEX IF NOT EXISTS idx_payments_invoice ON payments(invoice_id, status);
+-- Doanh thu theo tháng lọc range trên paid_at — không có index này thì range vẫn full scan
+CREATE INDEX IF NOT EXISTS idx_payments_paid_at ON payments(paid_at);
 -- GHI CHÚ: payment_txns.ref là PRIMARY KEY nên đã có index — không tạo thêm.
 CREATE INDEX IF NOT EXISTS idx_credits_parent ON credits(parent_id);
 
