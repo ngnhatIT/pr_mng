@@ -176,7 +176,11 @@
     "referralDesc": "Share your code, earn tuition credits",
     "subtitle": "Your parent account info",
     "title": "Account",
-    "watching": "Following <strong>{{count}}</strong> children"
+    "watching": "Following <strong>{{count}}</strong> children",
+    "zaloConsent": "Zalo notifications",
+    "zaloConsentDesc": "Receive tuition reminders via Zalo. Turn off if you don't want these messages.",
+    "zaloConsentError": "Could not save preference, please try again",
+    "zaloConsentSaved": "Zalo notification preference saved"
   },
   "quiz": {
     "answeredCount": "Answered {{answered}}/{{total}}",

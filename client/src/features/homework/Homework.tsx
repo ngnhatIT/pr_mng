@@ -331,7 +331,7 @@ export function Homework() {
                       <td>
                         <div className="hw-item-title">
                           {h.kind === 'quiz' && (
-                            <span className="badge badge-plan-premium hw-quiz-badge">Quiz</span>
+                            <span className="badge badge-plan-premium hw-quiz-badge">{t('filters.kindQuiz')}</span>
                           )}
                           {h.title}
                         </div>

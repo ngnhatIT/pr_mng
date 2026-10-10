@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { env } from '../config/env';
-import { requestActor } from '../db/pg-compat';
+import { db, requestActor } from '../db/pg-compat';
 
 /**
  * Secret ký JWT — NGUỒN DUY NHẤT là config/env (đọc từ biến môi trường JWT_SECRET).
@@ -16,6 +16,8 @@ export interface AuthUser {
   name: string;
   /** Namespace phân biệt id: 'parent' = id của bảng parents, 'staff' = id của bảng users. Chống C1. */
   kind?: 'parent' | 'staff';
+  /** D2: token version — tăng khi đổi mật khẩu/khóa tài khoản để thu hồi access token ngay. */
+  tv?: number;
   /** null = superadmin (thấy mọi trung tâm) */
   center_id?: number | null;
   parent_id?: number;
@@ -38,9 +40,77 @@ export interface AuthRequest extends Request {
 
 export function signToken(
   user: AuthUser,
-  expiresIn: number | `${number}${'s' | 'm' | 'h' | 'd'}` = '1h'
+  expiresIn: number | `${number}${'s' | 'm' | 'h' | 'd'}` = '15m'
 ): string {
   return jwt.sign(user, JWT_SECRET, { expiresIn });
+}
+
+/* ---------------- D2: thu hồi access token ngay ---------------- */
+
+/** Cache (kind:id) → {tv, active} — TTL 60s để đổi pass/khóa TK có hiệu lực nhanh mà không query DB mỗi request. */
+const tokenCheckCache = new Map<string, { at: number; tv: number; active: boolean }>();
+const TOKEN_CHECK_TTL_MS = 60_000;
+
+/** Xóa cache kiểm tra token của 1 tài khoản — gọi sau khi tăng token_version hoặc khóa/mở TK. */
+export function invalidateTokenCheck(kind: 'parent' | 'staff', id: number): void {
+  tokenCheckCache.delete(`${kind}:${id}`);
+}
+
+type TokenStatus = 'ok' | 'revoked' | 'locked';
+
+/**
+ * Kiểm tra access token còn hiệu lực không: so tv trong JWT với DB, và is_active.
+ * Token cấp trước D2 (không có tv) được bỏ qua — chúng hết hạn theo TTL cũ (tối đa 1h).
+ */
+async function checkTokenFreshness(payload: AuthUser): Promise<TokenStatus> {
+  if (payload.tv == null) return 'ok';
+  const kind = payload.kind === 'parent' || payload.role === 'parent' ? 'parent' : 'staff';
+  const id = kind === 'parent' ? (payload.parent_id ?? payload.id) : payload.id;
+  const key = `${kind}:${id}`;
+  const hit = tokenCheckCache.get(key);
+  let tv: number;
+  let active: boolean;
+  if (hit && Date.now() - hit.at < TOKEN_CHECK_TTL_MS) {
+    ({ tv, active } = hit);
+  } else {
+    const row = (await db
+      .prepare(`SELECT token_version, is_active FROM ${kind === 'parent' ? 'parents' : 'users'} WHERE id = ?`)
+      .get(id)) as { token_version: number; is_active: boolean } | undefined;
+    if (!row) return 'revoked'; // tài khoản đã bị xóa
+    tv = row.token_version;
+    active = row.is_active;
+    tokenCheckCache.set(key, { at: Date.now(), tv, active });
+  }
+  if (!active) return 'locked';
+  return tv === payload.tv ? 'ok' : 'revoked';
+}
+
+/**
+ * Verify xong → kiểm tra thu hồi/khóa (bất đồng bộ). Mọi lỗi bên trong đều biến
+ * thành 401, không throw ra ngoài (Express 4 không hứng được lỗi từ middleware async).
+ */
+function finishAuth(req: AuthRequest, res: Response, next: NextFunction, payload: AuthUser): void {
+  checkTokenFreshness(payload).then(
+    (status) => {
+      if (status === 'locked') {
+        res
+          .status(403)
+          .json({ error: 'Tài khoản đã bị khóa, vui lòng liên hệ quản trị viên', code: 'ACCOUNT_LOCKED' });
+        return;
+      }
+      if (status !== 'ok') {
+        res
+          .status(401)
+          .json({ error: 'Phiên đăng nhập đã hết hiệu lực, vui lòng đăng nhập lại', code: 'TOKEN_REVOKED' });
+        return;
+      }
+      req.user = payload;
+      withActorContext(payload, next);
+    },
+    () => {
+      res.status(401).json({ error: 'Không xác thực được phiên đăng nhập', code: 'INVALID_TOKEN' });
+    }
+  );
 }
 
 /** Chạy downstream trong AsyncLocalStorage mang actor '<id>:<role>' để trigger audit ghi changed_by. */
@@ -57,8 +127,7 @@ export function requireAuth(req: AuthRequest, res: Response, next: NextFunction)
   }
   try {
     const payload = jwt.verify(header.slice(7), JWT_SECRET, JWT_VERIFY_OPTS) as AuthUser;
-    req.user = payload;
-    withActorContext(payload, next);
+    finishAuth(req, res, next, payload);
   } catch {
     res.status(401).json({ error: 'Token không hợp lệ hoặc đã hết hạn', code: 'INVALID_TOKEN' });
   }
@@ -77,8 +146,7 @@ export function parentAuth(req: AuthRequest, res: Response, next: NextFunction):
       res.status(403).json({ error: 'Tài khoản này không phải phụ huynh', code: 'NOT_PARENT' });
       return;
     }
-    req.user = payload;
-    withActorContext(payload, next);
+    finishAuth(req, res, next, payload);
   } catch {
     res.status(401).json({ error: 'Token không hợp lệ hoặc đã hết hạn', code: 'INVALID_TOKEN' });
   }

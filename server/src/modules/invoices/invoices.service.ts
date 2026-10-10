@@ -5,6 +5,8 @@ import { escapeLike } from '../../shared/like';
 import { parsePagination, paginate, type PageOptions, type Paginated } from '../../shared/pagination';
 import { audit, formatVND, type AuditActor } from '../../shared/audit';
 import { nowVNSql } from '../../shared/vnTime';
+import { logger } from '../../shared/logger';
+import { formatError } from '../../shared/errorFormat';
 
 /* ---------------------------------- Types ---------------------------------- */
 
@@ -381,6 +383,8 @@ export async function applyCredit(
     return { applied: result.applied, status: result.status };
   } catch (err) {
     if (err instanceof AppError) throw err;
-    throw AppError.badRequest(err instanceof Error ? err.message : 'Không thể áp dụng credits');
+    // Không lộ message DB ra client — log chi tiết để debug.
+    logger.error('applyCredit thất bại', { invoiceId: id, creditId, ...formatError(err) });
+    throw AppError.badRequest('Không thể áp dụng credits. Vui lòng thử lại sau.');
   }
 }

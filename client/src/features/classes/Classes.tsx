@@ -10,7 +10,7 @@ import { PageHeader } from '../../shared/components/PageHeader';
 import { EmptyState } from '../../shared/components/EmptyState';
 import { CardGridSkeleton } from '../../shared/components/Skeleton';
 import { Pagination, type PaginationMeta } from '../../shared/components/Pagination';
-import { Teacher, ScheduleEntry, DAY_NAMES, formatVND } from '../../shared/types';
+import { Teacher, ScheduleEntry, getDayNames, formatVND } from '../../shared/types';
 import { Icon } from '../../shared/components/icons';
 import './Classes.css';
 
@@ -345,9 +345,9 @@ function ClassFormModal({
                 value={s.day}
                 onChange={(e) => updateSlot(i, { day: Number(e.target.value) })}
               >
-                {Object.keys(DAY_NAMES).map((d) => (
+                {Object.entries(getDayNames()).map(([d, name]) => (
                   <option key={d} value={d}>
-                    {t('days.' + d)}
+                    {name}
                   </option>
                 ))}
               </select>

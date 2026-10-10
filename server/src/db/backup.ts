@@ -38,6 +38,9 @@ export async function backupDatabase(backupDir: string, keep = 7): Promise<Backu
     `-${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
   const fileName = `educenter-backup-${stamp}.dump`;
   const filePath = path.join(backupDir, fileName);
+  // Ghi ra file .tmp rồi rename nguyên tử: crash giữa chừng không bao giờ để
+  // lại file backup tên chính thức bị dở dang (rotation chỉ thấy file hoàn chỉnh).
+  const tmpPath = `${filePath}.tmp`;
 
   // pg_dump custom format (-Fc): nén, restore linh hoạt từng bảng
   // Parse URL để tránh lộ password trong process list (dùng PGPASSWORD env)
@@ -51,7 +54,7 @@ export async function backupDatabase(backupDir: string, keep = 7): Promise<Backu
     PGPASSWORD: decodeURIComponent(dbUrl.password),
   };
   try {
-    await execFileAsync('pg_dump', ['-Fc', '-f', filePath], {
+    await execFileAsync('pg_dump', ['-Fc', '-f', tmpPath], {
       timeout: 10 * 60 * 1000,
       maxBuffer: 256 * 1024 * 1024,
       env: pgEnv,
@@ -59,29 +62,32 @@ export async function backupDatabase(backupDir: string, keep = 7): Promise<Backu
   } catch (err) {
     // pg_dump fail → xóa file dở dang (tránh file partial bị tính là backup hợp lệ)
     try {
-      fs.unlinkSync(filePath);
+      fs.unlinkSync(tmpPath);
     } catch {
       /* bỏ qua */
     }
     throw err;
   }
 
-  const sizeBytes = fs.statSync(filePath).size;
+  const sizeBytes = fs.statSync(tmpPath).size;
   if (sizeBytes === 0) {
-    fs.unlinkSync(filePath);
+    fs.unlinkSync(tmpPath);
     throw new Error('Backup thất bại: file dump rỗng');
   }
 
   // Verify: file dump phải đọc được bằng pg_restore --list (phát hiện file hỏng ngay)
   try {
-    await execFileAsync('pg_restore', ['--list', filePath], {
+    await execFileAsync('pg_restore', ['--list', tmpPath], {
       timeout: 60 * 1000,
       maxBuffer: 64 * 1024 * 1024,
     });
   } catch (err) {
-    fs.unlinkSync(filePath);
+    fs.unlinkSync(tmpPath);
     throw new Error(`Backup thất bại: file dump không đọc được (${String(err)})`, { cause: err });
   }
+
+  // Rename nguyên tử: từ đây file tên chính thức mới tồn tại và đã hoàn chỉnh.
+  fs.renameSync(tmpPath, filePath);
 
   // Xoay vòng: giữ N bản mới nhất
   const backups = fs

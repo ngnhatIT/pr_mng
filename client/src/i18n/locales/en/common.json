@@ -3,7 +3,29 @@
     "timeout": "Request timed out, please try again",
     "network": "Cannot reach the server, please check your connection and try again",
     "sessionExpired": "Your session has expired, please sign in again",
-    "error": "Something went wrong"
+    "error": "Something went wrong",
+    "errors": {
+      "NOT_FOUND": "Requested data not found",
+      "BAD_REQUEST": "Invalid request",
+      "VALIDATION_INVALID": "Invalid input data",
+      "VALIDATION_REQUIRED": "Missing required information",
+      "FORBIDDEN": "You don't have permission for this action",
+      "UNAUTHORIZED": "Session expired, please sign in again",
+      "NO_TOKEN": "Session expired, please sign in again",
+      "INVALID_TOKEN": "Invalid session, please sign in again",
+      "PARENT_AUTH_REQUIRED": "Please sign in with a parent account",
+      "RATE_LIMITED": "Too many requests, please try again later",
+      "DUPLICATE": "Data already exists",
+      "CONFLICT": "Data already exists or is in use",
+      "INTERNAL_ERROR": "System error, please try again later",
+      "PAYLOAD_TOO_LARGE": "Uploaded data is too large",
+      "WEAK_PASSWORD": "Password is too weak",
+      "WRONG_PASSWORD": "Current password is incorrect",
+      "SAME_PASSWORD": "New password must differ from the current one",
+      "ZALO_SEND_FAILED": "Failed to send via Zalo",
+      "REMINDER_COOLDOWN": "This invoice was recently reminded, please try again later",
+      "REMINDER_IN_PROGRESS": "Another reminder is in progress for this invoice"
+    }
   },
   "actions": {
     "add": "Add",

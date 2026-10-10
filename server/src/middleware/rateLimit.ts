@@ -36,12 +36,23 @@ export function publicRateLimit(maxPerWindow = 30, windowMs = 60 * 1000) {
       buckets.set(ip, b);
     }
     b.count += 1;
-    if (b.count > maxPerWindow) {
+    // B2: chia quota theo số worker (mỗi worker có Map riêng)
+    if (b.count > effectiveMax(maxPerWindow)) {
       res.status(429).json({ error: 'Bạn thao tác quá nhanh, vui lòng thử lại sau ít phút.', code: 'RATE_LIMITED' });
       return;
     }
     next();
   };
+}
+
+/**
+ * B2: Số worker PM2 cluster (mặc định 1). Vì mỗi worker giữ Map rate-limit
+ * riêng, max cấu hình phải chia cho số worker để tổng toàn cụm không vượt max.
+ * Đọc live từ env để test có thể đổi mà không cần restart module.
+ */
+export function effectiveMax(max: number): number {
+  const d = Math.max(1, Math.floor(env.RATE_LIMIT_DIVISOR));
+  return Math.max(1, Math.floor(max / d));
 }
 
 /* ------------------------- Rate limit toàn diện ------------------------- */
@@ -104,7 +115,9 @@ function defaultRateLimitKey(req: Request): string {
  * - In-memory, dọn dẹp định kỳ để không rò rỉ bộ nhớ
  */
 export function createRateLimit(opts: RateLimitOptions) {
-  const { windowMs, max } = opts;
+  const { windowMs } = opts;
+  // B2: max hiệu dụng trên mỗi worker = max cấu hình / số worker
+  const max = effectiveMax(opts.max);
   const message = opts.message ?? 'Bạn thao tác quá nhanh, vui lòng thử lại sau ít phút.';
   const keyFn = opts.keyFn ?? defaultRateLimitKey;
   // key -> timestamps của các request trong cửa sổ (sliding window)
@@ -187,40 +200,57 @@ export const fileServeRateLimit = createRateLimit({
 
 /* ------------------------- Login rate limit ------------------------- */
 
-const LOGIN_WINDOW_MS = env.LOGIN_RATE_WINDOW_MS;
-const LOGIN_MAX = env.LOGIN_RATE_LIMIT;
 // key: `${ip}:${path}` → các timestamp request trong window hiện tại
 const loginHits = new Map<string, number[]>();
+// D5: key `login:<username>` → timestamp theo tài khoản (lớp 2)
+const loginAccountHits = new Map<string, number[]>();
+
+/** Ghi 1 hit vào bucket sliding-window; false = đã vượt max (không ghi thêm). */
+function takeLoginSlot(hits: Map<string, number[]>, key: string, windowMs: number, max: number): boolean {
+  const now = Date.now();
+  const recent = (hits.get(key) || []).filter((t) => now - t < windowMs);
+  if (recent.length >= max) return false;
+  recent.push(now);
+  hits.set(key, recent);
+  // Dọn dẹp định kỳ để không rò rỉ bộ nhớ
+  if (hits.size > 1000) {
+    for (const [k, times] of hits) {
+      const fresh = times.filter((t) => now - t < windowMs);
+      if (fresh.length === 0) hits.delete(k);
+      else hits.set(k, fresh);
+    }
+  }
+  return true;
+}
+
+function tooManyAttempts(res: Response): void {
+  res.status(429).json({ error: 'Thử quá nhiều lần, vui lòng đợi một phút rồi thử lại', code: 'RATE_LIMITED' });
+}
 
 /**
- * Chống brute-force cho login/register: tối đa 10 request / 60 giây
- * cho mỗi IP trên mỗi endpoint. Quá giới hạn → 429.
+ * Chống brute-force cho login/register (2 lớp):
+ * - Lớp 1 (giữ nguyên): tối đa 10 request / 60 giây cho mỗi IP trên mỗi endpoint
+ *   (chia cho số worker qua RATE_LIMIT_DIVISOR — B2).
+ * - D5 — lớp 2: 20 request / 15 phút cho mỗi tài khoản (username/phone normalize
+ *   lowercase + trim), chống dò mật khẩu 1 user cụ thể từ nhiều IP.
+ * Quá giới hạn → 429.
  */
 export function loginRateLimit(req: Request, res: Response, next: NextFunction): void {
-  const now = Date.now();
   const ip = trustedClientIp(req);
   // Normalize path: /api/auth/login và /api/v1/auth/login dùng chung key (chống bypass qua legacy alias)
   const normalizedPath = req.path.replace(/^\/api\/v1\//, '/api/');
-  const key = `${ip}:${normalizedPath}`;
-  const prev = loginHits.get(key) || [];
-  const recent = prev.filter((t) => now - t < LOGIN_WINDOW_MS);
-
-  if (recent.length >= LOGIN_MAX) {
-    res.status(429).json({ error: 'Thử quá nhiều lần, vui lòng đợi một phút rồi thử lại', code: 'RATE_LIMITED' });
+  if (!takeLoginSlot(loginHits, `${ip}:${normalizedPath}`, env.LOGIN_RATE_WINDOW_MS, effectiveMax(env.LOGIN_RATE_LIMIT))) {
+    tooManyAttempts(res);
     return;
   }
-
-  recent.push(now);
-  loginHits.set(key, recent);
-
-  // Dọn dẹp định kỳ để không rò rỉ bộ nhớ
-  if (loginHits.size > 1000) {
-    for (const [k, times] of loginHits) {
-      const fresh = times.filter((t) => now - t < LOGIN_WINDOW_MS);
-      if (fresh.length === 0) loginHits.delete(k);
-      else loginHits.set(k, fresh);
-    }
+  const body = req.body as { username?: unknown; phone?: unknown } | undefined;
+  const loginName = String(body?.username ?? body?.phone ?? '').trim().toLowerCase();
+  if (
+    loginName &&
+    !takeLoginSlot(loginAccountHits, `login:${loginName}`, env.LOGIN_ACCOUNT_WINDOW_MS, effectiveMax(env.LOGIN_ACCOUNT_RATE_LIMIT))
+  ) {
+    tooManyAttempts(res);
+    return;
   }
-
   next();
 }

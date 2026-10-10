@@ -13,13 +13,39 @@ export function ParentProfile() {
   const toast = useToast();
   const user = getUser();
   const [childCount, setChildCount] = useState<number | null>(null);
+  // H5: đồng ý nhận tin Zalo ZNS ('granted' | 'denied' | 'unknown')
+  const [consent, setConsentState] = useState<'granted' | 'denied' | 'unknown'>('unknown');
+  const [consentBusy, setConsentBusy] = useState(false);
 
   useEffect(() => {
     parentApi
       .children()
       .then((c) => setChildCount(c.length))
       .catch(() => setChildCount(0));
+    parentApi
+      .consent()
+      .then((r) => {
+        setConsentState(r.zalo_consent === 'granted' || r.zalo_consent === 'denied' ? r.zalo_consent : 'unknown');
+      })
+      .catch(() => {
+        /* giữ unknown */
+      });
   }, []);
+
+  const toggleConsent = async () => {
+    const next = consent === 'granted' ? 'denied' : 'granted';
+    setConsentState(next); // optimistic: phản hồi ngay
+    setConsentBusy(true);
+    try {
+      await parentApi.setConsent(next);
+      toast(t('profile.zaloConsentSaved'), 'success');
+    } catch {
+      setConsentState(next === 'granted' ? 'denied' : 'granted'); // lỗi -> trả lại
+      toast(t('profile.zaloConsentError'), 'error');
+    } finally {
+      setConsentBusy(false);
+    }
+  };
 
   const logout = () => {
     void doLogout();
@@ -41,6 +67,23 @@ export function ParentProfile() {
             <Trans i18nKey="profile.watching" ns="parent" values={{ count: childCount }} />
           </p>
         )}
+      </section>
+
+      <section className="card">
+        <label className="consent-row">
+          <span className="quick-action-text">
+            <strong>{t('profile.zaloConsent')}</strong>
+            <small>{t('profile.zaloConsentDesc')}</small>
+          </span>
+          <input
+            type="checkbox"
+            className="switch"
+            checked={consent === 'granted'}
+            disabled={consentBusy}
+            onChange={toggleConsent}
+            aria-label={t('profile.zaloConsent')}
+          />
+        </label>
       </section>
 
       <section className="card">

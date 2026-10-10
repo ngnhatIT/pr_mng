@@ -1,6 +1,6 @@
 /**
  * Test refresh token rotation:
- * - login cấp cặp token (access 1h + refresh opaque)
+ * - login cấp cặp token (access 15m + refresh opaque)
  * - refresh thành công -> cặp mới, token cũ bị revoke
  * - dùng lại token cũ -> 401 + toàn bộ chuỗi bị thu hồi (theft detection)
  * - logout -> refresh token bị revoke
@@ -44,7 +44,7 @@ describe('refresh token rotation (PostgreSQL)', () => {
     const pair = await issueTokenPair(staffUser, { ip: '127.0.0.1' });
     assert.ok(pair.token.length > 20);
     assert.ok(pair.refresh_token.length >= 40);
-    assert.equal(pair.expires_in, 3600);
+    assert.equal(pair.expires_in, 900); // ACCESS_TOKEN_TTL mặc định 15 phút (D2)
     // DB chỉ lưu hash, không lưu token thô
     const rows = (await db.prepare('SELECT token_hash FROM refresh_tokens').all()) as {
       token_hash: string;
@@ -69,11 +69,46 @@ describe('refresh token rotation (PostgreSQL)', () => {
     assert.ok(old.replaced_by, 'phải ghi replaced_by');
   });
 
-  it('dùng lại token đã revoke -> thu hồi toàn bộ chuỗi (chống trộm)', async () => {
+  it('B4: 2 request refresh đồng thời với cùng token -> cả 2 đều nhận cặp hợp lệ (grace 30s)', async () => {
+    const p1 = await issueTokenPair(staffUser);
+    const [r1, r2] = await Promise.all([
+      rotateRefreshToken(p1.refresh_token),
+      rotateRefreshToken(p1.refresh_token),
+    ]);
+    assert.ok(r1.refresh_token.length >= 40 && r2.refresh_token.length >= 40);
+    assert.notEqual(r1.refresh_token, r2.refresh_token);
+    // Chuỗi KHÔNG bị thu hồi: refresh token mới của cả 2 vẫn dùng được
+    const r3 = await rotateRefreshToken(r1.refresh_token);
+    const r4 = await rotateRefreshToken(r2.refresh_token);
+    assert.ok(r3.refresh_token.length >= 40 && r4.refresh_token.length >= 40);
+  });
+
+  it('B4: dùng lại token cũ quá 30s sau rotation -> coi là trộm, thu hồi chuỗi', async () => {
     const p1 = await issueTokenPair(staffUser);
     const p2 = await rotateRefreshToken(p1.refresh_token);
-    // Kẻ trộm dùng lại token cũ p1
-    await assert.rejects(() => rotateRefreshToken(p1.refresh_token), /thu hồi|không hợp lệ/);
+    // Giả lập hết grace window: lùi revoked_at về 61s trước
+    await db
+      .prepare(`UPDATE refresh_tokens SET revoked_at = NOW() - INTERVAL '61 seconds' WHERE token_hash = ?`)
+      .run(createHash('sha256').update(p1.refresh_token).digest('hex'));
+    await assert.rejects(() => rotateRefreshToken(p1.refresh_token), /đánh cắp/);
+    // Chuỗi bị thu hồi: cả token mới cũng không dùng được
+    await assert.rejects(() => rotateRefreshToken(p2.refresh_token));
+  });
+
+  it('B4: logout rồi dùng lại token trong 30s -> không được cấp mới (không grace)', async () => {
+    const p1 = await issueTokenPair(staffUser);
+    await revokeRefreshToken(p1.refresh_token); // revoke không qua rotation: replaced_by NULL
+    await assert.rejects(() => rotateRefreshToken(p1.refresh_token), /không hợp lệ|hết hạn|thu hồi/);
+  });
+
+  it('dùng lại token đã revoke ngoài grace window -> thu hồi toàn bộ chuỗi (chống trộm)', async () => {
+    const p1 = await issueTokenPair(staffUser);
+    const p2 = await rotateRefreshToken(p1.refresh_token);
+    // Hết grace 30s rồi kẻ trộm mới dùng lại token cũ p1
+    await db
+      .prepare(`UPDATE refresh_tokens SET revoked_at = NOW() - INTERVAL '61 seconds' WHERE token_hash = ?`)
+      .run(createHash('sha256').update(p1.refresh_token).digest('hex'));
+    await assert.rejects(() => rotateRefreshToken(p1.refresh_token), /thu hồi|không hợp lệ|đánh cắp/);
     // Cả token mới p2 cũng bị thu hồi theo
     await assert.rejects(() => rotateRefreshToken(p2.refresh_token), /thu hồi|không hợp lệ/);
   });

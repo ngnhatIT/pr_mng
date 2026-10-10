@@ -25,8 +25,15 @@ export function toastApiError(
   err: unknown,
   fallback: string
 ): void {
-  const e = err as Error & { requestId?: string };
-  const msg = e instanceof Error ? e.message : fallback;
+  const e = err as (Error & { requestId?: string; code?: string }) | undefined;
+  // Ưu tiên thông điệp theo mã lỗi (đa ngôn ngữ); chưa có key thì giữ message gốc của server
+  const codeKey = e?.code ? `api.errors.${e.code}` : '';
+  const msg =
+    codeKey && i18n.exists(codeKey, { ns: 'common' })
+      ? String(i18n.t(codeKey, { ns: 'common' }))
+      : e instanceof Error
+        ? e.message
+        : fallback;
   const suffix = e?.requestId ? ` (${i18n.t('errorCode', { ns: 'common' })}: ${e.requestId})` : '';
   toast(`${msg}${suffix}`, 'error');
 }

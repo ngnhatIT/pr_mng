@@ -3,7 +3,29 @@
     "timeout": "Yêu cầu quá thời gian, vui lòng thử lại",
     "network": "Không thể kết nối máy chủ, vui lòng kiểm tra mạng và thử lại",
     "sessionExpired": "Phiên đăng nhập đã hết hạn, vui lòng đăng nhập lại",
-    "error": "Đã xảy ra lỗi"
+    "error": "Đã xảy ra lỗi",
+    "errors": {
+      "NOT_FOUND": "Không tìm thấy dữ liệu yêu cầu",
+      "BAD_REQUEST": "Yêu cầu không hợp lệ",
+      "VALIDATION_INVALID": "Dữ liệu nhập chưa hợp lệ",
+      "VALIDATION_REQUIRED": "Thiếu thông tin bắt buộc",
+      "FORBIDDEN": "Bạn không có quyền thực hiện thao tác này",
+      "UNAUTHORIZED": "Phiên đăng nhập đã hết hạn, vui lòng đăng nhập lại",
+      "NO_TOKEN": "Phiên đăng nhập đã hết hạn, vui lòng đăng nhập lại",
+      "INVALID_TOKEN": "Phiên đăng nhập không hợp lệ, vui lòng đăng nhập lại",
+      "PARENT_AUTH_REQUIRED": "Vui lòng đăng nhập tài khoản phụ huynh",
+      "RATE_LIMITED": "Thao tác quá nhanh, vui lòng thử lại sau",
+      "DUPLICATE": "Dữ liệu đã tồn tại",
+      "CONFLICT": "Dữ liệu đã tồn tại hoặc đang được sử dụng",
+      "INTERNAL_ERROR": "Lỗi hệ thống, vui lòng thử lại sau",
+      "PAYLOAD_TOO_LARGE": "Dữ liệu gửi lên quá lớn",
+      "WEAK_PASSWORD": "Mật khẩu quá yếu",
+      "WRONG_PASSWORD": "Mật khẩu hiện tại không đúng",
+      "SAME_PASSWORD": "Mật khẩu mới phải khác mật khẩu hiện tại",
+      "ZALO_SEND_FAILED": "Gửi tin Zalo thất bại",
+      "REMINDER_COOLDOWN": "Hóa đơn này vừa được nhắc, vui lòng thử lại sau",
+      "REMINDER_IN_PROGRESS": "Đang có yêu cầu nhắc khác cho hóa đơn này"
+    }
   },
   "actions": {
     "add": "Thêm",

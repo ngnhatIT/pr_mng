@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { formatVND, formatDate, formatDateTime, formatScheduleText } from './types';
+import { formatVND, formatDate, formatDateTime, formatScheduleText, getDayNames } from './types';
 
 describe('formatVND', () => {
   it('tiếng Việt: 1.000.000đ', () => {
@@ -52,5 +52,18 @@ describe('formatScheduleText', () => {
   });
   it('chuỗi rỗng trả về chuỗi rỗng', () => {
     expect(formatScheduleText('')).toBe('');
+  });
+});
+
+describe('getDayNames', () => {
+  it('tiếng Việt: 2=Thứ Hai, 8=Chủ Nhật', () => {
+    const names = getDayNames('vi');
+    expect(names[2]).toBe('Thứ Hai');
+    expect(names[8]).toBe('Chủ Nhật');
+  });
+  it('tiếng Anh: 2=Monday, 8=Sunday', () => {
+    const names = getDayNames('en');
+    expect(names[2]).toBe('Monday');
+    expect(names[8]).toBe('Sunday');
   });
 });

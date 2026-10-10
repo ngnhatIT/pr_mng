@@ -19,8 +19,15 @@ interface Migration {
   version: number;
   name: string;
   up: (tx: Tx) => Promise<void>;
+  /**
+   * Đảo ngược migration (phục vụ rollback). Migration cũ (v2-v13) chưa có
+   * down -> rollback phải làm thủ công. Quy ước: migration mới phải có down.
+   */
+  down?: (tx: Tx) => Promise<void>;
 }
 
+// shortcut: các migration cũ (v2-v13) chưa triển khai down (rollback cần can
+// thiệp thủ công) — chỉ migration mới nhất bắt buộc có down, xem v14.
 const MIGRATIONS: Migration[] = [
   {
     version: 2,
@@ -270,6 +277,70 @@ const MIGRATIONS: Migration[] = [
       await tx.exec(
         'CREATE UNIQUE INDEX IF NOT EXISTS parent_reviews_unique_full ON reviews(parent_id, center_id)'
       );
+    },
+    down: async (tx) => {
+      // Đảo ngược v14: về lại partial index của v3 (chỉ unique khi parent_id NOT NULL).
+      await tx.exec('DROP INDEX IF EXISTS parent_reviews_unique_full');
+      await tx.exec(
+        'CREATE UNIQUE INDEX IF NOT EXISTS parent_reviews_unique ON reviews(parent_id, center_id) WHERE parent_id IS NOT NULL'
+      );
+    },
+  },
+  {
+    version: 15,
+    name: 'reminders_dedup_key',
+    up: async (tx) => {
+      // Chống gửi trùng ZNS ở tầng DB: dedup_key = invoiceId:kind:ngày VN.
+      // Unique partial: chỉ dedup các trạng thái đang hiệu lực (sending/sent/demo);
+      // 'failed' được retry nên không chặn. NULL không xung đột nên DB cũ an toàn.
+      await tx.exec('ALTER TABLE reminders ADD COLUMN IF NOT EXISTS dedup_key TEXT');
+      await tx.exec(
+        `CREATE UNIQUE INDEX IF NOT EXISTS reminders_dedup_key_unique
+         ON reminders(dedup_key) WHERE status IN ('sending', 'sent', 'demo')`
+      );
+    },
+  },
+  {
+    version: 16,
+    name: 'auth_token_version',
+    up: async (tx) => {
+      // D2: thu hồi access token ngay — token_version nhúng vào JWT, tăng khi đổi
+      // pass/khóa TK; is_active=false từ chối login + mọi request đã auth.
+      // (DB mới tạo từ schema.ts đã có sẵn 2 cột này → ADD COLUMN IF NOT EXISTS.)
+      await tx.exec('ALTER TABLE users ADD COLUMN IF NOT EXISTS token_version INTEGER NOT NULL DEFAULT 1');
+      await tx.exec('ALTER TABLE users ADD COLUMN IF NOT EXISTS is_active BOOLEAN NOT NULL DEFAULT true');
+      await tx.exec('ALTER TABLE parents ADD COLUMN IF NOT EXISTS token_version INTEGER NOT NULL DEFAULT 1');
+      await tx.exec('ALTER TABLE parents ADD COLUMN IF NOT EXISTS is_active BOOLEAN NOT NULL DEFAULT true');
+    },
+    down: async (tx) => {
+      // Đảo ngược v16: gỡ 4 cột (lưu ý PG không DROP COLUMN IF EXISTS cho nhiều cột 1 lệnh ở bản cũ — tách riêng).
+      await tx.exec('ALTER TABLE parents DROP COLUMN IF EXISTS is_active');
+      await tx.exec('ALTER TABLE parents DROP COLUMN IF EXISTS token_version');
+      await tx.exec('ALTER TABLE users DROP COLUMN IF EXISTS is_active');
+      await tx.exec('ALTER TABLE users DROP COLUMN IF EXISTS token_version');
+    },
+  },
+  {
+    version: 17,
+    name: 'parents_zalo_consent',
+    up: async (tx) => {
+      // H5: phụ huynh đồng ý/từ chối nhận tin Zalo ZNS. Mặc định 'unknown'.
+      // Idempotent: DB mới tạo từ schema.ts đã có cột.
+      await tx.exec(`DO $$
+        BEGIN
+          IF NOT EXISTS (
+            SELECT 1 FROM information_schema.columns
+            WHERE table_name = 'parents' AND column_name = 'zalo_consent'
+          ) THEN
+            ALTER TABLE parents ADD COLUMN zalo_consent TEXT DEFAULT 'unknown'
+              CONSTRAINT chk_parents_zalo_consent
+              CHECK (zalo_consent IN ('granted','denied','unknown'));
+          END IF;
+        END $$;`);
+    },
+    down: async (tx) => {
+      // Đảo ngược v17: gỡ cột consent (mất dữ liệu opt-in/opt-out đã lưu).
+      await tx.exec('ALTER TABLE parents DROP COLUMN IF EXISTS zalo_consent');
     },
   },
 ];

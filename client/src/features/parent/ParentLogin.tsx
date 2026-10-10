@@ -23,11 +23,7 @@ export function ParentLogin() {
     setError('');
     try {
       const data = await parentApi.login(phone, password);
-      setAuth(
-        data.token,
-        { ...data.parent, role: 'parent', username: data.parent.phone },
-        data.refresh_token
-      );
+      setAuth(data.token, { ...data.parent, role: 'parent', username: data.parent.phone });
       toast(t('auth.welcome', { name: data.parent.name }), 'success');
       // Quay lại deep-link đã lưu (khi bị 401 hoặc vào trang cần login).
       const next = takePostLoginRedirect();

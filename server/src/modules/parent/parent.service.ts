@@ -3,7 +3,7 @@ import { assertStrongPassword, BCRYPT_ROUNDS } from '../../shared/password';
 import { db, toISODate, confirmedPaid, getCenterSettings, formatSchedule } from '../../db';
 import { nowVNSql } from '../../shared/vnTime';
 import { withAdvisoryLock } from '../../shared/advisoryLock';
-import { AuthUser, DUMMY_PASSWORD_HASH } from '../../middleware/auth';
+import { AuthUser, DUMMY_PASSWORD_HASH, invalidateTokenCheck } from '../../middleware/auth';
 import { issueTokenPair, TokenPair } from '../auth/refresh.service';
 import { ensureParentReferralCode } from '../../services/referrals';
 import { buildVnpayUrl } from '../../services/vnpay';
@@ -21,6 +21,8 @@ export interface ParentRow {
   password_hash: string;
   name: string;
   referral_code: string | null;
+  token_version: number;
+  is_active: boolean;
 }
 
 export interface ParentPublic {
@@ -47,7 +49,7 @@ export interface ChildSummary extends LinkedStudent {
 
 /* --------------------------------- Helpers --------------------------------- */
 
-async function issueTokenPairForParent(p: ParentPublic): Promise<TokenPair> {
+async function issueTokenPairForParent(p: ParentPublic & { token_version: number }): Promise<TokenPair> {
   const payload: AuthUser = {
     id: p.id,
     username: p.phone,
@@ -56,6 +58,7 @@ async function issueTokenPairForParent(p: ParentPublic): Promise<TokenPair> {
     name: p.name,
     center_id: p.center_id,
     parent_id: p.id,
+    tv: p.token_version, // D2: nhúng token version để thu hồi access token ngay khi đổi pass/khóa TK
   };
   return issueTokenPair(payload);
 }
@@ -147,7 +150,7 @@ export async function registerParent(input: {
     referral_code: await ensureParentReferralCode(parentId),
     center_id: center.id,
   };
-  return { ...(await issueTokenPairForParent(parent)), parent };
+  return { ...(await issueTokenPairForParent({ ...parent, token_version: 1 })), parent };
 }
 
 export async function loginParent(input: {
@@ -174,6 +177,10 @@ export async function loginParent(input: {
   if (!parent || !ok) {
     throw AppError.unauthorized('Số điện thoại hoặc mật khẩu không đúng');
   }
+  // D2: từ chối tài khoản đã bị khóa
+  if (!parent.is_active) {
+    throw AppError.forbidden('Tài khoản đã bị khóa, vui lòng liên hệ trung tâm', 'ACCOUNT_LOCKED');
+  }
   const out: ParentPublic = {
     id: parent.id,
     phone: parent.phone,
@@ -181,7 +188,7 @@ export async function loginParent(input: {
     referral_code: await ensureParentReferralCode(parent.id),
     center_id: parent.center_id,
   };
-  return { ...(await issueTokenPairForParent(out)), parent: out };
+  return { ...(await issueTokenPairForParent({ ...out, token_version: parent.token_version })), parent: out };
 }
 
 /* ------------------------------ Con & liên kết ------------------------------ */
@@ -747,4 +754,26 @@ export async function changePassword(parentId: number, oldPassword: string, newP
   if (!ok) throw AppError.badRequest('Mật khẩu cũ không đúng');
   const hash = await bcrypt.hash(newPassword, 10);
   await db.prepare('UPDATE parents SET password_hash = ? WHERE id = ?').run(hash, parentId);
+  // D2: tăng token_version → mọi access token cũ bị thu hồi ngay (client tự refresh khi gặp 401)
+  await db.prepare('UPDATE parents SET token_version = token_version + 1 WHERE id = ?').run(parentId);
+  invalidateTokenCheck('parent', parentId);
+}
+
+/** H5: trạng thái đồng ý nhận tin Zalo ZNS của phụ huynh. */
+export type ZaloConsent = 'granted' | 'denied' | 'unknown';
+
+export async function getZaloConsent(parentId: number): Promise<ZaloConsent> {
+  const row = (await db.prepare('SELECT zalo_consent FROM parents WHERE id = ?').get(parentId)) as {
+    zalo_consent: ZaloConsent | null;
+  } | undefined;
+  return row?.zalo_consent ?? 'unknown';
+}
+
+/** H5: phụ huynh tự bật/tắt nhận tin Zalo ZNS. */
+export async function setZaloConsent(parentId: number, consent: string): Promise<ZaloConsent> {
+  if (consent !== 'granted' && consent !== 'denied') {
+    throw AppError.badRequest('Trạng thái đồng ý không hợp lệ');
+  }
+  await db.prepare('UPDATE parents SET zalo_consent = ? WHERE id = ?').run(consent, parentId);
+  return consent;
 }

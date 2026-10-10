@@ -123,6 +123,12 @@
     "confirm": "Xác nhận thu",
     "confirmText": "{{name}} - còn nợ <strong>{{debt}}</strong>",
     "method": "Phương thức",
+    "methods": {
+      "cash": "Tiền mặt",
+      "transfer": "Chuyển khoản",
+      "card": "Quẹt thẻ",
+      "ewallet": "Ví điện tử"
+    },
     "note": "Ghi chú",
     "payError": "Thu tiền thất bại",
     "recorded": "Đã ghi nhận thanh toán",

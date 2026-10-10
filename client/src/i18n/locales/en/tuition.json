@@ -123,6 +123,12 @@
     "confirm": "Confirm collection",
     "confirmText": "{{name}} - owes <strong>{{debt}}</strong>",
     "method": "Method",
+    "methods": {
+      "cash": "Cash",
+      "transfer": "Bank transfer",
+      "card": "Card",
+      "ewallet": "E-wallet"
+    },
     "note": "Note",
     "payError": "Collection failed",
     "recorded": "Payment recorded",

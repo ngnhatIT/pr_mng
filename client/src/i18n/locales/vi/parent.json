@@ -176,7 +176,11 @@
     "referralDesc": "Chia sẻ mã, nhận credits giảm học phí",
     "subtitle": "Thông tin tài khoản phụ huynh của bạn",
     "title": "Tài khoản",
-    "watching": "Đang theo dõi <strong>{{count}}</strong> con"
+    "watching": "Đang theo dõi <strong>{{count}}</strong> con",
+    "zaloConsent": "Nhận tin Zalo",
+    "zaloConsentDesc": "Nhận thông báo học phí qua Zalo. Tắt nếu bạn không muốn nhận tin.",
+    "zaloConsentError": "Không lưu được tùy chọn, vui lòng thử lại",
+    "zaloConsentSaved": "Đã lưu tùy chọn nhận tin Zalo"
   },
   "quiz": {
     "answeredCount": "Đã trả lời {{answered}}/{{total}}",

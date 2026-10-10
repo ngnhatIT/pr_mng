@@ -38,12 +38,12 @@ export interface LeaveForm {
 
 export const parentApi = {
   login: (phone: string, password: string) =>
-    http.post<{ token: string; refresh_token: string; parent: ParentUser }>('/parent/login', {
+    http.post<{ token: string; parent: ParentUser }>('/parent/login', {
       phone,
       password,
     }),
   register: (phone: string, password: string, name: string, center_id: number) =>
-    http.post<{ token: string; refresh_token: string; parent: ParentUser }>('/parent/register', {
+    http.post<{ token: string; parent: ParentUser }>('/parent/register', {
       phone,
       password,
       name,
@@ -51,6 +51,10 @@ export const parentApi = {
     }),
 
   children: () => http.get<ParentChild[]>('/parent/children'),
+  /** H5: trạng thái + bật/tắt đồng ý nhận tin Zalo ZNS */
+  consent: () => http.get<{ zalo_consent: string }>('/parent/consent'),
+  setConsent: (consent: 'granted' | 'denied') =>
+    http.put<{ ok: boolean; zalo_consent: string }>('/parent/consent', { consent }),
   linkChild: (studentCode: string, dob: string) =>
     http.post<{ ok: boolean; student: ParentChild }>('/parent/link', { student_code: studentCode, dob }),
   childOverview: (id: number | string) => http.get<ChildOverview>(`/parent/children/${id}/overview`),

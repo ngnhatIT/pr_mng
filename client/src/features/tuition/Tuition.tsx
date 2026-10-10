@@ -594,6 +594,19 @@ function InvoiceFormModal({ onClose, onDone }: { onClose: () => void; onDone: ()
   );
 }
 
+/**
+ * Phương thức thanh toán: state giữ `code` để hiển thị qua i18n, khi gửi server
+ * map về chuỗi tiếng Việt cũ (server nhận chuỗi tự do, DB đang lưu các giá trị này).
+ */
+const PAYMENT_METHODS = [
+  { code: 'cash', legacy: 'Tiền mặt' },
+  { code: 'transfer', legacy: 'Chuyển khoản' },
+  { code: 'card', legacy: 'Quẹt thẻ' },
+  { code: 'ewallet', legacy: 'Ví điện tử' },
+] as const;
+
+type PaymentMethodCode = (typeof PAYMENT_METHODS)[number]['code'];
+
 function PayModal({
   invoice,
   onClose,
@@ -607,7 +620,7 @@ function PayModal({
   const paid = invoice.paid || 0;
   const remain = invoice.amount - paid;
   const [amount, setAmount] = useState(String(remain));
-  const [method, setMethod] = useState('Tiền mặt');
+  const [method, setMethod] = useState<PaymentMethodCode>('cash');
   const [note, setNote] = useState('');
   const [busy, setBusy] = useState(false);
   const toast = useToast();
@@ -619,7 +632,8 @@ function PayModal({
     try {
       await invoicesApi.recordPayment(invoice.id, {
         amount: Number(amount),
-        method,
+        // Giữ tương thích server/DB: gửi chuỗi tiếng Việt cũ thay vì code
+        method: PAYMENT_METHODS.find((m) => m.code === method)?.legacy ?? method,
         note: note || null,
       });
       toast(t('pay.recorded'), 'success');
@@ -655,11 +669,16 @@ function PayModal({
             />
           </Field>
           <Field label={t('pay.method')}>
-            <select className="text-input" value={method} onChange={(e) => setMethod(e.target.value)}>
-              <option>Tiền mặt</option>
-              <option>Chuyển khoản</option>
-              <option>Quẹt thẻ</option>
-              <option>Ví điện tử</option>
+            <select
+              className="text-input"
+              value={method}
+              onChange={(e) => setMethod(e.target.value as PaymentMethodCode)}
+            >
+              {PAYMENT_METHODS.map((m) => (
+                <option key={m.code} value={m.code}>
+                  {t(`pay.methods.${m.code}`)}
+                </option>
+              ))}
             </select>
           </Field>
           <Field label={t('pay.note')} span>

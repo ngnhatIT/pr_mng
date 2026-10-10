@@ -5,8 +5,9 @@
  * Build trước: npm run build (tạo server/dist)
  *
  * Lưu ý: rate-limit và permission cache là in-memory nên tách riêng theo từng
- * worker. Ở 2 worker điều này chấp nhận được; scale xa hơn (4+ worker hoặc
- * nhiều máy) thì cần đưa rate-limit/cache ra Redis.
+ * worker. RATE_LIMIT_DIVISOR=2 chia quota mỗi worker để tổng toàn cụm đúng max
+ * cấu hình. Scale xa hơn (4+ worker hoặc nhiều máy) thì cần đưa rate-limit/cache
+ * ra Redis.
  */
 module.exports = {
   apps: [
@@ -22,6 +23,9 @@ module.exports = {
       env_production: {
         NODE_ENV: 'production',
         PORT: 4000,
+        // B2: 2 worker → mỗi worker giữ Map rate-limit riêng nên max cấu hình
+        // được chia 2 (tổng toàn cụm vẫn đúng max). Xem middleware/rateLimit.ts.
+        RATE_LIMIT_DIVISOR: '2',
       },
     },
   ],

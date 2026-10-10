@@ -151,15 +151,20 @@ export interface ReminderItem {
   due_date: string | null;
 }
 
-export const DAY_NAMES: Record<number, string> = {
-  2: 'Thứ Hai',
-  3: 'Thứ Ba',
-  4: 'Thứ Tư',
-  5: 'Thứ Năm',
-  6: 'Thứ Sáu',
-  7: 'Thứ Bảy',
-  8: 'Chủ Nhật',
-};
+/**
+ * Tên các ngày trong tuần theo ngôn ngữ hiện tại của app (2 = Thứ Hai ... 8 = Chủ Nhật).
+ * Dùng Intl.DateTimeFormat thay vì hard-code để tự theo locale người dùng.
+ */
+export function getDayNames(locale?: string): Record<number, string> {
+  const lang = locale ?? i18n.language;
+  const fmt = new Intl.DateTimeFormat(lang === 'en' ? 'en-US' : 'vi-VN', { weekday: 'long' });
+  const names: Record<number, string> = {};
+  for (let day = 2; day <= 8; day++) {
+    // 12/10/2026 là Thứ Hai -> day 2..8 ứng với 12..18/10/2026
+    names[day] = fmt.format(new Date(2026, 9, 10 + day));
+  }
+  return names;
+}
 
 /**
  * Format tiền VND theo ngôn ngữ hiện tại của app.
@@ -191,8 +196,9 @@ export function formatDateTime(iso: string | null): string {
 
 export function formatScheduleText(scheduleJson: string): string {
   try {
+    const names = getDayNames();
     const s: ScheduleEntry[] = JSON.parse(scheduleJson || '[]');
-    return s.map((e) => `${DAY_NAMES[e.day] || ''} ${e.start}-${e.end}`).join(', ');
+    return s.map((e) => `${names[e.day] || ''} ${e.start}-${e.end}`).join(', ');
   } catch {
     return '';
   }

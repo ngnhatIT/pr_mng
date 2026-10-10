@@ -37,7 +37,7 @@ interface VnpayTxnRow {
   status: string;
 }
 
-type VnpayConfirmResult =
+export type VnpayConfirmResult =
   | { kind: 'confirmed'; txnRef: string; already: boolean }
   | {
       kind: 'failed';
@@ -45,7 +45,8 @@ type VnpayConfirmResult =
     };
 
 /**
- * Logic xác nhận VNPay dùng chung cho return URL và IPN.
+ * Logic xác nhận VNPay — CHỈ dùng cho IPN handler (G2).
+ * Return URL không gọi hàm này nữa (chỉ verify chữ ký + đọc DB để hiển thị).
  * - Idempotent: txn đã 'confirmed' → trả thành công ngay, không ghi thêm payment.
  * - Chỉ xử lý txn 'pending'; các trạng thái khác → fail.
  * - Secret trống → từ chối (chống giả mạo callback khi chưa cấu hình).
@@ -157,7 +158,27 @@ async function confirmVnpayTxn(
 }
 
 /**
- * Xử lý VNPay return (public — VNPay gọi về, không có token).
+ * G6: Đối soát đơn VNPay treo từ kết quả querydr (đã verify chữ ký ở tầng gọi).
+ * - vnp_TransactionStatus = '00' → đi đúng đường confirmVnpayTxn (verify lại chữ ký
+ *   querydr do VNPay ký bằng cùng hashSecret, check số tiền, chống overpay) —
+ *   không duplicate logic tiền.
+ * - Khác '00' → đánh failed (giống nhánh payment_failed của confirm).
+ */
+export async function reconcileVnpayTxn(qd: Record<string, string>): Promise<VnpayConfirmResult> {
+  if (qd.vnp_TransactionStatus !== '00') {
+    await db
+      .prepare("UPDATE payment_txns SET status = 'failed' WHERE ref = ? AND status = 'pending'")
+      .run(qd.vnp_TxnRef);
+    return { kind: 'failed', reason: 'payment_failed' };
+  }
+  return confirmVnpayTxn(qd);
+}
+
+/**
+ * Xử lý VNPay return (public — browser redirect, không có token).
+ * G2: CHỈ verify chữ ký VNPay + đọc trạng thái từ payment_txns để hiển thị,
+ * KHÔNG gọi confirmVnpayTxn, KHÔNG INSERT/UPDATE gì. Mọi ghi nhận tiền
+ * chỉ diễn ra ở IPN handler (server-to-server, đáng tin cậy).
  * Trả về URL để redirect (luôn thành công ở tầng HTTP, lỗi thể hiện qua query).
  */
 export async function handleVnpayReturn(
@@ -165,11 +186,31 @@ export async function handleVnpayReturn(
 ): Promise<string> {
   const fail = (reason: string): string => `${RESULT_PAGE}?status=fail&reason=${reason}`;
   try {
-    const r = await confirmVnpayTxn(query);
-    if (r.kind === 'confirmed') {
-      return `${RESULT_PAGE}?status=success&ref=${encodeURIComponent(r.txnRef)}`;
+    const txnRef = String(query.vnp_TxnRef || '');
+    const txn = (await db
+      .prepare('SELECT ref, invoice_id, amount, status FROM payment_txns WHERE ref = ?')
+      .get(txnRef)) as VnpayTxnRow | undefined;
+    if (!txn) return fail('notfound');
+    // Lấy secret theo center của hóa đơn để verify chữ ký (chỉ đọc, không ghi)
+    const inv = (await db
+      .prepare('SELECT student_id FROM invoices WHERE id = ?')
+      .get(txn.invoice_id)) as { student_id: number } | undefined;
+    const student = inv
+      ? ((await db.prepare('SELECT center_id FROM students WHERE id = ?').get(inv.student_id)) as {
+          center_id: number | null;
+        } | undefined)
+      : undefined;
+    const secret = await getCenterSetting(student?.center_id ?? 0, 'pay_vnp_hashsecret');
+    if (!secret) return fail('invalid_signature');
+    const result = verifyVnpayReturn(query, secret);
+    if (!result.ok) return fail('invalid_signature');
+    if (!result.success) return fail('payment_failed');
+    // Chữ ký hợp lệ + VNPay báo thành công: hiển thị theo trạng thái DB.
+    // IPN (server-to-server) mới là nơi ghi nhận tiền; return về trước IPN -> pending.
+    if (txn.status === 'confirmed') {
+      return `${RESULT_PAGE}?status=success&ref=${encodeURIComponent(txnRef)}`;
     }
-    return fail(r.reason);
+    return `${RESULT_PAGE}?status=pending&ref=${encodeURIComponent(txnRef)}`;
   } catch (err) {
     log.error('handleVnpayReturn error', {
       ref: String(query.vnp_TxnRef || ''),

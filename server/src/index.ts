@@ -5,10 +5,12 @@ import { env } from './config/env';
 import { logger } from './shared/logger';
 import { createApp } from './app';
 import { startReminderScheduler, stopReminderScheduler } from './jobs/reminderScheduler';
+import { startVnpayReconcileScheduler, stopVnpayReconcileScheduler } from './jobs/vnpayReconcile';
 import { initDatabase, closePool, db } from './db';
 import { sendAlert } from './shared/alert';
 import { backupDatabase } from './db/backup';
 import { withAdvisoryLock } from './shared/advisoryLock';
+import { trackJob, waitForJobs } from './shared/jobTracker';
 
 /**
  * Bẫy lỗi toàn cục — chuẩn production:
@@ -53,6 +55,7 @@ export function stopSchedulers(): void {
   void backupTask?.stop();
   void consistencyTask?.stop();
   backupTask = consistencyTask = null;
+  stopVnpayReconcileScheduler();
 }
 
 function startBackupScheduler(): void {
@@ -61,36 +64,40 @@ function startBackupScheduler(): void {
     return;
   }
   const dir = path.resolve(process.cwd(), 'backups');
-  backupTask = cron.schedule(
-    env.BACKUP_CRON,
-    async () => {
-      // Advisory lock đúng cách: dedicated client giữ lock suốt quá trình (kể cả retry)
-      const outcome = await withAdvisoryLock('educenter-backup', async () => {
-        try {
-          const r = await backupDatabase(dir, env.BACKUP_KEEP);
-          logger.info('Backup định kỳ hoàn tất', { path: r.path, sizeBytes: r.sizeBytes, kept: r.kept });
-        } catch (err: unknown) {
-          // Retry 2 lần cách nhau 15 phút — vẫn giữ lock để instance khác không xen vào
-          logger.error('Backup định kỳ THẤT BẠI, thử lại sau 15 phút', { error: String(err) });
-          for (let attempt = 1; attempt <= 2; attempt++) {
-            await new Promise((resolve) => setTimeout(resolve, 15 * 60 * 1000));
-            try {
-              const r = await backupDatabase(dir, env.BACKUP_KEEP);
-              logger.info('Backup retry thành công', { attempt, path: r.path });
-              return;
-            } catch (retryErr: unknown) {
-              logger.error('Backup retry THẤT BẠI', { attempt, error: String(retryErr) });
-              if (attempt === 2) {
-                await sendAlert('Backup DB thất bại sau 3 lần thử', String(retryErr));
-                throw retryErr;
-              }
+  const runBackup = async (): Promise<void> => {
+    // Advisory lock đúng cách: dedicated client giữ lock suốt quá trình (kể cả retry)
+    const outcome = await withAdvisoryLock('educenter-backup', async () => {
+      try {
+        const r = await backupDatabase(dir, env.BACKUP_KEEP);
+        logger.info('Backup định kỳ hoàn tất', { path: r.path, sizeBytes: r.sizeBytes, kept: r.kept });
+      } catch (err: unknown) {
+        // Retry 2 lần cách nhau 15 phút — vẫn giữ lock để instance khác không xen vào
+        logger.error('Backup định kỳ THẤT BẠI, thử lại sau 15 phút', { error: String(err) });
+        for (let attempt = 1; attempt <= 2; attempt++) {
+          await new Promise((resolve) => setTimeout(resolve, 15 * 60 * 1000));
+          try {
+            const r = await backupDatabase(dir, env.BACKUP_KEEP);
+            logger.info('Backup retry thành công', { attempt, path: r.path });
+            return;
+          } catch (retryErr: unknown) {
+            logger.error('Backup retry THẤT BẠI', { attempt, error: String(retryErr) });
+            if (attempt === 2) {
+              await sendAlert('Backup DB thất bại sau 3 lần thử', String(retryErr));
+              throw retryErr;
             }
           }
         }
-      });
-      if (outcome.status === 'error') {
-        logger.error('Backup thất bại hoàn toàn', { error: String(outcome.error) });
       }
+    });
+    if (outcome.status === 'error') {
+      logger.error('Backup thất bại hoàn toàn', { error: String(outcome.error) });
+    }
+  };
+  backupTask = cron.schedule(
+    env.BACKUP_CRON,
+    // trackJob: graceful shutdown chờ job backup đang chạy xong (tối đa 30s).
+    () => {
+      void trackJob(runBackup());
     },
     { timezone: 'Asia/Ho_Chi_Minh' }
   );
@@ -107,7 +114,9 @@ function startConsistencyScheduler(): void {
   consistencyTask = cron.schedule(
     '0 * * * *',
     () => {
-      void withAdvisoryLock('educenter-consistency', async () => {
+      // trackJob: graceful shutdown chờ vòng check/dọn dẹp đang chạy (tối đa 30s).
+      void trackJob(
+        withAdvisoryLock('educenter-consistency', async () => {
         try {
           const { checkFinancialConsistency } = await import('./db/consistency.js');
           const issues = await checkFinancialConsistency(db);
@@ -135,7 +144,8 @@ function startConsistencyScheduler(): void {
         } catch (err: unknown) {
           logger.error('Kiểm tra nhất quán tài chính thất bại', { error: String(err) });
         }
-      });
+        })
+      );
     },
     { timezone: 'Asia/Ho_Chi_Minh' }
   );
@@ -155,22 +165,28 @@ async function main(): Promise<void> {
     startReminderScheduler();
     startBackupScheduler();
     startConsistencyScheduler();
+    startVnpayReconcileScheduler(); // G6: đối soát đơn VNPay treo mỗi 15 phút
   });
 
   /**
    * Graceful shutdown — chuẩn production:
-   * - Ngừng nhận request mới, chờ request đang xử lý xong (timeout 10s)
+   * - Dừng scheduler (không phát sinh job mới), chờ job đang chạy xong (tối đa 30s)
+   * - Ngừng nhận request mới, chờ request đang xử lý xong
    * - Đóng PG pool sạch
    */
-  function shutdown(signal: string): void {
+  async function shutdown(signal: string): Promise<void> {
     logger.info(`Nhận ${signal}, đang tắt graceful...`);
     stopSchedulers();
     stopReminderScheduler();
+    // Ép tắt nếu shutdown treo quá 35s (30s chờ job + margin đóng pool/server).
     const forceTimer = setTimeout(() => {
       logger.warn('Graceful timeout, ép tắt');
       process.exit(1);
-    }, 10000);
+    }, 35000);
     forceTimer.unref();
+
+    // Chờ các job cron đang chạy xong (tối đa 30s) trước khi đóng pool.
+    await waitForJobs();
 
     // Drain keep-alive idle connections (tránh server.close() treo)
     if (typeof server.closeIdleConnections === 'function') {
@@ -187,8 +203,12 @@ async function main(): Promise<void> {
     });
   }
 
-  process.on('SIGTERM', () => shutdown('SIGTERM'));
-  process.on('SIGINT', () => shutdown('SIGINT'));
+  process.on('SIGTERM', () => {
+    void shutdown('SIGTERM');
+  });
+  process.on('SIGINT', () => {
+    void shutdown('SIGINT');
+  });
 }
 
 main().catch((err: unknown) => {

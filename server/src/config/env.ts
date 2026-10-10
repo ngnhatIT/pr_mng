@@ -56,6 +56,20 @@ export const env = {
   LOGIN_RATE_WINDOW_MS: optionalInt('LOGIN_RATE_WINDOW_MS', 60_000),
 
   /**
+   * D5: Rate limit đăng nhập theo tài khoản (lớp 2, chống brute-force 1 user
+   * cụ thể từ nhiều IP). Mặc định 20 lần / 15 phút / tài khoản.
+   */
+  LOGIN_ACCOUNT_RATE_LIMIT: optionalInt('LOGIN_ACCOUNT_RATE_LIMIT', 20),
+  LOGIN_ACCOUNT_WINDOW_MS: optionalInt('LOGIN_ACCOUNT_WINDOW_MS', 15 * 60 * 1000),
+
+  /**
+   * B2: Rate limiter in-memory tách riêng theo từng worker (PM2 cluster).
+   * Đặt = số worker để mỗi worker chỉ cho qua max/divisor request — tổng
+   * toàn cụm vẫn đúng max đã cấu hình. Mặc định 1 (chạy 1 process).
+   */
+  RATE_LIMIT_DIVISOR: optionalInt('RATE_LIMIT_DIVISOR', 1),
+
+  /**
    * Chỉ tin header X-Forwarded-For (cho rate limit) khi chạy sau reverse proxy đáng tin.
    * Mặc định false → rate limit key theo req.socket.remoteAddress (chống bypass bằng header giả).
    */
@@ -134,9 +148,9 @@ export const env = {
   /** Webhook nhận cảnh báo vận hành (backup fail...). Optional. */
   ALERT_WEBHOOK_URL: optional('ALERT_WEBHOOK_URL', ''),
 
-  /** Access token sống bao lâu (chuỗi jwt, vd: '1h', '30m'). Mặc định 1 giờ. */
+  /** Access token sống bao lâu (chuỗi jwt, vd: '15m', '1h'). Mặc định 15 phút (D2: TTL ngắn để thu hồi nhanh). */
   ACCESS_TOKEN_TTL: (() => {
-    const v = optional('ACCESS_TOKEN_TTL', '1h');
+    const v = optional('ACCESS_TOKEN_TTL', '15m');
     // Fail-fast nếu format sai (vd: '60' thiếu đơn vị) — tránh chạy với TTL không mong muốn
     if (!/^\d+[smhd]$/.test(v)) {
       throw new Error(`[CONFIG] ACCESS_TOKEN_TTL sai format: "${v}" (vd đúng: "1h", "30m")`);

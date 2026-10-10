@@ -1,14 +1,22 @@
 import { Router, Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import { db } from '../../db';
-import { AuthUser, DUMMY_PASSWORD_HASH, requireAuth, type AuthRequest } from '../../middleware/auth';
+import { AuthUser, DUMMY_PASSWORD_HASH, invalidateTokenCheck, requireAuth, type AuthRequest } from '../../middleware/auth';
 import { loginRateLimit } from '../../middleware/rateLimit';
 import { asyncHandler } from '../../shared/http';
-import { validate, v } from '../../shared/validate';
 import { issueTokenPair, rotateRefreshToken, revokeRefreshToken, revokeAllForOwner, revokeAllForOwnerExcept } from './refresh.service';
 import { audit } from '../../shared/audit';
 import { assertStrongPassword, BCRYPT_ROUNDS } from '../../shared/password';
 import { logger } from '../../shared/logger';
+import {
+  setRefreshCookie,
+  clearRefreshCookie,
+  getRefreshCookie,
+  requireSameOrigin,
+} from '../../middleware/cookieAuth';
+
+/** Path cookie refresh cho staff: tách khỏi parent để 2 phiên không đè nhau. */
+const COOKIE_PATH = '/api/v1/auth';
 
 const log = logger.scope('auth');
 
@@ -36,6 +44,8 @@ router.post(
           name: string;
           center_id: number | null;
           teacher_id: number | null;
+          token_version: number;
+          is_active: boolean;
         }
       | undefined;
     const passwordOk = user
@@ -47,6 +57,12 @@ router.post(
       res.status(401).json({ error: 'Tên đăng nhập hoặc mật khẩu không đúng', code: 'UNAUTHORIZED' });
       return;
     }
+    // D2: từ chối tài khoản đã bị khóa
+    if (!user.is_active) {
+      log.warn('Đăng nhập bị từ chối: tài khoản đã khóa', { username, ip: reqMeta(req).ip });
+      res.status(403).json({ error: 'Tài khoản đã bị khóa, vui lòng liên hệ quản trị viên', code: 'ACCOUNT_LOCKED' });
+      return;
+    }
     const payload: AuthUser = {
       id: user.id,
       username: user.username,
@@ -55,6 +71,7 @@ router.post(
       kind: 'staff',
       center_id: user.center_id ?? null,
       teacher_id: user.teacher_id ?? null,
+      tv: user.token_version, // D2: nhúng token version để thu hồi access token ngay khi đổi pass/khóa TK
     };
     const pair = await issueTokenPair(payload, reqMeta(req));
     // Audit login thành công (forensics: ai đăng nhập lúc nào, từ IP nào)
@@ -66,29 +83,37 @@ router.post(
       entityId: user.id,
       summary: `${user.name} đăng nhập`,
     });
-    res.json({ ...pair, user: payload });
+    // D4: refresh token chỉ đi qua HttpOnly cookie, KHÔNG trả trong body nữa
+    setRefreshCookie(res, pair.refresh_token, COOKIE_PATH);
+    res.json({ token: pair.token, expires_in: pair.expires_in, user: payload });
   })
 );
 
-/** Đổi refresh token lấy cặp token mới (rotation). */
+/** Đổi refresh token (đọc từ HttpOnly cookie) lấy cặp token mới (rotation). */
 router.post(
   '/refresh',
   loginRateLimit,
+  requireSameOrigin, // D4: cookie tự gửi theo request -> cần chống CSRF
   asyncHandler(async (req: Request, res: Response) => {
-    const { refresh_token } = validate(req.body, {
-      refresh_token: v.string({ required: true, label: 'Refresh token' }),
-    });
-    const pair = await rotateRefreshToken(refresh_token, reqMeta(req));
-    res.json(pair);
+    const refreshToken = getRefreshCookie(req);
+    if (!refreshToken) {
+      res.status(400).json({ error: 'Thiếu refresh token', code: 'VALIDATION_REQUIRED' });
+      return;
+    }
+    const pair = await rotateRefreshToken(refreshToken, reqMeta(req));
+    setRefreshCookie(res, pair.refresh_token, COOKIE_PATH);
+    res.json({ token: pair.token, expires_in: pair.expires_in });
   })
 );
 
-/** Đăng xuất: thu hồi refresh token hiện tại. */
+/** Đăng xuất: thu hồi refresh token trong cookie rồi xóa cookie. */
 router.post(
   '/logout',
+  requireSameOrigin, // D4: chống CSRF
   asyncHandler(async (req: Request, res: Response) => {
-    const { refresh_token } = (req.body ?? {}) as { refresh_token?: string };
-    if (refresh_token) await revokeRefreshToken(refresh_token);
+    const refreshToken = getRefreshCookie(req);
+    if (refreshToken) await revokeRefreshToken(refreshToken);
+    clearRefreshCookie(res, COOKIE_PATH);
     res.json({ ok: true });
   })
 );
@@ -138,9 +163,14 @@ router.post(
     assertStrongPassword(new_password, 'Mật khẩu mới');
     const hash = bcrypt.hashSync(new_password, BCRYPT_ROUNDS);
     await db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(hash, u.id);
+    // D2: tăng token_version → mọi access token cũ bị thu hồi ngay (kể cả session hiện tại;
+    // client tự refresh lấy token mới khi gặp 401). Xóa cache để check có hiệu lực tức thì.
+    await db.prepare('UPDATE users SET token_version = token_version + 1 WHERE id = ?').run(u.id);
+    invalidateTokenCheck('staff', u.id);
     // Đổi mật khẩu = thu hồi mọi session khác (giữ session hiện tại, kẻ trộm bị đá ra)
+    // D4: đọc refresh token từ cookie (fallback body cho client cũ trong đợt rolling deploy)
     const { refresh_token } = (req.body ?? {}) as { refresh_token?: string };
-    await revokeAllForOwnerExcept('staff', u.id, refresh_token);
+    await revokeAllForOwnerExcept('staff', u.id, getRefreshCookie(req) ?? refresh_token);
     await audit({
       centerId: u.center_id ?? null,
       actor: { id: u.id, name: u.name, role: u.role },

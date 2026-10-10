@@ -98,23 +98,51 @@ after(async () => {
   await teardownTestDb();
 });
 
-describe('payments.idempotency - VNPay replay', () => {
+describe('payments.idempotency - VNPay replay (IPN)', () => {
   beforeEach(async () => {
     await resetDb();
   });
 
-  it('gọi handleVnpayReturn 2 lần cùng ref -> chỉ 1 payment confirmed', async () => {
+  it('gọi handleVnpayIpn 2 lần cùng ref -> chỉ 1 payment confirmed', async () => {
     const q = buildReturnQuery(TXN_REF);
 
-    const url1 = await paymentsService.handleVnpayReturn(q);
-    assert.ok(url1.includes('status=success'), `lần 1 phải success, got: ${url1}`);
+    const r1 = await paymentsService.handleVnpayIpn(q);
+    assert.equal(r1.RspCode, '00', `lần 1 phải Confirm Success, got: ${JSON.stringify(r1)}`);
     assert.equal(await confirmedPaymentCount(), 1);
     assert.equal(await txnStatus(TXN_REF), 'confirmed');
 
-    const url2 = await paymentsService.handleVnpayReturn(q);
-    assert.ok(url2.includes('status=success'), `lần 2 (replay) phải success idempotent, got: ${url2}`);
+    const r2 = await paymentsService.handleVnpayIpn(q);
+    assert.equal(r2.RspCode, '00', `lần 2 (replay) phải idempotent, got: ${JSON.stringify(r2)}`);
     assert.equal(await confirmedPaymentCount(), 1);
     assert.equal(await txnStatus(TXN_REF), 'confirmed');
+  });
+
+  it('G2: handleVnpayReturn KHÔNG ghi gì — chỉ hiển thị theo DB', async () => {
+    const q = buildReturnQuery(TXN_REF);
+
+    // Return về trước IPN: chữ ký hợp lệ nhưng txn vẫn pending -> status=pending, DB nguyên vẹn
+    const url1 = await paymentsService.handleVnpayReturn(q);
+    assert.ok(url1.includes('status=pending'), `phải pending chờ IPN, got: ${url1}`);
+    assert.equal(await confirmedPaymentCount(), 0, 'return URL không được ghi payment');
+    assert.equal(await txnStatus(TXN_REF), 'pending', 'return URL không được đổi trạng thái txn');
+
+    // IPN mới là nơi ghi nhận tiền
+    const r = await paymentsService.handleVnpayIpn(q);
+    assert.equal(r.RspCode, '00');
+    assert.equal(await confirmedPaymentCount(), 1);
+
+    // Return về sau IPN -> success
+    const url2 = await paymentsService.handleVnpayReturn(q);
+    assert.ok(url2.includes('status=success'), `sau IPN phải success, got: ${url2}`);
+    assert.equal(await confirmedPaymentCount(), 1, 'return URL không được ghi thêm payment');
+  });
+
+  it('G2: handleVnpayReturn chữ ký sai -> fail, không ghi gì', async () => {
+    const q = { ...buildReturnQuery(TXN_REF), vnp_SecureHash: 'sai' };
+    const url = await paymentsService.handleVnpayReturn(q);
+    assert.ok(url.includes('status=fail'), `chữ ký sai phải fail, got: ${url}`);
+    assert.equal(await confirmedPaymentCount(), 0);
+    assert.equal(await txnStatus(TXN_REF), 'pending');
   });
 });
 

@@ -3,13 +3,22 @@ import { AuthRequest, parentAuth } from '../../middleware/auth';
 import { loginRateLimit } from '../../middleware/rateLimit';
 import { asyncHandler } from '../../shared/http';
 import { AppError } from '../../shared/errors';
-import { uploadSingle, cleanupUploadedFile } from '../../shared/upload';
+import { uploadSingle, assertSafeUpload, cleanupUploadedFile } from '../../shared/upload';
 import { validate, v, paramId } from '../../shared/validate';
 import { env } from '../../config/env';
 import { audit } from '../../shared/audit';
 import * as parentService from './parent.service';
 import { assertStrongPassword } from '../../shared/password';
 import { rotateRefreshToken, revokeRefreshToken, revokeAllForOwner, revokeAllForOwnerExcept } from '../auth/refresh.service';
+import {
+  setRefreshCookie,
+  clearRefreshCookie,
+  getRefreshCookie,
+  requireSameOrigin,
+} from '../../middleware/cookieAuth';
+
+/** Path cookie refresh cho phụ huynh: tách khỏi staff để 2 phiên không đè nhau. */
+const COOKIE_PATH = '/api/v1/parent';
 
 const router = Router();
 
@@ -40,7 +49,9 @@ router.post(
     // Chặn mật khẩu phổ biến (validate() chỉ check độ dài)
     assertStrongPassword(input.password);
     const result = await parentService.registerParent(input);
-    res.status(201).json(result);
+    // D4: refresh token chỉ đi qua HttpOnly cookie, KHÔNG trả trong body nữa
+    setRefreshCookie(res, result.refresh_token, COOKIE_PATH);
+    res.status(201).json({ token: result.token, expires_in: result.expires_in, parent: result.parent });
   })
 );
 
@@ -53,36 +64,61 @@ router.post(
       password: v.string({ required: true, label: 'Mật khẩu' }),
       center_id: v.number({ required: false, label: 'Trung tâm' }),
     });
-    res.json(await parentService.loginParent(input));
+    const result = await parentService.loginParent(input);
+    // D4: refresh token chỉ đi qua HttpOnly cookie, KHÔNG trả trong body nữa
+    setRefreshCookie(res, result.refresh_token, COOKIE_PATH);
+    res.json({ token: result.token, expires_in: result.expires_in, parent: result.parent });
   })
 );
 
-/** Đổi refresh token lấy cặp token mới (rotation). */
+/** Đổi refresh token (đọc từ HttpOnly cookie) lấy cặp token mới (rotation). */
 router.post(
   '/refresh',
   loginRateLimit,
+  requireSameOrigin, // D4: cookie tự gửi theo request -> cần chống CSRF
   asyncHandler(async (req: AuthRequest, res: Response) => {
-    const { refresh_token } = validate(req.body, {
-      refresh_token: v.string({ required: true, label: 'Refresh token' }),
-    });
-    res.json(
-      await rotateRefreshToken(refresh_token, { ip: req.ip, userAgent: req.get('user-agent') ?? undefined })
-    );
+    const refreshToken = getRefreshCookie(req);
+    if (!refreshToken) {
+      res.status(400).json({ error: 'Thiếu refresh token', code: 'VALIDATION_REQUIRED' });
+      return;
+    }
+    const pair = await rotateRefreshToken(refreshToken, { ip: req.ip, userAgent: req.get('user-agent') ?? undefined });
+    setRefreshCookie(res, pair.refresh_token, COOKIE_PATH);
+    res.json({ token: pair.token, expires_in: pair.expires_in });
   })
 );
 
-/** Đăng xuất phụ huynh: thu hồi refresh token. */
+/** Đăng xuất phụ huynh: thu hồi refresh token trong cookie rồi xóa cookie. */
 router.post(
   '/logout',
+  requireSameOrigin, // D4: chống CSRF
   asyncHandler(async (req: AuthRequest, res: Response) => {
-    const { refresh_token } = (req.body ?? {}) as { refresh_token?: string };
-    if (refresh_token) await revokeRefreshToken(refresh_token);
+    const refreshToken = getRefreshCookie(req);
+    if (refreshToken) await revokeRefreshToken(refreshToken);
+    clearRefreshCookie(res, COOKIE_PATH);
     res.json({ ok: true });
   })
 );
 
 /* --------------------- Từ đây yêu cầu đăng nhập phụ huynh --------------------- */
 router.use(parentAuth);
+
+/** H5: lấy trạng thái đồng ý nhận tin Zalo ZNS. */
+router.get(
+  '/consent',
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    res.json({ zalo_consent: await parentService.getZaloConsent(ctx(req).parentId) });
+  })
+);
+
+/** H5: phụ huynh tự bật/tắt nhận tin Zalo ZNS. */
+router.put(
+  '/consent',
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const { consent } = (req.body ?? {}) as { consent?: string };
+    res.json({ ok: true, zalo_consent: await parentService.setZaloConsent(ctx(req).parentId, consent ?? '') });
+  })
+);
 
 /** Đổi mật khẩu phụ huynh: yêu cầu mật khẩu cũ + thu hồi mọi session khác. */
 router.post(
@@ -100,8 +136,9 @@ router.post(
     assertStrongPassword(new_password);
     await parentService.changePassword(parentId, old_password, new_password);
     // Thu hồi mọi session khác (giữ session hiện tại)
+    // D4: đọc refresh token từ cookie (fallback body cho client cũ trong đợt rolling deploy)
     const { refresh_token } = (req.body ?? {}) as { refresh_token?: string };
-    await revokeAllForOwnerExcept('parent', parentId, refresh_token);
+    await revokeAllForOwnerExcept('parent', parentId, getRefreshCookie(req) ?? refresh_token);
     await audit({
       centerId: null,
       action: 'change_password',
@@ -331,6 +368,9 @@ router.post(
   '/homework/:homeworkId/submit',
   uploadSingle,
   asyncHandler(async (req: AuthRequest, res: Response) => {
+    // E2: fileFilter của multer chỉ check đuôi file (chạy trước khi ghi đĩa) —
+    // kiểm tra magic bytes + mimetype tại đây, file giả mạo → xóa + 400.
+    if (req.file) assertSafeUpload(req.file);
     const { parentId } = ctx(req);
     const homeworkId = paramId(req.params, 'homeworkId');
     const studentId = Number(req.body.student_id);

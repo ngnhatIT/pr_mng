@@ -26,20 +26,22 @@ router.get(
  * VNPay IPN — PUBLIC server-to-server (VNPay gọi trực tiếp).
  * Xử lý khi phụ huynh đóng tab trước khi redirect về.
  * Trả về RspCode chuẩn VNPay (JSON), luôn HTTP 200.
+ *
+ * VNPay gọi IPN URL bằng GET (query string). Đăng ký cả GET lẫn POST
+ * để không bị 404 mất xác nhận thanh toán nếu VNPay đổi method.
  */
-router.post(
-  '/vnpay-ipn',
-  asyncHandler(async (req: AuthRequest, res: Response) => {
-    const query = {
-      ...(req.query as Record<string, string | undefined>),
-      ...(req.body as Record<string, string | undefined>),
-    };
-    const result = await paymentService.handleVnpayIpn(
-      query as Record<string, string | string[] | undefined>
-    );
-    res.json(result);
-  })
-);
+async function handleIpn(req: AuthRequest, res: Response) {
+  const query = {
+    ...(req.query as Record<string, string | undefined>),
+    ...(req.body as Record<string, string | undefined>),
+  };
+  const result = await paymentService.handleVnpayIpn(
+    query as Record<string, string | string[] | undefined>
+  );
+  res.json(result);
+}
+router.get('/vnpay-ipn', asyncHandler(handleIpn));
+router.post('/vnpay-ipn', asyncHandler(handleIpn));
 
 /* --------------------- Từ đây yêu cầu đăng nhập --------------------- */
 router.use(requireAuth);

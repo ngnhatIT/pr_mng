@@ -32,7 +32,12 @@ router.get(
   requirePermission('notifications.manage'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const cfg = await getZaloConfig(await cidOf(req));
-    res.json({ ...cfg, zalo_access_token: maskAccessToken(cfg.zalo_access_token) });
+    res.json({
+      ...cfg,
+      zalo_access_token: maskAccessToken(cfg.zalo_access_token),
+      zalo_refresh_token: maskAccessToken(cfg.zalo_refresh_token),
+      zalo_app_secret: maskAccessToken(cfg.zalo_app_secret),
+    });
   })
 );
 
@@ -47,6 +52,8 @@ router.put(
       return;
     }
     const body = req.body as Record<string, unknown>;
+    // Cảnh báo (không chặn): Zalo khuyến nghị chỉ gửi tin 07:00-21:00
+    let hourWarning: string | null = null;
     for (const k of ZALO_CONFIG_KEYS) {
       if (body[k] === undefined) continue;
       let v = String(body[k] ?? '');
@@ -57,6 +64,9 @@ router.put(
         if (!m || hh < 0 || hh > 23 || mm < 0 || mm > 59) {
           res.status(400).json({ error: 'Giờ nhắc phải có dạng HH:MM (00:00-23:59)', code: 'BAD_REQUEST' });
           return;
+        }
+        if (hh < 7 || hh >= 21) {
+          hourWarning = `Giờ nhắc ${v} nằm ngoài khung 07:00-21:00, tin nhắn có thể làm phiền phụ huynh.`;
         }
       }
       if ((k === 'reminder_overdue_days' || k === 'reminder_upcoming_days') && v) {
@@ -71,7 +81,13 @@ router.put(
       await setCenterSetting(cid, k, v.trim());
     }
     const cfg = await getZaloConfig(cid);
-    res.json({ ...cfg, zalo_access_token: maskAccessToken(cfg.zalo_access_token) });
+    res.json({
+      ...cfg,
+      zalo_access_token: maskAccessToken(cfg.zalo_access_token),
+      ...(hourWarning ? { warning: hourWarning } : {}),
+      zalo_refresh_token: maskAccessToken(cfg.zalo_refresh_token),
+      zalo_app_secret: maskAccessToken(cfg.zalo_app_secret),
+    });
   })
 );
 

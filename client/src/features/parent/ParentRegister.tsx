@@ -50,11 +50,7 @@ export function ParentRegister() {
     setError('');
     try {
       const data = await parentApi.register(phone, password, name, center.id);
-      setAuth(
-        data.token,
-        { ...data.parent, role: 'parent', username: data.parent.phone },
-        data.refresh_token
-      );
+      setAuth(data.token, { ...data.parent, role: 'parent', username: data.parent.phone });
       toast(t('auth.registerSuccess'), 'success');
       navigate('/parent');
     } catch (err) {

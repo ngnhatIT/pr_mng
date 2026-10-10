@@ -105,9 +105,15 @@ server {
 - **Backup tự động**: theo lịch cron trong app.
 - **Health check**: `GET /api/health` (public, có ping DB), `GET /api/v1/health` (chi tiết, cần quyền).
 - **Metrics**: `GET /api/v1/metrics` (Prometheus).
-- **Rate limiting**: login 10 req/60s/IP; ghi dữ liệu 120 req/60s/IP.
+- **Rate limiting**: login 10 req/60s/IP (+ giới hạn riêng theo tài khoản);
+  API chung 300 req/15ph/tài khoản (IP nếu chưa đăng nhập); ghi 60 req/15ph.
+  Mọi giới hạn đều tính **per-worker**: với PM2 cluster N worker, đặt
+  `RATE_LIMIT_DIVISOR=N` (ecosystem.config.js đã đặt 2) để tổng toàn cụm
+  không vượt max cấu hình.
 
 ## Giới hạn đã biết
 
 - Rate limiter và event bus dùng bộ nhớ trong (in-memory): phù hợp chạy 1 instance.
-  Khi scale multi-instance, cần thay bằng Redis.
+  Khi scale multi-instance, cần thay bằng Redis. Với PM2 cluster, quota
+  rate-limit được chia đều cho các worker qua `RATE_LIMIT_DIVISOR`
+  (tổng toàn cụm = max cấu hình).

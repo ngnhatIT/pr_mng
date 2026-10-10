@@ -108,6 +108,20 @@ async function main(): Promise<void> {
   try {
     await client.query('BEGIN');
 
+    // Xóa dữ liệu PG cũ 1 lần cho toàn bộ bảng sẽ migrate (để chạy lại an toàn).
+    // TRUNCATE ... CASCADE tự xử lý thứ tự FK: DELETE từng bảng theo TABLE_ORDER
+    // (cha trước con sau) sẽ vi phạm FK khi xóa bảng cha mà bảng con còn tham chiếu.
+    // Chỉ truncate bảng tồn tại ở cả 2 phía để không làm hỏng schema PG thiếu bảng.
+    const pgTables = new Set(
+      (
+        await client.query(`SELECT tablename FROM pg_tables WHERE schemaname = 'public'`)
+      ).rows.map((r: { tablename: string }) => r.tablename)
+    );
+    const toClear = TABLE_ORDER.filter((t) => sqliteTables.has(t) && pgTables.has(t));
+    if (toClear.length > 0) {
+      await client.query(`TRUNCATE ${toClear.map((t) => `"${t}"`).join(', ')} CASCADE`);
+    }
+
     for (const table of TABLE_ORDER) {
       if (!sqliteTables.has(table)) continue;
       const rows = sqlite.prepare(`SELECT * FROM "${table}"`).all() as Record<string, unknown>[];
@@ -118,9 +132,6 @@ async function main(): Promise<void> {
       const cols = Object.keys(rows[0]);
       const placeholders = cols.map((_, i) => `$${i + 1}`).join(', ');
       const colList = cols.map((c) => `"${c}"`).join(', ');
-
-      // Xóa dữ liệu PG cũ của bảng này trước (trong transaction) để migrate idempotent
-      await client.query(`DELETE FROM "${table}"`);
 
       // Insert theo batch 500 dòng
       for (let i = 0; i < rows.length; i += 500) {
@@ -139,10 +150,12 @@ async function main(): Promise<void> {
         );
       }
 
-      // Reset sequence cho cột id (IDENTITY)
+      // Reset sequence cho cột id (IDENTITY). setval(..., true): nextval() tiếp
+      // theo trả về MAX(id)+1 — dùng false sẽ trả về đúng MAX(id) gây trùng PK
+      // ở INSERT đầu tiên sau migrate.
       const hasId = cols.includes('id');
       if (hasId) {
-        await client.query(`SELECT setval(pg_get_serial_sequence('"${table}"', 'id'), COALESCE((SELECT MAX(id) FROM "${table}"), 1), false)`);
+        await client.query(`SELECT setval(pg_get_serial_sequence('"${table}"', 'id'), COALESCE((SELECT MAX(id) FROM "${table}"), 1), true)`);
       }
 
       const pgCount = await client.query(`SELECT COUNT(*)::int AS c FROM "${table}"`);

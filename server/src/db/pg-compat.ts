@@ -367,7 +367,10 @@ export const db: Db = {
     const client = await pool.connect();
     return {
       query: async (text: string, params?: unknown[]) => {
-        const r = await client.query(text, params as unknown[]);
+        // Dịch SQL SQLite -> PG như mọi đường query khác. Callers hiện tại
+        // (advisory lock) dùng SQL PG thuần nên chưa lỗi, nhưng thiếu bước
+        // này là bẫy cho caller sau dùng placeholder `?` hay datetime('now').
+        const r = await client.query(translateSqlite(text), params as unknown[]);
         return { rows: r.rows, rowCount: r.rowCount };
       },
       release: () => client.release(),

@@ -1,12 +1,13 @@
 import cron from 'node-cron';
 import { db, toISODate } from '../db';
-import { getZaloConfig, sendTuitionReminder } from '../services/zalo';
+import { getZaloConfig, sendTuitionReminder, ZaloQuotaError, ZaloTokenError } from '../services/zalo';
 import { listCenters, hasFeature, Center } from '../utils/plans';
 import { logger } from '../shared/logger';
 import { formatError } from '../shared/errorFormat';
 import { DAY_MS } from '../shared/time';
 import { publishScheduled } from '../modules/homework/homework.service';
 import { withAdvisoryLock } from '../shared/advisoryLock';
+import { trackJob } from '../shared/jobTracker';
 
 const log = logger.scope('reminders');
 
@@ -52,12 +53,14 @@ async function findDueInvoices(centerId: number): Promise<{ overdue: DueInvoice[
   const today = nowVN().today;
 
   // Quá hạn: hạn nộp sớm hơn (hôm nay - overdue_days)
+  // H3: loại học viên đã nghỉ học (status='quit') — không nhắc học phí nữa
   const overdueCutoff = toISODate(new Date(Date.now() - overdueDays * DAY_MS));
   const overdue = (await db
     .prepare(
       `SELECT i.id, i.due_date FROM invoices i
        JOIN students s ON s.id = i.student_id
-       WHERE s.center_id = ? AND i.status IN ('unpaid','partial') AND i.due_date IS NOT NULL AND i.due_date < ?
+       WHERE s.center_id = ? AND s.status != 'quit'
+         AND i.status IN ('unpaid','partial') AND i.due_date IS NOT NULL AND i.due_date < ?
        ORDER BY i.due_date ASC`
     )
     .all(centerId, overdueCutoff)) as DueInvoice[];
@@ -68,7 +71,8 @@ async function findDueInvoices(centerId: number): Promise<{ overdue: DueInvoice[
     .prepare(
       `SELECT i.id, i.due_date FROM invoices i
        JOIN students s ON s.id = i.student_id
-       WHERE s.center_id = ? AND i.status IN ('unpaid','partial') AND i.due_date IS NOT NULL
+       WHERE s.center_id = ? AND s.status != 'quit'
+         AND i.status IN ('unpaid','partial') AND i.due_date IS NOT NULL
          AND i.due_date >= ? AND i.due_date <= ?
        ORDER BY i.due_date ASC`
     )
@@ -121,10 +125,14 @@ export async function runReminderOnce(centerId?: number): Promise<RunOnceResult>
     // Giới hạn số ZNS mỗi lần chạy để kiểm soát chi phí (500 hóa đơn = 500 tin tính tiền)
     const MAX_PER_RUN = 100;
     let sentCount = 0;
+    // Hết quota hoặc token hỏng: gửi tiếp cũng lỗi -> dừng cả vòng chạy
+    let stopRun: string | null = null;
     for (const center of centers) {
+      if (stopRun) break;
       const { overdue, upcoming } = await findDueInvoices(center.id);
       const process = async (list: DueInvoice[], kind: 'overdue' | 'upcoming') => {
         for (const inv of list) {
+          if (stopRun) break;
           if (sentCount >= MAX_PER_RUN) {
             log.warn(`Đạt giới hạn ${MAX_PER_RUN} tin/lần chạy, bỏ qua phần còn lại`, {
               center: center.name,
@@ -147,6 +155,15 @@ export async function runReminderOnce(centerId?: number): Promise<RunOnceResult>
               }
               return sendTuitionReminder(inv.id, kind, center.id);
             });
+            if (
+              lockOutcome.status === 'error' &&
+              (lockOutcome.error instanceof ZaloQuotaError || lockOutcome.error instanceof ZaloTokenError)
+            ) {
+              // Hết quota/token hỏng: dừng vòng chạy, alert đã gửi trong sendZNS
+              stopRun = lockOutcome.error.message;
+              result.details.push({ invoiceId: inv.id, kind, status: 'failed', message: stopRun });
+              break;
+            }
             if (lockOutcome.status !== 'done' || !lockOutcome.result) {
               result.skipped++;
               continue;
@@ -172,6 +189,7 @@ export async function runReminderOnce(centerId?: number): Promise<RunOnceResult>
       await process(overdue, 'overdue');
       await process(upcoming, 'upcoming');
     }
+    if (stopRun) log.warn(`Dừng vòng nhắc: ${stopRun}`);
   });
   if (outcome.status === 'locked') {
     log.info('Bỏ qua vòng nhắc: instance khác đang chạy', { lockKey });
@@ -195,7 +213,9 @@ export function startReminderScheduler(): void {
   reminderTask = cron.schedule(
     '* * * * *',
     () => {
-      (async () => {
+      // trackJob: shutdown chờ vòng quét đang chạy xong (tối đa 30s).
+      void trackJob(
+        (async () => {
         try {
           // Dọn entries cũ mỗi phút để tránh rò rỉ bộ nhớ
           pruneAutoRunDays(nowVN().today);
@@ -220,19 +240,24 @@ export function startReminderScheduler(): void {
             if (hhmm < cfg.reminder_hour) continue;
             autoRunDays.add(key);
             log.info(`Bắt đầu vòng nhắc tự động lúc ${hhmm} (giờ VN)`, { center: center.name });
-            runReminderOnce(center.id)
-              .then((r) => {
-                log.info(
-                  `Xong: ${r.overdue} quá hạn, ${r.upcoming} sắp đến hạn, ${r.skipped} bỏ qua (chống spam)`,
-                  { center: center.name }
-                );
-              })
-              .catch((err) => log.error('Lỗi vòng nhắc', { error: formatError(err) }));
+            // Vòng nhắc chạy fire-and-forget (tới 100 ZNS) — track để shutdown chờ xong.
+            void trackJob(
+              runReminderOnce(center.id)
+                .then((r) => {
+                  log.info(
+                    `Xong: ${r.overdue} quá hạn, ${r.upcoming} sắp đến hạn, ${r.skipped} bỏ qua (chống spam)`,
+                    { center: center.name }
+                  );
+                })
+                .catch((err) => log.error('Lỗi vòng nhắc', { error: formatError(err) }))
+            );
           }
         } catch (err) {
           log.error('Lỗi scheduler', { error: formatError(err) });
         }
-      })().catch((err) => log.error('Lỗi scheduler', { error: formatError(err) }));
+        })()
+        .catch((err) => log.error('Lỗi scheduler', { error: formatError(err) }))
+      );
     },
     { timezone: VN_TZ }
   );

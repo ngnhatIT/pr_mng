@@ -13,7 +13,7 @@ Cập nhật: 2026-10-09 (backup tự động bằng pg_dump trong app; tài kho
    - App tự chạy `pg_dump -Fc` (custom format, nén, online không cần tắt app) theo lịch `BACKUP_CRON` (mặc định `0 2 * * *`, múi giờ Asia/Ho_Chi_Minh), giữ `BACKUP_KEEP` bản mới nhất (mặc định 7).
    - File backup: `./backups/educenter-backup-YYYYMMDD-HHMMSS.dump` (thư mục làm việc của server).
    - Mỗi lần backup thành công/thất bại đều ghi log — **giám sát log `Backup định kỳ` để phát hiện backup fail** (backup fail không crash app).
-   - ⚠️ Script cũ `ops/backup-db.js` là thời SQLite, **KHÔNG dùng nữa** (backup file `server/data.db` không còn tồn tại).
+   - ⚠️ Script cũ `ops/archive/backup-db.js` là thời SQLite, **KHÔNG dùng nữa** (backup file `server/data.db` không còn tồn tại).
    - Drill khôi phục định kỳ (khuyến nghị mỗi quý): restore 1 bản backup vào database scratch để verify file dùng được:
      ```
      createdb educenter_restore

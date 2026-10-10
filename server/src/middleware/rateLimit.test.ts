@@ -117,3 +117,72 @@ describe('createRateLimit key theo tài khoản', () => {
     assert.ok(Number(res.headers['Retry-After']) >= 1);
   });
 });
+
+describe('B2: RATE_LIMIT_DIVISOR chia quota theo số worker', () => {
+  it('divisor 2: max 10 → 5 hiệu dụng trên mỗi worker', async () => {
+    const { env: envMod } = await import('../config/env');
+    const prev = envMod.RATE_LIMIT_DIVISOR;
+    (envMod as { RATE_LIMIT_DIVISOR: number }).RATE_LIMIT_DIVISOR = 2;
+    try {
+      const { createRateLimit: make } = await import('./rateLimit');
+      const limiter = make({ windowMs: 60_000, max: 10 });
+      for (let i = 0; i < 5; i++) assert.equal(hit(limiter, mockReq()).status, 200);
+      assert.equal(hit(limiter, mockReq()).status, 429); // request thứ 6 bị chặn
+    } finally {
+      (envMod as { RATE_LIMIT_DIVISOR: number }).RATE_LIMIT_DIVISOR = prev;
+    }
+  });
+
+  it('divisor 1 (mặc định): max giữ nguyên', async () => {
+    const { createRateLimit: make } = await import('./rateLimit');
+    const limiter = make({ windowMs: 60_000, max: 3 });
+    for (let i = 0; i < 3; i++) assert.equal(hit(limiter, mockReq()).status, 200);
+    assert.equal(hit(limiter, mockReq()).status, 429);
+  });
+});
+
+describe('D5: login rate limit theo tài khoản', () => {
+  async function withEnv(patch: Record<string, number>, fn: () => void | Promise<void>) {
+    const { env: envMod } = await import('../config/env');
+    const rec = envMod as unknown as Record<string, number>;
+    const prev: Record<string, number> = {};
+    for (const k of Object.keys(patch)) prev[k] = rec[k];
+    Object.assign(rec, patch);
+    try {
+      await fn();
+    } finally {
+      Object.assign(rec, prev);
+    }
+  }
+
+  function loginReq(username: string, ip: string) {
+    return {
+      body: { username },
+      socket: { remoteAddress: ip },
+      ip,
+      path: '/api/auth/login',
+    } as never;
+  }
+
+  it('cùng IP khác username không chia quota', async () => {
+    await withEnv({ LOGIN_RATE_LIMIT: 100, LOGIN_ACCOUNT_RATE_LIMIT: 2 }, async () => {
+      const { loginRateLimit: rl } = await import('./rateLimit');
+      const ip = '198.51.100.7';
+      assert.equal(hit(rl, loginReq('alice', ip)).status, 200);
+      assert.equal(hit(rl, loginReq('alice', ip)).status, 200);
+      assert.equal(hit(rl, loginReq('alice', ip)).status, 429); // alice hết quota tài khoản
+      assert.equal(hit(rl, loginReq('bob', ip)).status, 200); // bob cùng IP không bị ảnh hưởng
+    });
+  });
+
+  it('cùng username quá 20 lần → 429 (normalize chữ hoa/khoảng trắng)', async () => {
+    await withEnv({ LOGIN_RATE_LIMIT: 1000 }, async () => {
+      const { loginRateLimit: rl } = await import('./rateLimit');
+      const ip = '198.51.100.8';
+      for (let i = 0; i < 20; i++) {
+        assert.equal(hit(rl, loginReq(i % 2 ? 'Charlie' : ' charlie ', ip)).status, 200);
+      }
+      assert.equal(hit(rl, loginReq('CHARLIE', ip)).status, 429);
+    });
+  });
+});

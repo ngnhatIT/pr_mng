@@ -70,6 +70,8 @@ export const TABLE_DOCS: Record<string, TableDoc> = {
       name: 'Tên hiển thị.',
       center_id: 'Trung tâm trực thuộc; NULL = superadmin (thấy toàn hệ thống). RESTRICT khi xóa center.',
       teacher_id: 'Liên kết tới hồ sơ giáo viên (nếu role=teacher). SET NULL khi xóa giáo viên.',
+      token_version: 'D2: tăng mỗi khi đổi mật khẩu/khóa TK — access token cũ (tv khác) bị thu hồi ngay.',
+      is_active: 'D2: false = tài khoản bị khóa — từ chối login và mọi request đã auth.',
       created_at: 'Thời điểm tạo (UTC).',
       updated_at: 'Tự động cập nhật bởi trigger.',
     },
@@ -294,6 +296,9 @@ export const TABLE_DOCS: Record<string, TableDoc> = {
       password_hash: 'Mật khẩu đã băm bcrypt.',
       name: 'Tên phụ huynh.',
       referral_code: 'Mã giới thiệu duy nhất của phụ huynh.',
+      token_version: 'D2: tăng mỗi khi đổi mật khẩu/khóa TK — access token cũ (tv khác) bị thu hồi ngay.',
+      is_active: 'D2: false = tài khoản bị khóa — từ chối login và mọi request đã auth.',
+      zalo_consent: "Đồng ý nhận tin Zalo ZNS: 'granted' | 'denied' | 'unknown'.",
       created_at: 'Thời điểm tạo (UTC).',
       updated_at: 'Tự động cập nhật bởi trigger.',
     },
@@ -566,7 +571,7 @@ export const TABLE_DOCS: Record<string, TableDoc> = {
   },
   refresh_tokens: {
     description:
-      'Refresh token rotation: access token chỉ sống 1 giờ, refresh token (opaque, lưu hash SHA-256) sống 30 ngày. ' +
+      'Refresh token rotation: access token chỉ sống 15 phút, refresh token (opaque, lưu hash SHA-256) sống 30 ngày. ' +
       'Mỗi lần refresh sẽ revoke token cũ và cấp cặp mới (rotation); dùng lại token đã revoke -> thu hồi cả chuỗi (chống trộm token).',
     columns: {
       id: 'Khóa chính.',
@@ -731,6 +736,8 @@ CREATE TABLE IF NOT EXISTS users (
     CONSTRAINT fk_users_center REFERENCES centers(id) ON DELETE RESTRICT,
   teacher_id INTEGER
     CONSTRAINT fk_users_teacher REFERENCES teachers(id) ON DELETE SET NULL,
+  token_version INTEGER NOT NULL DEFAULT 1, -- D2: tăng khi đổi pass/khóa TK để thu hồi access token ngay
+  is_active BOOLEAN NOT NULL DEFAULT true, -- D2: false = tài khoản bị khóa, từ chối login + mọi request
   created_at TEXT NOT NULL DEFAULT (to_char(NOW(), 'YYYY-MM-DD HH24:MI:SS')),
   updated_at TEXT NOT NULL DEFAULT (to_char(NOW(), 'YYYY-MM-DD HH24:MI:SS'))
 );
@@ -960,6 +967,10 @@ CREATE TABLE IF NOT EXISTS parents (
   password_hash TEXT NOT NULL,
   name TEXT NOT NULL,
   referral_code TEXT UNIQUE,
+  token_version INTEGER NOT NULL DEFAULT 1, -- D2: tăng khi đổi pass/khóa TK để thu hồi access token ngay
+  is_active BOOLEAN NOT NULL DEFAULT true, -- D2: false = tài khoản bị khóa, từ chối login + mọi request
+  zalo_consent TEXT DEFAULT 'unknown'
+    CONSTRAINT chk_parents_zalo_consent CHECK (zalo_consent IN ('granted','denied','unknown')),
   created_at TEXT NOT NULL DEFAULT (to_char(NOW(), 'YYYY-MM-DD HH24:MI:SS')),
   updated_at TEXT NOT NULL DEFAULT (to_char(NOW(), 'YYYY-MM-DD HH24:MI:SS')),
   UNIQUE(center_id, phone)
@@ -1298,6 +1309,8 @@ CREATE TABLE IF NOT EXISTS reminders (
     CONSTRAINT chk_reminders_status CHECK (status IN ('sending', 'sent', 'failed', 'demo')),
   message TEXT,
   response TEXT,
+  -- Khóa chống gửi trùng ZNS: invoiceId:kind:ngày VN (migration v15 + unique index partial)
+  dedup_key TEXT,
   created_at TEXT NOT NULL DEFAULT (to_char(NOW(), 'YYYY-MM-DD HH24:MI:SS')),
   updated_at TEXT NOT NULL DEFAULT (to_char(NOW(), 'YYYY-MM-DD HH24:MI:SS'))
 );

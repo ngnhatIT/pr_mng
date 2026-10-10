@@ -10,6 +10,10 @@ export interface VnpayConfig {
 export const VNPAY_PAY_URL =
   process.env.VNPAY_PAY_URL || 'https://sandbox.vnpayment.vn/paymentv2/vpcpay.html';
 
+/** URL API merchant (querydr/hoàn tiền) — cấu hình qua VNPAY_API_URL */
+export const VNPAY_API_URL =
+  process.env.VNPAY_API_URL || 'https://sandbox.vnpayment.vn/merchant_webapi/api/transaction';
+
 /** yyyyMMddHHmmss theo giờ Việt Nam (VNPay yêu cầu GMT+7, không phụ thuộc TZ server) */
 function vnpDate(d: Date): string {
   const parts = new Intl.DateTimeFormat('en-CA', {
@@ -53,6 +57,7 @@ export function buildVnpayUrl(
   cfg: VnpayConfig,
   opts: { amountVnd: number; txnRef: string; orderInfo: string; ipAddr: string }
 ): string {
+  const now = new Date();
   const params: Record<string, string> = {
     vnp_Version: '2.1.0',
     vnp_Command: 'pay',
@@ -65,7 +70,10 @@ export function buildVnpayUrl(
     vnp_Locale: 'vn',
     vnp_ReturnUrl: cfg.returnUrl,
     vnp_IpAddr: opts.ipAddr || '127.0.0.1',
-    vnp_CreateDate: vnpDate(new Date()),
+    vnp_CreateDate: vnpDate(now),
+    // G6: đơn hết hạn sau 30 phút — VNPay không cho thanh toán muộn, cron đối soát
+    // chỉ đánh failed đơn treo quá 60 phút nên không thể trừ tiền 2 lần / muộn
+    vnp_ExpireDate: vnpDate(new Date(now.getTime() + 30 * 60 * 1000)),
   };
   const signData = buildSignData(params);
   const signed = crypto
@@ -108,4 +116,85 @@ export function verifyVnpayReturn(
     txnRef: flat.vnp_TxnRef || '',
     amountVnd,
   };
+}
+
+export interface VnpayQuerydrResult {
+  /** Gọi API thành công + verify được chữ ký phản hồi */
+  ok: boolean;
+  /** vnp_ResponseCode của querydr ('00' = truy vấn thành công) */
+  responseCode: string;
+  /** vnp_TransactionStatus ('00' = giao dịch thành công — khác với responseCode) */
+  transactionStatus: string;
+  /** Toàn bộ params phản hồi (đã verify chữ ký) — dùng cho đối soát */
+  params: Record<string, string>;
+  error?: string;
+}
+
+/**
+ * G6: Truy vấn kết quả giao dịch (querydr) — dùng khi đơn treo quá lâu mà
+ * không thấy IPN/return. Ký HMAC-SHA512 đúng chuẩn như verifyVnpayReturn.
+ * Lưu ý: wire format (POST JSON) theo sample chính thức của VNPay — cần kiểm
+ * chứng lại với sandbox khi có credentials thật.
+ */
+export async function queryVnpayTransaction(
+  cfg: VnpayConfig,
+  opts: { txnRef: string; orderInfo: string; transactionDate: string; ipAddr?: string }
+): Promise<VnpayQuerydrResult> {
+  const fail = (error: string): VnpayQuerydrResult => ({
+    ok: false,
+    responseCode: '',
+    transactionStatus: '',
+    params: {},
+    error,
+  });
+  const params: Record<string, string> = {
+    vnp_RequestId: crypto.randomUUID().replace(/-/g, ''),
+    vnp_Version: '2.1.0',
+    vnp_Command: 'querydr',
+    vnp_TmnCode: cfg.tmnCode,
+    vnp_TxnRef: opts.txnRef,
+    vnp_OrderInfo: unsign(opts.orderInfo),
+    vnp_TransactionDate: opts.transactionDate,
+    vnp_CreateDate: vnpDate(new Date()),
+    vnp_IpAddr: opts.ipAddr || '127.0.0.1',
+  };
+  const signData = buildSignData(params);
+  const signed = crypto
+    .createHmac('sha512', cfg.hashSecret)
+    .update(Buffer.from(signData, 'utf-8'))
+    .digest('hex');
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 15000);
+  try {
+    const res = await fetch(VNPAY_API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ...params, vnp_SecureHash: signed }),
+      signal: controller.signal,
+    });
+    if (!res.ok) return fail(`VNPay API HTTP ${res.status}`);
+    const data = (await res.json()) as Record<string, unknown>;
+    const flat: Record<string, string> = {};
+    for (const [k, v] of Object.entries(data)) flat[k] = String(v ?? '');
+    // Verify chữ ký phản hồi (M7: constant-time) — chống giả mạo kết quả đối soát
+    const signBack = buildSignData(
+      Object.fromEntries(Object.entries(flat).filter(([k]) => k !== 'vnp_SecureHash' && k !== 'vnp_SecureHashType'))
+    );
+    const expected = crypto.createHmac('sha512', cfg.hashSecret).update(Buffer.from(signBack, 'utf-8')).digest('hex');
+    const a = Buffer.from(expected, 'utf-8');
+    const b = Buffer.from(flat.vnp_SecureHash || '', 'utf-8');
+    if (!(a.length === b.length && crypto.timingSafeEqual(a, b))) {
+      return fail('Chữ ký phản hồi querydr không hợp lệ');
+    }
+    return {
+      ok: true,
+      responseCode: flat.vnp_ResponseCode || '',
+      transactionStatus: flat.vnp_TransactionStatus || '',
+      params: flat,
+    };
+  } catch (err) {
+    return fail(err instanceof Error ? err.message : String(err));
+  } finally {
+    clearTimeout(timer);
+  }
 }
