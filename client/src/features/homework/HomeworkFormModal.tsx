@@ -504,10 +504,14 @@ export function HomeworkFormModal({
     questions, quizEdited,
   ]);
   const [confirmClose, setConfirmClose] = useState(false);
+  // tryClose phải ổn định identity: Modal re-run effect (focus lại control đầu) mỗi khi onClose đổi,
+  // nên đọc isDirty qua ref để không giật focus khi user đang gõ ký tự đầu tiên.
+  const isDirtyRef = useRef(isDirty);
+  isDirtyRef.current = isDirty;
   const tryClose = useCallback(() => {
-    if (isDirty) setConfirmClose(true);
+    if (isDirtyRef.current) setConfirmClose(true);
     else onClose();
-  }, [isDirty, onClose]);
+  }, [onClose]);
 
   const quickDueOptions = [
     { k: 'today', label: t('form.dueToday') },
