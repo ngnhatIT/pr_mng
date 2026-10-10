@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { parentApi, type QuizQuestion, type QuizAttempt } from './parent.api';
 import { HomeworkItem, formatDate, formatDateTime, isPastCloseDate } from '../../shared/types';
@@ -140,11 +140,22 @@ export function QuizTaker({
   }, [loadQuiz, isExpired, reviewOnly]);
 
   const [confirming, setConfirming] = useState(false);
+  const qRef = useRef<HTMLDivElement>(null);
 
   // Bấm Nộp bài -> mở dialog xác nhận của app (không dùng confirm() native)
   const submit = () => {
-    if (Object.keys(answers).length < questions.length) {
+    const firstMissing = questions.findIndex((q) => answers[q.id] === undefined);
+    if (firstMissing !== -1) {
       toast(t('quiz.unanswered', { count: questions.length - Object.keys(answers).length }), 'error');
+      // FIX 8: cuộn + focus tới câu đầu tiên chưa trả lời (tôn trọng reduced-motion)
+      setQIndex(firstMissing);
+      requestAnimationFrame(() => {
+        const el = qRef.current;
+        if (!el) return;
+        const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        el.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'start' });
+        el.focus({ preventScroll: true });
+      });
       return;
     }
     setConfirming(true);
@@ -395,7 +406,7 @@ export function QuizTaker({
           {(() => {
             const q = questions[qIndex];
             return (
-              <div key={q.id} className="quiz-take-q">
+              <div key={q.id} className="quiz-take-q" ref={qRef} tabIndex={-1}>
                 <div style={{ fontWeight: 600, marginBottom: 12 }}>
                   {q.question}
                   <span className="muted" style={{ fontWeight: 400 }}>

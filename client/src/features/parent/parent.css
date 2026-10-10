@@ -124,6 +124,11 @@
 .quiz-take-q {
   margin-bottom: 16px;
 }
+.quiz-take-q:focus {
+  outline: 2px solid var(--primary);
+  outline-offset: 4px;
+  border-radius: 8px;
+}
 .quiz-take-opt {
   min-height: 56px;
   padding: 16px;
