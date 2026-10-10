@@ -259,7 +259,12 @@ export function prepareCreateInput(raw: Record<string, unknown>): PreparedHomewo
   }
   if (status === 'scheduled' && !publish_at) throw AppError.badRequest('Hẹn giờ đăng cần chọn thời gian');
 
-  const kind: HomeworkKind = raw.kind === 'quiz' ? 'quiz' : 'homework';
+  // P1-12: kind không hợp lệ → 400 (như status), không ép ngầm thành 'homework'
+  const kindRaw =
+    raw.kind === undefined || raw.kind === null || raw.kind === '' ? 'homework' : String(raw.kind);
+  if (!(HOMEWORK_KIND as readonly string[]).includes(kindRaw))
+    throw AppError.badRequest('Loại bài tập không hợp lệ');
+  const kind = kindRaw as HomeworkKind;
   const questions = Array.isArray(raw.questions) ? raw.questions : [];
   if (kind === 'quiz' && questions.length === 0) throw AppError.badRequest('Quiz cần ít nhất 1 câu hỏi');
 

@@ -1093,6 +1093,34 @@ describe('questionBank trả row trực tiếp (P1-4)', () => {
   });
 });
 
+describe('prepareCreateInput validate kind (P1-12)', () => {
+  it('kind sai → 400; thiếu kind → homework; quiz qua', () => {
+    assert.throws(
+      () => homeworkService.prepareCreateInput({ class_ids: [1], title: 'T', kind: 'exam' }),
+      /Loại bài tập không hợp lệ/
+    );
+    assert.equal(homeworkService.prepareCreateInput({ class_ids: [1], title: 'T' }).kind, 'homework');
+    assert.equal(
+      homeworkService.prepareCreateInput({
+        class_ids: [1],
+        title: 'T',
+        kind: 'quiz',
+        questions: [
+          {
+            question: 'Q?',
+            points: 1,
+            options: [
+              { text: 'A', is_correct: true },
+              { text: 'B', is_correct: false },
+            ],
+          },
+        ],
+      }).kind,
+      'quiz'
+    );
+  });
+});
+
 describe('prepareCreateInput validate publish_at (P1-2)', () => {
   it('publish_at sai format → 400', () => {
     assert.throws(
