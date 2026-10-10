@@ -1873,16 +1873,6 @@ textarea.text-input {
 }
 
 /* ---------- Cards ---------- */
-.card-hover {
-  transition:
-    box-shadow 0.18s ease,
-    border-color 0.18s ease;
-}
-.card-hover:hover {
-  box-shadow: var(--shadow-md);
-  border-color: var(--border-strong);
-}
-
 /* ---------- Tables ---------- */
 .table-wrap.sticky {
   overflow: auto;
