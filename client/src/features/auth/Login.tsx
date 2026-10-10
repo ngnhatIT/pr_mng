@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { api, setAuth, takePostLoginRedirect } from '../../shared/api/client';
-import { useToast } from '../../shared/ui/toast';
 import { Field, useFieldErrors } from '../../shared/components/Form';
 import { ThemeLangSwitch } from '../../shared/ui/ThemeLangSwitch';
 import { User } from '../../shared/types';
@@ -15,7 +14,6 @@ export function Login() {
   const [busy, setBusy] = useState(false);
   const { errors, refFor, show, clear } = useFieldErrors<'username' | 'password'>();
   const navigate = useNavigate();
-  const toast = useToast();
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -34,7 +32,6 @@ export function Login() {
         body: JSON.stringify({ username, password }),
       });
       setAuth(data.token, data.user);
-      toast(t('welcome', { name: data.user.name }), 'success');
       // Quay lại deep-link đã lưu (khi bị 401 hoặc vào trang cần login), nếu không thì về home theo role.
       const next = takePostLoginRedirect();
       if (next) {

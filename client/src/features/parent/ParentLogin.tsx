@@ -3,7 +3,6 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { setAuth, takePostLoginRedirect } from '../../shared/api/client';
 import { parentApi } from './parent.api';
-import { useToast } from '../../shared/ui/toast';
 import { Icon } from '../../shared/components/icons';
 import './parent.css';
 
@@ -14,7 +13,6 @@ export function ParentLogin() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const navigate = useNavigate();
-  const toast = useToast();
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -24,14 +22,11 @@ export function ParentLogin() {
     try {
       const data = await parentApi.login(phone, password);
       setAuth(data.token, { ...data.parent, role: 'parent', username: data.parent.phone });
-      toast(t('auth.welcome', { name: data.parent.name }), 'success');
       // Quay lại deep-link đã lưu (khi bị 401 hoặc vào trang cần login).
       const next = takePostLoginRedirect();
       navigate(next && next.startsWith('/parent') ? next : '/parent', { replace: true });
     } catch (err) {
-      const msg = err instanceof Error ? err.message : t('auth.loginError');
-      setError(msg);
-      toast(msg, 'error');
+      setError(err instanceof Error ? err.message : t('auth.loginError'));
     } finally {
       setBusy(false);
     }
