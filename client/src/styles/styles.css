@@ -830,12 +830,10 @@ textarea.text-input {
   min-height: 128px;
   transition:
     box-shadow 0.15s ease,
-    transform 0.15s ease,
     border-color 0.15s ease;
 }
 .stat-card:hover {
   box-shadow: var(--shadow-md);
-  transform: translateY(-2px);
   border-color: var(--border-strong);
 }
 .stat-top {
@@ -2049,7 +2047,6 @@ textarea.text-input {
     border-color 0.15s ease;
 }
 .quick-action:hover {
-  transform: translateY(-2px);
   box-shadow: var(--shadow-md);
   border-color: var(--primary-300);
 }
