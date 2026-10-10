@@ -90,11 +90,11 @@ export function TeacherToday() {
                     {s.checked_in ? t('today.checkedIn') : t('today.notCheckedIn')}
                   </span>
                 </div>
+                {/* sessions không có cột giờ: chip hiện 1 dòng ngày duy nhất, không lặp lại dòng muted */}
                 <div className="today-time-chip">
                   <Icon name="clock" size={15} />
-                  {s.date.slice(11, 16) || formatDate(s.date)}
+                  {formatDate(s.date)}
                 </div>
-                <div className="muted today-topic">{formatDate(s.date)}</div>
                 {s.topic && <div className="muted today-topic">{t('today.topic', { topic: s.topic })}</div>}
                 <div className="today-attendance">
                   <Icon name="users" size={14} />
