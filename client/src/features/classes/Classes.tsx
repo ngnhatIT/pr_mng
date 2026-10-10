@@ -128,7 +128,7 @@ export function Classes() {
               c.max_students > 0 ? Math.min(100, Math.round((c.student_count / c.max_students) * 100)) : 0;
             const isFull = c.max_students > 0 && c.student_count >= c.max_students;
             return (
-              <div key={c.id} className="card class-card card-hover">
+              <div key={c.id} className="card class-card">
                 <div className="card-head">
                   <h2>
                     <Link className="link" to={`/app/classes/${c.id}`}>

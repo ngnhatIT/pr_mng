@@ -126,7 +126,7 @@ export function Landing() {
         ) : (
           <div className="course-grid">
             {courses.map((c) => (
-              <div key={c.id} className="card course-card card-hover">
+              <div key={c.id} className="card course-card">
                 <h3>{c.name}</h3>
                 <dl className="dl dl-compact">
                   <dt>{t('courses.teacher')}</dt>
@@ -186,7 +186,7 @@ export function Landing() {
         )}
         <div className="course-grid">
           {(reviews?.items || []).map((r, i) => (
-            <div key={i} className="card review-card testimonial card-hover">
+            <div key={i} className="card review-card testimonial">
               <Stars rating={r.rating} />
               <p className="review-comment">{r.comment || '-'}</p>
               <div className="testimonial-foot">
