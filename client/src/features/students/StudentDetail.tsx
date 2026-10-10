@@ -115,7 +115,16 @@ export function StudentDetail() {
             <h3>{t('detail.classes')}</h3>
           </div>
           {data.classes.length === 0 ? (
-            <EmptyState icon="book" title={t('detail.noClasses')} />
+            <EmptyState
+              icon="book"
+              title={t('detail.noClasses')}
+              desc={t('detail.noClassesDesc')}
+              action={
+                <Link className="btn btn-primary btn-sm" to="/app/classes">
+                  {t('detail.noClassesAction')}
+                </Link>
+              }
+            />
           ) : (
             <ul className="list">
               {data.classes.map((c) => (
@@ -136,7 +145,16 @@ export function StudentDetail() {
           <h3>{t('detail.invoices')}</h3>
         </div>
         {data.invoices.length === 0 ? (
-          <EmptyState icon="banknote" title={t('detail.noInvoices')} />
+          <EmptyState
+            icon="banknote"
+            title={t('detail.noInvoices')}
+            desc={t('detail.noInvoicesDesc')}
+            action={
+              <Link className="btn btn-primary btn-sm" to="/app/tuition">
+                {t('detail.noInvoicesAction')}
+              </Link>
+            }
+          />
         ) : (
           <div className="table-wrap sticky">
             <table className="table">
