@@ -623,7 +623,7 @@ textarea.text-input {
   background: var(--bg-soft);
   font-weight: 700;
   color: var(--text-faint);
-  font-size: 11px;
+  font-size: 12px;
   text-transform: uppercase;
   letter-spacing: 0.06em;
   height: 40px;

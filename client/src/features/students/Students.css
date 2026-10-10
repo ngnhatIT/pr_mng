@@ -61,4 +61,8 @@
   .search-wrap .text-input {
     min-width: 0;
   }
+  /* Toolbar xếp chồng: ô lọc trạng thái xuống dòng full-width cho gọn */
+  .students-toolbar > select.text-input {
+    flex: 1 1 100%;
+  }
 }

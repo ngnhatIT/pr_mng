@@ -101,7 +101,7 @@ export function Students() {
         }
       />
 
-      <div className="toolbar">
+      <div className="toolbar students-toolbar">
         <span className="search-wrap">
           <span className="search-icon">
             <Icon name="search" size={15} />
