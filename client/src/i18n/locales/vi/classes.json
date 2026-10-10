@@ -159,7 +159,11 @@
       "capacity": "Sức chứa",
       "editTitle": "Sửa phòng học",
       "name": "Tên phòng *",
-      "capacityPlaceholder": "VD: 40 học viên"
+      "capacityPlaceholder": "VD: 40 học viên",
+      "errors": {
+        "nameRequired": "Vui lòng nhập tên phòng",
+        "capacityInvalid": "Sức chứa phải là số nguyên dương"
+      }
     },
     "loadError": "Không tải được danh sách phòng",
     "saved": "Đã lưu phòng học",

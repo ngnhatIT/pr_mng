@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { roomsApi, Room } from './classes.api';
 import { useToast } from '../../shared/ui/toast';
 import { Modal, ConfirmDialog } from '../../shared/components/Modal';
-import { Field } from '../../shared/components/Form';
+import { Field, useFieldErrors } from '../../shared/components/Form';
 import { PageHeader } from '../../shared/components/PageHeader';
 import { EmptyState } from '../../shared/components/EmptyState';
 import { TableSkeleton } from '../../shared/components/Skeleton';
@@ -178,10 +178,19 @@ function RoomFormModal({
   const [name, setName] = useState(initial?.name || '');
   const [capacity, setCapacity] = useState(initial?.capacity ? String(initial.capacity) : '');
   const [busy, setBusy] = useState(false);
+  const { errors, refFor, show, clear } = useFieldErrors<'name' | 'capacity'>();
+
+  const validate = () => {
+    const errs: { name?: string; capacity?: string } = {};
+    if (!name.trim()) errs.name = t('rooms.form.errors.nameRequired');
+    if (capacity.trim() && (!/^\d+$/.test(capacity.trim()) || Number(capacity) < 1))
+      errs.capacity = t('rooms.form.errors.capacityInvalid');
+    return show(errs);
+  };
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (busy) return;
+    if (busy || !validate()) return;
     setBusy(true);
     try {
       await onSave({ name, capacity }, initial?.id);
@@ -194,16 +203,29 @@ function RoomFormModal({
     <Modal title={initial ? t('rooms.form.editTitle') : t('rooms.form.addTitle')} onClose={onClose}>
       <form onSubmit={submit}>
         <div className="form-grid">
-          <Field label={t('rooms.form.name')} span>
-            <input className="text-input" value={name} onChange={(e) => setName(e.target.value)} required />
+          <Field label={t('rooms.form.name')} span error={errors.name}>
+            <input
+              className="text-input"
+              value={name}
+              onChange={(e) => {
+                setName(e.target.value);
+                clear('name');
+              }}
+              ref={refFor('name')}
+            />
           </Field>
-          <Field label={t('rooms.form.capacity')} span>
+          <Field label={t('rooms.form.capacity')} span error={errors.capacity}>
             <input
               className="text-input"
               type="number"
-              min={0}
+              min={1}
+              step={1}
               value={capacity}
-              onChange={(e) => setCapacity(e.target.value)}
+              onChange={(e) => {
+                setCapacity(e.target.value);
+                clear('capacity');
+              }}
+              ref={refFor('capacity')}
               placeholder={t('rooms.form.capacityPlaceholder')}
             />
           </Field>

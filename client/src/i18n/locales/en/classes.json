@@ -159,7 +159,11 @@
       "capacity": "Capacity",
       "editTitle": "Edit room",
       "name": "Room name *",
-      "capacityPlaceholder": "E.g. 40 students"
+      "capacityPlaceholder": "E.g. 40 students",
+      "errors": {
+        "nameRequired": "Please enter the room name",
+        "capacityInvalid": "Capacity must be a positive whole number"
+      }
     },
     "loadError": "Could not load room list",
     "saved": "Room saved",
