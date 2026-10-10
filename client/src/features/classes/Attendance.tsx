@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
-import { useSearchParams, Link } from 'react-router-dom';
+import { useSearchParams, useLocation, Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { classesApi, sessionsApi, ClassItem, SessionItem, AttendanceRow } from './classes.api';
+import { rolesApi } from '../system/roles.api';
 import { useToast } from '../../shared/ui/toast';
 import { Modal, ConfirmDialog } from '../../shared/components/Modal';
 import { Field, useFieldErrors } from '../../shared/components/Form';
@@ -17,6 +18,10 @@ type Status = 'present' | 'absent' | 'late';
 export function Attendance() {
   const { t } = useTranslation(['classes', 'common']);
   const [searchParams, setSearchParams] = useSearchParams();
+  const location = useLocation();
+  // Trang điểm danh dùng chung cho portal giáo viên (/teacher) và quản trị (/app):
+  // route /app/classes chỉ tồn tại ở layout quản trị nên ẩn link này với giáo viên
+  const isTeacherPortal = location.pathname.startsWith('/teacher');
   const [classes, setClasses] = useState<ClassItem[]>([]);
   const [sessions, setSessions] = useState<SessionItem[]>([]);
   const [rows, setRows] = useState<AttendanceRow[]>([]);
@@ -29,6 +34,7 @@ export function Attendance() {
   const [saveError, setSaveError] = useState('');
   const [showNewSession, setShowNewSession] = useState(false);
   const [showConfirmUnmarked, setShowConfirmUnmarked] = useState(false);
+  const [canManageSessions, setCanManageSessions] = useState(false);
   const [checkinCode, setCheckinCode] = useState<string | null>(null);
   const [makingCode, setMakingCode] = useState(false);
   const toast = useToast();
@@ -60,6 +66,15 @@ export function Attendance() {
   useEffect(() => {
     if (classId) void loadSessions(classId);
   }, [classId, loadSessions]);
+
+  // Ẩn nút quản trị buổi học khi role không có sessions.manage (teacher chỉ được điểm danh).
+  // Fail-closed theo pattern ZaloReminders: không kiểm tra được quyền thì không hiện nút.
+  useEffect(() => {
+    rolesApi
+      .mine()
+      .then((r) => setCanManageSessions(r.some((p) => p.code === 'sessions.manage')))
+      .catch(() => setCanManageSessions(false));
+  }, []);
 
   const loadAttendance = useCallback(
     async (sid: string) => {
@@ -210,7 +225,7 @@ export function Attendance() {
             </option>
           ))}
         </select>
-        {classId && (
+        {classId && canManageSessions && (
           <button className="btn btn-inline" onClick={() => setShowNewSession(true)}>
             <Icon name="plus" size={14} />
             {t('attendance.createSession')}
@@ -257,10 +272,12 @@ export function Attendance() {
               <button className="btn btn-sm" onClick={() => markAll('present')}>
                 {t('attendance.toolbar.allPresent')}
               </button>
-              <button className="btn btn-sm" onClick={() => void makeCheckinCode()} disabled={makingCode}>
-                {makingCode && <span className="spinner spinner-dark" aria-hidden="true" />}
-                {makingCode ? t('attendance.toolbar.creatingCode') : t('attendance.toolbar.createCode')}
-              </button>
+              {canManageSessions && (
+                <button className="btn btn-sm" onClick={() => void makeCheckinCode()} disabled={makingCode}>
+                  {makingCode && <span className="spinner spinner-dark" aria-hidden="true" />}
+                  {makingCode ? t('attendance.toolbar.creatingCode') : t('attendance.toolbar.createCode')}
+                </button>
+              )}
             </div>
           </div>
 
@@ -284,10 +301,12 @@ export function Attendance() {
               title={t('attendance.emptyTitle')}
               desc={t('attendance.emptyDesc')}
               action={
-                <Link className="btn btn-primary btn-inline" to={`/app/classes/${classId}`}>
-                  <Icon name="plus" size={14} />
-                  {t('detail.enroll.add')}
-                </Link>
+                !isTeacherPortal && (
+                  <Link className="btn btn-primary btn-inline" to={`/app/classes/${classId}`}>
+                    <Icon name="plus" size={14} />
+                    {t('detail.enroll.add')}
+                  </Link>
+                )
               }
             />
           ) : (

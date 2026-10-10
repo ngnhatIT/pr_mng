@@ -91,6 +91,11 @@
   border: 2px solid rgba(36, 86, 224, 0.18);
 }
 
+/* Anchor form đăng ký: chừa khoảng cho nav sticky khi cuộn tới */
+.landing-form-anchor {
+  scroll-margin-top: 84px;
+}
+
 /* Card khóa học: thông tin gọn, CTA rõ */
 .course-card {
   border-radius: var(--radius-lg);

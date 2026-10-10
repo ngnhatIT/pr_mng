@@ -66,6 +66,12 @@
   }
 }
 
+/* Portal giáo viên/phụ huynh có bottomnav cố định (~64px + safe-area):
+ * nâng savebar lên trên để nút Lưu không bị che */
+.parent-shell .att-savebar {
+  bottom: 76px;
+}
+
 /* Thông báo không khớp từ khóa tìm kiếm trong danh sách điểm danh */
 .att-no-match {
   margin: 12px 0;
