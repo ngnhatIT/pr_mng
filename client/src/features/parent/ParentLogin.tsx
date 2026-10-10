@@ -2,8 +2,8 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { setAuth, takePostLoginRedirect } from '../../shared/api/client';
+import { Field, useFieldErrors } from '../../shared/components/Form';
 import { parentApi } from './parent.api';
-import { Icon } from '../../shared/components/icons';
 import './parent.css';
 
 export function ParentLogin() {
@@ -11,14 +11,17 @@ export function ParentLogin() {
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState('');
+  const { errors, refFor, show, clear } = useFieldErrors<'phone' | 'password'>();
   const navigate = useNavigate();
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (busy) return;
+    const errs: { phone?: string; password?: string } = {};
+    if (!phone.trim()) errs.phone = t('auth.phoneEmpty');
+    if (!password) errs.password = t('auth.passwordEmpty');
+    if (!show(errs)) return;
     setBusy(true);
-    setError('');
     try {
       const data = await parentApi.login(phone, password);
       setAuth(data.token, { ...data.parent, role: 'parent', username: data.parent.phone });
@@ -26,7 +29,8 @@ export function ParentLogin() {
       const next = takePostLoginRedirect();
       navigate(next && next.startsWith('/parent') ? next : '/parent', { replace: true });
     } catch (err) {
-      setError(err instanceof Error ? err.message : t('auth.loginError'));
+      // Lỗi đăng nhập (sai SĐT/mật khẩu) hiện inline dưới ô mật khẩu, focus để nhập lại
+      show({ password: err instanceof Error ? err.message : t('auth.loginError') });
     } finally {
       setBusy(false);
     }
@@ -38,36 +42,34 @@ export function ParentLogin() {
         <div className="login-logo">E</div>
         <h1 className="login-title">{t('auth.loginTitle')}</h1>
         <p className="login-sub">{t('auth.loginSub')}</p>
-        {error && (
-          <div className="auth-error" role="alert">
-            <Icon name="alert" size={16} />
-            <span>{error}</span>
-          </div>
-        )}
-        <label className="field">
-          <span className="field-label">{t('auth.phone')}</span>
+        <Field label={t('auth.phone')} error={errors.phone} required>
           <input
             className="text-input"
             value={phone}
-            onChange={(e) => setPhone(e.target.value)}
+            onChange={(e) => {
+              setPhone(e.target.value);
+              clear('phone');
+            }}
             autoComplete="tel"
             inputMode="tel"
             placeholder={t('auth.phonePlaceholder')}
-            required
+            ref={refFor('phone')}
           />
-        </label>
-        <label className="field">
-          <span className="field-label">{t('auth.password')}</span>
+        </Field>
+        <Field label={t('auth.password')} error={errors.password} required>
           <input
             className="text-input"
             type="password"
             value={password}
-            onChange={(e) => setPassword(e.target.value)}
+            onChange={(e) => {
+              setPassword(e.target.value);
+              clear('password');
+            }}
             autoComplete="current-password"
             placeholder={t('auth.passwordPlaceholder')}
-            required
+            ref={refFor('password')}
           />
-        </label>
+        </Field>
         <button className="btn btn-primary btn-block btn-lg" type="submit" disabled={busy}>
           {busy ? t('auth.loggingIn') : t('auth.loginAction')}
         </button>

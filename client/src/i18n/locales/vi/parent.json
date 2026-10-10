@@ -29,7 +29,9 @@
     "registering": "Đang đăng ký...",
     "welcome": "Xin chào, {{name}}!",
     "centerRequired": "Không xác định được trung tâm. Vui lòng thử lại.",
-    "registerAtCenter": "Đăng ký tại {name}"
+    "registerAtCenter": "Đăng ký tại {name}",
+    "phoneEmpty": "Vui lòng nhập số điện thoại",
+    "passwordEmpty": "Vui lòng nhập mật khẩu"
   },
   "child": {
     "attendance": {

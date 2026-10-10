@@ -29,7 +29,9 @@
     "registering": "Signing up...",
     "welcome": "Hello, {{name}}!",
     "centerRequired": "Could not determine the center. Please try again.",
-    "registerAtCenter": "Registering at {name}"
+    "registerAtCenter": "Registering at {name}",
+    "phoneEmpty": "Please enter your phone number",
+    "passwordEmpty": "Please enter your password"
   },
   "child": {
     "attendance": {
