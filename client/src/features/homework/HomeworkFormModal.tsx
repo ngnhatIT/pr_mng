@@ -359,22 +359,23 @@ export function HomeworkFormModal({
   }));
 
   const validate = () => {
+    // P1-1: thứ tự insert errs khớp thứ tự field trên form để focus field lỗi đầu tiên đúng.
     const errs: Partial<Record<HwErrKey, string>> = {};
     if (!initial && selectedClasses.length === 0) errs.classes = t('form.errors.classRequired');
+    if (!initial && targetMode === 'selected' && selectedStudents.length === 0)
+      errs.students = t('form.errors.studentsRequired');
     if (!title.trim()) errs.title = t('form.errors.titleRequired');
     if (maxScore) {
       const m = Number(maxScore);
       if (!Number.isFinite(m) || m < 0) errs.maxScore = t('form.errors.maxScoreInvalid');
     }
-    if (dueDate && closeDate && closeDate < dueDate) errs.closeDate = t('form.errors.closeBeforeDue');
     // Hạn quá khứ chỉ cấm khi tạo mới; khi sửa được giữ hạn cũ (bài đã quá hạn vẫn lưu được)
     if (!initial && dueDate && dueDate < todayVN()) errs.dueDate = t('form.errors.duePast');
-    if (!initial && publishMode === 'schedule' && !publishAt)
-      errs.publishAt = t('form.errors.publishAtRequired');
-    if (!initial && targetMode === 'selected' && selectedStudents.length === 0)
-      errs.students = t('form.errors.studentsRequired');
+    if (dueDate && closeDate && closeDate < dueDate) errs.closeDate = t('form.errors.closeBeforeDue');
     if (kind === 'quiz' && quizInvalidCount > 0)
       errs.quiz = t('form.errors.quizInvalid', { count: quizInvalidCount });
+    if (!initial && publishMode === 'schedule' && !publishAt)
+      errs.publishAt = t('form.errors.publishAtRequired');
     return show(errs);
   };
 
