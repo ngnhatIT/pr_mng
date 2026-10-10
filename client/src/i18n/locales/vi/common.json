@@ -128,7 +128,8 @@
     "first": "Trang đầu",
     "prev": "Trang trước",
     "next": "Trang sau",
-    "last": "Trang cuối"
+    "last": "Trang cuối",
+    "pageOf": "Trang {{page}} / {{totalPages}}"
   },
   "error": {
     "title": "Đã xảy ra lỗi",

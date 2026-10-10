@@ -606,6 +606,12 @@ textarea.text-input {
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow);
   overflow-x: auto;
+  transition: opacity 0.15s ease-out;
+}
+/* Đang tải trang mới: giữ bảng cũ hiển thị mờ thay vì thay bằng skeleton (không nhảy layout) */
+.table-wrap[aria-busy='true'] {
+  opacity: 0.55;
+  pointer-events: none;
 }
 .table {
   width: 100%;

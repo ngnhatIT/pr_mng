@@ -127,7 +127,7 @@ export function Students() {
         </select>
       </div>
 
-      {loading ? (
+      {loading && students.length === 0 ? (
         <TableSkeleton cols={5} />
       ) : students.length === 0 ? (
         <EmptyState
@@ -155,7 +155,7 @@ export function Students() {
           }
         />
       ) : (
-        <div className="table-wrap sticky">
+        <div className="table-wrap sticky" aria-busy={loading || undefined}>
           <table className="table">
             <thead>
               <tr>
@@ -203,7 +203,7 @@ export function Students() {
         </div>
       )}
 
-      {pagination && <Pagination pagination={pagination} onChange={(p) => setPage(p)} />}
+      {pagination && <Pagination pagination={pagination} onChange={(p) => setPage(p)} loading={loading} />}
 
       {editing && (
         <StudentForm

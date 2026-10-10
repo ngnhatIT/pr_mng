@@ -128,7 +128,8 @@
     "first": "First page",
     "prev": "Previous page",
     "next": "Next page",
-    "last": "Last page"
+    "last": "Last page",
+    "pageOf": "Page {{page}} / {{totalPages}}"
   },
   "error": {
     "title": "Something went wrong",
