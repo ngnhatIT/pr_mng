@@ -15,6 +15,7 @@ export function TeacherToday() {
   const { t } = useTranslation(['teacher', 'common']);
   const [sessions, setSessions] = useState<TeacherTodayItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
   const [code, setCode] = useState('');
   const [checkingIn, setCheckingIn] = useState(false);
   const { errors, refFor, show, clear } = useFieldErrors<'code'>();
@@ -22,10 +23,12 @@ export function TeacherToday() {
 
   const load = useCallback(async () => {
     setLoading(true);
+    setError(false);
     try {
       const data = await teacherApi.today();
       setSessions(data);
     } catch (err) {
+      setError(true);
       toast(err instanceof Error ? err.message : t('today.loadError'), 'error');
     } finally {
       setLoading(false);
@@ -74,6 +77,17 @@ export function TeacherToday() {
             </div>
           ))}
         </div>
+      ) : error ? (
+        <EmptyState
+          icon="alert"
+          title={t('states.loadError', { ns: 'common' })}
+          desc={t('today.loadError')}
+          action={
+            <button className="btn btn-secondary btn-inline" onClick={() => void load()}>
+              <Icon name="rotate" size={14} /> {t('actions.retry', { ns: 'common' })}
+            </button>
+          }
+        />
       ) : sessions.length === 0 ? (
         <EmptyState icon="calendar" title={t('today.emptyTitle')} desc={t('today.emptyDesc')} />
       ) : (
