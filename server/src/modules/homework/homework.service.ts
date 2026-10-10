@@ -1,5 +1,7 @@
 import { db } from '../../db';
+import type { Tx } from '../../db';
 import type { ScopeCtx } from '../../shared/scope';
+import { countQuizQuestions } from './quiz.service';
 import { parsePagination, paginate, type PageOptions, type Paginated } from '../../shared/pagination';
 import { DAY_MS } from '../../shared/time';
 import { AppError } from '../../shared/errors';
@@ -289,6 +291,70 @@ export function prepareCreateInput(raw: Record<string, unknown>): PreparedHomewo
   };
 }
 
+/**
+ * Insert 1 bài tập + đính kèm + targets trong transaction do caller cung cấp.
+ * Dùng chung cho createHomeworkBatch và reuseHomework (P0-3b: 1 transaction duy nhất).
+ */
+async function insertHomeworkTx(
+  tx: Tx,
+  data: {
+    centerId: number | null;
+    class_id: number;
+    title: string;
+    content?: string | null;
+    due_date?: string | null;
+    created_by: number;
+    status: HomeworkStatus;
+    publish_at?: string | null;
+    max_score?: number | null;
+    close_date?: string | null;
+    kind: string;
+    rubric_id?: number | null;
+    attachments: { name: string; url: string; kind: string }[];
+    target_student_ids: number[];
+  }
+): Promise<number> {
+  const r = await tx
+    .prepare(
+      `INSERT INTO homework (center_id, class_id, title, content, due_date, created_by,
+        status, publish_at, max_score, close_date, kind, rubric_id)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    )
+    .run(
+      data.centerId,
+      data.class_id,
+      data.title.trim(),
+      data.content?.trim() || null,
+      data.due_date || null,
+      data.created_by,
+      data.status,
+      data.publish_at || null,
+      data.max_score ?? null,
+      data.close_date || null,
+      data.kind,
+      data.rubric_id ?? null
+    );
+  const hid = Number(r.lastInsertRowid);
+  const attStmt = await tx.prepare(
+    'INSERT INTO homework_attachments (homework_id, name, url, kind) VALUES (?, ?, ?, ?)'
+  );
+  for (const a of data.attachments) {
+    if (a.name.trim() && a.url.trim())
+      await attStmt.run(hid, a.name.trim(), a.url.trim(), a.kind || 'link');
+  }
+  const tgtStmt = await tx.prepare('INSERT INTO homework_targets (homework_id, student_id) VALUES (?, ?)');
+  for (const sid of data.target_student_ids) await tgtStmt.run(hid, sid);
+  return hid;
+}
+
+/** P0-3(a,c): quiz chỉ được đăng khi đã có ít nhất 1 câu hỏi (chặn quiz rỗng). */
+async function requireQuizPublishable(id: number): Promise<void> {
+  const hw = await homeworkRepo.findById(id);
+  if (hw && hw.kind === 'quiz' && (await countQuizQuestions(id)) === 0) {
+    throw AppError.badRequest('Quiz chưa có câu hỏi, không thể đăng');
+  }
+}
+
 export async function createHomeworkBatch(input: CreateHomeworkInput): Promise<HomeworkRow[]> {
   const {
     class_ids,
@@ -310,7 +376,8 @@ export async function createHomeworkBatch(input: CreateHomeworkInput): Promise<H
   if (!title.trim()) throw AppError.badRequest('Vui lòng nhập tiêu đề bài tập');
   if (!(HOMEWORK_STATUS as readonly string[]).includes(status))
     throw AppError.badRequest('Trạng thái không hợp lệ');
-  if (status === 'scheduled' && !publish_at) throw AppError.badRequest('Hẹn giờ đăng cần chọn thời gian');
+  const hwStatus = status as HomeworkStatus;
+  if (hwStatus === 'scheduled' && !publish_at) throw AppError.badRequest('Hẹn giờ đăng cần chọn thời gian');
   assertValidDates(due_date, close_date);
 
   // Validate rubric_id thuộc cùng center (chống cross-tenant linkage)
@@ -321,46 +388,28 @@ export async function createHomeworkBatch(input: CreateHomeworkInput): Promise<H
 
   const created: HomeworkRow[] = [];
   await db.transaction(async (tx) => {
-    const insert = await tx.prepare(
-      `INSERT INTO homework (center_id, class_id, title, content, due_date, created_by,
-        status, publish_at, max_score, close_date, kind, rubric_id)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-    );
-    const attStmt = await tx.prepare(
-      'INSERT INTO homework_attachments (homework_id, name, url, kind) VALUES (?, ?, ?, ?)'
-    );
-    const tgtStmt = await tx.prepare('INSERT INTO homework_targets (homework_id, student_id) VALUES (?, ?)');
     for (const cid of class_ids) {
-      const r = await insert.run(
+      const hid = await insertHomeworkTx(tx, {
         centerId,
-        cid,
-        title.trim(),
-        content?.trim() || null,
-        due_date || null,
+        class_id: cid,
+        title,
+        content,
+        due_date,
         created_by,
-        status,
-        publish_at || null,
-        max_score ?? null,
-        close_date || null,
+        status: hwStatus,
+        publish_at,
+        max_score,
+        close_date,
         kind,
-        rubric_id ?? null
-      );
-      const hid = Number(r.lastInsertRowid);
-      for (const a of attachments) {
-        if (a.name.trim() && a.url.trim())
-          await attStmt.run(hid, a.name.trim(), a.url.trim(), a.kind || 'link');
-      }
-      for (const sid of target_student_ids) await tgtStmt.run(hid, sid);
+        rubric_id,
+        attachments,
+        target_student_ids,
+      });
       created.push((await tx.prepare('SELECT * FROM homework WHERE id = ?').get(hid)) as HomeworkRow);
     }
   });
-  // Phát domain events — listeners (Zalo, Audit...) tự xử lý side-effects
-  for (const hw of created) {
-    eventBus.emitSync(new HomeworkCreatedEvent(hw.id, centerId, status, kind));
-    if (status === 'published') {
-      eventBus.emitSync(new HomeworkPublishedEvent(hw.id, centerId));
-    }
-  }
+  // P0-3(d): KHÔNG emit HomeworkCreatedEvent ở đây nữa — route POST / emit sau khi
+  // câu hỏi quiz đã lưu xong, listener không bao giờ thấy quiz chưa có câu hỏi.
   return created;
 }
 
@@ -378,7 +427,11 @@ export async function getHomeworkDetail(id: number): Promise<HomeworkRow | null>
   return hw;
 }
 
-/** Tái sử dụng: copy bài tập cũ thành bản mới (Classroom: Reuse Post). */
+/**
+ * Tái sử dụng: copy bài tập cũ thành bản mới (Classroom: Reuse Post).
+ * P0-3(b): tạo bài + copy câu hỏi + copy targets trong 1 TRANSACTION DUY NHẤT —
+ * copy câu hỏi fail thì không còn bài mới 0 câu hỏi publish được.
+ */
 export async function reuseHomework(
   id: number,
   createdBy: number,
@@ -386,40 +439,50 @@ export async function reuseHomework(
 ): Promise<HomeworkRow[]> {
   const src = await getHomeworkDetail(id);
   if (!src) throw AppError.notFound('Không tìm thấy bài tập gốc');
-  const created = await createHomeworkBatch({
-    class_ids: [src.class_id],
-    title: src.title,
-    content: src.content,
-    due_date: null, // reset hạn để người dùng đặt lại
-    created_by: createdBy,
-    centerId,
-    status: 'draft', // về nháp để chỉnh sửa trước khi đăng
-    max_score: src.max_score,
-    kind: src.kind,
-    rubric_id: src.rubric_id,
-    // P1-3: attachment loại file được COPY vật lý sang tên mới — bản copy sở hữu
-    // file riêng, xóa bài gốc không làm bài copy mất file. Link giữ nguyên URL.
-    // Copy lỗi (hiếm) → giữ URL cũ để bản nháp không mất tham chiếu (log ở helper).
-    attachments: (src.attachments || []).map((a) => ({
-      name: a.name,
-      url: a.kind === 'file' ? (copyUploadedFileByUrl(a.url) ?? a.url) : a.url,
-      kind: a.kind,
-    })),
-  });
-  // Copy câu hỏi quiz nếu có — bọc transaction (tránh bài mới thiếu câu hỏi/đáp án)
+  // P1-3: attachment loại file được COPY vật lý sang tên mới — bản copy sở hữu
+  // file riêng, xóa bài gốc không làm bài copy mất file. Link giữ nguyên URL.
+  // Copy lỗi (hiếm) → giữ URL cũ để bản nháp không mất tham chiếu (log ở helper).
+  // Copy file là I/O nên làm TRƯỚC transaction (không rollback được).
+  const attachments = (src.attachments || []).map((a) => ({
+    name: a.name,
+    url: a.kind === 'file' ? (copyUploadedFileByUrl(a.url) ?? a.url) : a.url,
+    kind: a.kind,
+  }));
+  const targets = (await db
+    .prepare('SELECT student_id FROM homework_targets WHERE homework_id = ?')
+    .all(id)) as { student_id: number }[];
+  let qs: { id: number; question: string; points: number }[] = [];
+  let optsAll: { question_id: number; text: string; is_correct: number }[] = [];
   if (src.kind === 'quiz') {
-    const qs = (await db
+    qs = (await db
       .prepare('SELECT id, question, points FROM quiz_questions WHERE homework_id = ? ORDER BY position')
       .all(id)) as { id: number; question: string; points: number }[];
-    const optsAll = (await db
+    optsAll = (await db
       .prepare(
         `SELECT qo.question_id, qo.text, qo.is_correct
          FROM quiz_options qo JOIN quiz_questions qq ON qq.id = qo.question_id
          WHERE qq.homework_id = ? ORDER BY qo.question_id, qo.position`
       )
       .all(id)) as { question_id: number; text: string; is_correct: number }[];
-    const newId = created[0].id;
-    await db.transaction(async (tx) => {
+  }
+  const newId = await db.transaction(async (tx) => {
+    const hid = await insertHomeworkTx(tx, {
+      centerId,
+      class_id: src.class_id,
+      title: src.title,
+      content: src.content,
+      due_date: null, // reset hạn để người dùng đặt lại
+      created_by: createdBy,
+      status: 'draft' as const, // về nháp để chỉnh sửa trước khi đăng
+      publish_at: null,
+      max_score: src.max_score,
+      close_date: null,
+      kind: src.kind,
+      rubric_id: src.rubric_id,
+      attachments,
+      target_student_ids: targets.map((t) => t.student_id),
+    });
+    if (src.kind === 'quiz') {
       const qStmt = await tx.prepare(
         'INSERT INTO quiz_questions (homework_id, position, question, points) VALUES (?, ?, ?, ?)'
       );
@@ -427,24 +490,17 @@ export async function reuseHomework(
         'INSERT INTO quiz_options (question_id, position, text, is_correct) VALUES (?, ?, ?, ?)'
       );
       for (const [qi, q] of qs.entries()) {
-        const qr = await qStmt.run(newId, qi, q.question, q.points);
+        const qr = await qStmt.run(hid, qi, q.question, q.points);
         const nqid = Number(qr.lastInsertRowid);
         const opts = optsAll.filter((o) => o.question_id === q.id);
         for (const [oi, o] of opts.entries()) await oStmt.run(nqid, oi, o.text, o.is_correct);
       }
-    });
-  }
-  // Copy danh sách học viên được giao riêng — cùng trong transaction
-  const targets = (await db
-    .prepare('SELECT student_id FROM homework_targets WHERE homework_id = ?')
-    .all(id)) as { student_id: number }[];
-  if (targets.length > 0) {
-    await db.transaction(async (tx) => {
-      const tStmt = await tx.prepare('INSERT INTO homework_targets (homework_id, student_id) VALUES (?, ?)');
-      for (const t of targets) await tStmt.run(created[0].id, t.student_id);
-    });
-  }
-  return created;
+    }
+    return hid;
+  });
+  // P0-3(d): emit SAU KHI mọi thứ (kể cả câu hỏi copy) đã lưu xong
+  eventBus.emitSync(new HomeworkCreatedEvent(newId, centerId, 'draft', src.kind));
+  return [(await db.prepare('SELECT * FROM homework WHERE id = ?').get(newId)) as HomeworkRow];
 }
 
 /** Xuất bản các bài đã hẹn giờ đến hạn (scheduler gọi mỗi phút).
@@ -496,6 +552,8 @@ export async function updateHomework(
   if (!['draft', 'scheduled', 'published'].includes(status)) {
     throw AppError.badRequest('Trạng thái bài tập không hợp lệ');
   }
+  // P0-3(c): PUT đổi status sang published cũng phải có câu hỏi (như nút Đăng)
+  if (status === 'published') await requireQuizPublishable(id);
   // Validate max_score > 0
   const maxScore = data.max_score ?? null;
   if (maxScore !== null && (!Number.isFinite(maxScore) || maxScore <= 0)) {
@@ -542,6 +600,8 @@ export async function setHomeworkStatus(
   status: 'published' | 'draft',
   centerId: number | null = null
 ): Promise<void> {
+  // P0-3(a): đăng quiz rỗng → 400
+  if (status === 'published') await requireQuizPublishable(id);
   await homeworkRepo.setStatus(id, status);
   if (status === 'published') {
     eventBus.emitSync(new HomeworkPublishedEvent(id, centerId));

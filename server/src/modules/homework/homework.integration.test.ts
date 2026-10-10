@@ -13,6 +13,7 @@ import { setupTestDb, resetTestDb, teardownTestDb } from '../../db/test-utils';
 import * as homeworkService from './homework.service';
 import * as quizService from './quiz.service';
 import * as parentService from '../parent/parent.service';
+import { eventBus } from '../../shared/events/eventBus';
 
 // ---------------------------------------------------------------------------
 // Fixtures
@@ -773,6 +774,93 @@ describe('homework.service - update và reuse', () => {
       targets.map((t) => Number(t.student_id)),
       [student1Id, student2Id]
     );
+  });
+});
+
+describe('homework.service - publish quiz phải có câu hỏi (P0-3)', () => {
+  beforeEach(async () => {
+    await resetDb();
+  });
+
+  async function createEmptyQuiz(): Promise<number> {
+    const [hw] = await homeworkService.createHomeworkBatch({
+      class_ids: [classId],
+      title: 'Quiz rỗng',
+      created_by: 1,
+      centerId: null,
+      status: 'draft',
+      kind: 'quiz',
+    });
+    return hw.id;
+  }
+
+  it('setHomeworkStatus từ chối đăng quiz 0 câu hỏi', async () => {
+    const id = await createEmptyQuiz();
+    await assert.rejects(
+      () => homeworkService.setHomeworkStatus(id, 'published', null),
+      /chưa có câu hỏi/
+    );
+    // Thêm câu hỏi rồi đăng được
+    await quizService.saveQuizQuestions(id, VALID_QUESTIONS);
+    await homeworkService.setHomeworkStatus(id, 'published', null);
+    const row = (await db.prepare('SELECT status FROM homework WHERE id = ?').get(id)) as {
+      status: string;
+    };
+    assert.equal(row.status, 'published');
+  });
+
+  it('updateHomework đổi status sang published cũng check câu hỏi', async () => {
+    const id = await createEmptyQuiz();
+    await assert.rejects(
+      () => homeworkService.updateHomework(id, { title: 'Quiz rỗng', status: 'published' }),
+      /chưa có câu hỏi/
+    );
+  });
+
+  it('reuseHomework copy đủ câu hỏi (1 transaction, không còn quiz 0 câu)', async () => {
+    const id = await createEmptyQuiz();
+    await quizService.saveQuizQuestions(id, VALID_QUESTIONS);
+    const [copy] = await homeworkService.reuseHomework(id, 1, null);
+    assert.equal(await quizService.countQuizQuestions(copy.id), VALID_QUESTIONS.length);
+    // Bản copy là draft nhưng đủ câu hỏi nên đăng được ngay
+    await homeworkService.setHomeworkStatus(copy.id, 'published', null);
+  });
+
+  it('createHomeworkBatch không emit homework.created (route emit sau khi lưu đề)', async () => {
+    let emitted = 0;
+    const off = eventBus.on('homework.created', () => {
+      emitted++;
+    });
+    try {
+      await homeworkService.createHomeworkBatch({
+        class_ids: [classId],
+        title: 'E',
+        created_by: 1,
+        centerId: null,
+      });
+    } finally {
+      off();
+    }
+    assert.equal(emitted, 0);
+  });
+
+  it('reuseHomework emit homework.created sau khi copy xong', async () => {
+    const [hw] = await homeworkService.createHomeworkBatch({
+      class_ids: [classId],
+      title: 'E2',
+      created_by: 1,
+      centerId: null,
+    });
+    let emitted = 0;
+    const off = eventBus.on('homework.created', () => {
+      emitted++;
+    });
+    try {
+      await homeworkService.reuseHomework(hw.id, 1, null);
+    } finally {
+      off();
+    }
+    assert.equal(emitted, 1);
   });
 });
 

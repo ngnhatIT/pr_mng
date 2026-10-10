@@ -5,6 +5,8 @@ import { asyncHandler } from '../../shared/http';
 import { AppError } from '../../shared/errors';
 import { validate, v, paramId } from '../../shared/validate';
 import { audit, actorFromReq } from '../../shared/audit';
+import { eventBus } from '../../shared/events/eventBus';
+import { HomeworkCreatedEvent, HomeworkPublishedEvent } from '../../shared/events/homework.events';
 import {
   listHomework,
   getHomeworkStats,
@@ -174,6 +176,14 @@ router.post(
     if (input.kind === 'quiz' && input.questions.length) {
       for (const hw of created) {
         await saveQuizQuestions(hw.id, input.questions as never);
+      }
+    }
+    // P0-3(d): emit SAU KHI câu hỏi quiz đã lưu xong (trước đây createHomeworkBatch
+    // emit trước, listener có thể thấy quiz chưa có câu hỏi)
+    for (const hw of created) {
+      eventBus.emitSync(new HomeworkCreatedEvent(hw.id, reqCenterId(req), input.status, input.kind));
+      if (input.status === 'published') {
+        eventBus.emitSync(new HomeworkPublishedEvent(hw.id, reqCenterId(req)));
       }
     }
     const statusLabel =
