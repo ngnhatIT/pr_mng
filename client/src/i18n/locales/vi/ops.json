@@ -34,7 +34,7 @@
     "filterEntity": "Lọc theo đối tượng",
     "title": "Nhật ký hoạt động",
     "toast": {
-      "loadFail": "Không tải được nhật ký"
+      "loadFail": "Không tải được nhật ký, vui lòng thử lại"
     },
     "totalCount": "Tổng {{total}} dòng nhật ký",
     "totalCount_one": "Tổng {{total}} dòng nhật ký",
@@ -129,7 +129,7 @@
     "title": "Quản lý đơn xin nghỉ phép",
     "toast": {
       "approveFail": "Không duyệt được đơn nghỉ phép, vui lòng thử lại",
-      "loadFail": "Không tải được đơn xin nghỉ phép",
+      "loadFail": "Không tải được đơn xin nghỉ phép, vui lòng thử lại",
       "rejectFail": "Không từ chối được đơn nghỉ phép, vui lòng thử lại",
       "rejected": "Đã từ chối đơn xin nghỉ phép"
     },
@@ -164,7 +164,7 @@
     },
     "title": "Giới thiệu",
     "toast": {
-      "loadFail": "Không tải được dữ liệu giới thiệu"
+      "loadFail": "Không tải được dữ liệu giới thiệu, vui lòng thử lại"
     }
   },
   "reviews": {
@@ -196,7 +196,7 @@
       "approved": "Đã duyệt đánh giá",
       "deleteFail": "Không xóa được đánh giá, vui lòng thử lại",
       "deleted": "Đã xóa đánh giá",
-      "loadFail": "Không tải được đánh giá",
+      "loadFail": "Không tải được đánh giá, vui lòng thử lại",
       "moderateFail": "Không xử lý được đánh giá, vui lòng thử lại",
       "rejected": "Đã từ chối đánh giá"
     }
@@ -243,7 +243,7 @@
     "toast": {
       "createFail": "Không tạo được trung tâm mới, vui lòng thử lại",
       "created": "Đã tạo trung tâm mới",
-      "loadFail": "Không tải được danh sách trung tâm",
+      "loadFail": "Không tải được danh sách trung tâm, vui lòng thử lại",
       "planUpdated": "Đã cập nhật gói",
       "updateFail": "Không cập nhật được gói dịch vụ, vui lòng thử lại"
     }
@@ -380,8 +380,8 @@
     },
     "title": "Nhắc học phí qua Zalo",
     "toast": {
-      "loadConfigFail": "Không tải được cấu hình",
-      "loadHistoryFail": "Không tải được lịch sử",
+      "loadConfigFail": "Không tải được cấu hình, vui lòng thử lại",
+      "loadHistoryFail": "Không tải được lịch sử, vui lòng thử lại",
       "needPhone": "Vui lòng nhập số điện thoại",
       "runFail": "Không chạy được nhắc nhở Zalo, vui lòng thử lại",
       "saveFail": "Không lưu được cấu hình Zalo, vui lòng thử lại",

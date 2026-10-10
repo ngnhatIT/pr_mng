@@ -211,7 +211,7 @@
     "progressLabel": "Question {{current}}/{{total}}",
     "questionCount": "{{count}} questions",
     "questionLabel": "Q{{num}}: {{question}}",
-    "reviewError": "Couldn't load the answers",
+    "reviewError": "Couldn't load the answers, please try again",
     "submitError": "Couldn't submit the quiz, please try again",
     "submitQuiz": "Submit",
     "title": "Quiz: {{title}}",

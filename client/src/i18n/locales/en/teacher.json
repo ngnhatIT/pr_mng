@@ -30,7 +30,7 @@
     "saved": "Grade saved",
     "selectClass": "- Select class -",
     "selectStudent": "- Select student -",
-    "studentsError": "Couldn't load students",
+    "studentsError": "Couldn't load students, please try again",
     "thActions": "Actions",
     "thComment": "Comment",
     "thDate": "Date entered",

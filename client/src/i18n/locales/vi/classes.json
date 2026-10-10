@@ -41,11 +41,11 @@
     },
     "title": "Điểm danh",
     "toast": {
-      "attendanceError": "Không tải được điểm danh",
+      "attendanceError": "Không tải được điểm danh, vui lòng thử lại",
       "createError": "Không tạo được buổi học, vui lòng thử lại",
       "created": "Đã tạo buổi học",
       "saved": "Đã lưu điểm danh",
-      "sessionsError": "Không tải được buổi học"
+      "sessionsError": "Không tải được buổi học, vui lòng thử lại"
     },
     "toolbar": {
       "allPresent": "Tất cả có mặt",
@@ -191,7 +191,7 @@
   "title": "Lớp học",
   "toast": {
     "deleted": "Đã xóa lớp học",
-    "loadError": "Không tải được danh sách lớp",
+    "loadError": "Không tải được danh sách lớp, vui lòng thử lại",
     "saved": "Đã lưu lớp học"
   },
   "days": {

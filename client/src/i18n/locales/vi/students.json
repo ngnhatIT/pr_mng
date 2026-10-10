@@ -101,7 +101,7 @@
   "title": "Học viên",
   "toast": {
     "deleted": "Đã xóa học viên",
-    "loadError": "Không tải được danh sách",
+    "loadError": "Không tải được danh sách, vui lòng thử lại",
     "saved": "Đã lưu học viên"
   },
   "emptyFiltered": {

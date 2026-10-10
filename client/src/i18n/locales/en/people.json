@@ -74,7 +74,7 @@
   "title": "Teachers",
   "toast": {
     "deleted": "Teacher deleted",
-    "loadError": "Could not load the list",
+    "loadError": "Could not load the list, please try again",
     "saved": "Teacher saved"
   }
 }

@@ -9,7 +9,7 @@
     },
     "desc": "Dùng để tạo mã VietQR cho phụ huynh quét thanh toán.",
     "pageDesc": "Thiết lập tài khoản nhận tiền, VNPay và thưởng giới thiệu",
-    "loadError": "Không tải được cấu hình",
+    "loadError": "Không tải được cấu hình, vui lòng thử lại",
     "loadFailDesc": "Vui lòng thử tải lại trang.",
     "loadFailTitle": "Không tải được cấu hình",
     "referral": {
@@ -53,7 +53,7 @@
   "debt": {
     "emptyDesc": "Tất cả học viên đã thanh toán đầy đủ.",
     "emptyTitle": "Không còn công nợ",
-    "loadError": "Không tải được công nợ",
+    "loadError": "Không tải được công nợ, vui lòng thử lại",
     "noInvoices": "Không tìm thấy hóa đơn cần nhắc",
     "remindResult": "Nhắc Zalo cho {{name}}: {{sent}} đã gửi, {{demo}} demo, {{failed}} thất bại",
     "remindTitle": "Gửi nhắc học phí qua Zalo cho các hóa đơn chưa thanh toán",
@@ -115,7 +115,7 @@
   "invoices": {
     "emptyDesc": "Tạo phiếu thu học phí cho học viên để bắt đầu thu tiền.",
     "emptyTitle": "Chưa có phiếu thu nào",
-    "loadError": "Không tải được phiếu thu",
+    "loadError": "Không tải được phiếu thu, vui lòng thử lại",
     "searchPlaceholder": "Tìm theo tên/mã học viên...",
     "tab": "Phiếu thu",
     "totalDebt": "Còn nợ:",
@@ -154,7 +154,7 @@
     "emptyDesc": "Các thanh toán do phụ huynh báo \"đã chuyển khoản\" sẽ hiện ở đây.",
     "emptyTitle": "Không có gì chờ duyệt",
     "fail": "Không xử lý được thanh toán, vui lòng thử lại",
-    "loadError": "Không tải được danh sách chờ duyệt",
+    "loadError": "Không tải được danh sách chờ duyệt, vui lòng thử lại",
     "note": "Thanh toán do phụ huynh báo \"đã chuyển khoản\", chờ trung tâm xác nhận.",
     "reject": "Từ chối",
     "rejected": "Đã từ chối thanh toán",

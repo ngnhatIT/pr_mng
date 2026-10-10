@@ -93,8 +93,8 @@
     "created": "Role created",
     "deleteFail": "Couldn't delete the role, please try again",
     "deleted": "Role deleted",
-    "loadDetailFail": "Failed to load role details",
-    "loadRolesFail": "Failed to load role list",
+    "loadDetailFail": "Failed to load role details, please try again",
+    "loadRolesFail": "Failed to load role list, please try again",
     "savePermsFail": "Couldn't save the permissions, please try again",
     "savedPerms": "Saved {{count}} permissions for the role",
     "updated": "Role updated"

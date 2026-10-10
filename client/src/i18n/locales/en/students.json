@@ -101,7 +101,7 @@
   "title": "Students",
   "toast": {
     "deleted": "Student deleted",
-    "loadError": "Could not load the list",
+    "loadError": "Could not load the list, please try again",
     "saved": "Student saved"
   },
   "emptyFiltered": {

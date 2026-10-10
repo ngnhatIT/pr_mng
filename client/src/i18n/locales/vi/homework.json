@@ -68,7 +68,7 @@
     "title": "Ngân hàng câu hỏi",
     "toast": {
       "deleteFail": "Không xóa được câu hỏi, vui lòng thử lại",
-      "loadFail": "Không tải được ngân hàng",
+      "loadFail": "Không tải được ngân hàng, vui lòng thử lại",
       "staleSelection": "Có {{count}} câu đã chọn không còn trong danh sách",
       "staleSelection_one": "Có {{count}} câu đã chọn không còn trong danh sách",
       "staleSelection_other": "Có {{count}} câu đã chọn không còn trong danh sách"
@@ -262,7 +262,7 @@
     "title": "Chấm điểm: {{title}}",
     "toast": {
       "invalidScore": "Điểm không hợp lệ",
-      "loadFail": "Không tải được bảng điểm",
+      "loadFail": "Không tải được bảng điểm, vui lòng thử lại",
       "overMax": "Điểm không vượt quá {{max}}",
       "saveFail": "Không lưu được điểm, vui lòng thử lại",
       "saved": "Đã lưu điểm"
@@ -314,7 +314,7 @@
   "toast": {
     "deleteFail": "Không xóa được bài tập, vui lòng thử lại",
     "deleted": "Đã xóa bài tập",
-    "loadFail": "Không tải được bài tập",
+    "loadFail": "Không tải được bài tập, vui lòng thử lại",
     "publishFail": "Không đăng được bài tập, vui lòng thử lại",
     "published": "Đã đăng bài tập",
     "reuseFail": "Không tái sử dụng được bài tập, vui lòng thử lại",

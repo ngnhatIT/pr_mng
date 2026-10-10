@@ -74,7 +74,7 @@
   "title": "Giáo viên",
   "toast": {
     "deleted": "Đã xóa giáo viên",
-    "loadError": "Không tải được danh sách",
+    "loadError": "Không tải được danh sách, vui lòng thử lại",
     "saved": "Đã lưu giáo viên"
   }
 }

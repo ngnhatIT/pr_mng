@@ -9,7 +9,7 @@
     },
     "desc": "Used to generate VietQR codes for parents to scan and pay.",
     "pageDesc": "Set up the receiving account, VNPay, and referral rewards",
-    "loadError": "Could not load settings",
+    "loadError": "Could not load settings, please try again",
     "loadFailDesc": "Please try reloading the page.",
     "loadFailTitle": "Could not load settings",
     "referral": {
@@ -53,7 +53,7 @@
   "debt": {
     "emptyDesc": "All students have paid in full.",
     "emptyTitle": "No outstanding debts",
-    "loadError": "Could not load debts",
+    "loadError": "Could not load debts, please try again",
     "noInvoices": "No invoices found to remind",
     "remindResult": "Zalo reminders for {{name}}: {{sent}} sent, {{demo}} demo, {{failed}} failed",
     "remindTitle": "Send Zalo tuition reminders for unpaid invoices",
@@ -115,7 +115,7 @@
   "invoices": {
     "emptyDesc": "Create tuition invoices for students to start collecting.",
     "emptyTitle": "No invoices yet",
-    "loadError": "Could not load invoices",
+    "loadError": "Could not load invoices, please try again",
     "searchPlaceholder": "Search by student name/code...",
     "tab": "Invoices",
     "totalDebt": "Owes:",
@@ -154,7 +154,7 @@
     "emptyDesc": "Payments parents reported as \"transferred\" will appear here.",
     "emptyTitle": "Nothing pending approval",
     "fail": "Couldn't process the payment, please try again",
-    "loadError": "Could not load the pending list",
+    "loadError": "Could not load the pending list, please try again",
     "note": "Payments parents reported as \"transferred\", awaiting confirmation.",
     "reject": "Reject",
     "rejected": "Payment rejected",

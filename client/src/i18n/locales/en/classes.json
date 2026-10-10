@@ -41,11 +41,11 @@
     },
     "title": "Attendance",
     "toast": {
-      "attendanceError": "Could not load attendance",
+      "attendanceError": "Could not load attendance, please try again",
       "createError": "Couldn't create the session, please try again",
       "created": "Session created",
       "saved": "Attendance saved",
-      "sessionsError": "Could not load sessions"
+      "sessionsError": "Could not load sessions, please try again"
     },
     "toolbar": {
       "allPresent": "Mark all present",
@@ -191,7 +191,7 @@
   "title": "Classes",
   "toast": {
     "deleted": "Class deleted",
-    "loadError": "Could not load class list",
+    "loadError": "Could not load class list, please try again",
     "saved": "Class saved"
   },
   "days": {

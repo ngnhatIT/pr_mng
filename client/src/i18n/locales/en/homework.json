@@ -70,7 +70,7 @@
     "title": "Question bank",
     "toast": {
       "deleteFail": "Couldn't delete the question, please try again",
-      "loadFail": "Could not load the bank",
+      "loadFail": "Could not load the bank, please try again",
       "staleSelection_one": "{{count}} selected question is no longer in the list",
       "staleSelection_other": "{{count}} selected questions are no longer in the list",
       "staleSelection": "{{count}} selected questions are no longer in the list"
@@ -262,7 +262,7 @@
     "title": "Grading: {{title}}",
     "toast": {
       "invalidScore": "Invalid score",
-      "loadFail": "Could not load the grade sheet",
+      "loadFail": "Could not load the grade sheet, please try again",
       "overMax": "Score cannot exceed {{max}}",
       "saveFail": "Couldn't save the score, please try again",
       "saved": "Score saved"
@@ -314,7 +314,7 @@
   "toast": {
     "deleteFail": "Couldn't delete the assignment, please try again",
     "deleted": "Homework deleted",
-    "loadFail": "Could not load homework",
+    "loadFail": "Could not load homework, please try again",
     "publishFail": "Couldn't publish the assignment, please try again",
     "published": "Homework published",
     "reuseFail": "Couldn't reuse the assignment, please try again",

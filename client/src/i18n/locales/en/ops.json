@@ -34,7 +34,7 @@
     "filterEntity": "Filter by entity",
     "title": "Activity log",
     "toast": {
-      "loadFail": "Could not load the activity log"
+      "loadFail": "Could not load the activity log, please try again"
     },
     "totalCount_one": "{{total}} log entry total",
     "totalCount_other": "{{total}} log entries total",
@@ -129,7 +129,7 @@
     "title": "Leave requests",
     "toast": {
       "approveFail": "Couldn't approve the leave request, please try again",
-      "loadFail": "Could not load leave requests",
+      "loadFail": "Could not load leave requests, please try again",
       "rejectFail": "Couldn't reject the leave request, please try again",
       "rejected": "Leave request rejected"
     },
@@ -164,7 +164,7 @@
     },
     "title": "Referrals",
     "toast": {
-      "loadFail": "Could not load referral data"
+      "loadFail": "Could not load referral data, please try again"
     }
   },
   "reviews": {
@@ -196,7 +196,7 @@
       "approved": "Review approved",
       "deleteFail": "Couldn't delete the review, please try again",
       "deleted": "Review deleted",
-      "loadFail": "Could not load reviews",
+      "loadFail": "Could not load reviews, please try again",
       "moderateFail": "Couldn't process the review, please try again",
       "rejected": "Review rejected"
     }
@@ -243,7 +243,7 @@
     "toast": {
       "createFail": "Couldn't create the center, please try again",
       "created": "New center created",
-      "loadFail": "Could not load center list",
+      "loadFail": "Could not load center list, please try again",
       "planUpdated": "Plan updated",
       "updateFail": "Couldn't update the plan, please try again"
     }
@@ -380,8 +380,8 @@
     },
     "title": "Tuition reminders via Zalo",
     "toast": {
-      "loadConfigFail": "Could not load configuration",
-      "loadHistoryFail": "Could not load history",
+      "loadConfigFail": "Could not load configuration, please try again",
+      "loadHistoryFail": "Could not load history, please try again",
       "needPhone": "Please enter a phone number",
       "runFail": "Couldn't run the Zalo reminders, please try again",
       "saveFail": "Couldn't save the Zalo config, please try again",

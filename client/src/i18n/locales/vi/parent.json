@@ -211,7 +211,7 @@
     "progressLabel": "Câu {{current}}/{{total}}",
     "questionCount": "{{count}} câu",
     "questionLabel": "Câu {{num}}: {{question}}",
-    "reviewError": "Không tải được đáp án",
+    "reviewError": "Không tải được đáp án, vui lòng thử lại",
     "submitError": "Không nộp được bài trắc nghiệm, vui lòng thử lại",
     "submitQuiz": "Nộp bài",
     "title": "Quiz: {{title}}",
