@@ -132,7 +132,11 @@
     "note": "Ghi chú",
     "payError": "Thu tiền thất bại",
     "recorded": "Đã ghi nhận thanh toán",
-    "title": "Thu tiền học phí"
+    "title": "Thu tiền học phí",
+    "errors": {
+      "amountRequired": "Vui lòng nhập số tiền thu",
+      "amountInvalid": "Số tiền phải từ 1 đến số còn nợ"
+    }
   },
   "pending": {
     "approve": "Duyệt",

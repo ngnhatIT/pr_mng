@@ -6,7 +6,7 @@ import { studentsApi, Student } from '../students/students.api';
 import { classesApi, ClassItem } from '../classes/classes.api';
 import { useToast, toastApiError } from '../../shared/ui/toast';
 import { Modal } from '../../shared/components/Modal';
-import { Field } from '../../shared/components/Form';
+import { Field, useFieldErrors } from '../../shared/components/Form';
 import { PageHeader } from '../../shared/components/PageHeader';
 import { EmptyState } from '../../shared/components/EmptyState';
 import { TableSkeleton } from '../../shared/components/Skeleton';
@@ -651,10 +651,17 @@ function PayModal({
   const [note, setNote] = useState('');
   const [busy, setBusy] = useState(false);
   const toast = useToast();
+  // Lỗi inline dưới field + focus field lỗi (skill 8.2); dữ liệu giữ nguyên khi lỗi
+  const { errors, refFor, show, clear } = useFieldErrors<'amount'>();
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (busy) return; // Chống double-submit khi Enter nhanh 2 lần
+    const amt = Number(amount);
+    const errs: { amount?: string } = {};
+    if (!amount.trim()) errs.amount = t('pay.errors.amountRequired');
+    else if (!Number.isFinite(amt) || amt < 1 || amt > remain) errs.amount = t('pay.errors.amountInvalid');
+    if (!show(errs)) return;
     setBusy(true);
     try {
       await invoicesApi.recordPayment(invoice.id, {
@@ -684,15 +691,18 @@ function PayModal({
           />
         </p>
         <div className="form-grid">
-          <Field label={t('pay.amount')}>
+          <Field label={t('pay.amount')} error={errors.amount}>
             <input
+              ref={refFor('amount')}
               className="text-input"
               type="number"
               min={1}
               max={remain}
               value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-              required
+              onChange={(e) => {
+                setAmount(e.target.value);
+                clear('amount');
+              }}
             />
           </Field>
           <Field label={t('pay.method')}>

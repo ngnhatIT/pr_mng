@@ -132,7 +132,11 @@
     "note": "Note",
     "payError": "Collection failed",
     "recorded": "Payment recorded",
-    "title": "Collect tuition"
+    "title": "Collect tuition",
+    "errors": {
+      "amountRequired": "Please enter the amount",
+      "amountInvalid": "Amount must be between 1 and the remaining debt"
+    }
   },
   "pending": {
     "approve": "Approve",
