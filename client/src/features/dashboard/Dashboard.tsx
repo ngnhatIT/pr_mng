@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { dashboardApi } from './dashboard.api';
@@ -9,6 +9,7 @@ import { getUser } from '../../shared/api/client';
 import { PageHeader } from '../../shared/components/PageHeader';
 import { StatCard } from '../../shared/components/StatCard';
 import { StatGridSkeleton } from '../../shared/components/Skeleton';
+import { EmptyState } from '../../shared/components/EmptyState';
 import { Icon, IconName } from '../../shared/components/icons';
 import './Dashboard.css';
 
@@ -34,6 +35,7 @@ export function Dashboard() {
   const [data, setData] = useState<DashboardData | null>(null);
   const [debts, setDebts] = useState<DebtRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const toast = useToast();
   const user = getUser();
 
@@ -54,25 +56,30 @@ export function Dashboard() {
     { to: '/app/zalo-reminders', label: t('quick.zalo'), desc: t('quick.zaloDesc'), icon: 'bell' },
   ];
 
-  useEffect(() => {
-    void (async () => {
+  const load = useCallback(async () => {
+    setLoading(true);
+    setLoadError(false);
+    try {
+      const d = await dashboardApi.summary();
+      setData(d);
       try {
-        const d = await dashboardApi.summary();
-        setData(d);
-        try {
-          // Teacher không có quyền invoices.view → 403, bỏ qua (không vỡ dashboard)
-          const debt = await dashboardApi.topDebts({ limit: 5 });
-          setDebts(debt.data);
-        } catch {
-          setDebts([]);
-        }
-      } catch (err) {
-        toast(err instanceof Error ? err.message : t('loadError'), 'error');
-      } finally {
-        setLoading(false);
+        // Teacher không có quyền invoices.view → 403, bỏ qua (không vỡ dashboard)
+        const debt = await dashboardApi.topDebts({ limit: 5 });
+        setDebts(debt.data);
+      } catch {
+        setDebts([]);
       }
-    })();
+    } catch (err) {
+      setLoadError(true);
+      toast(err instanceof Error ? err.message : t('loadError'), 'error');
+    } finally {
+      setLoading(false);
+    }
   }, [toast, t]);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
 
   if (loading) {
     return (
@@ -85,8 +92,20 @@ export function Dashboard() {
   if (!data) {
     return (
       <div className="page">
-        <PageHeader title={t('pageTitle')} />
-        <div className="loading">{t('noData')}</div>
+        <PageHeader title={t('pageTitle')} desc={t('pageDesc')} />
+        <EmptyState
+          icon="alert"
+          title={loadError ? t('loadError') : t('noData')}
+          desc={loadError ? t('loadErrorDesc') : undefined}
+          action={
+            loadError ? (
+              <button className="btn btn-primary btn-inline" onClick={() => void load()}>
+                <Icon name="rotate" size={14} />
+                {t('actions.retry', { ns: 'common' })}
+              </button>
+            ) : undefined
+          }
+        />
       </div>
     );
   }

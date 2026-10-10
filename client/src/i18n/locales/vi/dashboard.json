@@ -9,6 +9,7 @@
     "morning": "Chào buổi sáng"
   },
   "loadError": "Không tải được dữ liệu",
+  "loadErrorDesc": "Kiểm tra lại kết nối mạng rồi thử tải lại dữ liệu.",
   "noData": "Không có dữ liệu",
   "pageDesc": "Tình hình hoạt động của trung tâm hôm nay",
   "pageTitle": "Tổng quan",

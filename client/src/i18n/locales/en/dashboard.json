@@ -9,6 +9,7 @@
     "morning": "Good morning"
   },
   "loadError": "Couldn't load data",
+  "loadErrorDesc": "Check your network connection, then try loading the data again.",
   "noData": "No data",
   "pageDesc": "Center activity today",
   "pageTitle": "Overview",
