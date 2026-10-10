@@ -341,16 +341,36 @@ router.post(
     });
     if (
       !Array.isArray(answers) ||
-      answers.some(
-        (a) =>
-          typeof a !== 'object' ||
-          a === null ||
-          !Number.isInteger((a as { question_id?: unknown }).question_id) ||
-          !Number.isInteger((a as { option_id?: unknown }).option_id)
-      )
+      answers.some((a) => {
+        if (typeof a !== 'object' || a === null) return true;
+        const ans = a as {
+          question_id?: unknown;
+          option_id?: unknown;
+          option_ids?: unknown;
+          answer_text?: unknown;
+        };
+        if (!Number.isInteger(ans.question_id)) return true;
+        // Validate shape ở trust boundary: phần tử sai shape (null, thiếu id)
+        // sẽ làm submitQuiz 500 khi đọc a.question_id. Shape mới: multiple dùng
+        // option_ids (mảng id), essay dùng answer_text (chuỗi).
+        if (ans.option_id !== undefined && ans.option_id !== null && !Number.isInteger(ans.option_id))
+          return true;
+        if (
+          ans.option_ids !== undefined &&
+          ans.option_ids !== null &&
+          (!Array.isArray(ans.option_ids) ||
+            (ans.option_ids as unknown[]).some((id) => !Number.isInteger(id)))
+        )
+          return true;
+        if (
+          ans.answer_text !== undefined &&
+          ans.answer_text !== null &&
+          typeof ans.answer_text !== 'string'
+        )
+          return true;
+        return false;
+      })
     ) {
-      // Validate shape ở trust boundary: phần tử sai shape (null, thiếu id)
-      // sẽ làm submitQuiz 500 khi đọc a.question_id
       throw AppError.badRequest('Bài làm không hợp lệ');
     }
     res

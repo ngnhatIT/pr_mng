@@ -667,6 +667,7 @@ import {
   submitQuiz,
   getStudentAttempts,
   getAttemptReview,
+  type QuizAnswerInput,
 } from '../homework/quiz.service';
 
 /* ------------------------------- Quiz cho con ------------------------------- */
@@ -697,7 +698,7 @@ export async function submitChildQuiz(
   parentId: number,
   studentId: number,
   homeworkId: number,
-  answers: { question_id: number; option_id: number }[]
+  answers: QuizAnswerInput[]
 ) {
   await getChildHomework(parentId, studentId, homeworkId);
   return await submitQuiz(homeworkId, studentId, answers);

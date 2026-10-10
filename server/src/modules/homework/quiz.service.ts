@@ -3,7 +3,7 @@ import { AppError } from '../../shared/errors';
 import { todayVN } from '../../shared/vnTime';
 import { eventBus } from '../../shared/events/eventBus';
 import { QuizSubmittedEvent } from '../../shared/events/homework.events';
-import { sumQuestionPoints, normalizePoints, assertUniqueOptionTexts } from './homework.helpers';
+import { sumQuestionPoints, normalizePoints, normalizeQtype, validateQuestionOptions, gradeQuestion, type QuestionType } from './homework.helpers';
 
 /* ---------------------------------- Types ---------------------------------- */
 
@@ -15,14 +15,33 @@ export interface QuizOptionInput {
 export interface QuizQuestionInput {
   question: string;
   points: number;
+  qtype?: string;
   options: QuizOptionInput[];
+}
+
+/** Câu hỏi đã validate + chuẩn hoá (validateQuizQuestions trả về). */
+export interface NormalizedQuizQuestion {
+  question: string;
+  points: number;
+  qtype: QuestionType;
+  options: { text: string; is_correct: boolean }[];
 }
 
 export interface QuizQuestion {
   id: number;
+  qtype: string;
   question: string;
   points: number;
   options: { id: number; text: string }[]; // ẩn is_correct với học viên
+}
+
+/** Bài làm 1 câu: tương thích shape cũ {question_id, option_id};
+ * multiple → option_ids (nhiều đáp án); essay → answer_text (tự luận). */
+export interface QuizAnswerInput {
+  question_id: number;
+  option_id?: number | null;
+  option_ids?: number[];
+  answer_text?: string | null;
 }
 
 export interface QuizAttempt {
@@ -30,7 +49,12 @@ export interface QuizAttempt {
   score: number;
   max_score: number;
   submitted_at: string;
-  answers: { question_id: number; option_id: number | null; correct: boolean }[];
+  answers: {
+    question_id: number;
+    option_ids: number[];
+    answer_text: string | null;
+    correct: boolean | null; // null = essay chờ chấm
+  }[];
 }
 
 /* --------------------------------- Service --------------------------------- */
@@ -38,31 +62,27 @@ export interface QuizAttempt {
 /**
  * Validate bộ câu hỏi quiz (dùng chung cho tạo mới và lưu đề): ném AppError
  * nếu câu hỏi/đáp án không hợp lệ. Không chạm DB — gọi trước mọi ghi dữ liệu.
+ * Trả về bộ câu hỏi đã chuẩn hoá (qtype, options) để caller ghi DB trực tiếp.
  */
-export function validateQuizQuestions(questions: QuizQuestionInput[]): void {
+export function validateQuizQuestions(questions: QuizQuestionInput[]): NormalizedQuizQuestion[] {
   if (!Array.isArray(questions) || !questions.length)
     throw AppError.badRequest('Quiz cần ít nhất 1 câu hỏi');
-  questions.forEach((q, qi) => {
+  return questions.map((q, qi) => {
+    const label = `Câu ${qi + 1}`;
     if (typeof q?.question !== 'string' || !q.question.trim())
-      throw AppError.badRequest(`Câu ${qi + 1} chưa có nội dung`);
-    if (!Array.isArray(q.options) || q.options.length < 2)
-      throw AppError.badRequest(`Câu ${qi + 1} cần ít nhất 2 đáp án`);
-    if (!q.options.some((o) => o.is_correct))
-      throw AppError.badRequest(`Câu ${qi + 1} chưa chọn đáp án đúng`);
+      throw AppError.badRequest(`${label} chưa có nội dung`);
+    const qtype = normalizeQtype(q?.qtype, `${label} (loại câu hỏi)`);
+    const options = validateQuestionOptions(qtype, q?.options, label);
     // P1-7: điểm âm/khổng lồ/không phải số → 400, không clamp im lặng
-    normalizePoints(q?.points, `Điểm câu ${qi + 1}`);
-    assertUniqueOptionTexts(q.options, `Câu ${qi + 1} có đáp án trùng nhau`);
-    q.options.forEach((o, oi) => {
-      if (typeof o.text !== 'string' || !o.text.trim())
-        throw AppError.badRequest(`Câu ${qi + 1}: đáp án ${oi + 1} trống`);
-    });
+    const points = normalizePoints(q?.points, `Điểm câu ${qi + 1}`);
+    return { question: q.question.trim(), points, qtype, options };
   });
 }
 
 /** Lưu bộ câu hỏi cho quiz (thay thế toàn bộ). Validate TẤT CẢ trước khi xóa để tránh mất dữ liệu. */
 export async function saveQuizQuestions(homeworkId: number, questions: QuizQuestionInput[]): Promise<void> {
   // Validate toàn bộ trước — không xóa gì nếu có lỗi (không cần lock)
-  validateQuizQuestions(questions);
+  const normalized = validateQuizQuestions(questions);
 
   // Tất cả hợp lệ → thay thế trong transaction
   await db.transaction(async (tx) => {
@@ -85,31 +105,31 @@ export async function saveQuizQuestions(homeworkId: number, questions: QuizQuest
     await tx.prepare('DELETE FROM quiz_questions WHERE homework_id = ?').run(homeworkId);
 
     const qStmt = await tx.prepare(
-      'INSERT INTO quiz_questions (homework_id, position, question, points) VALUES (?, ?, ?, ?)'
+      'INSERT INTO quiz_questions (homework_id, position, qtype, question, points) VALUES (?, ?, ?, ?, ?)'
     );
     const oStmt = await tx.prepare(
       'INSERT INTO quiz_options (question_id, position, text, is_correct) VALUES (?, ?, ?, ?)'
     );
-    for (const [qi, q] of questions.entries()) {
-      // Điểm đã validate ở validateQuizQuestions — normalizePoints không clamp im lặng
-      const qr = await qStmt.run(homeworkId, qi, q.question.trim(), normalizePoints(q.points));
+    for (const [qi, q] of normalized.entries()) {
+      const qr = await qStmt.run(homeworkId, qi, q.qtype, q.question, q.points);
       const qid = Number(qr.lastInsertRowid);
+      // essay: không có đáp án trắc nghiệm
       for (const [oi, o] of q.options.entries()) {
-        await oStmt.run(qid, oi, o.text.trim(), o.is_correct ? 1 : 0);
+        await oStmt.run(qid, oi, o.text, o.is_correct ? 1 : 0);
       }
     }
     // Đồng bộ max_score của bài theo đề mới (giữ điểm lẻ 0.5, không làm tròn)
     await tx
       .prepare('UPDATE homework SET max_score = ? WHERE id = ?')
-      .run(sumQuestionPoints(questions), homeworkId);
+      .run(sumQuestionPoints(normalized), homeworkId);
   });
 }
 
 /** Lấy câu hỏi cho học viên làm bài (ẩn đáp án đúng). */
 export async function getQuizForStudent(homeworkId: number): Promise<QuizQuestion[]> {
   const qs = (await db
-    .prepare('SELECT id, question, points FROM quiz_questions WHERE homework_id = ? ORDER BY position, id')
-    .all(homeworkId)) as { id: number; question: string; points: number }[];
+    .prepare('SELECT id, qtype, question, points FROM quiz_questions WHERE homework_id = ? ORDER BY position, id')
+    .all(homeworkId)) as { id: number; qtype: string; question: string; points: number }[];
   // P1-4: 1 query duy nhất cho mọi đáp án thay vì 1 query/câu hỏi.
   // Học viên KHÔNG bao giờ thấy is_correct — strip ở đây, không phụ thuộc caller.
   const options = await getOptionsBatch(qs.map((q) => q.id));
@@ -157,8 +177,8 @@ export async function getQuizForStaff(
   homeworkId: number
 ): Promise<(QuizQuestion & { options: { id: number; text: string; is_correct: boolean }[] })[]> {
   const qs = (await db
-    .prepare('SELECT id, question, points FROM quiz_questions WHERE homework_id = ? ORDER BY position, id')
-    .all(homeworkId)) as { id: number; question: string; points: number }[];
+    .prepare('SELECT id, qtype, question, points FROM quiz_questions WHERE homework_id = ? ORDER BY position, id')
+    .all(homeworkId)) as { id: number; qtype: string; question: string; points: number }[];
   // P1-4: 1 query duy nhất cho mọi đáp án thay vì 1 query/câu hỏi
   const options = await getOptionsBatch(qs.map((q) => q.id));
   return qs.map((q) => ({
@@ -181,7 +201,48 @@ export async function countQuizAttempts(homeworkId: number): Promise<number> {
 }
 
 /**
+ * Chuẩn hoá bài làm ở trust boundary: shape cũ {question_id, option_id} vẫn
+ * được chấp nhận (1 đáp án); multiple dùng option_ids; essay dùng answer_text.
+ * Giá trị rác (id không phải số, text quá dài) → 400, không để 500 ở DB.
+ */
+function normalizeSubmitAnswers(
+  answers: QuizAnswerInput[] | undefined | null
+): Map<number, { optionIds: number[]; answerText: string | null }> {
+  if (!Array.isArray(answers)) throw AppError.badRequest('Bài làm không hợp lệ');
+  const map = new Map<number, { optionIds: number[]; answerText: string | null }>();
+  for (const a of answers) {
+    if (typeof a !== 'object' || a === null || !Number.isInteger(a.question_id)) {
+      throw AppError.badRequest('Bài làm không hợp lệ');
+    }
+    const optionIds = new Set<number>();
+    // Tương thích shape cũ: option_id đơn
+    if (a.option_id !== undefined && a.option_id !== null) {
+      if (!Number.isInteger(a.option_id)) throw AppError.badRequest('Bài làm không hợp lệ');
+      optionIds.add(a.option_id);
+    }
+    if (a.option_ids !== undefined && a.option_ids !== null) {
+      if (!Array.isArray(a.option_ids) || a.option_ids.some((id) => !Number.isInteger(id))) {
+        throw AppError.badRequest('Bài làm không hợp lệ');
+      }
+      for (const id of a.option_ids) optionIds.add(id);
+    }
+    let answerText: string | null = null;
+    if (a.answer_text !== undefined && a.answer_text !== null) {
+      if (typeof a.answer_text !== 'string') throw AppError.badRequest('Bài làm không hợp lệ');
+      answerText = a.answer_text.trim().slice(0, 20000) || null;
+    }
+    map.set(a.question_id, { optionIds: [...optionIds], answerText });
+  }
+  return map;
+}
+
+/**
  * Nộp bài quiz → tự chấm điểm ngay (Classroom: Forms grade importing).
+ * Quy tắc chấm theo loại câu (xem gradeQuestion trong homework.helpers):
+ * single/truefalse khớp đáp án đúng → full điểm; multiple khớp TOÀN BỘ
+ * (đúng hết đáp án đúng, không chọn đáp án sai) → full điểm, ngược lại 0
+ * (không cho điểm từng phần); essay không chấm tự động (0 điểm tạm, chờ
+ * giáo viên chấm tay qua gradeHomework).
  * - Cho làm lại nhiều lần (như Google Forms), giữ điểm CAO NHẤT
  * - Không ghi đè điểm giáo viên đã chấm tay (trừ khi điểm tự chấm cao hơn và giáo viên chưa chấm)
  * Trả về điểm đạt được.
@@ -189,7 +250,7 @@ export async function countQuizAttempts(homeworkId: number): Promise<number> {
 export async function submitQuiz(
   homeworkId: number,
   studentId: number,
-  answers: { question_id: number; option_id: number }[]
+  answers: QuizAnswerInput[]
 ): Promise<{ score: number; max_score: number; attempt_id: number; attempt_no: number }> {
   // Kiểm tra hạn chót cứng
   const hw = (await db.prepare('SELECT close_date FROM homework WHERE id = ?').get(homeworkId)) as
@@ -200,10 +261,10 @@ export async function submitQuiz(
     throw AppError.badRequest('Đã quá hạn chót, không thể nộp bài');
   }
 
-  const answerMap = new Map(answers.map((a) => [a.question_id, a.option_id]));
+  const answerMap = normalizeSubmitAnswers(answers);
   const questions = (await db
-    .prepare('SELECT id, points FROM quiz_questions WHERE homework_id = ?')
-    .all(homeworkId)) as { id: number; points: number }[];
+    .prepare('SELECT id, qtype, points FROM quiz_questions WHERE homework_id = ?')
+    .all(homeworkId)) as { id: number; qtype: string; points: number }[];
   if (questions.length === 0) throw AppError.badRequest('Quiz chưa có câu hỏi');
 
   // Chấm 40 câu = 1 query duy nhất thay vì 40 round-trip (hết N+1):
@@ -217,18 +278,37 @@ export async function submitQuiz(
         .join(',')})`
     )
     .all(...questions.map((q) => q.id))) as { id: number; question_id: number; is_correct: number }[];
-  const optionMap = new Map(options.map((o) => [o.id, o]));
+  const optionsByQuestion = new Map<number, { id: number; is_correct: number }[]>();
+  for (const o of options) {
+    const list = optionsByQuestion.get(o.question_id) ?? [];
+    list.push({ id: o.id, is_correct: o.is_correct });
+    optionsByQuestion.set(o.question_id, list);
+  }
 
   let score = 0;
   let maxScore = 0;
-  const graded: { question_id: number; option_id: number | null; correct: boolean }[] = [];
+  // Bài làm đã chuẩn hoá để ghi quiz_answers: mỗi câu multiple → 1 dòng/đáp án
+  // đã chọn; essay → 1 dòng chứa answer_text; single/truefalse → 1 dòng.
+  const rowsToInsert: { question_id: number; option_id: number | null; answer_text: string | null }[] = [];
   for (const q of questions) {
     maxScore += q.points;
-    const optId = answerMap.get(q.id) ?? null;
-    const opt = optId ? optionMap.get(optId) : undefined;
-    const correct = !!opt && opt.question_id === q.id && opt.is_correct === 1;
-    if (correct) score += q.points;
-    graded.push({ question_id: q.id, option_id: optId, correct });
+    const qtype = normalizeQtype(q.qtype);
+    const given = answerMap.get(q.id) ?? { optionIds: [], answerText: null };
+    // Lọc đáp án lạ (id không thuộc câu này) — coi như không chọn, không 500
+    const validIds = new Set((optionsByQuestion.get(q.id) ?? []).map((o) => o.id));
+    const chosen = given.optionIds.filter((id) => validIds.has(id));
+    const correctIds = (optionsByQuestion.get(q.id) ?? [])
+      .filter((o) => o.is_correct === 1)
+      .map((o) => o.id);
+    if (gradeQuestion(qtype, chosen, correctIds) === true) score += q.points;
+    // essay: chấm tay sau — điểm tự động 0, lưu nội dung bài làm
+    if (qtype === 'essay') {
+      rowsToInsert.push({ question_id: q.id, option_id: null, answer_text: given.answerText });
+    } else if (chosen.length) {
+      for (const oid of chosen) rowsToInsert.push({ question_id: q.id, option_id: oid, answer_text: null });
+    } else {
+      rowsToInsert.push({ question_id: q.id, option_id: null, answer_text: null }); // bỏ trống
+    }
   }
 
   const attemptNo =
@@ -246,9 +326,9 @@ export async function submitQuiz(
       .run(homeworkId, studentId, score, maxScore);
     const attemptId = Number(ar.lastInsertRowid);
     const aStmt = await tx.prepare(
-      'INSERT INTO quiz_answers (attempt_id, question_id, option_id) VALUES (?, ?, ?)'
+      'INSERT INTO quiz_answers (attempt_id, question_id, option_id, answer_text) VALUES (?, ?, ?, ?)'
     );
-    for (const g of graded) await aStmt.run(attemptId, g.question_id, g.option_id);
+    for (const r of rowsToInsert) await aStmt.run(attemptId, r.question_id, r.option_id, r.answer_text);
 
     // Đồng bộ điểm: giữ điểm CAO NHẤT — atomic bằng GREATEST ngay trong SQL,
     // không đọc-then-ghi từ snapshot nên 2 lần nộp đồng thời không ghi đè
@@ -287,26 +367,57 @@ export async function getStudentAttempts(homeworkId: number, studentId: number):
       'SELECT id, score, max_score, submitted_at FROM quiz_attempts WHERE homework_id = ? AND student_id = ? ORDER BY submitted_at DESC'
     )
     .all(homeworkId, studentId)) as QuizAttempt[];
-  // P1-4: 1 query duy nhất cho đáp án mọi lượt làm thay vì 1 query/lượt
-  const answersByAttempt = new Map<number, { question_id: number; option_id: number | null; correct: boolean }[]>();
+  // Gom bài làm theo (lượt, câu hỏi): multiple có thể chọn nhiều đáp án (nhiều
+  // dòng), essay lưu answer_text. Chấm lại trong memory để có correct theo qtype.
+  const answersByAttempt = new Map<
+    number,
+    { question_id: number; option_ids: number[]; answer_text: string | null; correct: boolean | null }[]
+  >();
   if (attempts.length) {
     const rows = (await db
       .prepare(
-        `SELECT qa.attempt_id, qa.question_id, qa.option_id,
-          CASE WHEN qo.is_correct = 1 THEN 1 ELSE 0 END as correct
-         FROM quiz_answers qa LEFT JOIN quiz_options qo ON qo.id = qa.option_id
+        `SELECT qa.attempt_id, qa.question_id, qa.option_id, qa.answer_text
+         FROM quiz_answers qa
          WHERE qa.attempt_id IN (${attempts.map(() => '?').join(',')})`
       )
       .all(...attempts.map((a) => a.id))) as {
       attempt_id: number;
       question_id: number;
       option_id: number | null;
-      correct: boolean;
+      answer_text: string | null;
     }[];
+    const qtypes = new Map(
+      (
+        (await db
+          .prepare('SELECT id, qtype FROM quiz_questions WHERE homework_id = ?')
+          .all(homeworkId)) as { id: number; qtype: string }[]
+      ).map((q) => [q.id, normalizeQtype(q.qtype)])
+    );
+    const options = await getOptionsBatch([...qtypes.keys()]);
+    const correctIdsByQ = new Map<number, number[]>();
+    for (const [qid, opts] of options) {
+      correctIdsByQ.set(
+        qid,
+        opts.filter((o) => o.is_correct === 1).map((o) => o.id)
+      );
+    }
+    const grouped = new Map<string, { attempt_id: number; question_id: number; option_ids: number[]; answer_text: string | null }>();
     for (const r of rows) {
-      const list = answersByAttempt.get(r.attempt_id) ?? [];
-      list.push({ question_id: r.question_id, option_id: r.option_id, correct: r.correct });
-      answersByAttempt.set(r.attempt_id, list);
+      const key = `${r.attempt_id}:${r.question_id}`;
+      let g = grouped.get(key);
+      if (!g) {
+        g = { attempt_id: r.attempt_id, question_id: r.question_id, option_ids: [], answer_text: null };
+        grouped.set(key, g);
+      }
+      if (r.option_id !== null && r.option_id !== undefined) g.option_ids.push(r.option_id);
+      if (r.answer_text) g.answer_text = r.answer_text;
+    }
+    for (const g of grouped.values()) {
+      const qtype = qtypes.get(g.question_id) ?? 'single';
+      const correct = gradeQuestion(qtype, g.option_ids, correctIdsByQ.get(g.question_id) ?? []);
+      const list = answersByAttempt.get(g.attempt_id) ?? [];
+      list.push({ question_id: g.question_id, option_ids: g.option_ids, answer_text: g.answer_text, correct });
+      answersByAttempt.set(g.attempt_id, list);
     }
   }
   return attempts.map((a) => ({ ...a, answers: answersByAttempt.get(a.id) ?? [] }));
@@ -328,37 +439,56 @@ export async function getAllAttempts(homeworkId: number): Promise<unknown[]> {
 export interface QuizReview {
   question_id: number;
   question: string;
+  qtype: string;
   points: number;
   options: { id: number; text: string; is_correct: boolean; chosen: boolean }[];
+  answer_text: string | null; // bài làm tự luận (câu essay)
+  correct: boolean | null; // null = essay, chờ chấm tay
 }
 
-/** Chi tiết 1 lượt làm: câu hỏi + đáp án đúng/sai + đáp án đã chọn (Google Forms: review). */
+/** Chi tiết 1 lượt làm: câu hỏi + đáp án đúng/sai + đáp án đã chọn (Google Forms: review).
+ * Câu essay hiện nội dung bài làm + trạng thái "chờ chấm" (correct = null). */
 export async function getAttemptReview(attemptId: number, studentId: number): Promise<QuizReview[]> {
   const attempt = (await db
     .prepare('SELECT homework_id, student_id FROM quiz_attempts WHERE id = ?')
     .get(attemptId)) as { homework_id: number; student_id: number } | undefined;
   if (!attempt || attempt.student_id !== studentId) throw AppError.notFound('Không tìm thấy lượt làm bài');
-  const chosen = new Map(
-    (
-      (await db
-        .prepare('SELECT question_id, option_id FROM quiz_answers WHERE attempt_id = ?')
-        .all(attemptId)) as { question_id: number; option_id: number | null }[]
-    ).map((a) => [a.question_id, a.option_id])
-  );
+  // Gom đáp án đã chọn theo câu hỏi (multiple = nhiều dòng; essay = answer_text)
+  const chosenByQ = new Map<number, { option_ids: number[]; answer_text: string | null }>();
+  for (const a of (await db
+    .prepare('SELECT question_id, option_id, answer_text FROM quiz_answers WHERE attempt_id = ?')
+    .all(attemptId)) as { question_id: number; option_id: number | null; answer_text: string | null }[]) {
+    let g = chosenByQ.get(a.question_id);
+    if (!g) {
+      g = { option_ids: [], answer_text: null };
+      chosenByQ.set(a.question_id, g);
+    }
+    if (a.option_id !== null && a.option_id !== undefined) g.option_ids.push(a.option_id);
+    if (a.answer_text) g.answer_text = a.answer_text;
+  }
   const qs = (await db
-    .prepare('SELECT id, question, points FROM quiz_questions WHERE homework_id = ? ORDER BY position, id')
-    .all(attempt.homework_id)) as { id: number; question: string; points: number }[];
+    .prepare('SELECT id, qtype, question, points FROM quiz_questions WHERE homework_id = ? ORDER BY position, id')
+    .all(attempt.homework_id)) as { id: number; qtype: string; question: string; points: number }[];
   // P1-4: 1 query duy nhất cho mọi đáp án thay vì 1 query/câu hỏi
   const options = await getOptionsBatch(qs.map((q) => q.id));
-  return qs.map((q) => ({
-    question_id: q.id,
-    question: q.question,
-    points: q.points,
-    options: (options.get(q.id) ?? []).map((o) => ({
-      id: o.id,
-      text: o.text,
-      is_correct: o.is_correct === 1,
-      chosen: chosen.get(q.id) === o.id,
-    })),
-  }));
+  return qs.map((q) => {
+    const qtype = normalizeQtype(q.qtype);
+    const given = chosenByQ.get(q.id) ?? { option_ids: [], answer_text: null };
+    const opts = options.get(q.id) ?? [];
+    const correctIds = opts.filter((o) => o.is_correct === 1).map((o) => o.id);
+    return {
+      question_id: q.id,
+      question: q.question,
+      qtype,
+      points: q.points,
+      options: opts.map((o) => ({
+        id: o.id,
+        text: o.text,
+        is_correct: o.is_correct === 1,
+        chosen: given.option_ids.includes(o.id),
+      })),
+      answer_text: given.answer_text,
+      correct: gradeQuestion(qtype, given.option_ids, correctIds),
+    };
+  });
 }

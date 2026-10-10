@@ -48,7 +48,7 @@ function stmtFor(sql: string) {
       throw new Error('unexpected get: ' + sql);
     },
     all: async (...args: unknown[]) => {
-      if (sql.startsWith('SELECT id, points FROM quiz_questions')) return QUESTIONS;
+      if (sql.includes('FROM quiz_questions')) return QUESTIONS;
       if (sql.includes('FROM quiz_options')) {
         lastBatchArgs = args;
         return OPTIONS;

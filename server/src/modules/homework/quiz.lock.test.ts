@@ -139,8 +139,8 @@ describe('P1-13 submitQuiz lock row homework khi tạo attempt', () => {
       lockRoute(),
       { match: 'SELECT close_date FROM homework', get: () => ({ close_date: null }) },
       {
-        match: 'SELECT id, points FROM quiz_questions',
-        all: () => [{ id: 21, points: 2 }],
+        match: 'FROM quiz_questions WHERE homework_id',
+        all: () => [{ id: 21, qtype: 'single', points: 2 }],
       },
       {
         match: 'FROM quiz_options WHERE question_id IN',

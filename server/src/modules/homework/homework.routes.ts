@@ -37,6 +37,7 @@ import type { QuizQuestionInput } from './quiz.service';
 import {
   listBankQuestions,
   listBankTags,
+  listBankSubjects,
   addBankQuestion,
   updateBankQuestion,
   deleteBankQuestion,
@@ -378,12 +379,19 @@ router.get(
   '/bank/questions',
   requirePermission('homework.view'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
-    const { search = '', tag = '', page, limit } = req.query as Record<string, string>;
+    const { search = '', tag = '', subject = '', difficulty = '', page, limit } = req.query as Record<
+      string,
+      string
+    >;
     const result = await listBankQuestions(reqCenterId(req), search, tag, {
       page: page ? Number(page) : undefined,
       limit: limit ? Number(limit) : undefined,
+    }, { subject, difficulty });
+    res.json({
+      ...result,
+      tags: await listBankTags(reqCenterId(req)),
+      subjects: await listBankSubjects(reqCenterId(req)),
     });
-    res.json({ ...result, tags: await listBankTags(reqCenterId(req)) });
   })
 );
 
@@ -391,16 +399,28 @@ router.post(
   '/bank/questions',
   requirePermission('homework.create'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
-    const { tag, question, points, options } = req.body as {
+    const { tag, subject, difficulty, qtype, question, points, options } = req.body as {
       tag: string;
+      subject?: string | null;
+      difficulty?: string | null;
+      qtype?: string | null;
       question: string;
       points: number;
       options: { text: string; is_correct: boolean }[];
     };
-    if (!Array.isArray(options)) {
+    // Câu tự luận không có đáp án trắc nghiệm → cho phép thiếu options
+    if (qtype !== 'essay' && !Array.isArray(options)) {
       throw AppError.badRequest('Thiếu đáp án');
     }
-    const q = await addBankQuestion(reqCenterId(req), req.user!.id, { tag, question, points, options });
+    const q = await addBankQuestion(reqCenterId(req), req.user!.id, {
+      tag,
+      subject,
+      difficulty,
+      qtype,
+      question,
+      points,
+      options,
+    });
     await audit({
       centerId: reqCenterId(req),
       actor: actorFromReq(req),
@@ -419,16 +439,27 @@ router.put(
   requirePermission('homework.create'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const bid = paramId(req.params, 'bid');
-    const { tag, question, points, options } = req.body as {
+    const { tag, subject, difficulty, qtype, question, points, options } = req.body as {
       tag: string;
+      subject?: string | null;
+      difficulty?: string | null;
+      qtype?: string | null;
       question: string;
       points: number;
       options: { text: string; is_correct: boolean }[];
     };
-    if (!Array.isArray(options)) {
+    if (qtype !== 'essay' && !Array.isArray(options)) {
       throw AppError.badRequest('Thiếu đáp án');
     }
-    const q = await updateBankQuestion(bid, reqCenterId(req), { tag, question, points, options });
+    const q = await updateBankQuestion(bid, reqCenterId(req), {
+      tag,
+      subject,
+      difficulty,
+      qtype,
+      question,
+      points,
+      options,
+    });
     await audit({
       centerId: reqCenterId(req),
       actor: actorFromReq(req),
