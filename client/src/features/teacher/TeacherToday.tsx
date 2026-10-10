@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { teacherApi } from './teacher.api';
 import { useToast } from '../../shared/ui/toast';
-import { Field } from '../../shared/components/Form';
+import { Field, useFieldErrors } from '../../shared/components/Form';
 import { PageHeader } from '../../shared/components/PageHeader';
 import { EmptyState } from '../../shared/components/EmptyState';
 import { Skeleton } from '../../shared/components/Skeleton';
@@ -17,6 +17,7 @@ export function TeacherToday() {
   const [loading, setLoading] = useState(true);
   const [code, setCode] = useState('');
   const [checkingIn, setCheckingIn] = useState(false);
+  const { errors, refFor, show, clear } = useFieldErrors<'code'>();
   const toast = useToast();
 
   const load = useCallback(async () => {
@@ -37,8 +38,9 @@ export function TeacherToday() {
 
   const checkin = async (e: React.FormEvent) => {
     e.preventDefault();
+    // Mã chấm công sai định dạng / sai mã: báo inline dưới ô nhập (skill 8.2)
     if (!/^\d{6}$/.test(code.trim())) {
-      toast(t('checkin.invalidCode'), 'error');
+      show({ code: t('checkin.invalidCode') });
       return;
     }
     setCheckingIn(true);
@@ -48,7 +50,7 @@ export function TeacherToday() {
       setCode('');
       void load();
     } catch (err) {
-      toast(err instanceof Error ? err.message : t('checkin.fail'), 'error');
+      show({ code: err instanceof Error ? err.message : t('checkin.fail') });
     } finally {
       setCheckingIn(false);
     }
@@ -118,17 +120,22 @@ export function TeacherToday() {
         <h2 className="card-title">{t('checkin.title')}</h2>
         <p className="card-desc">{t('checkin.desc')}</p>
         <form onSubmit={checkin}>
-          <Field label={t('checkin.codeLabel')}>
+          <Field label={t('checkin.codeLabel')} error={errors.code}>
             <input
               className="text-input mono"
               value={code}
-              onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+              onChange={(e) => {
+                setCode(e.target.value.replace(/\D/g, '').slice(0, 6));
+                clear('code');
+              }}
               placeholder="••••••"
               inputMode="numeric"
               maxLength={6}
+              ref={refFor('code')}
             />
           </Field>
           <button className="btn btn-block btn-lg checkin-submit" type="submit" disabled={checkingIn}>
+            {checkingIn && <span className="spinner" aria-hidden="true" />}
             {checkingIn ? t('checkin.submitting') : t('checkin.submit')}
           </button>
         </form>
