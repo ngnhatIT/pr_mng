@@ -215,6 +215,8 @@ function InvoiceList() {
       .catch(() => {});
   }, []);
 
+  const filteringInvoices = search.trim() !== '' || status !== '';
+
   return (
     <>
       <div className="toolbar tuition-toolbar">
@@ -257,13 +259,27 @@ function InvoiceList() {
       ) : invoices.length === 0 ? (
         <EmptyState
           icon="banknote"
-          title={t('invoices.emptyTitle')}
-          desc={t('invoices.emptyDesc')}
+          title={t(filteringInvoices ? 'invoices.emptyFiltered.title' : 'invoices.emptyTitle')}
+          desc={t(filteringInvoices ? 'invoices.emptyFiltered.desc' : 'invoices.emptyDesc')}
           action={
-            <button className="btn btn-primary btn-inline" onClick={() => setShowCreate(true)}>
-              <Icon name="plus" size={14} />
-              {t('invoice.create')}
-            </button>
+            filteringInvoices ? (
+              <button
+                className="btn btn-secondary btn-inline"
+                onClick={() => {
+                  setSearch('');
+                  setStatus('');
+                  setPage(1);
+                }}
+              >
+                <Icon name="x" size={14} />
+                {t('invoices.emptyFiltered.clear')}
+              </button>
+            ) : (
+              <button className="btn btn-primary btn-inline" onClick={() => setShowCreate(true)}>
+                <Icon name="plus" size={14} />
+                {t('invoice.create')}
+              </button>
+            )
           }
         />
       ) : (

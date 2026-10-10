@@ -114,7 +114,12 @@
     "loadError": "Could not load invoices",
     "searchPlaceholder": "Search by student name/code...",
     "tab": "Invoices",
-    "totalDebt": "Owes:"
+    "totalDebt": "Owes:",
+    "emptyFiltered": {
+      "title": "No invoices match your filters",
+      "desc": "Try a different keyword or clear the filters to see the full list.",
+      "clear": "Clear filters"
+    }
   },
   "pay": {
     "amount": "Amount collected (VND) *",

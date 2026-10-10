@@ -114,7 +114,12 @@
     "loadError": "Không tải được phiếu thu",
     "searchPlaceholder": "Tìm theo tên/mã học viên...",
     "tab": "Phiếu thu",
-    "totalDebt": "Còn nợ:"
+    "totalDebt": "Còn nợ:",
+    "emptyFiltered": {
+      "title": "Không tìm thấy hóa đơn",
+      "desc": "Thử từ khóa khác hoặc xóa bộ lọc để xem toàn bộ danh sách.",
+      "clear": "Xóa bộ lọc"
+    }
   },
   "pay": {
     "amount": "Số tiền thu (đ) *",
