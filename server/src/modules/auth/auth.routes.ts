@@ -1,9 +1,13 @@
 import { Router, Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
+import crypto from 'crypto';
 import { db } from '../../db';
 import { AuthUser, DUMMY_PASSWORD_HASH, invalidateTokenCheck, requireAuth, type AuthRequest } from '../../middleware/auth';
 import { loginRateLimit } from '../../middleware/rateLimit';
+import { requirePermission } from '../authorization/authorization.middleware';
 import { asyncHandler } from '../../shared/http';
+import { AppError } from '../../shared/errors';
+import { paramId } from '../../shared/validate';
 import { issueTokenPair, rotateRefreshToken, revokeRefreshToken, revokeAllForOwner, revokeAllForOwnerExcept } from './refresh.service';
 import { audit } from '../../shared/audit';
 import { assertStrongPassword, BCRYPT_ROUNDS } from '../../shared/password';

@@ -8,12 +8,13 @@ import { Field, useFieldErrors } from '../../shared/components/Form';
 import { EmptyState } from '../../shared/components/EmptyState';
 import { Skeleton } from '../../shared/components/Skeleton';
 import { Icon } from '../../shared/components/icons';
-import { ParentChild } from '../../shared/types';
+import { ParentChild, formatVND } from '../../shared/types';
 import './parent.css';
 
 export function ParentHome() {
   const { t } = useTranslation(['parent', 'common']);
   const [children, setChildren] = useState<ParentChild[]>([]);
+  const [debts, setDebts] = useState<{ child: ParentChild; debt: number }[]>([]);
   const [loading, setLoading] = useState(true);
   const [code, setCode] = useState('');
   const [dob, setDob] = useState('');
@@ -29,6 +30,22 @@ export function ParentHome() {
     try {
       const data = await parentApi.children();
       setChildren(data);
+      // Công nợ thật từ childOverview -> invoices (API có sẵn), không tự bịa số
+      const settled = await Promise.allSettled(
+        data.map(async (c) => {
+          const ov = await parentApi.childOverview(c.id);
+          const debt = ov.invoices
+            .filter((inv) => inv.status !== 'paid')
+            .reduce((sum, inv) => sum + inv.amount - inv.paid, 0);
+          return { child: c, debt };
+        }),
+      );
+      setDebts(
+        settled
+          .filter((r): r is PromiseFulfilledResult<{ child: ParentChild; debt: number }> => r.status === 'fulfilled')
+          .map((r) => r.value)
+          .filter((d) => d.debt > 0),
+      );
     } catch (err) {
       toast(err instanceof Error ? err.message : t('home.loadError'), 'error');
     } finally {
@@ -73,6 +90,34 @@ export function ParentHome() {
     <div className="parent-page">
       <h1 className="parent-title">{t('home.greeting', { name: user?.name })}</h1>
       <p className="muted">{t('home.subtitle')}</p>
+
+      {!loading && debts.length > 0 && (
+        <section className="card parent-debt-card">
+          <div className="debt-head">
+            <Icon name="banknote" size={20} />
+            <h2 className="card-title">{t('home.debtTitle')}</h2>
+          </div>
+          <p className="card-desc">
+            {t('home.debtTotal', { amount: formatVND(debts.reduce((s, d) => s + d.debt, 0)) })}
+          </p>
+          <ul className="debt-list">
+            {debts.map(({ child, debt }) => (
+              <li key={child.id} className="debt-row">
+                <div>
+                  <div className="debt-name">{child.name}</div>
+                  <div className="muted">{formatVND(debt)}</div>
+                </div>
+                <Link
+                  className="btn btn-primary btn-sm btn-inline"
+                  to={`/parent/children/${child.id}?tab=tuition`}
+                >
+                  {t('home.payTuition')}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       {loading ? (
         <div className="child-list" aria-hidden="true">

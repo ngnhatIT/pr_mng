@@ -11,6 +11,8 @@
     "creating": "Đang tạo...",
     "emptyDesc": "Lớp này chưa có học viên nào được ghi danh.",
     "emptyTitle": "Chưa có học viên để điểm danh",
+    "startTitle": "Bắt đầu điểm danh",
+    "startDesc": "Chọn lớp và buổi học để bắt đầu điểm danh.",
     "newSession": {
       "create": "Tạo",
       "creating": "Đang tạo...",

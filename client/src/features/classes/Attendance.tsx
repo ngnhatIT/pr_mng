@@ -226,7 +226,7 @@ export function Attendance() {
         )}
       </div>
 
-      {sessionId && (
+      {sessionId ? (
         <>
           <div className="card">
             <Field label={t('attendance.topic.label')}>
@@ -350,6 +350,12 @@ export function Attendance() {
             </>
           )}
         </>
+      ) : (
+        <EmptyState
+          icon="clipboard"
+          title={t('attendance.startTitle')}
+          desc={t('attendance.startDesc')}
+        />
       )}
 
       {showNewSession && classId && (

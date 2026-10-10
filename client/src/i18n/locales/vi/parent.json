@@ -130,6 +130,8 @@
     "codeLabel": "Mã: {{code}}",
     "codePlaceholder": "VD: HV001",
     "codeRequired": "Vui lòng nhập mã học viên",
+    "debtTitle": "Học phí còn nợ",
+    "debtTotal": "Tổng còn nợ: {{amount}}",
     "emptyDesc": "Nhập mã học viên do trung tâm cấp vào ô bên dưới để bắt đầu theo dõi.",
     "emptyTitle": "Chưa liên kết con nào",
     "greeting": "Xin chào, {{name}}!",
@@ -141,6 +143,7 @@
     "linking": "Đang liên kết...",
     "loadError": "Không tải được danh sách con",
     "noClasses": "Chưa ghi danh lớp nào",
+    "payTuition": "Đóng học phí",
     "subtitle": "Theo dõi tiến độ học tập của con bạn tại đây.",
     "dobField": "Ngày sinh của học viên",
     "dobRequired": "Vui lòng nhập ngày sinh của học viên"

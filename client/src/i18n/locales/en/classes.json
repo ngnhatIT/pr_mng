@@ -11,6 +11,8 @@
     "creating": "Creating...",
     "emptyDesc": "No students are enrolled in this class yet.",
     "emptyTitle": "No students to check in",
+    "startTitle": "Start taking attendance",
+    "startDesc": "Select a class and session to start taking attendance.",
     "newSession": {
       "create": "Create",
       "creating": "Creating...",

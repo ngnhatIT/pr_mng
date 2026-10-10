@@ -130,6 +130,8 @@
     "codeLabel": "Code: {{code}}",
     "codePlaceholder": "E.g. HV001",
     "codeRequired": "Please enter the student code",
+    "debtTitle": "Tuition due",
+    "debtTotal": "Total outstanding: {{amount}}",
     "emptyDesc": "Enter the student code given by the center in the box below to start tracking your child.",
     "emptyTitle": "No child linked yet",
     "greeting": "Hello, {{name}}!",
@@ -141,6 +143,7 @@
     "linking": "Linking...",
     "loadError": "Couldn't load your children",
     "noClasses": "Not enrolled in any class",
+    "payTuition": "Pay tuition",
     "subtitle": "Follow your child's learning progress here.",
     "dobField": "Student's date of birth",
     "dobRequired": "Please enter the student's date of birth"

@@ -319,6 +319,39 @@ button.quiz-take-opt {
   gap: 6px;
 }
 
+/* ---------- Khối nhắc nợ học phí ---------- */
+.parent-debt-card {
+  margin-bottom: 16px;
+}
+.debt-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text);
+}
+.debt-head .card-title {
+  margin: 0;
+}
+.debt-list {
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.debt-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+.debt-name {
+  font-weight: 600;
+}
+
 /* ---------- 360px: không tràn ---------- */
 @media (max-width: 400px) {
   .quiz-take-opt {
