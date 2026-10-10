@@ -311,9 +311,11 @@ export function ZaloReminders() {
               </div>
               <div className="modal-actions">
                 <button type="submit" className="btn btn-primary" disabled={saving}>
+                  {saving && <span className="spinner" aria-hidden="true" />}
                   {saving ? t('actions.saving', { ns: 'common' }) : t('zalo.saveSchedule')}
                 </button>
                 <button type="button" className="btn" onClick={runOnce} disabled={running}>
+                  {running && <span className="spinner spinner-dark" aria-hidden="true" />}
                   <Icon name="play" size={15} />
                   {running ? t('zalo.running') : t('zalo.runNow')}
                 </button>
@@ -334,6 +336,7 @@ export function ZaloReminders() {
                 />
               </Field>
               <button className="btn btn-primary" onClick={sendTest} disabled={testing}>
+                {testing && <span className="spinner" aria-hidden="true" />}
                 <Icon name="send" size={15} />
                 {testing ? t('actions.sending', { ns: 'common' }) : t('zalo.test.send')}
               </button>
@@ -348,7 +351,22 @@ export function ZaloReminders() {
         {loadingHistory ? (
           <TableSkeleton cols={7} />
         ) : reminders.length === 0 ? (
-          <EmptyState icon="bell" title={t('zalo.empty.title')} desc={t('zalo.empty.desc')} />
+          <EmptyState
+            icon="bell"
+            title={t('zalo.empty.title')}
+            desc={t('zalo.empty.desc')}
+            action={
+              <button
+                className="btn btn-primary btn-inline"
+                onClick={() => void runOnce()}
+                disabled={running}
+              >
+                {running && <span className="spinner" aria-hidden="true" />}
+                <Icon name="play" size={15} />
+                {running ? t('zalo.running') : t('zalo.runNow')}
+              </button>
+            }
+          />
         ) : (
           <>
             <div className="table-wrap">
@@ -361,7 +379,9 @@ export function ZaloReminders() {
                     <th scope="col">{t('zalo.col.amount')}</th>
                     <th scope="col">{t('zalo.col.kind')}</th>
                     <th scope="col">{t('zalo.col.status')}</th>
-                    <th scope="col" className="th-right">{t('zalo.col.actions')}</th>
+                    <th scope="col" className="th-right">
+                      {t('zalo.col.actions')}
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
