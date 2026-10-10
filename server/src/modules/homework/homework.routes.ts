@@ -25,7 +25,13 @@ import {
 } from './homework.service';
 import { scopeOf, ownScoped } from '../../shared/scope';
 import { listRubrics, getRubric, createRubric, deleteRubric } from './rubric.service';
-import { saveQuizQuestions, getAllAttempts, getQuizForStaff } from './quiz.service';
+import {
+  saveQuizQuestions,
+  getAllAttempts,
+  getQuizForStaff,
+  validateQuizQuestions,
+} from './quiz.service';
+import type { QuizQuestionInput } from './quiz.service';
 import {
   listBankQuestions,
   listBankTags,
@@ -139,6 +145,10 @@ router.post(
   requirePermission('homework.create'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const input = prepareCreateInput(req.body as Record<string, unknown>);
+    // Validate câu hỏi quiz TRƯỚC khi tạo bài: câu hỏi lỗi thì 400, không tạo bài rỗng
+    if (input.kind === 'quiz') {
+      validateQuizQuestions(input.questions as QuizQuestionInput[]);
+    }
     const validIds = await getScopedClasses(req, input.class_ids, 'homework.create');
     if (!validIds.length) throw AppError.notFound('Không tìm thấy lớp học hợp lệ');
     // Lọc target students thuộc các lớp được chọn
