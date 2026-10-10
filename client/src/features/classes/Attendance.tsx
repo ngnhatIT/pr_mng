@@ -3,7 +3,7 @@ import { useSearchParams, Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { classesApi, sessionsApi, ClassItem, SessionItem, AttendanceRow } from './classes.api';
 import { useToast } from '../../shared/ui/toast';
-import { Modal } from '../../shared/components/Modal';
+import { Modal, ConfirmDialog } from '../../shared/components/Modal';
 import { Field, useFieldErrors } from '../../shared/components/Form';
 import { PageHeader } from '../../shared/components/PageHeader';
 import { EmptyState } from '../../shared/components/EmptyState';
@@ -28,6 +28,7 @@ export function Attendance() {
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState('');
   const [showNewSession, setShowNewSession] = useState(false);
+  const [showConfirmUnmarked, setShowConfirmUnmarked] = useState(false);
   const [checkinCode, setCheckinCode] = useState<string | null>(null);
   const [makingCode, setMakingCode] = useState(false);
   const toast = useToast();
@@ -115,6 +116,7 @@ export function Attendance() {
     setRows((prev) => prev.map((r) => ({ ...r, status })));
   };
 
+  // Học viên chưa tick = chưa điểm danh (null), không mặc định "có mặt" để tránh ghi sai
   const save = async () => {
     if (!sessionId) return;
     setSaving(true);
@@ -123,7 +125,9 @@ export function Attendance() {
       await sessionsApi.updateTopic(sessionId, topic);
       await sessionsApi.saveAttendance(
         sessionId,
-        rows.map((r) => ({ student_id: r.id, status: r.status || 'present', note: r.note || '' }))
+        rows
+          .filter((r) => r.status != null)
+          .map((r) => ({ student_id: r.id, status: r.status as Status, note: r.note || '' }))
       );
       toast(t('attendance.toast.saved'), 'success');
       void loadSessions(classId);
@@ -135,7 +139,19 @@ export function Attendance() {
     }
   };
 
-  const presentCount = rows.filter((r) => (r.status || 'present') === 'present').length;
+  // Còn người chưa tick thì hỏi xác nhận trước khi ghi, tránh lưu thiếu
+  const trySave = () => {
+    if (!sessionId) return;
+    if (unmarkedCount > 0) setShowConfirmUnmarked(true);
+    else void save();
+  };
+  const confirmSave = () => {
+    setShowConfirmUnmarked(false);
+    void save();
+  };
+
+  const markedCount = rows.filter((r) => r.status != null).length;
+  const unmarkedCount = rows.length - markedCount;
   const lateCount = rows.filter((r) => r.status === 'late').length;
   const absentCount = rows.filter((r) => r.status === 'absent').length;
 
@@ -278,9 +294,9 @@ export function Attendance() {
             <>
               <div className="att-list" aria-busy={loading || undefined}>
                 {visibleRows.map((r) => {
-                  const st = (r.status || 'present') as Status;
+                  const st = r.status as Status | null;
                   return (
-                    <div key={r.id} className={`att-item${st === 'present' ? '' : ` att-${st}`}`}>
+                    <div key={r.id} className={`att-item${st && st !== 'present' ? ` att-${st}` : ''}`}>
                       <div className="att-item-main">
                         <div className="att-item-name">{r.name}</div>
                         <div className="att-item-code mono muted">{r.code}</div>
@@ -320,10 +336,7 @@ export function Attendance() {
               <div className="att-savebar">
                 <span className="att-summary">
                   <span>
-                    <span className="num">{rows.length}</span> {t('attendance.summary.students')}
-                  </span>
-                  <span>
-                    <span className="num">{presentCount}</span> {t('attendance.summary.present')}
+                    {t('attendance.summary.marked', { marked: markedCount, total: rows.length })}
                   </span>
                   {lateCount > 0 && (
                     <span className="sum-late">
@@ -342,11 +355,19 @@ export function Attendance() {
                     {saveError}
                   </span>
                 )}
-                <button className="btn btn-primary btn-lg" onClick={() => void save()} disabled={saving}>
+                <button className="btn btn-primary btn-lg" onClick={trySave} disabled={saving}>
                   {saving && <span className="spinner" aria-hidden="true" />}
                   {saving ? t('actions.saving', { ns: 'common' }) : t('attendance.save')}
                 </button>
               </div>
+              {showConfirmUnmarked && (
+                <ConfirmDialog
+                  title={t('attendance.confirmUnmarked.title')}
+                  message={t('attendance.confirmUnmarked.message', { count: unmarkedCount })}
+                  onClose={() => setShowConfirmUnmarked(false)}
+                  onConfirm={confirmSave}
+                />
+              )}
             </>
           )}
         </>

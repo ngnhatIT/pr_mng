@@ -8,6 +8,10 @@
       "help": "Teachers enter this code on the \"Today's sessions\" page > \"Check in\" to record attendance."
     },
     "createSession": "New session",
+    "confirmUnmarked": {
+      "title": "Save with unchecked students?",
+      "message": "{{count}} students are not checked yet. Save anyway?"
+    },
     "creating": "Creating...",
     "emptyDesc": "No students are enrolled in this class yet.",
     "emptyTitle": "No students to check in",
@@ -39,7 +43,8 @@
       "absent": "absent",
       "late": "late",
       "present": "present",
-      "students": "students"
+      "students": "students",
+      "marked": "Checked {{marked}}/{{total}}"
     },
     "title": "Attendance",
     "searchPlaceholder": "Find a student in this session...",

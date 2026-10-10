@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { setAuth, takePostLoginRedirect } from '../../shared/api/client';
 import { Field, useFieldErrors } from '../../shared/components/Form';
+import { ForgotPasswordModal } from '../auth/Login';
 import { parentApi } from './parent.api';
 import { isValidVNPhone } from '../../shared/validation';
 import { useDocumentTitle } from '../../shared/hooks/useDocumentTitle';
@@ -14,6 +15,7 @@ export function ParentLogin() {
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
+  const [forgotOpen, setForgotOpen] = useState(false);
   const { errors, refFor, show, clear } = useFieldErrors<'phone' | 'password'>();
   const navigate = useNavigate();
 
@@ -78,6 +80,11 @@ export function ParentLogin() {
         <button className="btn btn-primary btn-block btn-lg" type="submit" disabled={busy}>
           {busy ? t('auth.loggingIn') : t('auth.loginAction')}
         </button>
+        <div style={{ textAlign: 'center', marginTop: 12 }}>
+          <button type="button" className="link" onClick={() => setForgotOpen(true)}>
+            {t('auth.forgotLink')}
+          </button>
+        </div>
         <p className="login-hint">
           {t('auth.noAccount')}{' '}
           <Link className="link" to="/parent/register">
@@ -85,6 +92,17 @@ export function ParentLogin() {
           </Link>
         </p>
       </form>
+      {forgotOpen && (
+        <ForgotPasswordModal
+          kind="parent"
+          title={t('auth.forgotTitle')}
+          desc={t('auth.forgotDesc')}
+          fieldLabel={t('auth.phone')}
+          emptyError={t('auth.phoneEmpty')}
+          sentMessage={t('auth.forgotSent')}
+          onClose={() => setForgotOpen(false)}
+        />
+      )}
     </div>
   );
 }

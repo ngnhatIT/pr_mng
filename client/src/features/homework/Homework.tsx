@@ -171,9 +171,13 @@ export function Homework() {
   const tabs: { id: StatusTab; label: string }[] = [
     { id: '', label: t('tabs.all') },
     { id: 'published', label: t('tabs.published') },
-    { id: 'scheduled', label: t('tabs.scheduled') },
-    { id: 'draft', label: t('tabs.draft') },
-  ].filter((tab) => !isTeacher || (tab.id !== 'scheduled' && tab.id !== 'draft'));
+  ];
+  if (!isTeacher) {
+    tabs.push(
+      { id: 'scheduled', label: t('tabs.scheduled') },
+      { id: 'draft', label: t('tabs.draft') },
+    );
+  }
 
   return (
     <div className="page">

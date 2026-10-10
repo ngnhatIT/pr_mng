@@ -3,10 +3,96 @@ import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { api, setAuth, takePostLoginRedirect } from '../../shared/api/client';
 import { Field, useFieldErrors } from '../../shared/components/Form';
+import { Modal } from '../../shared/components/Modal';
+import { useToast } from '../../shared/ui/toast';
 import { ThemeLangSwitch } from '../../shared/ui/ThemeLangSwitch';
 import { useDocumentTitle } from '../../shared/hooks/useDocumentTitle';
 import { User } from '../../shared/types';
 import './Login.css';
+
+/**
+ * Modal "Quên mật khẩu" dùng chung cho staff (Login) và phụ huynh (ParentLogin).
+ * Luồng trung thực: gửi yêu cầu tới server, admin xử lý và báo mật khẩu tạm
+ * qua kênh ngoài hệ thống (chưa có hạ tầng email/SMS).
+ */
+export function ForgotPasswordModal({
+  kind,
+  title,
+  desc,
+  fieldLabel,
+  emptyError,
+  sentMessage,
+  onClose,
+}: {
+  kind: 'staff' | 'parent';
+  title: string;
+  desc: string;
+  fieldLabel: string;
+  emptyError: string;
+  sentMessage: string;
+  onClose: () => void;
+}) {
+  const { t } = useTranslation('common');
+  const [identifier, setIdentifier] = useState('');
+  const [error, setError] = useState('');
+  const [busy, setBusy] = useState(false);
+  const toast = useToast();
+
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (busy) return;
+    const id = identifier.trim();
+    if (!id) {
+      setError(emptyError);
+      return;
+    }
+    setError('');
+    setBusy(true);
+    try {
+      await api('/auth/forgot-password', {
+        method: 'POST',
+        body: JSON.stringify(kind === 'staff' ? { kind, username: id } : { kind, phone: id }),
+      });
+      toast(sentMessage, 'success');
+      onClose();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t('api.network'));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <Modal title={title} onClose={onClose}>
+      <p className="muted" style={{ marginTop: 0 }}>
+        {desc}
+      </p>
+      <form onSubmit={submit}>
+        <Field label={fieldLabel} error={error} required>
+          <input
+            className="text-input"
+            value={identifier}
+            onChange={(e) => {
+              setIdentifier(e.target.value);
+              setError('');
+            }}
+            autoComplete={kind === 'staff' ? 'username' : 'tel'}
+            autoFocus
+          />
+        </Field>
+        <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 16 }}>
+          <button type="button" className="btn btn-ghost" onClick={onClose}>
+            {t('actions.cancel')}
+          </button>
+          <button type="submit" className="btn btn-primary" disabled={busy}>
+            {busy && <span className="spinner" aria-hidden="true" />}
+            {busy ? t('actions.sending') : t('actions.send')}
+          </button>
+        </div>
+      </form>
+    </Modal>
+  );
+}
 
 export function Login() {
   const { t } = useTranslation(['auth', 'common']);
@@ -14,6 +100,7 @@ export function Login() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
+  const [forgotOpen, setForgotOpen] = useState(false);
   const { errors, refFor, show, clear } = useFieldErrors<'username' | 'password'>();
   const navigate = useNavigate();
 
@@ -88,8 +175,24 @@ export function Login() {
           {busy && <span className="spinner" aria-hidden="true" />}
           {busy ? t('submitting') : t('submit')}
         </button>
+        <div style={{ textAlign: 'center', marginTop: 12 }}>
+          <button type="button" className="link" onClick={() => setForgotOpen(true)}>
+            {t('forgotLink')}
+          </button>
+        </div>
         <p className="login-hint">{t('demoHint')}</p>
       </form>
+      {forgotOpen && (
+        <ForgotPasswordModal
+          kind="staff"
+          title={t('forgotTitle')}
+          desc={t('forgotDesc')}
+          fieldLabel={t('username')}
+          emptyError={t('usernameRequired')}
+          sentMessage={t('forgotSent')}
+          onClose={() => setForgotOpen(false)}
+        />
+      )}
     </div>
   );
 }

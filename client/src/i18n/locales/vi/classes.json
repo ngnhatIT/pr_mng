@@ -8,6 +8,10 @@
       "help": "Giáo viên nhập mã này trong trang \"Buổi dạy hôm nay\" > \"Chấm công\" để ghi nhận điểm danh."
     },
     "createSession": "Tạo buổi mới",
+    "confirmUnmarked": {
+      "title": "Lưu khi chưa điểm danh hết?",
+      "message": "Còn {{count}} học viên chưa được điểm danh. Vẫn lưu lại?"
+    },
     "creating": "Đang tạo...",
     "emptyDesc": "Lớp này chưa có học viên nào được ghi danh.",
     "emptyTitle": "Chưa có học viên để điểm danh",
@@ -39,7 +43,8 @@
       "absent": "vắng",
       "late": "muộn",
       "present": "có mặt",
-      "students": "học viên"
+      "students": "học viên",
+      "marked": "Đã điểm danh {{marked}}/{{total}}"
     },
     "title": "Điểm danh",
     "searchPlaceholder": "Tìm học viên trong buổi này...",

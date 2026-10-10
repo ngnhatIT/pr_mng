@@ -30,7 +30,11 @@
     "registerAtCenter": "Đăng ký tại {name}",
     "phoneEmpty": "Vui lòng nhập số điện thoại",
     "phoneInvalid": "Số điện thoại chưa đúng định dạng (10 số, bắt đầu bằng 0)",
-    "passwordEmpty": "Vui lòng nhập mật khẩu"
+    "passwordEmpty": "Vui lòng nhập mật khẩu",
+    "forgotLink": "Quên mật khẩu?",
+    "forgotTitle": "Quên mật khẩu",
+    "forgotDesc": "Nhập số điện thoại bạn đã đăng ký. Yêu cầu sẽ được gửi tới quản trị viên, bạn sẽ nhận mật khẩu mới từ quản trị viên.",
+    "forgotSent": "Đã gửi yêu cầu. Vui lòng liên hệ quản trị viên để nhận mật khẩu mới."
   },
   "child": {
     "attendance": {
