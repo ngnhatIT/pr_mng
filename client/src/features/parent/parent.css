@@ -167,6 +167,37 @@ button.quiz-take-opt {
 .quiz-take-opt.selected .quiz-radio::after {
   background: var(--primary);
 }
+/* Checkbox cho câu multiple (ô vuông thay vì tròn) */
+.quiz-take-opt .quiz-checkbox {
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  border: 2px solid var(--border-strong, #c3cddc);
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: border-color 0.15s ease;
+}
+.quiz-take-opt .quiz-checkbox::after {
+  content: '';
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  background: transparent;
+  transition: background 0.15s ease;
+}
+.quiz-take-opt.selected .quiz-checkbox {
+  border-color: var(--primary);
+}
+.quiz-take-opt.selected .quiz-checkbox::after {
+  background: var(--primary);
+}
+.quiz-essay-input {
+  width: 100%;
+  resize: vertical;
+  min-height: 140px;
+}
 .quiz-nav {
   display: flex;
   gap: 8px;
@@ -198,6 +229,20 @@ button.quiz-take-opt {
 }
 .quiz-review-qhead .icon-bad {
   color: var(--danger, #dc2626);
+}
+.quiz-review-qhead .icon-warn {
+  color: #d97706;
+}
+.quiz-essay-answer {
+  margin-top: 4px;
+  padding: 10px 12px;
+  border: 1px solid var(--border, #e2e8f0);
+  border-radius: 10px;
+  background: var(--bg-soft, #f8fafc);
+}
+.quiz-essay-answer p {
+  margin: 4px 0 0;
+  white-space: pre-wrap;
 }
 .quiz-review-opt {
   display: flex;

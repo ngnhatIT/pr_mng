@@ -239,7 +239,13 @@
     "noQuestionsDesc": "Đề chưa có câu hỏi nào. Vui lòng thử lại sau hoặc liên hệ trung tâm.",
     "closeDate": "- Hạn chót nộp: {{date}}",
     "attemptLine": "{{score}}/{{max}}đ",
-    "noAttempts": "Chưa có lần làm nào"
+    "noAttempts": "Chưa có lần làm nào",
+    "multipleHint": "Chọn tất cả đáp án đúng",
+    "essayHint": "Tự luận: gõ bài làm của con, giáo viên sẽ chấm tay",
+    "essayPlaceholder": "Gõ bài làm vào đây...",
+    "pendingGrade": "Chờ chấm",
+    "essayAnswer": "Bài làm của con",
+    "unansweredEssay": "Còn {{count}} câu chưa trả lời (kể cả tự luận)"
   },
   "referral": {
     "copied": "Đã sao chép",

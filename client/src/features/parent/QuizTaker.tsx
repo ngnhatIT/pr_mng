@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { parentApi, type QuizQuestion, type QuizAttempt } from './parent.api';
+import { parentApi, type QuizQuestion, type QuizAttempt, type QuizAttemptDetail } from './parent.api';
 import { HomeworkItem, formatDate, formatDateTime, isPastCloseDate } from '../../shared/types';
 import { useToast } from '../../shared/ui/toast';
 import { ConfirmDialog, Modal } from '../../shared/components/Modal';
@@ -9,14 +9,8 @@ import { Skeleton } from '../../shared/components/Skeleton';
 import { Icon } from '../../shared/components/icons';
 import './parent.css';
 
-interface QuizAttemptDetail {
-  question_id: number;
-  question: string;
-  points: number;
-  options: { id: number; text: string; is_correct: boolean; chosen: boolean }[];
-}
-
 // FIX 5: màn hình xem lại đáp án dùng chung cho cả sau khi nộp và quiz đã hoàn thành
+// Render theo loại câu hỏi: essay hiện bài làm + "chờ chấm" thay vì đúng/sai.
 function QuizReviewView({
   review,
   onBack,
@@ -30,7 +24,22 @@ function QuizReviewView({
   return (
     <div className="quiz-review">
       {review.map((q, qi) => {
-        const gotIt = q.options.some((o) => o.chosen && o.is_correct);
+        if (q.qtype === 'essay') {
+          return (
+            <div key={q.question_id} className="quiz-review-q pending">
+              <div className="quiz-review-qhead">
+                <Icon name="clock" size={18} className="icon-warn" />
+                <span>{t('quiz.questionLabel', { num: qi + 1, question: q.question })}</span>
+                <span className="badge badge-late">{t('quiz.pendingGrade')}</span>
+              </div>
+              <div className="quiz-essay-answer">
+                <div className="muted-sm">{t('quiz.essayAnswer')}</div>
+                <p>{q.answer_text || <span className="muted-sm">-</span>}</p>
+              </div>
+            </div>
+          );
+        }
+        const gotIt = q.correct === true;
         return (
           <div key={q.question_id} className={`quiz-review-q ${gotIt ? 'correct' : 'wrong'}`}>
             <div className="quiz-review-qhead">
@@ -88,7 +97,10 @@ export function QuizTaker({
   const toast = useToast();
   const { t } = useTranslation(['parent', 'common']);
   const [questions, setQuestions] = useState<QuizQuestion[]>([]);
-  const [answers, setAnswers] = useState<Record<number, number>>({});
+  // Đáp án trắc nghiệm: id câu hỏi → mảng id đáp án đã chọn (multiple chọn nhiều)
+  const [answers, setAnswers] = useState<Record<number, number[]>>({});
+  // Bài làm tự luận: id câu hỏi → nội dung
+  const [essayAnswers, setEssayAnswers] = useState<Record<number, string>>({});
   const [qIndex, setQIndex] = useState(0);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -142,11 +154,19 @@ export function QuizTaker({
   const [confirming, setConfirming] = useState(false);
   const qRef = useRef<HTMLDivElement>(null);
 
+  // Một câu được coi là đã trả lời: trắc nghiệm → chọn ít nhất 1 đáp án;
+  // tự luận → gõ nội dung
+  const isAnswered = (q: QuizQuestion) =>
+    q.qtype === 'essay'
+      ? (essayAnswers[q.id] ?? '').trim().length > 0
+      : (answers[q.id] ?? []).length > 0;
+
   // Bấm Nộp bài -> mở dialog xác nhận của app (không dùng confirm() native)
   const submit = () => {
-    const firstMissing = questions.findIndex((q) => answers[q.id] === undefined);
+    const firstMissing = questions.findIndex((q) => !isAnswered(q));
     if (firstMissing !== -1) {
-      toast(t('quiz.unanswered', { count: questions.length - Object.keys(answers).length }), 'error');
+      const missing = questions.length - questions.filter(isAnswered).length;
+      toast(t('quiz.unanswered', { count: missing }), 'error');
       // FIX 8: cuộn + focus tới câu đầu tiên chưa trả lời (tôn trọng reduced-motion)
       setQIndex(firstMissing);
       requestAnimationFrame(() => {
@@ -169,7 +189,11 @@ export function QuizTaker({
       const res = await parentApi.submitQuiz(
         homework.id,
         studentId,
-        Object.entries(answers).map(([qid, oid]) => ({ question_id: Number(qid), option_id: oid }))
+        questions.map((q) =>
+          q.qtype === 'essay'
+            ? { question_id: q.id, answer_text: (essayAnswers[q.id] ?? '').trim() || null }
+            : { question_id: q.id, option_ids: answers[q.id] ?? [] }
+        )
       );
       // HIGH-1: KHÔNG gọi onDone() ngay, hiện màn hình kết quả trước.
       setResult(res);
@@ -214,6 +238,7 @@ export function QuizTaker({
     setReview(null);
     setShowReview(false);
     setAnswers({});
+    setEssayAnswers({});
     setQIndex(0);
   };
 
@@ -387,7 +412,10 @@ export function QuizTaker({
                 {t('quiz.progressLabel', { current: qIndex + 1, total: questions.length })}
               </span>
               <span className="muted-sm">
-                {t('quiz.answeredCount', { answered: Object.keys(answers).length, total: questions.length })}
+                {t('quiz.answeredCount', {
+                  answered: questions.filter(isAnswered).length,
+                  total: questions.length,
+                })}
               </span>
             </div>
             <div
@@ -405,6 +433,17 @@ export function QuizTaker({
           </div>
           {(() => {
             const q = questions[qIndex];
+            const chosen = answers[q.id] ?? [];
+            const toggleOption = (oid: number) => {
+              if (q.qtype === 'multiple') {
+                setAnswers((a) => ({
+                  ...a,
+                  [q.id]: chosen.includes(oid) ? chosen.filter((x) => x !== oid) : [...chosen, oid],
+                }));
+              } else {
+                setAnswers((a) => ({ ...a, [q.id]: [oid] }));
+              }
+            };
             return (
               <div key={q.id} className="quiz-take-q" ref={qRef} tabIndex={-1}>
                 <div style={{ fontWeight: 600, marginBottom: 12 }}>
@@ -414,21 +453,42 @@ export function QuizTaker({
                     {t('quiz.points', { points: q.points })}
                   </span>
                 </div>
-                <div role="radiogroup" aria-label={q.question} className="quiz-take-opts">
-                  {q.options.map((o) => (
-                    <button
-                      key={o.id}
-                      type="button"
-                      role="radio"
-                      aria-checked={answers[q.id] === o.id}
-                      className={`quiz-take-opt ${answers[q.id] === o.id ? 'selected' : ''}`}
-                      onClick={() => setAnswers((a) => ({ ...a, [q.id]: o.id }))}
-                    >
-                      <span className="quiz-radio" aria-hidden="true" />
-                      <span>{o.text}</span>
-                    </button>
-                  ))}
-                </div>
+                {q.qtype === 'multiple' && <p className="muted-sm">{t('quiz.multipleHint')}</p>}
+                {q.qtype === 'essay' && <p className="muted-sm">{t('quiz.essayHint')}</p>}
+                {q.qtype === 'essay' ? (
+                  <textarea
+                    className="text-input quiz-essay-input"
+                    rows={6}
+                    value={essayAnswers[q.id] ?? ''}
+                    onChange={(e) => setEssayAnswers((a) => ({ ...a, [q.id]: e.target.value }))}
+                    placeholder={t('quiz.essayPlaceholder')}
+                    aria-label={q.question}
+                    maxLength={20000}
+                  />
+                ) : (
+                  <div
+                    role={q.qtype === 'multiple' ? 'group' : 'radiogroup'}
+                    aria-label={q.question}
+                    className="quiz-take-opts"
+                  >
+                    {q.options.map((o) => {
+                      const isChosen = chosen.includes(o.id);
+                      return (
+                        <button
+                          key={o.id}
+                          type="button"
+                          role={q.qtype === 'multiple' ? 'checkbox' : 'radio'}
+                          aria-checked={isChosen}
+                          className={`quiz-take-opt ${isChosen ? 'selected' : ''}`}
+                          onClick={() => toggleOption(o.id)}
+                        >
+                          <span className={q.qtype === 'multiple' ? 'quiz-checkbox' : 'quiz-radio'} aria-hidden="true" />
+                          <span>{o.text}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             );
           })()}

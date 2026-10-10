@@ -239,7 +239,13 @@
     "noQuestionsDesc": "This quiz has no questions yet. Please try again later or contact the center.",
     "closeDate": "- Final deadline: {{date}}",
     "attemptLine": "{{score}}/{{max}} pts",
-    "noAttempts": "No attempts yet"
+    "noAttempts": "No attempts yet",
+    "multipleHint": "Select all correct answers",
+    "essayHint": "Essay: type the answer, the teacher will grade it manually",
+    "essayPlaceholder": "Type the answer here...",
+    "pendingGrade": "Pending grading",
+    "essayAnswer": "Student's answer",
+    "unansweredEssay": "{{count}} questions unanswered (including essays)"
   },
   "referral": {
     "copied": "Copied",

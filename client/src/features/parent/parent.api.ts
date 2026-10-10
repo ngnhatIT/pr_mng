@@ -78,7 +78,7 @@ export const parentApi = {
   submitQuiz: (
     homeworkId: number,
     studentId: number,
-    answers: { question_id: number; option_id: number }[]
+    answers: { question_id: number; option_id?: number | null; option_ids?: number[]; answer_text?: string | null }[]
   ) =>
     http.post<{ score: number; max_score: number; attempt_id: number; attempt_no: number }>(
       `/parent/homework/${homeworkId}/quiz/submit`,
@@ -114,6 +114,7 @@ export interface Submission {
 
 export interface QuizQuestion {
   id: number;
+  qtype: 'single' | 'multiple' | 'truefalse' | 'essay';
   question: string;
   points: number;
   options: { id: number; text: string }[];
@@ -124,7 +125,22 @@ export interface QuizAttempt {
   score: number;
   max_score: number;
   submitted_at: string;
-  answers: { question_id: number; option_id: number | null; correct: boolean }[];
+  answers: {
+    question_id: number;
+    option_ids: number[];
+    answer_text: string | null;
+    correct: boolean | null;
+  }[];
+}
+
+export interface QuizAttemptDetail {
+  question_id: number;
+  question: string;
+  qtype: 'single' | 'multiple' | 'truefalse' | 'essay';
+  points: number;
+  options: { id: number; text: string; is_correct: boolean; chosen: boolean }[];
+  answer_text: string | null;
+  correct: boolean | null;
 }
 
 export interface QuizAttemptDetail {
