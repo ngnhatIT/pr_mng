@@ -51,7 +51,8 @@
     "sessions": "Số buổi đã chấm công",
     "sessionsDone": "{{count}} buổi đã chấm công",
     "title": "Lương của tôi",
-    "totalOfMonth": "Tổng lương tháng {{month}}"
+    "totalOfMonth": "Tổng lương tháng {{month}}",
+    "loadErrorDesc": "Vui lòng thử tải lại."
   },
   "today": {
     "attendanceCount": "{{count}} học viên đã điểm danh",

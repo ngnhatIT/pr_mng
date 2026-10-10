@@ -6,6 +6,7 @@ import { Field } from '../../shared/components/Form';
 import { PageHeader } from '../../shared/components/PageHeader';
 import { EmptyState } from '../../shared/components/EmptyState';
 import { StatGridSkeleton } from '../../shared/components/Skeleton';
+import { Icon } from '../../shared/components/icons';
 import { formatVND } from '../../shared/types';
 import './TeacherSalary.css';
 
@@ -15,15 +16,20 @@ export function TeacherSalary() {
   const defaultMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
   const [month, setMonth] = useState(defaultMonth);
   const [salary, setSalary] = useState<SalaryInfo | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const toast = useToast();
 
   const load = useCallback(async () => {
     setLoading(true);
+    setLoadError(false);
     try {
       const data = await teacherApi.payroll(month);
       setSalary(data);
     } catch (err) {
+      // Lỗi tải: xóa số liệu tháng cũ để không hiện nhầm dưới nhãn tháng mới
+      setSalary(null);
+      setLoadError(true);
       toast(err instanceof Error ? err.message : t('salary.loadError'), 'error');
     } finally {
       setLoading(false);
@@ -51,6 +57,18 @@ export function TeacherSalary() {
 
       {loading ? (
         <StatGridSkeleton count={3} />
+      ) : loadError ? (
+        <EmptyState
+          icon="alert"
+          title={t('salary.loadError')}
+          desc={t('salary.loadErrorDesc')}
+          action={
+            <button className="btn btn-primary btn-inline" onClick={() => void load()}>
+              <Icon name="rotate" size={14} />
+              {t('actions.retry', { ns: 'common' })}
+            </button>
+          }
+        />
       ) : salary ? (
         <>
           <div className="salary-hero">

@@ -51,7 +51,8 @@
     "sessions": "Sessions checked in",
     "sessionsDone": "{{count}} sessions checked in",
     "title": "My salary",
-    "totalOfMonth": "Total salary · {{month}}"
+    "totalOfMonth": "Total salary · {{month}}",
+    "loadErrorDesc": "Please try again."
   },
   "today": {
     "attendanceCount": "{{count}} students marked present",
