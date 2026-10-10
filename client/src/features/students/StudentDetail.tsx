@@ -228,7 +228,9 @@ function GradesSection({ studentId }: { studentId: number }) {
                 <th scope="col">{t('detail.grades.table.score')}</th>
                 <th scope="col">{t('detail.grades.table.comment')}</th>
                 <th scope="col">{t('detail.grades.table.date')}</th>
-                <th scope="col" className="th-right">{t('detail.grades.table.actions')}</th>
+                <th scope="col" className="th-right">
+                  {t('detail.grades.table.actions')}
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -382,6 +384,7 @@ function StudentGradeFormModal({
             {t('actions.cancel', { ns: 'common' })}
           </button>
           <button type="submit" className="btn btn-primary" disabled={busy}>
+            {busy && <span className="spinner" aria-hidden="true" />}
             {busy ? t('actions.saving', { ns: 'common' }) : t('actions.save', { ns: 'common' })}
           </button>
         </div>

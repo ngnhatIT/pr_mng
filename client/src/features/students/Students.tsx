@@ -148,7 +148,9 @@ export function Students() {
                 <th scope="col">{t('table.name')}</th>
                 <th scope="col">{t('table.phone')}</th>
                 <th scope="col">{t('table.status')}</th>
-                <th scope="col" className="th-right">{t('table.actions')}</th>
+                <th scope="col" className="th-right">
+                  {t('table.actions')}
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -283,6 +285,7 @@ function StudentForm({
             {t('actions.cancel', { ns: 'common' })}
           </button>
           <button type="submit" className="btn btn-primary" disabled={busy}>
+            {busy && <span className="spinner" aria-hidden="true" />}
             {busy ? t('actions.saving', { ns: 'common' }) : t('actions.save', { ns: 'common' })}
           </button>
         </div>
