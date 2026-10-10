@@ -3689,6 +3689,12 @@ a:focus-visible,
   border: 1px solid var(--border);
 }
 
+/* Dark mode: toast thêm viền và bóng rõ hơn để tách khỏi nền tối */
+[data-theme='dark'] .toast {
+  border-color: var(--border-strong);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+}
+
 /* ---------- Dark mode: button contrast (WCAG AA) ---------- */
 [data-theme='dark'] .btn-primary {
   background: #3b5fd9;
