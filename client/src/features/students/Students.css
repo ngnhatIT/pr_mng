@@ -29,6 +29,42 @@
   padding-left: 36px;
   min-width: 280px;
 }
+/* Nút xóa từ khóa tìm kiếm: chỉ hiện khi ô có chữ */
+.search-wrap.has-clear .text-input {
+  padding-right: 36px;
+}
+.search-wrap .search-clear {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-faint);
+  cursor: pointer;
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease,
+    transform 0.15s ease;
+}
+button.search-clear:hover {
+  background: var(--bg-muted);
+  color: var(--text);
+}
+button.search-clear:active {
+  transform: translateY(-50%) scale(0.96);
+}
+.search-wrap .search-clear .spinner {
+  width: 14px;
+  height: 14px;
+}
 
 /* O ten: avatar nho + ten, tang kha nang nhan dien dong */
 .name-cell {

@@ -102,7 +102,7 @@ export function Students() {
       />
 
       <div className="toolbar students-toolbar">
-        <span className="search-wrap">
+        <span className={`search-wrap${search ? ' has-clear' : ''}`}>
           <span className="search-icon">
             <Icon name="search" size={15} />
           </span>
@@ -113,9 +113,24 @@ export function Students() {
             value={search}
             onChange={(e) => setSearchReset(e.target.value)}
           />
+          {search !== '' &&
+            (loading || search !== debouncedSearch ? (
+              <span className="search-clear" aria-hidden="true">
+                <span className="spinner spinner-dark" />
+              </span>
+            ) : (
+              <button
+                type="button"
+                className="search-clear"
+                onClick={() => setSearchReset('')}
+                aria-label={t('clearSearch')}
+              >
+                <Icon name="x" size={14} />
+              </button>
+            ))}
         </span>
         <select
-          aria-label="Lọc theo trạng thái"
+          aria-label={t('statusFilterLabel')}
           className="text-input"
           value={status}
           onChange={(e) => setStatusReset(e.target.value)}

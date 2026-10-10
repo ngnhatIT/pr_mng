@@ -86,6 +86,8 @@
     "unpaid": "Unpaid"
   },
   "searchPlaceholder": "Search by name, code, phone...",
+  "clearSearch": "Clear search",
+  "statusFilterLabel": "Filter by status",
   "status": {
     "paused": "Paused",
     "quit": "Withdrawn",

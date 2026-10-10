@@ -86,6 +86,8 @@
     "unpaid": "Chưa thanh toán"
   },
   "searchPlaceholder": "Tìm theo tên, mã, số điện thoại...",
+  "clearSearch": "Xóa từ khóa tìm kiếm",
+  "statusFilterLabel": "Lọc theo trạng thái",
   "status": {
     "paused": "Tạm nghỉ",
     "quit": "Đã nghỉ",
