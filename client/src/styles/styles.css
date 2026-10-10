@@ -502,7 +502,7 @@ a {
     box-shadow 0.15s ease;
 }
 .text-input::placeholder {
-  color: #5b6b8c;
+  color: var(--text-faint);
   opacity: 1;
 }
 .text-input:hover:not(:disabled) {
@@ -1887,7 +1887,7 @@ textarea.text-input {
   margin-top: -2px;
 }
 .text-input::placeholder {
-  color: #5b6b8c;
+  color: var(--text-faint);
   opacity: 1;
 }
 /* ---------- Page header ---------- */
