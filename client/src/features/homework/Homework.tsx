@@ -248,7 +248,7 @@ export function Homework() {
         ))}
       </div>
 
-      <div className="toolbar">
+      <div className="toolbar hw-toolbar">
         <input
           className="text-input search-input"
           aria-label={t('filters.searchPlaceholder')}

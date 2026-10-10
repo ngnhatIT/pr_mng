@@ -271,6 +271,15 @@ a:hover .submission-thumb {
 
 /* ---------- Mobile ---------- */
 @media (max-width: 640px) {
+  /* Toolbar bài tập: tìm kiếm full-width, 3 ô lọc chia 2 cột gọn */
+  .hw-toolbar .search-input {
+    flex: 1 1 100%;
+    max-width: none;
+  }
+  .hw-toolbar > select.text-input {
+    flex: 1 1 calc(50% - 4px);
+    min-width: 0;
+  }
   .grade-layout {
     grid-template-columns: 1fr;
     min-height: 0;
@@ -324,6 +333,14 @@ a:hover .submission-thumb {
 @media (max-width: 900px) {
   .hw-stat-grid {
     grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 480px) {
+  /* 360px: 4 tab vừa màn hình, không tràn ngang */
+  .hw-tabs .tab {
+    padding: 10px 12px;
+    font-size: 13px;
   }
 }
 
