@@ -93,7 +93,9 @@ function scopeConds(ctx: ScopeCtx, params: unknown[]): string[] {
     conds.push('(h.center_id = ? OR (h.center_id IS NULL AND c.center_id = ?))');
     params.push(ctx.centerId, ctx.centerId);
   }
-  if (ctx.role === 'teacher' && ctx.teacherId) {
+  if (ctx.ownOnly) {
+    // Scope 'own' (giáo viên hoặc custom role scope own): chỉ lớp của mình dạy.
+    // teacherId null → c.teacher_id = NULL không khớp dòng nào (fail-closed).
     conds.push('c.teacher_id = ?');
     params.push(ctx.teacherId);
   }

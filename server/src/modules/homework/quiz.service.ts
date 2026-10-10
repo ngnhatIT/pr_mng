@@ -34,25 +34,38 @@ export interface QuizAttempt {
 
 /* --------------------------------- Service --------------------------------- */
 
+/**
+ * Validate bộ câu hỏi quiz (dùng chung cho tạo mới và lưu đề): ném AppError
+ * nếu câu hỏi/đáp án không hợp lệ. Không chạm DB — gọi trước mọi ghi dữ liệu.
+ */
+export function validateQuizQuestions(questions: QuizQuestionInput[]): void {
+  if (!Array.isArray(questions) || !questions.length)
+    throw AppError.badRequest('Quiz cần ít nhất 1 câu hỏi');
+  questions.forEach((q, qi) => {
+    if (typeof q?.question !== 'string' || !q.question.trim())
+      throw AppError.badRequest(`Câu ${qi + 1} chưa có nội dung`);
+    if (!Array.isArray(q.options) || q.options.length < 2)
+      throw AppError.badRequest(`Câu ${qi + 1} cần ít nhất 2 đáp án`);
+    if (!q.options.some((o) => o.is_correct))
+      throw AppError.badRequest(`Câu ${qi + 1} chưa chọn đáp án đúng`);
+    const texts = q.options.map((o) => String(o.text).trim().toLowerCase());
+    if (new Set(texts).size !== texts.length)
+      throw AppError.badRequest(`Câu ${qi + 1} có đáp án trùng nhau`);
+    q.options.forEach((o, oi) => {
+      if (typeof o.text !== 'string' || !o.text.trim())
+        throw AppError.badRequest(`Câu ${qi + 1}: đáp án ${oi + 1} trống`);
+    });
+  });
+}
+
 /** Lưu bộ câu hỏi cho quiz (thay thế toàn bộ). Validate TẤT CẢ trước khi xóa để tránh mất dữ liệu. */
 export async function saveQuizQuestions(homeworkId: number, questions: QuizQuestionInput[]): Promise<void> {
   // Chặn sửa đề khi đã có học viên làm bài (tránh hỏng lịch sử)
   if ((await countQuizAttempts(homeworkId)) > 0) {
     throw AppError.badRequest('Đã có học viên làm bài, không thể sửa đề. Hãy tạo quiz mới.');
   }
-  if (!questions.length) throw AppError.badRequest('Quiz cần ít nhất 1 câu hỏi');
   // Validate toàn bộ trước — không xóa gì nếu có lỗi
-  questions.forEach((q, qi) => {
-    if (!q.question.trim()) throw AppError.badRequest(`Câu ${qi + 1} chưa có nội dung`);
-    if (q.options.length < 2) throw AppError.badRequest(`Câu ${qi + 1} cần ít nhất 2 đáp án`);
-    if (!q.options.some((o) => o.is_correct))
-      throw AppError.badRequest(`Câu ${qi + 1} chưa chọn đáp án đúng`);
-    const texts = q.options.map((o) => o.text.trim().toLowerCase());
-    if (new Set(texts).size !== texts.length) throw AppError.badRequest(`Câu ${qi + 1} có đáp án trùng nhau`);
-    q.options.forEach((o, oi) => {
-      if (!o.text.trim()) throw AppError.badRequest(`Câu ${qi + 1}: đáp án ${oi + 1} trống`);
-    });
-  });
+  validateQuizQuestions(questions);
 
   // Tất cả hợp lệ → thay thế trong transaction
   await db.transaction(async (tx) => {

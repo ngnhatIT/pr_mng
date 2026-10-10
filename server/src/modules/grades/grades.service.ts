@@ -46,7 +46,8 @@ export async function listGrades(
     conds.push('s.center_id = ?');
     params.push(ctx.centerId);
   }
-  if (ctx.role === 'teacher' && ctx.teacherId) {
+  if (ctx.ownOnly) {
+    // Scope 'own': chỉ điểm của lớp mình dạy; teacherId null → rỗng (fail-closed)
     conds.push('c.teacher_id = ?');
     params.push(ctx.teacherId);
   }
@@ -88,6 +89,8 @@ export interface GradeCreateInput {
   created_by: number;
   role: string;
   teacher_id: number | null;
+  /** True khi permission scope của user là 'own' → chỉ nhập điểm lớp mình dạy. */
+  ownOnly: boolean;
 }
 
 /**
@@ -110,7 +113,7 @@ export async function createGrade(input: GradeCreateInput): Promise<GradeRow> {
     if (!cls || (input.centerId !== null && cls.center_id !== input.centerId)) {
       throw AppError.notFound('Không tìm thấy lớp học');
     }
-    if (input.role === 'teacher') {
+    if (input.ownOnly) {
       if (!input.teacher_id || cls.teacher_id !== input.teacher_id) {
         throw AppError.forbidden('Bạn chỉ được nhập điểm cho lớp của mình');
       }
@@ -123,7 +126,7 @@ export async function createGrade(input: GradeCreateInput): Promise<GradeRow> {
     if (!enrolled) {
       throw AppError.badRequest('Học viên không thuộc lớp học này');
     }
-  } else if (input.role === 'teacher') {
+  } else if (input.ownOnly) {
     throw AppError.badRequest('Vui lòng chọn lớp học');
   }
 
@@ -169,8 +172,8 @@ export async function createGrade(input: GradeCreateInput): Promise<GradeRow> {
 export async function deleteGrade(
   centerId: number | null,
   id: number,
-  role: string,
   teacherId: number | null,
+  ownOnly: boolean,
   actor?: AuditActor
 ): Promise<void> {
   const grade = (await db
@@ -194,7 +197,7 @@ export async function deleteGrade(
   if (!grade || (centerId !== null && grade.center_id !== centerId)) {
     throw AppError.notFound('Không tìm thấy điểm');
   }
-  if (role === 'teacher' && (!teacherId || grade.teacher_id !== teacherId)) {
+  if (ownOnly && (!teacherId || grade.teacher_id !== teacherId)) {
     throw AppError.forbidden('Bạn chỉ được xóa điểm của lớp mình');
   }
   await db.prepare('DELETE FROM grades WHERE id = ?').run(id);

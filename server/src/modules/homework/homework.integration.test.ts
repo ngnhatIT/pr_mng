@@ -330,6 +330,53 @@ describe('quiz.service - tạo đề và validate', () => {
     // Đề cũ vẫn nguyên 2 câu
     assert.equal(await quizService.countQuizQuestions(id), 2);
   });
+
+  it('validateQuizQuestions: câu thiếu đáp án đúng → throw (dùng chung cho POST /)', async () => {
+    assert.throws(
+      () =>
+        quizService.validateQuizQuestions([
+          {
+            question: 'Q?',
+            points: 1,
+            options: [
+              { text: 'A', is_correct: false },
+              { text: 'B', is_correct: false },
+            ],
+          },
+        ]),
+      /chưa chọn đáp án đúng/
+    );
+  });
+
+  it('validateQuizQuestions: bộ câu hỏi hợp lệ → không throw', async () => {
+    quizService.validateQuizQuestions(VALID_QUESTIONS);
+  });
+
+  it('P0-2: câu hỏi lỗi → validate trước insert nên không tạo bài tập nào', async () => {
+    const before = await count('homework');
+    const badQuestions = [
+      {
+        question: 'Q?',
+        points: 1,
+        options: [
+          { text: 'A', is_correct: false },
+          { text: 'B', is_correct: false },
+        ],
+      },
+    ];
+    // Mô phỏng đúng thứ tự của POST /: validate trước, createHomeworkBatch sau
+    await assert.rejects(async () => {
+      quizService.validateQuizQuestions(badQuestions);
+      await homeworkService.createHomeworkBatch({
+        class_ids: [classId],
+        title: 'Quiz lỗi',
+        created_by: 1,
+        centerId: null,
+        kind: 'quiz',
+      });
+    }, /chưa chọn đáp án đúng/);
+    assert.equal(await count('homework'), before);
+  });
 });
 
 describe('quiz.service - nộp bài và chấm điểm', () => {

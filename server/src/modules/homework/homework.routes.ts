@@ -23,7 +23,7 @@ import {
   filterValidTargets,
   getHomeworkSubmissions,
 } from './homework.service';
-import { scopeOf } from '../../shared/scope';
+import { scopeOf, ownScoped } from '../../shared/scope';
 import { listRubrics, getRubric, createRubric, deleteRubric } from './rubric.service';
 import { saveQuizQuestions, getAllAttempts, getQuizForStaff } from './quiz.service';
 import {
@@ -36,15 +36,17 @@ import {
 
 const router = Router();
 
-/** Kiểm tra các lớp thuộc scope của user (center + teacher) */
-async function getScopedClasses(req: AuthRequest, classIds: number[]) {
+/** Kiểm tra các lớp thuộc scope của user (center + own-scope) */
+async function getScopedClasses(req: AuthRequest, classIds: number[], permission: string) {
   const cid = reqCenterId(req);
+  // Scope 'own' (giáo viên hoặc custom role): chỉ lớp của mình dạy
+  const own = await ownScoped(req, permission);
   const valid: number[] = [];
   for (const id of classIds) {
     const cls = await getClassScope(id);
     if (!cls) continue;
     if (cid !== null && cls.center_id !== cid) continue;
-    if (req.user?.role === 'teacher' && (!req.user.teacher_id || cls.teacher_id !== req.user.teacher_id)) {
+    if (own && (!req.user?.teacher_id || cls.teacher_id !== req.user.teacher_id)) {
       continue;
     }
     valid.push(cls.id);
@@ -53,20 +55,24 @@ async function getScopedClasses(req: AuthRequest, classIds: number[]) {
 }
 
 /** Lấy bài tập thuộc scope của user, throw 404 nếu không có/không có quyền. */
-async function requireHomework(req: AuthRequest, id: number) {
-  const hw = await getScopedHomework(req, id);
+async function requireHomework(req: AuthRequest, id: number, permission: string) {
+  const hw = await getScopedHomework(req, id, permission);
   if (!hw) throw AppError.notFound('Không tìm thấy bài tập');
   return hw;
 }
 
 /** Kiểm tra bài tập thuộc scope của user */
-async function getScopedHomework(req: AuthRequest, id: number) {
+async function getScopedHomework(req: AuthRequest, id: number, permission: string) {
   const cid = reqCenterId(req);
   const hw = await getHomeworkWithScope(id);
   if (!hw) return null;
   const hwCid = hw.center_id ?? hw.class_center_id;
   if (cid !== null && hwCid !== cid) return null;
-  if (req.user?.role === 'teacher' && (!req.user.teacher_id || hw.teacher_id !== req.user.teacher_id)) {
+  // Scope 'own': chỉ bài của lớp mình dạy; teacher_id null → không thấy bài nào
+  if (
+    (await ownScoped(req, permission)) &&
+    (!req.user?.teacher_id || hw.teacher_id !== req.user.teacher_id)
+  ) {
     return null;
   }
   return hw;
@@ -87,9 +93,11 @@ router.get(
       limit,
     } = req.query as Record<string, string>;
     // Mặc định ẩn nháp? Không — staff thấy tất cả, phân biệt bằng status badge
+    const ctx = scopeOf(req);
+    ctx.ownOnly = await ownScoped(req, 'homework.view');
     res.json(
       await listHomework(
-        scopeOf(req),
+        ctx,
         {
           class_id,
           search,
@@ -108,7 +116,9 @@ router.get(
   '/stats',
   requirePermission('homework.view'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
-    res.json(await getHomeworkStats(scopeOf(req)));
+    const ctx = scopeOf(req);
+    ctx.ownOnly = await ownScoped(req, 'homework.view');
+    res.json(await getHomeworkStats(ctx));
   })
 );
 
@@ -117,7 +127,9 @@ router.get(
   '/analytics',
   requirePermission('homework.view'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
-    res.json(await getHomeworkAnalytics(scopeOf(req)));
+    const ctx = scopeOf(req);
+    ctx.ownOnly = await ownScoped(req, 'homework.view');
+    res.json(await getHomeworkAnalytics(ctx));
   })
 );
 
@@ -127,7 +139,7 @@ router.post(
   requirePermission('homework.create'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const input = prepareCreateInput(req.body as Record<string, unknown>);
-    const validIds = await getScopedClasses(req, input.class_ids);
+    const validIds = await getScopedClasses(req, input.class_ids, 'homework.create');
     if (!validIds.length) throw AppError.notFound('Không tìm thấy lớp học hợp lệ');
     // Lọc target students thuộc các lớp được chọn
     const targetIds = await filterValidTargets(validIds, input.target_student_ids);
@@ -175,7 +187,7 @@ router.get(
   requirePermission('homework.view'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const id = paramId(req.params);
-    await requireHomework(req, id);
+    await requireHomework(req, id, 'homework.view');
     res.json(await getHomeworkDetail(id));
   })
 );
@@ -186,7 +198,7 @@ router.post(
   requirePermission('homework.create'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const id = paramId(req.params);
-    await requireHomework(req, id);
+    await requireHomework(req, id, 'homework.create');
     const created = await reuseHomework(id, req.user!.id, reqCenterId(req));
     res.status(201).json({ created: created[0], count: 1 });
   })
@@ -198,7 +210,7 @@ router.post(
   requirePermission('homework.create'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const id = paramId(req.params);
-    await requireHomework(req, id);
+    await requireHomework(req, id, 'homework.create');
     await setHomeworkStatus(id, 'published', reqCenterId(req));
     res.json({ ok: true });
   })
@@ -210,7 +222,7 @@ router.post(
   requirePermission('homework.create'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const id = paramId(req.params);
-    const hw = await requireHomework(req, id);
+    const hw = await requireHomework(req, id, 'homework.create');
     await setHomeworkStatus(id, 'draft', reqCenterId(req));
     await audit({
       centerId: reqCenterId(req),
@@ -231,7 +243,7 @@ router.get(
   requirePermission('homework.grade'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const id = paramId(req.params);
-    await requireHomework(req, id);
+    await requireHomework(req, id, 'homework.grade');
     res.json(await getHomeworkScores(id));
   })
 );
@@ -242,7 +254,7 @@ router.post(
   requirePermission('homework.grade'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const id = paramId(req.params);
-    await requireHomework(req, id);
+    await requireHomework(req, id, 'homework.grade');
     const body = validate(req.body, {
       student_id: v.number({ integer: true, min: 1, label: 'Học viên' }),
       score: v.any({ label: 'Điểm' }),
@@ -270,7 +282,7 @@ router.get(
   requirePermission('homework.grade'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const id = paramId(req.params);
-    await requireHomework(req, id);
+    await requireHomework(req, id, 'homework.grade');
     res.json(await getAllAttempts(id));
   })
 );
@@ -281,7 +293,7 @@ router.get(
   requirePermission('homework.create'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const id = paramId(req.params);
-    await requireHomework(req, id);
+    await requireHomework(req, id, 'homework.create');
     res.json(await getQuizForStaff(id));
   })
 );
@@ -292,7 +304,7 @@ router.put(
   requirePermission('homework.create'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const id = paramId(req.params);
-    await requireHomework(req, id);
+    await requireHomework(req, id, 'homework.create');
     const { questions } = req.body as { questions: unknown };
     if (!Array.isArray(questions)) {
       throw AppError.badRequest('Thiếu danh sách câu hỏi');
@@ -351,7 +363,7 @@ router.post(
   requirePermission('homework.create'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const id = paramId(req.params);
-    await requireHomework(req, id);
+    await requireHomework(req, id, 'homework.create');
     const { bank_ids } = req.body as { bank_ids: number[] };
     if (!Array.isArray(bank_ids) || !bank_ids.length) {
       throw AppError.badRequest('Chưa chọn câu hỏi');
@@ -369,7 +381,7 @@ router.get(
   requirePermission('homework.grade'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const id = paramId(req.params);
-    await requireHomework(req, id);
+    await requireHomework(req, id, 'homework.grade');
     const { page, limit } = req.query as Record<string, string>;
     res.json(
       await getHomeworkSubmissions(id, {
@@ -421,7 +433,7 @@ router.put(
   requirePermission('homework.create'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const id = paramId(req.params);
-    await requireHomework(req, id);
+    await requireHomework(req, id, 'homework.create');
     const body = validate(req.body, {
       title: v.string({ min: 1, max: 200, label: 'Tiêu đề' }),
       content: v.string({ max: 5000, label: 'Nội dung' }),
@@ -456,7 +468,7 @@ router.delete(
   requirePermission('homework.delete'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const id = paramId(req.params);
-    const hw = await requireHomework(req, id);
+    const hw = await requireHomework(req, id, 'homework.delete');
     await deleteHomework(id, reqCenterId(req));
     await audit({
       centerId: reqCenterId(req),

@@ -6,7 +6,7 @@ import { AppError } from '../../shared/errors';
 import { actorFromReq } from '../../shared/audit';
 import { paramId } from '../../shared/validate';
 import { listGrades, createGrade, deleteGrade } from './grades.service';
-import { scopeOf } from '../../shared/scope';
+import { scopeOf, ownScoped } from '../../shared/scope';
 
 const router = Router();
 
@@ -26,7 +26,9 @@ router.get(
       page?: string;
       limit?: string;
     };
-    res.json(await listGrades(scopeOf(req), { student_id, class_id }, { page, limit }));
+    const ctx = scopeOf(req);
+    ctx.ownOnly = await ownScoped(req, 'grades.view');
+    res.json(await listGrades(ctx, { student_id, class_id }, { page, limit }));
   })
 );
 
@@ -54,6 +56,7 @@ router.post(
       created_by: req.user!.id,
       role: req.user?.role || '',
       teacher_id: req.user?.teacher_id ?? null,
+      ownOnly: await ownScoped(req, 'grades.manage'),
     });
     res.status(201).json(row);
   })
@@ -66,7 +69,13 @@ router.delete(
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const cid = reqCenterId(req);
     const id = paramId(req.params);
-    await deleteGrade(cid, id, req.user?.role || '', req.user?.teacher_id ?? null, actorFromReq(req));
+    await deleteGrade(
+      cid,
+      id,
+      req.user?.teacher_id ?? null,
+      await ownScoped(req, 'grades.manage'),
+      actorFromReq(req)
+    );
     res.json({ ok: true });
   })
 );
