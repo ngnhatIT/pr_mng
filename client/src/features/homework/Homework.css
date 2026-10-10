@@ -459,3 +459,12 @@ a:hover .submission-thumb {
 .hw-flat-card {
   margin: 0;
 }
+/* Empty state gọn trong picker (icon + 1 câu hướng dẫn) */
+.hw-empty-inline {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 16px 8px;
+  color: var(--text-muted);
+  font-size: 13px;
+}

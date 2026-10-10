@@ -205,6 +205,8 @@
     "noTitle": "(No title yet)",
     "optionPh": "Answer {{letter}}",
     "pickStudents": "Pick students",
+    "loadingStudents": "Loading student list...",
+    "pickClassFirst": "Select a class above to see the student list",
     "points": "Points",
     "preview": "Preview",
     "publishDraftOpt": "Save draft",

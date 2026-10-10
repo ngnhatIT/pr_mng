@@ -84,6 +84,7 @@ export function HomeworkFormModal({
   // Đối tượng: cả lớp hoặc chọn riêng từng em
   const [targetMode, setTargetMode] = useState<'all' | 'selected'>('all');
   const [students, setStudents] = useState<{ id: number; name: string }[]>([]);
+  const [studentsLoading, setStudentsLoading] = useState(false);
   const [selectedStudents, setSelectedStudents] = useState<number[]>([]);
   const [studentSearch, setStudentSearch] = useState('');
   // Đính kèm
@@ -180,9 +181,11 @@ export function HomeworkFormModal({
   useEffect(() => {
     if (targetMode !== 'selected' || !selectedClasses.length) {
       setStudents([]);
+      setStudentsLoading(false);
       return;
     }
     let cancelled = false;
+    setStudentsLoading(true);
     Promise.all(selectedClasses.map((id) => classesApi.get(id).catch(() => null)))
       .then((details) => {
         if (cancelled) return;
@@ -199,7 +202,10 @@ export function HomeworkFormModal({
         merged.sort((a, b) => a.name.localeCompare(b.name, 'vi'));
         setStudents(merged);
       })
-      .catch(() => {});
+      .catch(() => {})
+      .finally(() => {
+        if (!cancelled) setStudentsLoading(false);
+      });
     return () => {
       cancelled = true;
     };
@@ -611,7 +617,18 @@ export function HomeworkFormModal({
                       </button>
                     );
                   })}
-                  {filteredStudents.length === 0 && <span className="muted">{t('form.noResults')}</span>}
+                  {filteredStudents.length === 0 && (
+                    <div className="hw-empty-inline">
+                      <Icon name="users" size={18} />
+                      <span>
+                        {studentsLoading
+                          ? t('form.loadingStudents')
+                          : selectedClasses.length === 0
+                            ? t('form.pickClassFirst')
+                            : t('form.noResults')}
+                      </span>
+                    </div>
+                  )}
                 </div>
                 <div className="muted hw-text-13 hw-mt-4">
                   {t('form.selectedCount', { count: selectedStudents.length })}

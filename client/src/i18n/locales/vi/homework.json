@@ -205,6 +205,8 @@
     "noTitle": "(Chưa có tiêu đề)",
     "optionPh": "Đáp án {{letter}}",
     "pickStudents": "Chọn riêng từng em",
+    "loadingStudents": "Đang tải danh sách học viên...",
+    "pickClassFirst": "Chọn lớp ở trên để thấy danh sách học viên",
     "points": "Điểm",
     "preview": "Xem trước",
     "publishDraftOpt": "Lưu nháp",
