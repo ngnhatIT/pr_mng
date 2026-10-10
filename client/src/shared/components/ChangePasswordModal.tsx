@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ConfirmDialog, Modal } from './Modal';
-import { Field } from './Form';
+import { Field, useFieldErrors } from './Form';
 import { useToast } from '../ui/toast';
 import { api } from '../api/client';
 
@@ -18,18 +18,17 @@ export function ChangePasswordModal({ onClose }: Props) {
   const [confirmPw, setConfirmPw] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  // Lỗi validation hiện ngay dưới field + focus field lỗi (skill 8.2)
+  const { errors, refFor, show, clear } = useFieldErrors<'old' | 'new' | 'confirm'>();
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    if (newPassword !== confirmPw) {
-      setError(t('changePassword.mismatch', 'Mật khẩu mới không khớp'));
-      return;
-    }
-    if (newPassword.length < 8) {
-      setError(t('changePassword.tooShort', 'Mật khẩu phải từ 8 ký tự'));
-      return;
-    }
+    const errs: { new?: string; confirm?: string } = {};
+    if (newPassword.length < 8) errs.new = t('changePassword.tooShort', 'Mật khẩu phải từ 8 ký tự');
+    else if (newPassword !== confirmPw)
+      errs.confirm = t('changePassword.mismatch', 'Mật khẩu mới không khớp');
+    if (!show(errs)) return;
     setBusy(true);
     try {
       await api('/auth/change-password', {
@@ -42,7 +41,8 @@ export function ChangePasswordModal({ onClose }: Props) {
       toast(t('changePassword.success', 'Đổi mật khẩu thành công'), 'success');
       onClose();
     } catch (err) {
-      setError(err instanceof Error ? err.message : t('changePassword.fail', 'Đổi mật khẩu thất bại'));
+      // Lỗi server (thường là sai mật khẩu hiện tại): hiện ngay dưới field đó
+      show({ old: err instanceof Error ? err.message : t('changePassword.fail', 'Đổi mật khẩu thất bại') });
     } finally {
       setBusy(false);
     }
@@ -73,33 +73,45 @@ export function ChangePasswordModal({ onClose }: Props) {
               {error}
             </div>
           )}
-          <Field label={t('changePassword.old', 'Mật khẩu hiện tại')} required>
+          <Field label={t('changePassword.old', 'Mật khẩu hiện tại')} required error={errors.old}>
             <input
+              ref={refFor('old')}
               type="password"
               className="text-input"
               value={oldPassword}
-              onChange={(e) => setOldPassword(e.target.value)}
+              onChange={(e) => {
+                setOldPassword(e.target.value);
+                clear('old');
+              }}
               required
               autoComplete="current-password"
             />
           </Field>
-          <Field label={t('changePassword.new', 'Mật khẩu mới')} required>
+          <Field label={t('changePassword.new', 'Mật khẩu mới')} required error={errors.new}>
             <input
+              ref={refFor('new')}
               type="password"
               className="text-input"
               value={newPassword}
-              onChange={(e) => setNewPassword(e.target.value)}
+              onChange={(e) => {
+                setNewPassword(e.target.value);
+                clear('new');
+              }}
               required
               autoComplete="new-password"
               minLength={8}
             />
           </Field>
-          <Field label={t('changePassword.confirm', 'Nhập lại mật khẩu mới')} required>
+          <Field label={t('changePassword.confirm', 'Nhập lại mật khẩu mới')} required error={errors.confirm}>
             <input
+              ref={refFor('confirm')}
               type="password"
               className="text-input"
               value={confirmPw}
-              onChange={(e) => setConfirmPw(e.target.value)}
+              onChange={(e) => {
+                setConfirmPw(e.target.value);
+                clear('confirm');
+              }}
               required
               autoComplete="new-password"
             />
