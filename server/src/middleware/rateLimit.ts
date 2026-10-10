@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import type { AuthRequest, AuthUser } from './auth';
+import { JWT_VERIFY_OPTS } from './auth';
 import { env } from '../config/env';
 
 /**
@@ -79,8 +80,7 @@ function tokenUser(req: Request): AuthUser | undefined {
   const header = req.headers.authorization;
   if (!header || !header.startsWith('Bearer ')) return undefined;
   try {
-    // Giữ đồng bộ với JWT_VERIFY_OPTS trong middleware/auth.ts
-    return jwt.verify(header.slice(7), env.JWT_SECRET, { algorithms: ['HS256'] }) as AuthUser;
+    return jwt.verify(header.slice(7), env.JWT_SECRET, JWT_VERIFY_OPTS) as AuthUser;
   } catch {
     return undefined;
   }

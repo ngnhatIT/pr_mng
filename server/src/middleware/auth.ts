@@ -28,7 +28,7 @@ export interface AuthUser {
  */
 export const DUMMY_PASSWORD_HASH = '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy';
 
-const JWT_VERIFY_OPTS: jwt.VerifyOptions = { algorithms: ['HS256'] };
+export const JWT_VERIFY_OPTS: jwt.VerifyOptions = { algorithms: ['HS256'] };
 
 export interface AuthRequest extends Request {
   user?: AuthUser;
