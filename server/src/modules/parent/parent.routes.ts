@@ -102,7 +102,7 @@ router.post(
     // Thu hồi mọi session khác (giữ session hiện tại)
     const { refresh_token } = (req.body ?? {}) as { refresh_token?: string };
     await revokeAllForOwnerExcept('parent', parentId, refresh_token);
-    void audit({
+    await audit({
       centerId: null,
       action: 'change_password',
       entity: 'parents',

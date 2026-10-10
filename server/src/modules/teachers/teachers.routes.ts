@@ -98,7 +98,7 @@ router.delete(
       await tx.prepare('DELETE FROM salary_rules WHERE teacher_id = ?').run(id);
       await tx.prepare('DELETE FROM teachers WHERE id = ?').run(id);
     });
-    void audit({
+    await audit({
       centerId: cid,
       actor: actorFromReq(req),
       action: 'delete',

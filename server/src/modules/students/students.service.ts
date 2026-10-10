@@ -229,7 +229,7 @@ export async function deleteStudent(centerId: number | null, id: number, actor?:
   });
   // Xóa file vật lý sau khi DB đã xóa thành công
   for (const f of submissionFiles) await deleteUploadFileByUrl(f.file_url);
-  void audit({
+  await audit({
     centerId,
     actor,
     action: 'delete',

@@ -58,7 +58,7 @@ router.post(
     };
     const pair = await issueTokenPair(payload, reqMeta(req));
     // Audit login thành công (forensics: ai đăng nhập lúc nào, từ IP nào)
-    void audit({
+    await audit({
       centerId: user.center_id ?? null,
       actor: { id: user.id, name: user.name, role: user.role, ip: reqMeta(req).ip },
       action: 'login',
@@ -141,7 +141,7 @@ router.post(
     // Đổi mật khẩu = thu hồi mọi session khác (giữ session hiện tại, kẻ trộm bị đá ra)
     const { refresh_token } = (req.body ?? {}) as { refresh_token?: string };
     await revokeAllForOwnerExcept('staff', u.id, refresh_token);
-    void audit({
+    await audit({
       centerId: u.center_id ?? null,
       actor: { id: u.id, name: u.name, role: u.role },
       action: 'update',

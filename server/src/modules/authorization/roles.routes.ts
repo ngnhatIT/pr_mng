@@ -146,7 +146,7 @@ router.delete(
     await db.prepare('DELETE FROM roles WHERE id = ?').run(id);
     invalidateAllPermissions();
     // Audit xóa role (thao tác phân quyền nhạy cảm)
-    void audit({
+    await audit({
       centerId: null,
       actor: actorFromReq(req),
       action: 'delete',

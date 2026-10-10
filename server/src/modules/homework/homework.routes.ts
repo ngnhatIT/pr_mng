@@ -163,7 +163,7 @@ router.post(
     }
     const statusLabel =
       input.status === 'draft' ? 'nháp' : input.status === 'scheduled' ? 'hẹn giờ đăng' : 'đăng';
-    void audit({
+    await audit({
       centerId: reqCenterId(req),
       actor: actorFromReq(req),
       action: 'create',
@@ -220,7 +220,7 @@ router.post(
     const id = paramId(req.params);
     const hw = await requireHomework(req, id);
     await setHomeworkStatus(id, 'draft', reqCenterId(req));
-    void audit({
+    await audit({
       centerId: reqCenterId(req),
       actor: actorFromReq(req),
       action: 'update',
@@ -466,7 +466,7 @@ router.delete(
     const id = paramId(req.params);
     const hw = await requireHomework(req, id);
     await deleteHomework(id, reqCenterId(req));
-    void audit({
+    await audit({
       centerId: reqCenterId(req),
       actor: actorFromReq(req),
       action: 'delete',
