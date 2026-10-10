@@ -178,6 +178,7 @@ export function ClassDetail() {
                     <div className="list-sub">{s.phone || ''}</div>
                   </div>
                   <button className="btn btn-sm btn-danger-ghost" onClick={() => setKicking(s)}>
+                    <Icon name="trash" size={14} />
                     {t('detail.kick.removeFromClass')}
                   </button>
                 </li>
