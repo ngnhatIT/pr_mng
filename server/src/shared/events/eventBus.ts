@@ -1,3 +1,4 @@
+import { randomBytes } from 'crypto';
 import { logger } from '../logger';
 
 /**
@@ -94,7 +95,7 @@ export abstract class BaseEvent implements DomainEvent {
   readonly correlationId: string;
 
   constructor(correlationId?: string) {
-    // correlationId ngắn để dễ đọc trong log
-    this.correlationId = correlationId || Math.random().toString(36).slice(2, 10);
+    // correlationId ngắn để dễ đọc trong log (8 ký tự hex từ CSPRNG)
+    this.correlationId = correlationId || randomBytes(4).toString('hex');
   }
 }

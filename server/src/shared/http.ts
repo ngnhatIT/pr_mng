@@ -74,6 +74,6 @@ export function errorHandler(err: unknown, req: Request, res: Response, _next: N
 }
 
 /** 404 cho API không tồn tại — đặt sau mọi route, trước errorHandler. */
-export function notFoundHandler(_req: Request, res: Response): void {
-  res.status(404).json({ error: 'API không tồn tại', code: 'NOT_FOUND' });
+export function notFoundHandler(req: Request, res: Response): void {
+  res.status(404).json({ error: 'API không tồn tại', code: 'NOT_FOUND', request_id: getRequestId(req) });
 }
