@@ -39,7 +39,10 @@ export function Landing() {
   const [courses, setCourses] = useState<PublicClassItem[]>([]);
   const [teachers, setTeachers] = useState<PublicTeacher[]>([]);
   const [reviews, setReviews] = useState<{ avg: number; total: number; items: PublicReview[] } | null>(null);
-  const formRef = useRef<HTMLDivElement>(null);
+  const leadRef = useRef<HTMLDivElement>(null);
+  const trialRef = useRef<HTMLDivElement>(null);
+  // Khóa học user vừa bấm "Đăng ký học thử" trên thẻ khóa học -> preselect trong TrialForm
+  const [trialClassId, setTrialClassId] = useState<number | null>(null);
 
   useEffect(() => {
     void (async () => {
@@ -60,11 +63,14 @@ export function Landing() {
     })();
   }, []);
 
-  const scrollToForm = () => {
+  // Mỗi CTA cuộn tới đúng form của nó (tư vấn vs học thử là 2 form khác nhau).
+  const scrollTo = (ref: React.RefObject<HTMLDivElement | null>) => {
     // Tôn trọng người dùng yêu cầu giảm chuyển động (WCAG 2.3.3)
     const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    formRef.current?.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth' });
+    ref.current?.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'start' });
   };
+  const scrollToLead = () => scrollTo(leadRef);
+  const scrollToTrial = () => scrollTo(trialRef);
 
   return (
     <main className="landing">
@@ -100,10 +106,10 @@ export function Landing() {
             <h1>{center?.name || t('hero.fallbackName')}</h1>
             <p className="landing-hero-sub">{t('hero.sub')}</p>
             <div className="landing-hero-cta">
-              <button className="btn btn-primary btn-lg" onClick={scrollToForm}>
+              <button className="btn btn-primary btn-lg" onClick={scrollToLead}>
                 {t('hero.ctaConsult')}
               </button>
-              <button className="btn btn-lg" onClick={scrollToForm}>
+              <button className="btn btn-lg" onClick={scrollToTrial}>
                 {t('hero.ctaTrial')}
               </button>
             </div>
@@ -142,7 +148,13 @@ export function Landing() {
                   <dt>{t('courses.capacity')}</dt>
                   <dd>{t('courses.students', { count: c.student_count })}</dd>
                 </dl>
-                <button className="btn btn-primary btn-block" onClick={scrollToForm}>
+                <button
+                  className="btn btn-primary btn-block"
+                  onClick={() => {
+                    setTrialClassId(c.id);
+                    scrollToTrial();
+                  }}
+                >
                   {t('courses.trial')}
                 </button>
               </div>
@@ -207,11 +219,19 @@ export function Landing() {
         )}
       </section>
 
-      <section className="landing-section landing-alt" ref={formRef}>
+      <section className="landing-section landing-alt">
         <h2>{t('formTitle')}</h2>
         <div className="two-col landing-forms">
-          <LeadForm />
-          <TrialForm refCode={searchParams.get('ref') || ''} courses={courses} />
+          <div ref={leadRef} id="dang-ky-tu-van" className="landing-form-anchor">
+            <LeadForm />
+          </div>
+          <div ref={trialRef} id="dang-ky-hoc-thu" className="landing-form-anchor">
+            <TrialForm
+              refCode={searchParams.get('ref') || ''}
+              courses={courses}
+              preselectClassId={trialClassId}
+            />
+          </div>
         </div>
       </section>
 
@@ -300,7 +320,15 @@ function LeadForm() {
   );
 }
 
-function TrialForm({ refCode, courses }: { refCode: string; courses: PublicClassItem[] }) {
+function TrialForm({
+  refCode,
+  courses,
+  preselectClassId,
+}: {
+  refCode: string;
+  courses: PublicClassItem[];
+  preselectClassId: number | null;
+}) {
   const { t } = useTranslation(['landing', 'common']);
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
@@ -310,6 +338,11 @@ function TrialForm({ refCode, courses }: { refCode: string; courses: PublicClass
   const [referralCode, setReferralCode] = useState(refCode);
   const [busy, setBusy] = useState(false);
   const toast = useToast();
+
+  // Bấm "Đăng ký học thử" trên thẻ khóa học -> dropdown preselect sẵn lớp đó
+  useEffect(() => {
+    if (preselectClassId !== null) setClassId(String(preselectClassId));
+  }, [preselectClassId]);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();

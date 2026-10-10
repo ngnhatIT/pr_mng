@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { parentApi, VietQRInfo } from './parent.api';
 import { useToast } from '../../shared/ui/toast';
@@ -36,7 +36,14 @@ export function ChildDetail() {
   ];
   const [data, setData] = useState<ChildOverview | null>(null);
   const [loading, setLoading] = useState(true);
-  const [tab, setTab] = useState<Tab>('schedule');
+  // Deep-link ?tab=tuition từ nút "Đóng học phí" ở ParentHome; không có param thì giữ tab mặc định
+  const [searchParams] = useSearchParams();
+  const tabParam = searchParams.get('tab');
+  const [tab, setTab] = useState<Tab>(
+    tabParam === 'tuition' || tabParam === 'attendance' || tabParam === 'grades' || tabParam === 'homework'
+      ? tabParam
+      : 'schedule'
+  );
   const toast = useToast();
 
   const load = useCallback(async () => {
