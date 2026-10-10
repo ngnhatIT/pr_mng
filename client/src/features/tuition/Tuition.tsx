@@ -102,7 +102,7 @@ function PendingPayments({ onViewInvoices }: { onViewInvoices: () => void }) {
       <div className="toolbar">
         <span className="muted">{t('pending.note')}</span>
       </div>
-      {loading ? (
+      {loading && items.length === 0 ? (
         <TableSkeleton cols={6} />
       ) : items.length === 0 ? (
         <EmptyState
@@ -116,7 +116,7 @@ function PendingPayments({ onViewInvoices }: { onViewInvoices: () => void }) {
           }
         />
       ) : (
-        <div className="table-wrap sticky">
+        <div className="table-wrap sticky" aria-busy={loading || undefined}>
           <table className="table">
             <thead>
               <tr>
@@ -166,7 +166,7 @@ function PendingPayments({ onViewInvoices }: { onViewInvoices: () => void }) {
           </table>
         </div>
       )}
-      {pagination && <Pagination pagination={pagination} onChange={(p) => setPage(p)} />}
+      {pagination && <Pagination pagination={pagination} onChange={(p) => setPage(p)} loading={loading} />}
     </>
   );
 }
@@ -269,7 +269,7 @@ function InvoiceList() {
         </button>
       </div>
 
-      {loading ? (
+      {loading && invoices.length === 0 ? (
         <TableSkeleton cols={8} />
       ) : invoices.length === 0 ? (
         <EmptyState
@@ -298,7 +298,7 @@ function InvoiceList() {
           }
         />
       ) : (
-        <div className="table-wrap sticky">
+        <div className="table-wrap sticky" aria-busy={loading || undefined}>
           <table className="table">
             <thead>
               <tr>
@@ -389,7 +389,7 @@ function InvoiceList() {
         </div>
       )}
 
-      {pagination && <Pagination pagination={pagination} onChange={(p) => setPage(p)} />}
+      {pagination && <Pagination pagination={pagination} onChange={(p) => setPage(p)} loading={loading} />}
 
       {showCreate && (
         <InvoiceFormModal
@@ -932,12 +932,12 @@ function DebtList() {
           />
         </span>
       </div>
-      {loading ? (
+      {loading && debts.length === 0 ? (
         <TableSkeleton cols={6} />
       ) : debts.length === 0 ? (
         <EmptyState icon="check-circle" title={t('debt.emptyTitle')} desc={t('debt.emptyDesc')} />
       ) : (
-        <div className="table-wrap sticky">
+        <div className="table-wrap sticky" aria-busy={loading || undefined}>
           <table className="table">
             <thead>
               <tr>
@@ -983,7 +983,7 @@ function DebtList() {
           </table>
         </div>
       )}
-      {pagination && <Pagination pagination={pagination} onChange={(p) => setPage(p)} />}
+      {pagination && <Pagination pagination={pagination} onChange={(p) => setPage(p)} loading={loading} />}
     </>
   );
 }
