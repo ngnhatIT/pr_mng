@@ -43,3 +43,11 @@
     order: -1;
   }
 }
+
+@media (max-width: 480px) {
+  /* 360px: 3 tab vừa màn hình, không tràn ngang */
+  .tabs .tab {
+    padding: 10px 12px;
+    font-size: 13px;
+  }
+}
