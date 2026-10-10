@@ -433,11 +433,3 @@ export interface TeacherTodayItem {
   checked_in: boolean;
 }
 
-/** @deprecated Đã chuyển sang i18n (common namespace 'roles'). */
-export const ROLE_LABEL: Record<string, string> = {
-  superadmin: 'Quản trị hệ thống',
-  admin: 'Quản trị viên',
-  staff: 'Nhân viên',
-  teacher: 'Giáo viên',
-  parent: 'Phụ huynh',
-};
