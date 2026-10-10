@@ -14,7 +14,7 @@ import * as homeworkService from './homework.service';
 import * as quizService from './quiz.service';
 import * as parentService from '../parent/parent.service';
 import { createRubric } from './rubric.service';
-import { addBankQuestion, updateBankQuestion } from './questionBank.service';
+import { addBankQuestion, updateBankQuestion, importFromBank } from './questionBank.service';
 import { eventBus } from '../../shared/events/eventBus';
 
 // ---------------------------------------------------------------------------
@@ -949,6 +949,40 @@ describe('bank check đáp án trùng (P1-8)', () => {
       ],
     });
     assert.equal(q.options.length, 2);
+  });
+});
+
+describe('importFromBank dedupe + giữ thứ tự (P1-9)', () => {
+  beforeEach(async () => {
+    await resetDb();
+  });
+
+  it('dedupe bank_ids và import đúng thứ tự client gửi', async () => {
+    const opts = [
+      { text: 'A', is_correct: true },
+      { text: 'B', is_correct: false },
+    ];
+    const q1 = await addBankQuestion(null, 1, { question: 'Câu một', points: 1, options: opts });
+    const q2 = await addBankQuestion(null, 1, { question: 'Câu hai', points: 1, options: opts });
+    const q3 = await addBankQuestion(null, 1, { question: 'Câu ba', points: 1, options: opts });
+    const [hw] = await homeworkService.createHomeworkBatch({
+      class_ids: [classId],
+      title: 'Quiz import',
+      created_by: 1,
+      centerId: null,
+      status: 'draft',
+      kind: 'quiz',
+    });
+    // Trùng id + id không tồn tại (999999) → chỉ import 1 lần mỗi câu, đúng thứ tự gửi
+    const n = await importFromBank(hw.id, [q3.id, q2.id, q1.id, q3.id, 999999], null);
+    assert.equal(n, 3);
+    const rows = (await db
+      .prepare('SELECT question FROM quiz_questions WHERE homework_id = ? ORDER BY position')
+      .all(hw.id)) as { question: string }[];
+    assert.deepEqual(
+      rows.map((r) => r.question),
+      ['Câu ba', 'Câu hai', 'Câu một']
+    );
   });
 });
 

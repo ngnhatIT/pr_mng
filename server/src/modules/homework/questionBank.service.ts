@@ -214,7 +214,10 @@ export async function importFromBank(
   bankIds: number[],
   centerId: number | null
 ): Promise<number> {
-  if (!bankIds.length) throw AppError.badRequest('Chưa chọn câu hỏi để import');
+  // P1-9: dedupe id + loại giá trị rác; giữ đúng thứ tự client gửi khi gán position
+  // (WHERE id IN (...) không đảm bảo thứ tự trả về)
+  const uniqueIds = [...new Set(bankIds.map(Number).filter((n) => Number.isInteger(n) && n > 0))];
+  if (!uniqueIds.length) throw AppError.badRequest('Chưa chọn câu hỏi để import');
   // Chỉ import vào bài loại quiz — import vào bài thường sẽ ghi đè max_score sai nghĩa
   const hw = (await db.prepare('SELECT kind FROM homework WHERE id = ?').get(homeworkId)) as
     { kind: string } | undefined;
@@ -225,8 +228,8 @@ export async function importFromBank(
     throw AppError.badRequest('Đã có học viên làm bài, không thể thêm câu hỏi. Hãy tạo quiz mới.');
   }
   // Lọc bankIds theo center trước khi import (chống rò rỉ cross-tenant)
-  const placeholders = bankIds.map(() => '?').join(',');
-  const params: unknown[] = [...bankIds];
+  const placeholders = uniqueIds.map(() => '?').join(',');
+  const params: unknown[] = [...uniqueIds];
   let scopeCond = '';
   if (centerId !== null) {
     scopeCond = 'AND (center_id = ? OR center_id IS NULL)';
@@ -236,12 +239,17 @@ export async function importFromBank(
     .prepare(`SELECT id, question, points FROM question_bank WHERE id IN (${placeholders}) ${scopeCond}`)
     .all(...params)) as { id: number; question: string; points: number }[];
   if (!valid.length) throw AppError.badRequest('Không tìm thấy câu hỏi hợp lệ để import');
+  // Sắp lại theo đúng thứ tự client gửi (bỏ id không tồn tại/khác center)
+  const byId = new Map(valid.map((q) => [q.id, q]));
+  const ordered = uniqueIds
+    .map((bid) => byId.get(bid))
+    .filter((q): q is { id: number; question: string; points: number } => !!q);
   const optsAll = (await db
     .prepare(
       `SELECT question_id, text, is_correct FROM question_bank_options
-       WHERE question_id IN (${valid.map(() => '?').join(',')}) ORDER BY question_id, position`
+       WHERE question_id IN (${ordered.map(() => '?').join(',')}) ORDER BY question_id, position`
     )
-    .all(...valid.map((v) => v.id))) as { question_id: number; text: string; is_correct: number }[];
+    .all(...ordered.map((v) => v.id))) as { question_id: number; text: string; is_correct: number }[];
   // Toàn bộ import trong 1 transaction (tránh import dở khi lỗi giữa chừng)
   const count = await db.transaction(async (tx) => {
     const maxPos = (
@@ -256,7 +264,7 @@ export async function importFromBank(
       'INSERT INTO quiz_options (question_id, position, text, is_correct) VALUES (?, ?, ?, ?)'
     );
     let n = 0;
-    for (const [bi, bq] of valid.entries()) {
+    for (const [bi, bq] of ordered.entries()) {
       const qr = await qStmt.run(homeworkId, maxPos + 1 + bi, bq.question, bq.points);
       const nqid = Number(qr.lastInsertRowid);
       const opts = optsAll.filter((o) => o.question_id === bq.id);
