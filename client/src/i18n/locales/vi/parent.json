@@ -29,6 +29,7 @@
     "centerRequired": "Không xác định được trung tâm. Vui lòng thử lại.",
     "registerAtCenter": "Đăng ký tại {name}",
     "phoneEmpty": "Vui lòng nhập số điện thoại",
+    "phoneInvalid": "Số điện thoại chưa đúng định dạng (10 số, bắt đầu bằng 0)",
     "passwordEmpty": "Vui lòng nhập mật khẩu"
   },
   "child": {

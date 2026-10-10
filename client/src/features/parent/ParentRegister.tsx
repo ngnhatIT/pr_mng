@@ -5,6 +5,7 @@ import { setAuth, api } from '../../shared/api/client';
 import { Field, useFieldErrors } from '../../shared/components/Form';
 import { parentApi } from './parent.api';
 import { useToast } from '../../shared/ui/toast';
+import { isValidVNPhone } from '../../shared/validation';
 import './parent.css';
 
 export function ParentRegister() {
@@ -30,6 +31,7 @@ export function ParentRegister() {
     if (busy) return;
     const errs: { phone?: string; password?: string; confirm?: string } = {};
     if (!phone.trim()) errs.phone = t('auth.phoneEmpty');
+    else if (!isValidVNPhone(phone)) errs.phone = t('auth.phoneInvalid');
     if (!password) errs.password = t('auth.passwordEmpty');
     else if (password.length < 8) errs.password = t('auth.passwordTooShort');
     if (password && password !== confirm) errs.confirm = t('auth.passwordMismatch');

@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { setAuth, takePostLoginRedirect } from '../../shared/api/client';
 import { Field, useFieldErrors } from '../../shared/components/Form';
 import { parentApi } from './parent.api';
+import { isValidVNPhone } from '../../shared/validation';
 import './parent.css';
 
 export function ParentLogin() {
@@ -19,6 +20,7 @@ export function ParentLogin() {
     if (busy) return;
     const errs: { phone?: string; password?: string } = {};
     if (!phone.trim()) errs.phone = t('auth.phoneEmpty');
+    else if (!isValidVNPhone(phone)) errs.phone = t('auth.phoneInvalid');
     if (!password) errs.password = t('auth.passwordEmpty');
     if (!show(errs)) return;
     setBusy(true);

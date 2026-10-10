@@ -29,6 +29,7 @@
     "centerRequired": "Could not determine the center. Please try again.",
     "registerAtCenter": "Registering at {name}",
     "phoneEmpty": "Please enter your phone number",
+    "phoneInvalid": "Invalid phone number format (10 digits, starting with 0)",
     "passwordEmpty": "Please enter your password"
   },
   "child": {
