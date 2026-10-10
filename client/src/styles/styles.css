@@ -408,6 +408,15 @@ a {
 .nav-link:active {
   transform: scale(0.98);
 }
+/* Disabled nhìn là biết disabled cho mọi control tùy biến (skill 8.1): mờ + cursor not-allowed */
+.chip:disabled,
+.seg-btn:disabled,
+.lang-seg-btn:disabled,
+.modal-close:disabled,
+.hw-check:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
 .btn-primary {
   background: var(--primary);
   border-color: var(--primary);
