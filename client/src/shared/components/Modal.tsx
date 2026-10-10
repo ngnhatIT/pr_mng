@@ -1,4 +1,4 @@
-import { ReactNode, useEffect, useId, useRef } from 'react';
+import { ReactNode, useEffect, useId, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Icon } from './icons';
 
@@ -121,19 +121,30 @@ export function ConfirmDialog({
   danger?: boolean;
 }) {
   const { t } = useTranslation('common');
+  // Trạng thái đang thực thi: spinner trong nút + disabled, chống bấm 2 lần (skill 8.1)
+  const [busy, setBusy] = useState(false);
+  const confirm = async () => {
+    if (busy) return;
+    setBusy(true);
+    try {
+      await onConfirm();
+    } finally {
+      setBusy(false);
+    }
+  };
   return (
     <Modal title={title} onClose={onClose}>
       <p className="confirm-text">{message}</p>
       <div className="modal-actions">
-        <button className="btn" onClick={onClose}>
+        <button className="btn" onClick={onClose} disabled={busy}>
           {t('actions.cancel')}
         </button>
         <button
           className={`btn ${danger ? 'btn-danger' : 'btn-primary'}`}
-          onClick={() => {
-            void Promise.resolve(onConfirm());
-          }}
+          onClick={() => void confirm()}
+          disabled={busy}
         >
+          {busy && <span className="spinner" aria-hidden="true" />}
           {t('actions.confirm')}
         </button>
       </div>
