@@ -155,7 +155,11 @@ export function PaymentConfig() {
           </h2>
           <p className="card-desc">{t('config.vnpay.desc')}</p>
           <div className="form-grid">
-            <Field label={t('config.vnpay.tmnCode')} error={errors.pay_vnp_tmncode}>
+            <Field
+              label={t('config.vnpay.tmnCode')}
+              hint={t('config.vnpay.tmnCodeHint')}
+              error={errors.pay_vnp_tmncode}
+            >
               <input
                 className="text-input mono"
                 value={form.pay_vnp_tmncode}
@@ -166,7 +170,11 @@ export function PaymentConfig() {
                 ref={refFor('pay_vnp_tmncode')}
               />
             </Field>
-            <Field label={t('config.vnpay.hashSecret')} error={errors.pay_vnp_hashsecret}>
+            <Field
+              label={t('config.vnpay.hashSecret')}
+              hint={t('config.vnpay.hashSecretHint')}
+              error={errors.pay_vnp_hashsecret}
+            >
               <input
                 className="text-input mono"
                 type="password"
@@ -189,7 +197,7 @@ export function PaymentConfig() {
                 }
               />
             </Field>
-            <Field label={t('config.vnpay.status')}>
+            <Field label={t('config.vnpay.status')} hint={t('config.vnpay.statusHint')}>
               <select
                 className="text-input"
                 value={form.pay_vnp_enabled}
