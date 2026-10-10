@@ -42,6 +42,55 @@
   max-width: 640px;
 }
 
+/* Hero visual: khối trang trí CSS thuần thay ảnh AI (aria-hidden, tĩnh, không animation).
+   Pattern chấm mờ + 2 mảng màu brand nhạt + 1 vòng tròn outline. */
+.landing-hero-visual {
+  position: relative;
+  min-height: 340px;
+  border-radius: 16px;
+  overflow: hidden;
+  background:
+    radial-gradient(240px 240px at 80% 18%, rgba(36, 86, 224, 0.14), transparent 70%),
+    radial-gradient(200px 200px at 18% 82%, rgba(13, 148, 136, 0.12), transparent 70%),
+    var(--primary-soft);
+}
+.landing-hero-visual::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(rgba(36, 86, 224, 0.16) 1.2px, transparent 1.3px);
+  background-size: 22px 22px;
+  -webkit-mask-image: radial-gradient(75% 75% at 50% 45%, black, transparent);
+  mask-image: radial-gradient(75% 75% at 50% 45%, black, transparent);
+}
+.landing-hero-orb {
+  position: absolute;
+  border-radius: 50%;
+}
+.landing-hero-orb-a {
+  width: 190px;
+  height: 190px;
+  right: 8%;
+  top: 12%;
+  background: rgba(36, 86, 224, 0.16);
+}
+.landing-hero-orb-b {
+  width: 120px;
+  height: 120px;
+  left: 12%;
+  bottom: 14%;
+  background: rgba(13, 148, 136, 0.16);
+}
+.landing-hero-ring {
+  position: absolute;
+  width: 260px;
+  height: 260px;
+  left: 30%;
+  top: 22%;
+  border-radius: 50%;
+  border: 2px solid rgba(36, 86, 224, 0.18);
+}
+
 /* Card khóa học: thông tin gọn, CTA rõ */
 .course-card {
   border-radius: var(--radius-lg);
@@ -95,6 +144,10 @@
 
   .course-grid {
     grid-template-columns: 1fr;
+  }
+
+  .landing-hero-visual {
+    min-height: 220px;
   }
 }
 
@@ -156,6 +209,25 @@
     radial-gradient(600px 300px at 20% 10%, rgba(107, 148, 255, 0.14), transparent),
     radial-gradient(600px 300px at 80% 20%, rgba(45, 212, 191, 0.08), transparent),
     linear-gradient(135deg, #141b30 0%, #0d1220 60%, #0f1a24 100%);
+}
+
+[data-theme='dark'] .landing-hero-visual {
+  background:
+    radial-gradient(240px 240px at 80% 18%, rgba(107, 148, 255, 0.2), transparent 70%),
+    radial-gradient(200px 200px at 18% 82%, rgba(45, 212, 191, 0.14), transparent 70%),
+    #141b30;
+}
+[data-theme='dark'] .landing-hero-visual::before {
+  background-image: radial-gradient(rgba(107, 148, 255, 0.22) 1.2px, transparent 1.3px);
+}
+[data-theme='dark'] .landing-hero-orb-a {
+  background: rgba(107, 148, 255, 0.2);
+}
+[data-theme='dark'] .landing-hero-orb-b {
+  background: rgba(45, 212, 191, 0.16);
+}
+[data-theme='dark'] .landing-hero-ring {
+  border-color: rgba(107, 148, 255, 0.24);
 }
 
 [data-theme='dark'] .landing-badge {

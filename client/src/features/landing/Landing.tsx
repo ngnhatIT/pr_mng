@@ -108,15 +108,10 @@ export function Landing() {
               </button>
             </div>
           </div>
-          <div className="landing-hero-media">
-            <img
-              src="/landing-hero.jpg"
-              alt={t('hero.imgAlt')}
-              loading="eager"
-              width="1920"
-              height="1280"
-              fetchPriority="high"
-            />
+          <div className="landing-hero-visual" aria-hidden="true">
+            <span className="landing-hero-orb landing-hero-orb-a" />
+            <span className="landing-hero-orb landing-hero-orb-b" />
+            <span className="landing-hero-ring" />
           </div>
         </div>
       </section>
