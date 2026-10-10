@@ -1956,6 +1956,11 @@ textarea.text-input {
   background-size: 200% 100%;
   animation: shimmer 1.2s ease-in-out infinite;
 }
+/* Dark mode: skeleton dùng tông tối, không nháy sáng */
+[data-theme='dark'] .skeleton {
+  background: linear-gradient(90deg, #1a2338 25%, #232d49 50%, #1a2338 75%);
+  background-size: 200% 100%;
+}
 @keyframes shimmer {
   from {
     background-position: 200% 0;
