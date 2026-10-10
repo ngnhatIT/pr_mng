@@ -8,7 +8,7 @@ import { PageHeader } from '../../shared/components/PageHeader';
 import { EmptyState } from '../../shared/components/EmptyState';
 import { Skeleton } from '../../shared/components/Skeleton';
 import { Icon } from '../../shared/components/icons';
-import { TeacherTodayItem, formatDate, formatDateTime } from '../../shared/types';
+import { TeacherTodayItem, formatDate } from '../../shared/types';
 import './TeacherToday.css';
 
 export function TeacherToday() {
@@ -94,7 +94,7 @@ export function TeacherToday() {
                   <Icon name="clock" size={15} />
                   {s.date.slice(11, 16) || formatDate(s.date)}
                 </div>
-                <div className="muted today-topic">{formatDateTime(s.date)}</div>
+                <div className="muted today-topic">{formatDate(s.date)}</div>
                 {s.topic && <div className="muted today-topic">{t('today.topic', { topic: s.topic })}</div>}
                 <div className="today-attendance">
                   <Icon name="users" size={14} />
