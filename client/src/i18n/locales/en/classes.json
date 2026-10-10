@@ -4,7 +4,7 @@
     "checkin": {
       "close": "Close",
       "codeTitle": "Check-in code",
-      "createError": "Could not create code",
+      "createError": "Couldn't create the check-in code, please try again",
       "help": "Teachers enter this code on the \"Today's sessions\" page > \"Check in\" to record attendance."
     },
     "createSession": "New session",
@@ -42,7 +42,7 @@
     "title": "Attendance",
     "toast": {
       "attendanceError": "Could not load attendance",
-      "createError": "Creation failed",
+      "createError": "Couldn't create the session, please try again",
       "created": "Session created",
       "saved": "Attendance saved",
       "sessionsError": "Could not load sessions"
@@ -81,7 +81,7 @@
     "emptyStudentsTitle": "No students yet",
     "enroll": {
       "add": "Add",
-      "addError": "Could not add",
+      "addError": "Couldn't add the student, please try again",
       "added": "Student added to class",
       "adding": "Adding...",
       "notFound": "No students found.",

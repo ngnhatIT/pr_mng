@@ -4,7 +4,7 @@
     "checkin": {
       "close": "Đóng",
       "codeTitle": "Mã chấm công",
-      "createError": "Tạo mã thất bại",
+      "createError": "Không tạo được mã điểm danh, vui lòng thử lại",
       "help": "Giáo viên nhập mã này trong trang \"Buổi dạy hôm nay\" > \"Chấm công\" để ghi nhận điểm danh."
     },
     "createSession": "Tạo buổi mới",
@@ -42,7 +42,7 @@
     "title": "Điểm danh",
     "toast": {
       "attendanceError": "Không tải được điểm danh",
-      "createError": "Tạo thất bại",
+      "createError": "Không tạo được buổi học, vui lòng thử lại",
       "created": "Đã tạo buổi học",
       "saved": "Đã lưu điểm danh",
       "sessionsError": "Không tải được buổi học"
@@ -81,7 +81,7 @@
     "emptyStudentsTitle": "Chưa có học viên nào",
     "enroll": {
       "add": "Thêm",
-      "addError": "Thêm thất bại",
+      "addError": "Không thêm được học viên, vui lòng thử lại",
       "added": "Đã thêm học viên vào lớp",
       "adding": "Đang thêm...",
       "notFound": "Không tìm thấy học viên.",
