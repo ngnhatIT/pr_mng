@@ -485,6 +485,8 @@ export function HomeworkFormModal({
       selectedClasses.length > 0 ||
       selectedStudents.length > 0 ||
       attachments.length > 0 ||
+      attName.trim() !== '' ||
+      attUrl.trim() !== '' ||
       rubricId !== '' ||
       newRubricName.trim() !== '' ||
       publishMode !== 'now' ||
@@ -495,7 +497,7 @@ export function HomeworkFormModal({
     );
   }, [
     initial, kind, title, content, dueDate, closeDate, maxScore, selectedClasses,
-    selectedStudents, attachments, rubricId, newRubricName, publishMode, publishAt,
+    selectedStudents, attachments, attName, attUrl, rubricId, newRubricName, publishMode, publishAt,
     questions, quizEdited,
   ]);
   const [confirmClose, setConfirmClose] = useState(false);
@@ -764,8 +766,9 @@ export function HomeworkFormModal({
           </Field>
         </div>
 
-        {/* Đính kèm */}
-        {kind === 'homework' && (
+        {/* Đính kèm: cả bài thường lẫn quiz đều đính kèm được (dùng chung cụm này).
+            Ẩn ở chế độ sửa vì updateHomework chưa nhận attachments (tránh bẫy nhập rồi mất im lặng). */}
+        {!initial && (
           <Field label={t('form.attachments')} error={errors.attachment}>
             {attachments.map((a, i) => (
               <div key={i} className="att-row">
