@@ -760,6 +760,43 @@ textarea.text-input {
   color: #991b1b;
 }
 
+/* Dark mode: badge trạng thái dùng tông soft của theme, không chói trên nền tối */
+[data-theme='dark'] .badge-studying,
+[data-theme='dark'] .badge-active,
+[data-theme='dark'] .badge-present,
+[data-theme='dark'] .badge-paid,
+[data-theme='dark'] .badge-sent,
+[data-theme='dark'] .badge-approved {
+  background: var(--success-soft);
+  color: var(--success);
+}
+[data-theme='dark'] .badge-paused,
+[data-theme='dark'] .badge-partial,
+[data-theme='dark'] .badge-late,
+[data-theme='dark'] .badge-upcoming,
+[data-theme='dark'] .badge-pending {
+  background: var(--warning-soft);
+  color: var(--warning);
+}
+[data-theme='dark'] .badge-quit,
+[data-theme='dark'] .badge-inactive,
+[data-theme='dark'] .badge-absent,
+[data-theme='dark'] .badge-unpaid,
+[data-theme='dark'] .badge-failed,
+[data-theme='dark'] .badge-overdue,
+[data-theme='dark'] .badge-rejected {
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+[data-theme='dark'] .badge-demo {
+  background: var(--bg-muted);
+  color: var(--text-muted);
+}
+[data-theme='dark'] .badge-test {
+  background: var(--info-soft);
+  color: var(--info);
+}
+
 /* ============================ Zalo ============================ */
 .card-title {
   font-size: 16px;
