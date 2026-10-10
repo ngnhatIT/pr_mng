@@ -3428,6 +3428,10 @@ a:focus-visible,
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
   }
+  /* Tắt hẳn hiệu ứng nhấn (:active scale) cho người dùng giảm chuyển động */
+  *:active {
+    transform: none !important;
+  }
 }
 
 /* ---------- Mobile: input 16px chống iOS auto-zoom ---------- */
