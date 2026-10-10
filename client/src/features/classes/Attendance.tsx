@@ -25,6 +25,7 @@ export function Attendance() {
   const [sessionId, setSessionId] = useState(searchParams.get('session') || '');
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState('');
   const [showNewSession, setShowNewSession] = useState(false);
   const [checkinCode, setCheckinCode] = useState<string | null>(null);
   const [makingCode, setMakingCode] = useState(false);
@@ -114,6 +115,7 @@ export function Attendance() {
   const save = async () => {
     if (!sessionId) return;
     setSaving(true);
+    setSaveError(''); // điểm danh đã chọn giữ nguyên, lỗi hiện ngay trong savebar
     try {
       await sessionsApi.updateTopic(sessionId, topic);
       await sessionsApi.saveAttendance(
@@ -123,7 +125,8 @@ export function Attendance() {
       toast(t('attendance.toast.saved'), 'success');
       void loadSessions(classId);
     } catch (err) {
-      toast(err instanceof Error ? err.message : t('states.saveError', { ns: 'common' }), 'error');
+      // Lỗi lưu hiện inline trong savebar, ngay cạnh nút lưu (skill 8.2)
+      setSaveError(err instanceof Error ? err.message : t('states.saveError', { ns: 'common' }));
     } finally {
       setSaving(false);
     }
@@ -298,6 +301,11 @@ export function Attendance() {
                   )}
                 </span>
                 <span className="spacer" />
+                {saveError && (
+                  <span className="field-error" role="alert">
+                    {saveError}
+                  </span>
+                )}
                 <button className="btn btn-primary btn-lg" onClick={() => void save()} disabled={saving}>
                   {saving && <span className="spinner" aria-hidden="true" />}
                   {saving ? t('actions.saving', { ns: 'common' }) : t('attendance.save')}
