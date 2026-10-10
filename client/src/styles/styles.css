@@ -833,14 +833,8 @@ textarea.text-input {
   flex-direction: column;
   gap: var(--sp-3);
   min-height: 128px;
-  transition:
-    box-shadow 0.15s ease,
-    border-color 0.15s ease;
 }
-.stat-card:hover {
-  box-shadow: var(--shadow-md);
-  border-color: var(--border-strong);
-}
+/* stat-card không bấm được: không hover đổi bóng/viền (chống false affordance) */
 .stat-top {
   display: flex;
   align-items: center;
