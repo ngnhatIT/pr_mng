@@ -103,5 +103,10 @@
     "deleted": "Student deleted",
     "loadError": "Could not load the list",
     "saved": "Student saved"
+  },
+  "emptyFiltered": {
+    "title": "No students match your filters",
+    "desc": "Try a different keyword or clear the filters to see the full list.",
+    "clear": "Clear filters"
   }
 }

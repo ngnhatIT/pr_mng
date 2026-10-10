@@ -103,5 +103,10 @@
     "deleted": "Đã xóa học viên",
     "loadError": "Không tải được danh sách",
     "saved": "Đã lưu học viên"
+  },
+  "emptyFiltered": {
+    "title": "Không tìm thấy học viên",
+    "desc": "Thử từ khóa khác hoặc xóa bộ lọc để xem toàn bộ danh sách.",
+    "clear": "Xóa bộ lọc"
   }
 }

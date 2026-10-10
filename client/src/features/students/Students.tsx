@@ -86,6 +86,8 @@ export function Students() {
     }
   };
 
+  const filtering = search.trim() !== '' || status !== '';
+
   return (
     <div className="page">
       <PageHeader
@@ -130,13 +132,26 @@ export function Students() {
       ) : students.length === 0 ? (
         <EmptyState
           icon="users"
-          title={t('empty.title')}
-          desc={t('empty.desc')}
+          title={t(filtering ? 'emptyFiltered.title' : 'empty.title')}
+          desc={t(filtering ? 'emptyFiltered.desc' : 'empty.desc')}
           action={
-            <button className="btn btn-primary btn-inline" onClick={() => setEditing('new')}>
-              <Icon name="plus" size={14} />
-              {t('add')}
-            </button>
+            filtering ? (
+              <button
+                className="btn btn-secondary btn-inline"
+                onClick={() => {
+                  setSearchReset('');
+                  setStatusReset('');
+                }}
+              >
+                <Icon name="x" size={14} />
+                {t('emptyFiltered.clear')}
+              </button>
+            ) : (
+              <button className="btn btn-primary btn-inline" onClick={() => setEditing('new')}>
+                <Icon name="plus" size={14} />
+                {t('add')}
+              </button>
+            )
           }
         />
       ) : (
