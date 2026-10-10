@@ -99,7 +99,8 @@
     "markdownHint": "Markdown supported",
     "numbered": "Numbered list",
     "quote": "Quote",
-    "selFallback": "text"
+    "selFallback": "text",
+    "toolbar": "Editor toolbar"
   },
   "empty": {
     "desc": "Create a new assignment, save as draft or schedule it.",

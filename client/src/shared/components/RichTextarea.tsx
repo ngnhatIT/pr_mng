@@ -65,9 +65,16 @@ export function RichTextarea({
 
   return (
     <div className="rich-editor">
-      <div className="rich-toolbar">
+      <div className="rich-toolbar" role="toolbar" aria-label={t('editor.toolbar')}>
         {tools.map((tool) => (
-          <button key={tool.title} type="button" className="rich-tool" title={tool.title} onClick={tool.fn}>
+          <button
+            key={tool.title}
+            type="button"
+            className="rich-tool"
+            title={tool.title}
+            aria-label={tool.title}
+            onClick={tool.fn}
+          >
             {tool.label}
           </button>
         ))}

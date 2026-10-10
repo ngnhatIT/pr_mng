@@ -99,7 +99,8 @@
     "markdownHint": "Hỗ trợ markdown",
     "numbered": "Danh sách số",
     "quote": "Trích dẫn",
-    "selFallback": "nội dung"
+    "selFallback": "nội dung",
+    "toolbar": "Thanh công cụ soạn thảo"
   },
   "empty": {
     "desc": "Tạo bài tập mới, lưu nháp hoặc hẹn giờ đăng.",

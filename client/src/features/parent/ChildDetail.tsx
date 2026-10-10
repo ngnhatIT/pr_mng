@@ -287,7 +287,7 @@ function PayModal({
     setBusy(true);
     try {
       const data = await parentApi.vnpay(invoice.id);
-      window.open(data.pay_url, '_blank');
+      window.open(data.pay_url, '_blank', 'noopener');
       toast(t('child.pay.vnpayOpened'), 'info');
     } catch (err) {
       toast(err instanceof Error ? err.message : t('child.pay.vnpayError'), 'error');
