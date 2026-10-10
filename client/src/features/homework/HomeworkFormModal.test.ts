@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import { isValidHttpUrl, isQuizQuestionInvalid } from './HomeworkFormModal';
+import { isValidHttpUrl, isQuizQuestionInvalid, quickDate } from './HomeworkFormModal';
 import type { QuizQuestionForm } from './homework.api';
+import { todayVN } from '../../shared/types';
 
 describe('isValidHttpUrl', () => {
   it('chấp nhận http/https', () => {
@@ -89,5 +90,28 @@ describe('isQuizQuestionInvalid - điểm số', () => {
   });
   it('điểm lẻ 0.5 hợp lệ', () => {
     expect(isQuizQuestionInvalid({ ...base, points: 0.5 })).toBe(false);
+  });
+});
+
+describe('quickDate', () => {
+  it('today khớp todayVN()', () => {
+    expect(quickDate('today')).toBe(todayVN());
+  });
+  it('tomorrow/nextweek cộng đúng ngày theo lịch VN', () => {
+    const plus = (base: string, n: number) => {
+      const [y, m, d] = base.split('-').map(Number);
+      const dt = new Date(y, m - 1, d + n);
+      const p = (x: number) => String(x).padStart(2, '0');
+      return `${dt.getFullYear()}-${p(dt.getMonth() + 1)}-${p(dt.getDate())}`;
+    };
+    const t = todayVN();
+    expect(quickDate('tomorrow')).toBe(plus(t, 1));
+    expect(quickDate('nextweek')).toBe(plus(t, 7));
+  });
+  it('weekend ra đúng Chủ nhật và sau hôm nay', () => {
+    const w = quickDate('weekend');
+    const [y, m, d] = w.split('-').map(Number);
+    expect(new Date(y, m - 1, d).getDay()).toBe(0);
+    expect(w > todayVN()).toBe(true);
   });
 });

@@ -42,13 +42,16 @@ const BLANK_QTYPE_OPTIONS: { text: string; is_correct: boolean }[] = [
   { text: '', is_correct: false },
 ];
 
-function quickDate(kind: 'today' | 'tomorrow' | 'weekend' | 'nextweek'): string {
-  const d = new Date();
+/** Ngày nhanh cho hạn nộp, neo theo todayVN() (lịch VN) để không lệch ngày theo múi giờ máy. */
+export function quickDate(kind: 'today' | 'tomorrow' | 'weekend' | 'nextweek'): string {
+  const [y, m, day] = todayVN().split('-').map(Number);
+  // Nửa đêm giờ máy: chỉ làm toán lịch (cộng ngày, thứ trong tuần), không đổi múi giờ khi xuất.
+  const d = new Date(y, m - 1, day);
   if (kind === 'tomorrow') d.setDate(d.getDate() + 1);
   if (kind === 'weekend') d.setDate(d.getDate() + ((7 - d.getDay()) % 7 || 7));
   if (kind === 'nextweek') d.setDate(d.getDate() + 7);
-  // Giờ VN theo máy, xuất ra YYYY-MM-DD theo múi giờ VN (tránh lệch ngày UTC lúc 0:00-7:00)
-  return d.toLocaleDateString('en-CA', { timeZone: 'Asia/Ho_Chi_Minh' });
+  const p = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
 }
 
 interface Attachment {
