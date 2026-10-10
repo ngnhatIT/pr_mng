@@ -5,6 +5,7 @@ import { db } from '../../db';
 import { AuthUser, DUMMY_PASSWORD_HASH, invalidateTokenCheck, requireAuth, type AuthRequest } from '../../middleware/auth';
 import { loginRateLimit } from '../../middleware/rateLimit';
 import { requirePermission } from '../authorization/authorization.middleware';
+import { getPermissionScope } from '../authorization/authorization.service';
 import { asyncHandler } from '../../shared/http';
 import { AppError } from '../../shared/errors';
 import { paramId } from '../../shared/validate';
@@ -184,6 +185,118 @@ router.post(
       summary: `${u.name} đổi mật khẩu`,
     });
     res.json({ ok: true });
+  })
+);
+
+/* ---------------------------------------------------------------------------
+ * Quên mật khẩu (P0 red-team).
+ * Luồng trung thực cho demo (chưa có hạ tầng email/SMS): user gửi yêu cầu ->
+ * admin xem danh sách (GET /reset-requests) và bấm "Đặt lại mật khẩu"
+ * (POST /reset-requests/:id/process) để sinh mật khẩu tạm, rồi báo lại cho
+ * user qua kênh ngoài hệ thống (gọi điện, gặp trực tiếp).
+ * ------------------------------------------------------------------------- */
+
+/** Gửi yêu cầu đặt lại mật khẩu (public, rate-limit). Luôn trả ok để không lộ tài khoản có tồn tại. */
+router.post(
+  '/forgot-password',
+  loginRateLimit,
+  asyncHandler(async (req: Request, res: Response) => {
+    const { kind, username, phone } = (req.body ?? {}) as {
+      kind?: string;
+      username?: string;
+      phone?: string;
+    };
+    // kind=staff dùng username, kind=parent dùng phone — trùng key body với login
+    // để loginRateLimit vẫn giới hạn theo tài khoản (D5).
+    const identifier = kind === 'parent' ? String(phone ?? '').trim() : String(username ?? '').trim();
+    if ((kind !== 'staff' && kind !== 'parent') || !identifier || identifier.length > 100) {
+      res.status(400).json({ error: 'Thiếu thông tin yêu cầu đặt lại mật khẩu', code: 'VALIDATION_REQUIRED' });
+      return;
+    }
+    await db.prepare('INSERT INTO reset_requests (identifier, kind) VALUES (?, ?)').run(identifier, kind);
+    log.info('Yêu cầu đặt lại mật khẩu mới', { kind });
+    res.json({ ok: true });
+  })
+);
+
+/** Admin: danh sách yêu cầu đặt lại mật khẩu (chờ xử lý lên trước). */
+router.get(
+  '/reset-requests',
+  requireAuth,
+  requirePermission('users.view'),
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const rows = await db
+      .prepare(
+        `SELECT id, identifier, kind, status, created_at FROM reset_requests
+         ORDER BY (status = 'pending') DESC, created_at DESC LIMIT 200`
+      )
+      .all();
+    res.json({ data: rows });
+  })
+);
+
+/** Admin: xử lý yêu cầu — sinh mật khẩu tạm, đá mọi session cũ của tài khoản, đánh dấu đã xử lý. */
+router.post(
+  '/reset-requests/:id/process',
+  requireAuth,
+  requirePermission('users.update'),
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const id = paramId(req.params);
+    const r = (await db.prepare('SELECT * FROM reset_requests WHERE id = ?').get(id)) as
+      | { id: number; identifier: string; kind: string; status: string }
+      | undefined;
+    if (!r) throw AppError.notFound('Không tìm thấy yêu cầu');
+    if (r.status !== 'pending') throw AppError.badRequest('Yêu cầu đã được xử lý', 'ALREADY_PROCESSED');
+
+    // Tìm tài khoản theo định danh. Phía admin nên được phép biết tài khoản có tồn tại.
+    const target =
+      r.kind === 'staff'
+        ? ((await db
+            .prepare('SELECT id, center_id, name, role FROM users WHERE username = ?')
+            .get(r.identifier)) as
+            | { id: number; center_id: number | null; name: string; role: string }
+            | undefined)
+        : ((await db.prepare('SELECT id, center_id, name FROM parents WHERE phone = ?').get(r.identifier)) as
+            | { id: number; center_id: number | null; name: string }
+            | undefined);
+    if (!target)
+      throw AppError.notFound(
+        `Không tìm thấy tài khoản ${r.kind === 'staff' ? 'nhân sự' : 'phụ huynh'} "${r.identifier}"`
+      );
+
+    const admin = req.user!;
+    // Không cho admin reset superadmin (trừ chính superadmin) — chống leo thang quyền.
+    if (r.kind === 'staff' && (target as { role?: string }).role === 'superadmin' && admin.role !== 'superadmin')
+      throw AppError.forbidden('Chỉ superadmin được đặt lại mật khẩu của superadmin');
+    // Không cho reset tài khoản ngoài trung tâm mình (trừ superadmin / scope all).
+    if (admin.role !== 'superadmin' && target.center_id !== null && target.center_id !== admin.center_id) {
+      const scope = await getPermissionScope(admin.id, 'users.update');
+      if (scope !== 'all') throw AppError.forbidden('Yêu cầu thuộc trung tâm khác');
+    }
+
+    // Mật khẩu tạm ngẫu nhiên 12 ký tự — đủ mạnh theo assertStrongPassword (>= 8 ký tự, không phổ biến).
+    const tempPassword = crypto.randomBytes(9).toString('base64url');
+    const hash = bcrypt.hashSync(tempPassword, BCRYPT_ROUNDS);
+    if (r.kind === 'staff') {
+      await db.prepare('UPDATE users SET password_hash = ?, token_version = token_version + 1 WHERE id = ?').run(hash, target.id);
+      invalidateTokenCheck('staff', target.id);
+      await revokeAllForOwner('staff', target.id);
+    } else {
+      await db.prepare('UPDATE parents SET password_hash = ?, token_version = token_version + 1 WHERE id = ?').run(hash, target.id);
+      invalidateTokenCheck('parent', target.id);
+      await revokeAllForOwner('parent', target.id);
+    }
+    await db.prepare("UPDATE reset_requests SET status = 'processed' WHERE id = ?").run(id);
+    await audit({
+      centerId: target.center_id,
+      actor: { id: admin.id, name: admin.name, role: admin.role },
+      action: 'reset-password',
+      entity: 'reset_requests',
+      entityId: id,
+      summary: `${admin.name} đặt lại mật khẩu cho ${target.name} (${r.identifier})`,
+    });
+    // Trả mật khẩu tạm để admin báo lại cho user qua kênh ngoài hệ thống.
+    res.json({ ok: true, tempPassword });
   })
 );
 
