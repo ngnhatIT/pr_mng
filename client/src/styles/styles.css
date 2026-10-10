@@ -2894,18 +2894,7 @@ button.search-clear:active {
   margin: 0 0 var(--sp-3);
 }
 
-/* Parent homework: phân nhóm trạng thái */
-.hw-group-title {
-  font-size: var(--font-size-sm);
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: var(--text-muted);
-  margin: var(--sp-4) 0 var(--sp-2);
-}
-.hw-group-title:first-child {
-  margin-top: 0;
-}
+/* Parent homework: dùng .hw-group-title trong features/parent/parent.css (không trùng định nghĩa) */
 .hw-item {
   display: flex;
   align-items: flex-start;
