@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { parentApi, type QuizQuestion, type QuizAttempt } from './parent.api';
-import { HomeworkItem, formatDate, formatDateTime, todayVN } from '../../shared/types';
+import { HomeworkItem, formatDate, formatDateTime, isPastCloseDate } from '../../shared/types';
 import { useToast } from '../../shared/ui/toast';
 import { ConfirmDialog, Modal } from '../../shared/components/Modal';
 import { EmptyState } from '../../shared/components/EmptyState';
@@ -16,16 +16,74 @@ interface QuizAttemptDetail {
   options: { id: number; text: string; is_correct: boolean; chosen: boolean }[];
 }
 
+// FIX 5: màn hình xem lại đáp án dùng chung cho cả sau khi nộp và quiz đã hoàn thành
+function QuizReviewView({
+  review,
+  onBack,
+  onDone,
+}: {
+  review: QuizAttemptDetail[];
+  onBack: () => void;
+  onDone: () => void;
+}) {
+  const { t } = useTranslation(['parent', 'common']);
+  return (
+    <div className="quiz-review">
+      {review.map((q, qi) => {
+        const gotIt = q.options.some((o) => o.chosen && o.is_correct);
+        return (
+          <div key={q.question_id} className={`quiz-review-q ${gotIt ? 'correct' : 'wrong'}`}>
+            <div className="quiz-review-qhead">
+              {gotIt ? (
+                <Icon name="check" size={18} className="icon-ok" />
+              ) : (
+                <Icon name="x" size={18} className="icon-bad" />
+              )}
+              <span>{t('quiz.questionLabel', { num: qi + 1, question: q.question })}</span>
+            </div>
+            {q.options.map((o) => (
+              <div
+                key={o.id}
+                className={`quiz-review-opt ${o.is_correct ? 'is-correct' : ''} ${o.chosen && !o.is_correct ? 'is-wrong-choice' : ''}`}
+              >
+                {o.is_correct ? (
+                  <Icon name="check" size={14} />
+                ) : o.chosen ? (
+                  <Icon name="arrow-right" size={14} />
+                ) : (
+                  <span className="opt-dot" aria-hidden="true" />
+                )}
+                <span>{o.text}</span>
+                {o.chosen && <span className="muted-xs"> {t('quiz.youChose')}</span>}
+              </div>
+            ))}
+          </div>
+        );
+      })}
+      <div className="modal-actions">
+        <button className="btn" onClick={onBack}>
+          {t('actions.back', { ns: 'common' })}
+        </button>
+        <button className="btn btn-primary" onClick={onDone}>
+          {t('actions.close', { ns: 'common' })}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export function QuizTaker({
   homework,
   studentId,
   onClose,
   onDone,
+  reviewOnly = false,
 }: {
   homework: HomeworkItem;
   studentId: number;
   onClose: () => void;
   onDone: () => void;
+  reviewOnly?: boolean;
 }) {
   const toast = useToast();
   const { t } = useTranslation(['parent', 'common']);
@@ -46,17 +104,21 @@ export function QuizTaker({
   const [review, setReview] = useState<QuizAttemptDetail[] | null>(null);
   const [showReview, setShowReview] = useState(false);
   const [history, setHistory] = useState<QuizAttempt[]>([]);
+  const [attemptsLoading, setAttemptsLoading] = useState(reviewOnly);
 
+  // Lịch sử làm bài: chế độ làm bài dùng cho thanh info, chế độ xem lại dùng làm nội dung chính
   useEffect(() => {
+    setAttemptsLoading(reviewOnly);
     parentApi
       .getQuizAttempts(homework.id, studentId)
       .then(setHistory)
-      .catch(() => {});
-  }, [homework.id, studentId]);
+      .catch(() => {})
+      .finally(() => setAttemptsLoading(false));
+  }, [homework.id, studentId, reviewOnly]);
 
   // FIX 2: quiz đã qua hạn chót thì không cho mở làm, báo rõ ngay từ đầu
   // (trước đây phụ huynh làm xong mới bị server chặn lúc nộp)
-  const isExpired = homework.close_date != null && homework.close_date < todayVN();
+  const isExpired = !reviewOnly && isPastCloseDate(homework.close_date);
 
   // Tách riêng tải đề để nút "Thử lại" dùng lại được khi mất mạng
   const loadQuiz = useCallback(() => {
@@ -73,9 +135,9 @@ export function QuizTaker({
   }, [homework.id, studentId]);
 
   useEffect(() => {
-    if (isExpired) return; // Đã hết hạn thì không tải đề
+    if (isExpired || reviewOnly) return; // Đã hết hạn / chỉ xem lại thì không tải đề
     loadQuiz();
-  }, [loadQuiz, isExpired]);
+  }, [loadQuiz, isExpired, reviewOnly]);
 
   const [confirming, setConfirming] = useState(false);
 
@@ -133,7 +195,7 @@ export function QuizTaker({
 
   // MEDIUM-12: làm lại quiz (server cho phép không giới hạn, giữ điểm cao nhất)
   const retry = () => {
-    if (homework.close_date != null && homework.close_date < todayVN()) {
+    if (isPastCloseDate(homework.close_date)) {
       toast(t('quiz.expiredTitle'), 'error'); // Hạn chót trôi qua giữa chừng thì khóa làm lại
       return;
     }
@@ -149,7 +211,7 @@ export function QuizTaker({
   return (
     <Modal title={t('quiz.title', { title: homework.title })} onClose={onClose} wide>
       {/* Thông tin quiz + lịch sử làm bài */}
-      {!result && !showReview && (
+      {!reviewOnly && !result && !showReview && (
         <div className="quiz-info-bar">
           <span className="muted-sm">
             {t('quiz.questionCount', { count: questions.length })}
@@ -172,7 +234,56 @@ export function QuizTaker({
           )}
         </div>
       )}
-      {isExpired && !result ? (
+      {reviewOnly ? (
+        showReview && review ? (
+          <QuizReviewView review={review} onBack={() => setShowReview(false)} onDone={onDone} />
+        ) : attemptsLoading ? (
+          <div aria-hidden="true" style={{ display: 'grid', gap: 8 }}>
+            {[0, 1, 2].map((i) => (
+              <Skeleton key={i} height={52} radius={10} />
+            ))}
+          </div>
+        ) : history.length === 0 ? (
+          <EmptyState
+            icon="file"
+            title={t('quiz.noAttempts')}
+            action={
+              <button className="btn btn-inline" onClick={onClose}>
+                {t('actions.close', { ns: 'common' })}
+              </button>
+            }
+          />
+        ) : (
+          <div>
+            <p className="muted-sm" style={{ marginBottom: 12 }}>
+              {t('quiz.attempted', { count: history.length })} · {t('quiz.bestScore')}{' '}
+              <strong>
+                {t('quiz.bestScoreLine', {
+                  best: Math.max(...history.map((h) => h.score)),
+                  max: history[0].max_score,
+                })}
+              </strong>
+            </p>
+            <ul className="list">
+              {history.map((a) => (
+                <li key={a.id} className="list-item">
+                  <div>
+                    <strong>{t('quiz.attemptLine', { score: a.score, max: a.max_score })}</strong>
+                    <div className="muted-sm">{formatDateTime(a.submitted_at)}</div>
+                  </div>
+                  <button
+                    className="btn btn-sm"
+                    disabled={reviewLoading}
+                    onClick={() => void loadReview(a.id)}
+                  >
+                    {t('quiz.viewAnswers')}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )
+      ) : isExpired && !result ? (
         <EmptyState
           icon="clock"
           title={t('quiz.expiredTitle')}
@@ -192,7 +303,7 @@ export function QuizTaker({
             ))}
           </div>
         </div>
-      ) : result ? (
+      ) : result && !showReview ? (
         <div className="quiz-result">
           <div className={`quiz-result-ic ${pct >= 80 ? 'good' : pct >= 50 ? 'mid' : 'bad'}`}>
             <Icon name={pct >= 50 ? 'check' : 'x'} size={30} />
@@ -233,47 +344,7 @@ export function QuizTaker({
           </div>
         </div>
       ) : showReview && review ? (
-        <div className="quiz-review">
-          {review.map((q, qi) => {
-            const gotIt = q.options.some((o) => o.chosen && o.is_correct);
-            return (
-              <div key={q.question_id} className={`quiz-review-q ${gotIt ? 'correct' : 'wrong'}`}>
-                <div className="quiz-review-qhead">
-                  {gotIt ? (
-                    <Icon name="check" size={18} className="icon-ok" />
-                  ) : (
-                    <Icon name="x" size={18} className="icon-bad" />
-                  )}
-                  <span>{t('quiz.questionLabel', { num: qi + 1, question: q.question })}</span>
-                </div>
-                {q.options.map((o) => (
-                  <div
-                    key={o.id}
-                    className={`quiz-review-opt ${o.is_correct ? 'is-correct' : ''} ${o.chosen && !o.is_correct ? 'is-wrong-choice' : ''}`}
-                  >
-                    {o.is_correct ? (
-                      <Icon name="check" size={14} />
-                    ) : o.chosen ? (
-                      <Icon name="arrow-right" size={14} />
-                    ) : (
-                      <span className="opt-dot" aria-hidden="true" />
-                    )}
-                    <span>{o.text}</span>
-                    {o.chosen && <span className="muted-xs"> {t('quiz.youChose')}</span>}
-                  </div>
-                ))}
-              </div>
-            );
-          })}
-          <div className="modal-actions">
-            <button className="btn" onClick={() => setShowReview(false)}>
-              {t('actions.back', { ns: 'common' })}
-            </button>
-            <button className="btn btn-primary" onClick={onDone}>
-              {t('actions.close', { ns: 'common' })}
-            </button>
-          </div>
-        </div>
+        <QuizReviewView review={review} onBack={() => setShowReview(false)} onDone={onDone} />
       ) : loadError ? (
         <EmptyState
           icon="alert"

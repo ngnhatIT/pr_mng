@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { formatVND, formatDate, formatDateTime, formatScheduleText, getDayNames } from './types';
+import { formatVND, formatDate, formatDateTime, formatScheduleText, getDayNames, isPastCloseDate, todayVN } from './types';
 
 describe('formatVND', () => {
   it('tiếng Việt: 1.000.000đ', () => {
@@ -65,5 +65,22 @@ describe('getDayNames', () => {
     const names = getDayNames('en');
     expect(names[2]).toBe('Monday');
     expect(names[8]).toBe('Sunday');
+  });
+});
+
+describe('isPastCloseDate - đã qua hạn chót theo giờ VN', () => {
+  it('null/undefined thì chưa qua hạn', () => {
+    expect(isPastCloseDate(null)).toBe(false);
+    expect(isPastCloseDate(undefined)).toBe(false);
+  });
+  it('ngày hôm qua theo giờ VN là đã qua hạn', () => {
+    const y = new Date(Date.now() - 24 * 3600_000).toLocaleDateString('en-CA', { timeZone: 'Asia/Ho_Chi_Minh' });
+    expect(isPastCloseDate(y)).toBe(true);
+  });
+  it('hôm nay và ngày mai chưa qua hạn', () => {
+    const t = todayVN();
+    const tm = new Date(Date.now() + 24 * 3600_000).toLocaleDateString('en-CA', { timeZone: 'Asia/Ho_Chi_Minh' });
+    expect(isPastCloseDate(t)).toBe(false);
+    expect(isPastCloseDate(tm)).toBe(false);
   });
 });

@@ -201,6 +201,12 @@ export function nowVN(): string {
   return new Date(Date.now() + 7 * 3600_000).toISOString().slice(0, 16);
 }
 
+/** Đã qua hạn chót cứng theo giờ VN chưa? So sánh chuỗi YYYY-MM-DD với todayVN(),
+ * khớp đúng logic chặn nộp của server (submitQuiz/submitHomework). */
+export function isPastCloseDate(closeDate: string | null | undefined): boolean {
+  return closeDate != null && closeDate < todayVN();
+}
+
 /** Định dạng ngày giờ đầy đủ: "08/10/2026 14:30" */
 export function formatDateTime(iso: string | null): string {
   if (!iso) return '-';

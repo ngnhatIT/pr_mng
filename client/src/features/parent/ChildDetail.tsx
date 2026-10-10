@@ -500,6 +500,7 @@ function HomeworkTab({ data, onChanged }: { data: ChildOverview; onChanged: () =
   const toast = useToast();
   const [busy, setBusy] = useState<number | null>(null);
   const [takingQuiz, setTakingQuiz] = useState<HomeworkItem | null>(null);
+  const [reviewingQuiz, setReviewingQuiz] = useState<HomeworkItem | null>(null);
   const [submitting, setSubmitting] = useState<HomeworkItem | null>(null);
   const [viewingSubs, setViewingSubs] = useState<HomeworkItem | null>(null);
   // Ngày hôm nay theo giờ VN: toISOString() trả ngày UTC, lệch 1 ngày trong 0h-7h sáng VN
@@ -585,6 +586,12 @@ function HomeworkTab({ data, onChanged }: { data: ChildOverview; onChanged: () =
                 {t('child.homework.takeQuiz')}
               </button>
             )}
+            {isQuiz && isDone && (
+              <button className="btn btn-sm" onClick={() => setReviewingQuiz(h)}>
+                <Icon name="eye" size={15} />
+                {t('child.homework.reviewQuiz')}
+              </button>
+            )}
             {!isQuiz && !isDone && (
               <button className="btn btn-sm btn-primary" onClick={() => setSubmitting(h)}>
                 <Icon name="upload" size={15} />
@@ -659,6 +666,15 @@ function HomeworkTab({ data, onChanged }: { data: ChildOverview; onChanged: () =
             setTakingQuiz(null);
             onChanged();
           }}
+        />
+      )}
+      {reviewingQuiz && (
+        <QuizTaker
+          homework={reviewingQuiz}
+          studentId={studentId}
+          reviewOnly
+          onClose={() => setReviewingQuiz(null)}
+          onDone={() => setReviewingQuiz(null)}
         />
       )}
       {submitting && (

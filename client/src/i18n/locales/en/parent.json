@@ -75,7 +75,8 @@
       "unmark": "Unmark as done",
       "viewSubmissions": "Submitted work",
       "emptyDesc": "Homework will appear here once the teacher assigns it.",
-      "closeLabel": "Final deadline: {{date}}"
+      "closeLabel": "Final deadline: {{date}}",
+      "reviewQuiz": "Review result"
     },
     "loadError": "Couldn't load the details",
     "notFoundDesc": "Student record not found.",
@@ -236,7 +237,9 @@
     "youChose": "(your choice)",
     "retry": "Retry",
     "noQuestionsDesc": "This quiz has no questions yet. Please try again later or contact the center.",
-    "closeDate": "- Final deadline: {{date}}"
+    "closeDate": "- Final deadline: {{date}}",
+    "attemptLine": "{{score}}/{{max}} pts",
+    "noAttempts": "No attempts yet"
   },
   "referral": {
     "copied": "Copied",
