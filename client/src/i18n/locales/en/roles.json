@@ -22,7 +22,8 @@
   "edit": "Edit",
   "emptySearch": {
     "desc": "Try a different keyword.",
-    "title": "No roles found"
+    "title": "No roles found",
+    "clear": "Clear search"
   },
   "forbidden": {
     "desc": "Your account cannot view the roles page. Contact an administrator if needed.",

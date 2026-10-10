@@ -96,7 +96,16 @@ export function ClassDetail() {
   if (!data)
     return (
       <div className="page">
-        <EmptyState icon="book" title={t('detail.notFoundTitle')} desc={t('detail.notFoundDesc')} />
+        <EmptyState
+          icon="book"
+          title={t('detail.notFoundTitle')}
+          desc={t('detail.notFoundDesc')}
+          action={
+            <Link className="btn btn-primary btn-inline" to="/app/classes">
+              {t('actions.back', { ns: 'common' })}
+            </Link>
+          }
+        />
       </div>
     );
   const { class: cls } = data;

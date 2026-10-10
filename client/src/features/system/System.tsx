@@ -56,7 +56,17 @@ export function System() {
       {loading ? (
         <TableSkeleton cols={6} />
       ) : centers.length === 0 ? (
-        <EmptyState icon="building" title={t('system.empty.title')} desc={t('system.empty.desc')} />
+        <EmptyState
+          icon="building"
+          title={t('system.empty.title')}
+          desc={t('system.empty.desc')}
+          action={
+            <button className="btn btn-primary btn-inline" onClick={() => setShowCreate(true)}>
+              <Icon name="plus" size={14} />
+              {t('system.create')}
+            </button>
+          }
+        />
       ) : (
         <div className="table-wrap sticky">
           <table className="table">

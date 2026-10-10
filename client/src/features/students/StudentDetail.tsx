@@ -66,7 +66,16 @@ export function StudentDetail() {
   if (!data)
     return (
       <div className="page">
-        <EmptyState icon="user" title={t('detail.notFoundTitle')} desc={t('detail.notFoundDesc')} />
+        <EmptyState
+          icon="user"
+          title={t('detail.notFoundTitle')}
+          desc={t('detail.notFoundDesc')}
+          action={
+            <Link className="btn btn-primary btn-inline" to="/app/students">
+              {t('actions.back', { ns: 'common' })}
+            </Link>
+          }
+        />
       </div>
     );
   const { student } = data;

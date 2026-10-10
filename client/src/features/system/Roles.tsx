@@ -349,7 +349,16 @@ export function Roles() {
           </span>
           <div className="roles-list">
             {filteredRoles.length === 0 ? (
-              <EmptyState icon="users" title={t('emptySearch.title')} desc={t('emptySearch.desc')} />
+              <EmptyState
+                icon="users"
+                title={t('emptySearch.title')}
+                desc={t('emptySearch.desc')}
+                action={
+                  <button className="btn btn-secondary btn-inline" onClick={() => setSearch('')}>
+                    {t('emptySearch.clear')}
+                  </button>
+                }
+              />
             ) : (
               filteredRoles.map((r) => (
                 <button

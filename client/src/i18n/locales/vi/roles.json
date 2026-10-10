@@ -22,7 +22,8 @@
   "edit": "Sửa",
   "emptySearch": {
     "desc": "Thử tìm với từ khóa khác.",
-    "title": "Không tìm thấy vai trò"
+    "title": "Không tìm thấy vai trò",
+    "clear": "Xóa lọc"
   },
   "forbidden": {
     "desc": "Tài khoản của bạn không được xem trang phân quyền. Liên hệ quản trị viên nếu cần.",
