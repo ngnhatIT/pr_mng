@@ -1,8 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { homeworkApi, type QuizAttemptRow } from './homework.api';
 import { HomeworkItem, formatDate } from '../../shared/types';
-import { useToast } from '../../shared/ui/toast';
 import { Modal } from '../../shared/components/Modal';
 import { TableSkeleton } from '../../shared/components/Skeleton';
 import { EmptyState } from '../../shared/components/EmptyState';
@@ -10,17 +9,25 @@ import { Icon } from '../../shared/components/icons';
 
 export function QuizAttemptsModal({ homework, onClose }: { homework: HomeworkItem; onClose: () => void }) {
   const { t } = useTranslation(['homework', 'common']);
-  const toast = useToast();
   const [rows, setRows] = useState<QuizAttemptRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError(false);
+    try {
+      setRows(await homeworkApi.getQuizAttempts(homework.id));
+    } catch {
+      setError(true);
+    } finally {
+      setLoading(false);
+    }
+  }, [homework.id]);
 
   useEffect(() => {
-    homeworkApi
-      .getQuizAttempts(homework.id)
-      .then(setRows)
-      .catch((err: Error) => toast(err.message, 'error'))
-      .finally(() => setLoading(false));
-  }, [homework.id, toast]);
+    void load();
+  }, [load]);
 
   const avg =
     rows.length > 0
@@ -40,6 +47,16 @@ export function QuizAttemptsModal({ homework, onClose }: { homework: HomeworkIte
       </div>
       {loading ? (
         <TableSkeleton rows={5} cols={4} />
+      ) : error ? (
+        <EmptyState
+          icon="alert"
+          title={t('states.loadError', { ns: 'common' })}
+          action={
+            <button className="btn btn-secondary btn-inline" onClick={() => void load()}>
+              <Icon name="rotate" size={14} /> {t('actions.retry', { ns: 'common' })}
+            </button>
+          }
+        />
       ) : rows.length === 0 ? (
         <EmptyState icon="file" title={t('attempts.empty')} desc={t('attempts.emptyDesc')} />
       ) : (
