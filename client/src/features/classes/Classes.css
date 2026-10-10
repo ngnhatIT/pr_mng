@@ -56,3 +56,16 @@
     grid-column: 1 / -1;
   }
 }
+
+/* 360px: tên lớp dài không ép badge trạng thái, cụm nút chân card xuống dòng khi chật */
+@media (max-width: 480px) {
+  .class-card .card-head h2 {
+    min-width: 0;
+  }
+  .class-card .card-head .badge {
+    flex-shrink: 0;
+  }
+  .class-card .card-foot {
+    flex-wrap: wrap;
+  }
+}
