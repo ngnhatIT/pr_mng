@@ -86,7 +86,7 @@ export function QuizTaker({
   const doSubmit = async () => {
     setConfirming(false);
     setSubmitting(true);
-    setSubmitError(''); // bai lam giu nguyen, loi hien ngay duoi nut nop
+    setSubmitError(''); // Giữ nguyên bài làm, lỗi hiển thị ngay dưới nút nộp
     try {
       const res = await parentApi.submitQuiz(
         homework.id,
