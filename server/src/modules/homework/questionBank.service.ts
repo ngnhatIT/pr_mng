@@ -2,7 +2,7 @@ import { db } from '../../db';
 import { AppError } from '../../shared/errors';
 import { escapeLike } from '../../shared/like';
 import { countQuizAttempts } from './quiz.service';
-import { sumQuestionPoints } from './homework.helpers';
+import { sumQuestionPoints, normalizePoints } from './homework.helpers';
 
 /* ---------------------------------- Types ---------------------------------- */
 
@@ -110,7 +110,11 @@ export async function listBankTags(centerId: number | null): Promise<string[]> {
  * Validate input câu hỏi bank dùng chung cho thêm/sửa: thiếu field bắt buộc →
  * 400 (không để trim() trên undefined gây 500).
  */
-function validateBankInput(input: BankQuestionInput): { question: string; options: { text: string; is_correct: boolean }[] } {
+function validateBankInput(input: BankQuestionInput): {
+  question: string;
+  options: { text: string; is_correct: boolean }[];
+  points: number;
+} {
   const question = typeof input.question === 'string' ? input.question.trim() : '';
   if (!question) throw AppError.badRequest('Câu hỏi trống');
   const options = Array.isArray(input.options) ? input.options : [];
@@ -120,7 +124,9 @@ function validateBankInput(input: BankQuestionInput): { question: string; option
     if (typeof o?.text !== 'string' || !o.text.trim())
       throw AppError.badRequest(`Đáp án ${i + 1} trống`);
   });
-  return { question, options };
+  // P1-7: điểm âm/khổng lồ/không phải số → 400, không clamp im lặng
+  const points = normalizePoints(input.points, 'Điểm câu hỏi');
+  return { question, options, points };
 }
 
 /** Thêm câu hỏi vào ngân hàng. Validate hết trước khi insert (tránh câu mồ côi). */
@@ -129,7 +135,7 @@ export async function addBankQuestion(
   createdBy: number,
   input: BankQuestionInput
 ): Promise<BankQuestion> {
-  const { question, options } = validateBankInput(input);
+  const { question, options, points } = validateBankInput(input);
   const qid = await db.transaction(async (tx) => {
     const ins = await tx
       .prepare(
@@ -139,7 +145,7 @@ export async function addBankQuestion(
         centerId,
         input.tag?.trim() || null,
         question,
-        Math.max(0.5, Number(input.points) || 1),
+        points,
         createdBy
       );
     const qid = Number(ins.lastInsertRowid);
@@ -166,14 +172,14 @@ export async function updateBankQuestion(
   if (!q || (centerId !== null && q.center_id !== null && q.center_id !== centerId)) {
     throw AppError.notFound('Không tìm thấy câu hỏi');
   }
-  const { question, options } = validateBankInput(input);
+  const { question, options, points } = validateBankInput(input);
   await db.transaction(async (tx) => {
     await tx
       .prepare('UPDATE question_bank SET tag = ?, question = ?, points = ? WHERE id = ?')
       .run(
         input.tag?.trim() || null,
         question,
-        Math.max(0.5, Number(input.points) || 1),
+        points,
         id
       );
     await tx.prepare('DELETE FROM question_bank_options WHERE question_id = ?').run(id);

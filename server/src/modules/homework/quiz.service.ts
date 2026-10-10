@@ -3,7 +3,7 @@ import { AppError } from '../../shared/errors';
 import { todayVN } from '../../shared/vnTime';
 import { eventBus } from '../../shared/events/eventBus';
 import { QuizSubmittedEvent } from '../../shared/events/homework.events';
-import { sumQuestionPoints } from './homework.helpers';
+import { sumQuestionPoints, normalizePoints } from './homework.helpers';
 
 /* ---------------------------------- Types ---------------------------------- */
 
@@ -49,6 +49,8 @@ export function validateQuizQuestions(questions: QuizQuestionInput[]): void {
       throw AppError.badRequest(`Câu ${qi + 1} cần ít nhất 2 đáp án`);
     if (!q.options.some((o) => o.is_correct))
       throw AppError.badRequest(`Câu ${qi + 1} chưa chọn đáp án đúng`);
+    // P1-7: điểm âm/khổng lồ/không phải số → 400, không clamp im lặng
+    normalizePoints(q?.points, `Điểm câu ${qi + 1}`);
     const texts = q.options.map((o) => String(o.text).trim().toLowerCase());
     if (new Set(texts).size !== texts.length)
       throw AppError.badRequest(`Câu ${qi + 1} có đáp án trùng nhau`);
@@ -83,7 +85,8 @@ export async function saveQuizQuestions(homeworkId: number, questions: QuizQuest
       'INSERT INTO quiz_options (question_id, position, text, is_correct) VALUES (?, ?, ?, ?)'
     );
     for (const [qi, q] of questions.entries()) {
-      const qr = await qStmt.run(homeworkId, qi, q.question.trim(), Math.max(0.5, Number(q.points) || 1));
+      // Điểm đã validate ở validateQuizQuestions — normalizePoints không clamp im lặng
+      const qr = await qStmt.run(homeworkId, qi, q.question.trim(), normalizePoints(q.points));
       const qid = Number(qr.lastInsertRowid);
       for (const [oi, o] of q.options.entries()) {
         await oStmt.run(qid, oi, o.text.trim(), o.is_correct ? 1 : 0);

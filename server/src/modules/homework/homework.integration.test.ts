@@ -876,6 +876,51 @@ describe('validate field bắt buộc bank/rubric (P1-3)', () => {
   });
 });
 
+describe('validate điểm câu hỏi (P1-7)', () => {
+  beforeEach(async () => {
+    await resetDb();
+  });
+
+  // points: unknown để test cả giá trị sai kiểu runtime (validate ở trust boundary)
+  const qWith = (points: unknown) =>
+    ({
+      question: 'Q?',
+      points,
+      options: [
+        { text: 'A', is_correct: true },
+        { text: 'B', is_correct: false },
+      ],
+    }) as unknown as Parameters<typeof quizService.validateQuizQuestions>[0][number];
+
+  it('validateQuizQuestions: điểm âm/0/quá 1000/không phải số → 400', () => {
+    for (const bad of [-1, 0, 1001, 99999, 'abc', NaN]) {
+      assert.throws(
+        () => quizService.validateQuizQuestions([qWith(bad)]),
+        /Điểm câu 1 phải lớn hơn 0/
+      );
+    }
+    // Thiếu điểm → mặc định 1, vẫn qua
+    quizService.validateQuizQuestions([qWith(undefined)]);
+    quizService.validateQuizQuestions([qWith(0.5)]);
+    quizService.validateQuizQuestions([qWith(1000)]);
+  });
+
+  it('addBankQuestion: điểm âm → 400 (không clamp im lặng)', async () => {
+    await assert.rejects(
+      () =>
+        addBankQuestion(null, 1, {
+          question: 'Q?',
+          points: -5,
+          options: [
+            { text: 'A', is_correct: true },
+            { text: 'B', is_correct: false },
+          ],
+        }),
+      /Điểm câu hỏi phải lớn hơn 0/
+    );
+  });
+});
+
 describe('questionBank trả row trực tiếp (P1-4)', () => {
   beforeEach(async () => {
     await resetDb();

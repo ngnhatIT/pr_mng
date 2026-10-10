@@ -38,12 +38,24 @@ export function assignedCountExpr(homeworkAlias = 'h', classAlias = 'h'): string
 }
 
 /**
+ * Chuẩn hoá điểm mỗi câu hỏi — P1-7: thiếu → 1 (quy ước cũ); có giá trị thì
+ * phải là số > 0 và ≤ 1000, sai → 400 thay vì clamp im lặng như trước.
+ */
+export function normalizePoints(points: unknown, label = 'Điểm mỗi câu hỏi'): number {
+  if (points === null || points === undefined || points === '') return 1;
+  const n = Number(points);
+  if (!Number.isFinite(n) || n <= 0 || n > 1000) {
+    throw AppError.badRequest(`${label} phải lớn hơn 0 và không quá 1000`);
+  }
+  return n;
+}
+
+/**
  * Tổng điểm tối đa từ danh sách câu hỏi — KHÔNG làm tròn (giữ điểm lẻ 0.5).
- * Quy ước chuẩn hoá điểm/câu dùng chung cho tạo quiz, lưu đề và import từ
- * ngân hàng: điểm mỗi câu tối thiểu 0.5, thiếu/sai → 1.
+ * Dùng chung cho tạo quiz, lưu đề và import từ ngân hàng.
  */
 export function sumQuestionPoints(questions: { points?: number | null }[]): number {
-  return questions.reduce((s, q) => s + Math.max(0.5, Number(q?.points) || 1), 0);
+  return questions.reduce((s, q) => s + normalizePoints(q?.points), 0);
 }
 
 /** Validate cặp hạn nộp / hạn chót cứng. */
