@@ -12,6 +12,7 @@ import { Icon } from '../../shared/components/icons';
 import { ClassItem } from '../classes/classes.api';
 import { Grade, formatDate } from '../../shared/types';
 import './TeacherGrades.css';
+import { EmptyCell } from '../../shared/components/EmptyCell';
 
 export function TeacherGrades() {
   const { t } = useTranslation(['teacher', 'common']);
@@ -174,7 +175,7 @@ export function TeacherGrades() {
                       {g.score}/{g.max_score}
                     </span>
                   </td>
-                  <td>{g.comment || '-'}</td>
+                  <td>{g.comment || <EmptyCell />}</td>
                   <td>{formatDate(g.created_at)}</td>
                   <td className="td-right">
                     <button className="btn btn-sm btn-danger-ghost" onClick={() => setDeleting(g)}>

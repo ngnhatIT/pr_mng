@@ -10,6 +10,7 @@ import { Pagination, type PaginationMeta } from '../../shared/components/Paginat
 import { LeaveRequest, formatDate } from '../../shared/types';
 import { Icon } from '../../shared/components/icons';
 import './LeavesAdmin.css';
+import { EmptyCell } from '../../shared/components/EmptyCell';
 
 export function LeavesAdmin() {
   const { t } = useTranslation(['ops', 'common']);
@@ -119,7 +120,7 @@ export function LeavesAdmin() {
                   <td className="nowrap">{formatDate(l.from_date)}</td>
                   <td className="nowrap">{formatDate(l.to_date)}</td>
                   <td className="leave-reason" title={l.reason || undefined}>
-                    {l.reason || '-'}
+                    {l.reason || <EmptyCell />}
                   </td>
                   <td>
                     <span className={`badge badge-${l.status}`}>{t(`leaves.status.${l.status}`)}</span>

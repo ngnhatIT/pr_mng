@@ -11,6 +11,7 @@ import { Pagination, type PaginationMeta } from '../../shared/components/Paginat
 import { CenterItem, formatDate } from '../../shared/types';
 import { Icon } from '../../shared/components/icons';
 import './SystemAdmin.css';
+import { EmptyCell } from '../../shared/components/EmptyCell';
 
 const CENTERS_PER_PAGE = 20;
 
@@ -78,7 +79,7 @@ export function System() {
                     <div className="center-name">{c.name}</div>
                     <div className="center-sub mono">{c.subdomain}</div>
                   </td>
-                  <td>{c.phone || '-'}</td>
+                  <td>{c.phone || <EmptyCell />}</td>
                   <td>
                     <span className={`badge badge-plan-${c.plan}`}>{t(`system.plan.${c.plan}`)}</span>
                   </td>

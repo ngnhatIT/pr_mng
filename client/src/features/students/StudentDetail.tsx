@@ -12,6 +12,7 @@ import { EmptyState } from '../../shared/components/EmptyState';
 import { Skeleton, TableSkeleton } from '../../shared/components/Skeleton';
 import { Icon } from '../../shared/components/icons';
 import './Students.css';
+import { EmptyCell } from '../../shared/components/EmptyCell';
 
 interface Detail {
   student: Student;
@@ -97,15 +98,15 @@ export function StudentDetail() {
           </div>
           <dl className="kv">
             <dt>{t('detail.phone')}</dt>
-            <dd>{student.phone || '-'}</dd>
+            <dd>{student.phone || <EmptyCell />}</dd>
             <dt>{t('detail.email')}</dt>
-            <dd>{student.email || '-'}</dd>
+            <dd>{student.email || <EmptyCell />}</dd>
             <dt>{t('detail.dob')}</dt>
             <dd>{formatDate(student.dob)}</dd>
             <dt>{t('detail.address')}</dt>
-            <dd>{student.address || '-'}</dd>
+            <dd>{student.address || <EmptyCell />}</dd>
             <dt>{t('detail.note')}</dt>
-            <dd>{student.note || '-'}</dd>
+            <dd>{student.note || <EmptyCell />}</dd>
           </dl>
         </section>
 
@@ -151,7 +152,7 @@ export function StudentDetail() {
               <tbody>
                 {data.invoices.map((inv) => (
                   <tr key={inv.id}>
-                    <td>{inv.class_name || '-'}</td>
+                    <td>{inv.class_name || <EmptyCell />}</td>
                     <td className="num">{formatVND(inv.amount)}</td>
                     <td className="num">{formatVND(inv.paid || 0)}</td>
                     <td>{formatDate(inv.due_date)}</td>
@@ -239,13 +240,13 @@ function GradesSection({ studentId }: { studentId: number }) {
               {grades.map((g) => (
                 <tr key={g.id}>
                   <td>{g.title}</td>
-                  <td>{g.class_name || '-'}</td>
+                  <td>{g.class_name || <EmptyCell />}</td>
                   <td className="num">
                     <strong>
                       {g.score}/{g.max_score}
                     </strong>
                   </td>
-                  <td>{g.comment || '-'}</td>
+                  <td>{g.comment || <EmptyCell />}</td>
                   <td>{formatDate(g.created_at)}</td>
                   <td className="td-right">
                     <span className="row-actions">

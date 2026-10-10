@@ -16,6 +16,7 @@ import { Icon } from '../../shared/components/icons';
 import { formatVND, formatDate } from '../../shared/types';
 import './Tuition.css';
 import { ReceiptModal } from '../../shared/components/ReceiptModal';
+import { EmptyCell } from '../../shared/components/EmptyCell';
 
 export function remindKind(dueDate: string | null): 'overdue' | 'upcoming' {
   const today = new Date().toISOString().slice(0, 10);
@@ -140,7 +141,7 @@ function PendingPayments({ onViewInvoices }: { onViewInvoices: () => void }) {
                   <td className="num">{formatVND(p.amount)}</td>
                   <td>{p.method || t('pending.defaultMethod')}</td>
                   <td>{formatDate(p.paid_at)}</td>
-                  <td>{p.note || '-'}</td>
+                  <td>{p.note || <EmptyCell />}</td>
                   <td className="td-right">
                     <span className="tuition-actions">
                       <button
@@ -353,7 +354,7 @@ function InvoiceList() {
                     <td>
                       {inv.student_name} <span className="muted mono">({inv.student_code})</span>
                     </td>
-                    <td>{inv.class_name || '-'}</td>
+                    <td>{inv.class_name || <EmptyCell />}</td>
                     <td className="num">{formatVND(inv.amount)}</td>
                     <td className="num">{formatVND(paid)}</td>
                     <td className="num debt-amount">{formatVND(inv.amount - paid)}</td>
@@ -988,7 +989,7 @@ function DebtList() {
                   <td>
                     {d.name} <span className="muted mono">({d.code})</span>
                   </td>
-                  <td>{d.phone || '-'}</td>
+                  <td>{d.phone || <EmptyCell />}</td>
                   <td className="num">{formatVND(d.total)}</td>
                   <td className="num">{formatVND(d.paid)}</td>
                   <td className="num debt-amount">{formatVND(d.debt)}</td>

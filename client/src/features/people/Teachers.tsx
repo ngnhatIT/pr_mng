@@ -11,6 +11,7 @@ import { Pagination, type PaginationMeta } from '../../shared/components/Paginat
 import { Icon } from '../../shared/components/icons';
 import { Teacher } from '../../shared/types';
 import './Teachers.css';
+import { EmptyCell } from '../../shared/components/EmptyCell';
 
 export function Teachers() {
   const { t } = useTranslation(['people', 'common']);
@@ -117,9 +118,9 @@ export function Teachers() {
                       {tch.name}
                     </span>
                   </td>
-                  <td>{tch.subject || '-'}</td>
-                  <td>{tch.phone || '-'}</td>
-                  <td>{tch.email || '-'}</td>
+                  <td>{tch.subject || <EmptyCell />}</td>
+                  <td>{tch.phone || <EmptyCell />}</td>
+                  <td>{tch.email || <EmptyCell />}</td>
                   <td className="num">{tch.class_count ?? 0}</td>
                   <td className="td-right">
                     <span className="row-actions">

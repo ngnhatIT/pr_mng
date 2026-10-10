@@ -2171,6 +2171,12 @@ button.search-clear:active {
   opacity: 0.55;
   pointer-events: none;
 }
+
+/* Ô dữ liệu trống: dấu gạch ngang hiển thị muted nhất quán */
+.empty-cell {
+  color: var(--text-faint);
+  user-select: none;
+}
 .att-item {
   display: flex;
   align-items: center;

@@ -12,6 +12,7 @@ import { Pagination, type PaginationMeta } from '../../shared/components/Paginat
 import { Icon } from '../../shared/components/icons';
 import { ZaloConfig, ReminderItem, formatVND, formatDate } from '../../shared/types';
 import './Zalo.css';
+import { EmptyCell } from '../../shared/components/EmptyCell';
 
 const EMPTY_CONFIG: ZaloConfig = {
   zalo_oa_id: '',
@@ -391,10 +392,10 @@ export function ZaloReminders() {
                       <tr key={r.id}>
                         <td className="mono">{r.created_at?.slice(0, 16).replace('T', ' ')}</td>
                         <td>
-                          {r.student_name || '-'}
+                          {r.student_name || <EmptyCell />}
                           {r.student_code && <span className="muted mono"> ({r.student_code})</span>}
                         </td>
-                        <td className="mono">{r.phone || '-'}</td>
+                        <td className="mono">{r.phone || <EmptyCell />}</td>
                         <td className="num">
                           {r.invoice_amount != null ? formatVND(r.invoice_amount) : '-'}
                         </td>
@@ -444,9 +445,9 @@ export function ZaloReminders() {
         <Modal title={t('zalo.view.title')} onClose={() => setViewing(null)}>
           <dl className="dl dl-compact">
             <dt>{t('zalo.col.student')}</dt>
-            <dd>{viewing.student_name || '-'}</dd>
+            <dd>{viewing.student_name || <EmptyCell />}</dd>
             <dt>{t('zalo.col.phone')}</dt>
-            <dd className="mono">{viewing.phone || '-'}</dd>
+            <dd className="mono">{viewing.phone || <EmptyCell />}</dd>
             <dt>{t('zalo.col.kind')}</dt>
             <dd>{t(`zalo.kind.${viewing.kind}`, { defaultValue: viewing.kind })}</dd>
             <dt>{t('zalo.col.status')}</dt>

@@ -12,6 +12,7 @@ import { Icon } from '../../shared/components/icons';
 import { Pagination, type PaginationMeta } from '../../shared/components/Pagination';
 import { TrialItem, formatDate } from '../../shared/types';
 import './Admissions.css';
+import { EmptyCell } from '../../shared/components/EmptyCell';
 
 const STATUSES = ['new', 'contacted', 'trialed', 'enrolled', 'lost'] as const;
 
@@ -123,9 +124,9 @@ export function Trials() {
                 <tr key={tr.id}>
                   <td>{tr.name}</td>
                   <td>{tr.phone}</td>
-                  <td>{tr.class_name || '-'}</td>
+                  <td>{tr.class_name || <EmptyCell />}</td>
                   <td>{formatDate(tr.desired_date)}</td>
-                  <td className="mono">{tr.referral_code || '-'}</td>
+                  <td className="mono">{tr.referral_code || <EmptyCell />}</td>
                   <td>
                     <span className={`badge badge-${tr.status} trial-badge`}>{statusLabel(tr.status)}</span>
                   </td>

@@ -12,6 +12,7 @@ import { useDebounce } from '../../shared/hooks/useDebounce';
 import { Pagination, type PaginationMeta } from '../../shared/components/Pagination';
 import { Icon } from '../../shared/components/icons';
 import './Students.css';
+import { EmptyCell } from '../../shared/components/EmptyCell';
 
 const emptyForm = {
   code: '',
@@ -197,7 +198,7 @@ export function Students() {
                       </Link>
                     </span>
                   </td>
-                  <td>{s.phone || '-'}</td>
+                  <td>{s.phone || <EmptyCell />}</td>
                   <td>
                     <span className={`badge badge-${s.status}`}>{t(`status.${s.status}`)}</span>
                   </td>

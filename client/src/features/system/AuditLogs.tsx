@@ -8,6 +8,7 @@ import { Pagination, type PaginationMeta } from '../../shared/components/Paginat
 import { auditApi, type AuditLog } from './audit.api';
 import { formatDateTime } from '../../shared/types';
 import './SystemAdmin.css';
+import { EmptyCell } from '../../shared/components/EmptyCell';
 
 const ACTIONS = [
   'create',
@@ -126,7 +127,7 @@ export function AuditLogs() {
                 <tr key={l.id}>
                   <td className="mono nowrap">{formatDateTime(l.created_at)}</td>
                   <td>
-                    <span className="audit-actor">{l.actor_name || '-'}</span>
+                    <span className="audit-actor">{l.actor_name || <EmptyCell />}</span>
                     {l.actor_role && <span className="muted"> ({l.actor_role})</span>}
                   </td>
                   <td>

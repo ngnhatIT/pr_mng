@@ -9,6 +9,7 @@ import { ThemeLangSwitch } from '../../shared/ui/ThemeLangSwitch';
 import { http } from '../../shared/api/client';
 import { PublicCenter, PublicClassItem, PublicTeacher, PublicReview, formatVND } from '../../shared/types';
 import './Landing.css';
+import { EmptyCell } from '../../shared/components/EmptyCell';
 
 async function getJSON<T>(path: string): Promise<T> {
   try {
@@ -132,9 +133,9 @@ export function Landing() {
                 <h3>{c.name}</h3>
                 <dl className="dl dl-compact">
                   <dt>{t('courses.teacher')}</dt>
-                  <dd>{c.teacher_name || '-'}</dd>
+                  <dd>{c.teacher_name || <EmptyCell />}</dd>
                   <dt>{t('courses.schedule')}</dt>
-                  <dd>{c.schedule_text || '-'}</dd>
+                  <dd>{c.schedule_text || <EmptyCell />}</dd>
                   <dt>{t('courses.tuition')}</dt>
                   <dd>
                     <strong className="text-primary">{formatVND(c.tuition_fee)}</strong>
@@ -192,7 +193,7 @@ export function Landing() {
           {(reviews?.items || []).map((r, i) => (
             <div key={i} className="card review-card testimonial">
               <Stars rating={r.rating} />
-              <p className="review-comment">{r.comment || '-'}</p>
+              <p className="review-comment">{r.comment || <EmptyCell />}</p>
               <div className="testimonial-foot">
                 <Icon name="user" size={15} aria-hidden="true" />
                 <div className="muted">{r.parent_name || t('reviews.fallbackName')}</div>

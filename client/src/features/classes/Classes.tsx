@@ -13,6 +13,7 @@ import { Pagination, type PaginationMeta } from '../../shared/components/Paginat
 import { Teacher, ScheduleEntry, getDayNames, formatVND } from '../../shared/types';
 import { Icon } from '../../shared/components/icons';
 import './Classes.css';
+import { EmptyCell } from '../../shared/components/EmptyCell';
 
 interface ClassForm {
   name: string;
@@ -141,7 +142,7 @@ export function Classes() {
                   <dt>{t('table.teacher')}</dt>
                   <dd>{c.teacher_name || t('form.teacherUnassigned')}</dd>
                   <dt>{t('table.schedule')}</dt>
-                  <dd>{formatSchedule(c.schedule || '') || '-'}</dd>
+                  <dd>{formatSchedule(c.schedule || '') || <EmptyCell />}</dd>
                   <dt>{t('table.fee')}</dt>
                   <dd className="num">{formatVND(c.tuition_fee)}</dd>
                   <dt>{t('table.size')}</dt>
@@ -387,7 +388,7 @@ function ClassFormModal({
                 value={s.start}
                 onChange={(e) => updateSlot(i, { start: e.target.value })}
               />
-              <span className="muted">-</span>
+              <EmptyCell />
               <input
                 className="text-input"
                 type="time"

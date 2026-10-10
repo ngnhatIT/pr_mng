@@ -12,6 +12,7 @@ import { SubmitModal } from './SubmitModal';
 import { MySubmissionsModal } from './MySubmissionsModal';
 import { Skeleton } from '../../shared/components/Skeleton';
 import { renderMarkdown } from '../../shared/components/RichTextarea';
+import { EmptyCell } from '../../shared/components/EmptyCell';
 import {
   ChildOverview,
   ChildOverviewInvoice,
@@ -430,13 +431,13 @@ function GradesTab({ data }: { data: ChildOverview }) {
                 {grades.map((g) => (
                   <tr key={g.id}>
                     <td>{g.title}</td>
-                    <td>{g.class_name || '-'}</td>
+                    <td>{g.class_name || <EmptyCell />}</td>
                     <td className="num">
                       <strong>
                         {g.score}/{g.max_score}
                       </strong>
                     </td>
-                    <td>{g.comment || '-'}</td>
+                    <td>{g.comment || <EmptyCell />}</td>
                   </tr>
                 ))}
               </tbody>

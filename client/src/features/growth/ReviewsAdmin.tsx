@@ -10,6 +10,7 @@ import { Pagination, type PaginationMeta } from '../../shared/components/Paginat
 import { Icon } from '../../shared/components/icons';
 import { ReviewItem, formatDate } from '../../shared/types';
 import './Growth.css';
+import { EmptyCell } from '../../shared/components/EmptyCell';
 
 function Stars({ rating }: { rating: number }) {
   const { t } = useTranslation(['ops', 'common']);
@@ -112,7 +113,7 @@ export function ReviewsAdmin() {
                 <Stars rating={r.rating} />
                 <span className={`badge badge-${r.status}`}>{t(`reviews.status.${r.status}`)}</span>
               </div>
-              <p className="review-comment">{r.comment || '-'}</p>
+              <p className="review-comment">{r.comment || <EmptyCell />}</p>
               <div className="review-meta">
                 <Icon name="user" size={13} />
                 <span>{r.parent_name || t('reviews.anonymousParent')}</span>

@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next';
 import { Modal } from '../components/Modal';
 import type { InvoiceItem } from '../../features/tuition/tuition.api';
 import { formatVND, formatDate } from '../../shared/types';
+import { EmptyCell } from './EmptyCell';
 
 /**
  * Biên lai thu học phí — layout in A4.
@@ -36,7 +37,7 @@ export function ReceiptModal({
           </div>
           <div className="kv">
             <span>{t('receipt.class')}</span>
-            <strong>{invoice.class_name || '-'}</strong>
+            <strong>{invoice.class_name || <EmptyCell />}</strong>
           </div>
           <div className="kv">
             <span>{t('receipt.amount')}</span>

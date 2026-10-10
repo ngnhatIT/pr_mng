@@ -13,6 +13,7 @@ import { formatVND, formatDate } from '../../shared/types';
 import type { ScheduleEntry } from '../../shared/types';
 import { Icon } from '../../shared/components/icons';
 import './ClassDetail.css';
+import { EmptyCell } from '../../shared/components/EmptyCell';
 
 export function ClassDetail() {
   const { t } = useTranslation(['classes', 'common']);
@@ -128,7 +129,7 @@ export function ClassDetail() {
           <dt>{t('detail.room')}</dt>
           <dd>{cls.room_name || t('detail.noRoom')}</dd>
           <dt>{t('detail.schedule')}</dt>
-          <dd>{formatSchedule(cls.schedule || '') || '-'}</dd>
+          <dd>{formatSchedule(cls.schedule || '') || <EmptyCell />}</dd>
           <dt>{t('detail.dateRange')}</dt>
           <dd className="num">
             {formatDate(cls.start_date)} - {formatDate(cls.end_date)}
