@@ -117,6 +117,8 @@
     "emptyTitle": "Chưa có phiếu thu nào",
     "loadError": "Không tải được phiếu thu, vui lòng thử lại",
     "searchPlaceholder": "Tìm theo tên/mã học viên...",
+    "clearSearch": "Xóa từ khóa tìm kiếm",
+    "statusFilterLabel": "Lọc theo trạng thái",
     "tab": "Phiếu thu",
     "totalDebt": "Còn nợ:",
     "emptyFiltered": {

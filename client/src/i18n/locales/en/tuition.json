@@ -117,6 +117,8 @@
     "emptyTitle": "No invoices yet",
     "loadError": "Could not load invoices, please try again",
     "searchPlaceholder": "Search by student name/code...",
+    "clearSearch": "Clear search",
+    "statusFilterLabel": "Filter by status",
     "tab": "Invoices",
     "totalDebt": "Owes:",
     "emptyFiltered": {

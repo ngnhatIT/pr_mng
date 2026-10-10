@@ -550,6 +550,18 @@ textarea.text-input {
   display: inline-flex;
   align-items: center;
 }
+.search-wrap .search-icon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-faint);
+  pointer-events: none;
+  display: inline-flex;
+}
+.search-wrap .search-icon + .text-input {
+  padding-left: 36px;
+}
 .search-wrap.has-clear .text-input {
   padding-right: 36px;
 }

@@ -11,6 +11,7 @@ import { PageHeader } from '../../shared/components/PageHeader';
 import { EmptyState } from '../../shared/components/EmptyState';
 import { TableSkeleton } from '../../shared/components/Skeleton';
 import { Pagination, type PaginationMeta } from '../../shared/components/Pagination';
+import { useDebounce } from '../../shared/hooks/useDebounce';
 import { Icon } from '../../shared/components/icons';
 import { formatVND, formatDate } from '../../shared/types';
 import './Tuition.css';
@@ -203,10 +204,12 @@ function InvoiceList() {
     }
   };
 
+  const debouncedSearch = useDebounce(search);
+
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await invoicesApi.list(search, status, { page });
+      const res = await invoicesApi.list(debouncedSearch, status, { page });
       setInvoices(res.data);
       setPagination(res.pagination);
     } catch (err) {
@@ -214,12 +217,11 @@ function InvoiceList() {
     } finally {
       setLoading(false);
     }
-  }, [status, search, page, toast, t]);
+  }, [status, debouncedSearch, page, toast, t]);
 
   useEffect(() => {
-    const t = window.setTimeout(() => void load(), search ? 350 : 0);
-    return () => window.clearTimeout(t);
-  }, [load, search]);
+    void load();
+  }, [load]);
 
   const totalDebt = debtSummary?.totalDebt ?? invoices.reduce((s, i) => s + (i.amount - (i.paid || 0)), 0);
 
@@ -235,18 +237,41 @@ function InvoiceList() {
   return (
     <>
       <div className="toolbar tuition-toolbar">
-        <input
-          className="text-input search-input"
-          aria-label={t('invoices.searchPlaceholder')}
-          placeholder={t('invoices.searchPlaceholder')}
-          value={search}
-          onChange={(e) => {
-            setSearch(e.target.value);
-            setPage(1);
-          }}
-        />
+        <span className={`search-wrap${search ? ' has-clear' : ''}`}>
+          <span className="search-icon">
+            <Icon name="search" size={15} />
+          </span>
+          <input
+            className="text-input search-input"
+            aria-label={t('invoices.searchPlaceholder')}
+            placeholder={t('invoices.searchPlaceholder')}
+            value={search}
+            onChange={(e) => {
+              setSearch(e.target.value);
+              setPage(1);
+            }}
+          />
+          {search !== '' &&
+            (loading || search !== debouncedSearch ? (
+              <span className="search-clear" aria-hidden="true">
+                <span className="spinner spinner-dark" />
+              </span>
+            ) : (
+              <button
+                type="button"
+                className="search-clear"
+                onClick={() => {
+                  setSearch('');
+                  setPage(1);
+                }}
+                aria-label={t('invoices.clearSearch')}
+              >
+                <Icon name="x" size={14} />
+              </button>
+            ))}
+        </span>
         <select
-          aria-label="Lọc theo trạng thái"
+          aria-label={t('invoices.statusFilterLabel')}
           className="text-input"
           value={status}
           onChange={(e) => {

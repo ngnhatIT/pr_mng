@@ -10,18 +10,8 @@
   flex-shrink: 0;
 }
 
-/* O tim kiem: icon kinh lup ben trong (base .search-wrap/.search-clear dung chung trong styles.css) */
-.search-wrap .search-icon {
-  position: absolute;
-  left: 12px;
-  top: 50%;
-  transform: translateY(-50%);
-  color: var(--text-faint);
-  pointer-events: none;
-  display: inline-flex;
-}
+/* O tim kiem hoc vien: icon kinh lup dung chung (.search-icon trong styles.css) */
 .search-wrap .text-input {
-  padding-left: 36px;
   min-width: 280px;
 }
 
