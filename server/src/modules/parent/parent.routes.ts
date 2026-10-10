@@ -18,10 +18,10 @@ function ctx(req: AuthRequest): { parentId: number; centerId: number | null } {
   return { parentId: req.user!.parent_id as number, centerId: req.user!.center_id ?? null };
 }
 
-/** Lấy student_id từ query/body, throw 400 nếu thiếu. */
+/** Lấy student_id từ query/body, throw 400 nếu thiếu hoặc không phải số nguyên dương. */
 function reqStudentId(req: AuthRequest): number {
   const id = Number(req.query.student_id ?? req.body.student_id);
-  if (!id) throw AppError.badRequest('Thiếu student_id');
+  if (!Number.isInteger(id) || id <= 0) throw AppError.badRequest('Thiếu student_id');
   return id;
 }
 
