@@ -2111,12 +2111,6 @@ textarea.text-input {
   border-radius: var(--radius-md);
   padding: 14px 16px;
   box-shadow: var(--shadow-sm);
-  transition:
-    border-color 0.15s ease,
-    box-shadow 0.15s ease;
-}
-.att-item:hover {
-  border-color: var(--primary-200);
 }
 .att-item-main {
   flex: 1;
