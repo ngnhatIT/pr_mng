@@ -124,11 +124,7 @@ export function Teachers() {
                   <td className="num">{tch.class_count ?? 0}</td>
                   <td className="td-right">
                     <span className="row-actions">
-                      <button
-                        type="button"
-                        className="btn btn-sm btn-ghost"
-                        onClick={() => setEditing(tch)}
-                      >
+                      <button type="button" className="btn btn-sm btn-ghost" onClick={() => setEditing(tch)}>
                         <Icon name="pencil" size={15} />
                         {t('actions.edit', { ns: 'common' })}
                       </button>

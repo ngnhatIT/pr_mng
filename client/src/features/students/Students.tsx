@@ -204,11 +204,7 @@ export function Students() {
                   </td>
                   <td className="td-right">
                     <span className="row-actions">
-                      <button
-                        type="button"
-                        className="btn btn-sm btn-ghost"
-                        onClick={() => setEditing(s)}
-                      >
+                      <button type="button" className="btn btn-sm btn-ghost" onClick={() => setEditing(s)}>
                         <Icon name="pencil" size={15} />
                         {t('actions.edit', { ns: 'common' })}
                       </button>
