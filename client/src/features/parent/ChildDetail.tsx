@@ -20,6 +20,7 @@ import {
   HomeworkItem,
   formatVND,
   formatDate,
+  todayVN,
 } from '../../shared/types';
 
 type Tab = 'schedule' | 'attendance' | 'tuition' | 'grades' | 'homework';
@@ -500,7 +501,8 @@ function HomeworkTab({ data, onChanged }: { data: ChildOverview; onChanged: () =
   const [takingQuiz, setTakingQuiz] = useState<HomeworkItem | null>(null);
   const [submitting, setSubmitting] = useState<HomeworkItem | null>(null);
   const [viewingSubs, setViewingSubs] = useState<HomeworkItem | null>(null);
-  const today = new Date().toISOString().slice(0, 10);
+  // Ngày hôm nay theo giờ VN: toISOString() trả ngày UTC, lệch 1 ngày trong 0h-7h sáng VN
+  const today = todayVN();
   const studentId = data.student.id;
 
   const toggle = async (h: HomeworkItem) => {
