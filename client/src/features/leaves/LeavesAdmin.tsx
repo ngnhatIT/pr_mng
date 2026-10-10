@@ -18,6 +18,7 @@ export function LeavesAdmin() {
   const [status, setStatus] = useState('');
   const [loading, setLoading] = useState(false);
   const [approving, setApproving] = useState<LeaveRequest | null>(null);
+  const [busyId, setBusyId] = useState<number | null>(null);
   const [suggestions, setSuggestions] = useState<MakeupSuggestion[] | null>(null);
   const [rejecting, setRejecting] = useState<LeaveRequest | null>(null);
   const [page, setPage] = useState(1);
@@ -42,6 +43,9 @@ export function LeavesAdmin() {
   }, [load]);
 
   const approve = async (l: LeaveRequest) => {
+    // Chặn bấm trùng khi API đang chạy: nút hiện spinner + disabled
+    if (busyId !== null) return;
+    setBusyId(l.id);
     try {
       const r = await leavesApi.approve(l.id);
       setSuggestions(r.suggestions);
@@ -49,6 +53,8 @@ export function LeavesAdmin() {
       void load();
     } catch (err) {
       toast(err instanceof Error ? err.message : t('leaves.toast.approveFail'), 'error');
+    } finally {
+      setBusyId(null);
     }
   };
 
@@ -128,8 +134,16 @@ export function LeavesAdmin() {
                   <td className="td-right">
                     {l.status === 'pending' && (
                       <span className="leave-actions">
-                        <button className="btn btn-sm btn-primary" onClick={() => void approve(l)}>
-                          <Icon name="check" size={14} />
+                        <button
+                          className="btn btn-sm btn-primary"
+                          onClick={() => void approve(l)}
+                          disabled={busyId === l.id}
+                        >
+                          {busyId === l.id ? (
+                            <span className="spinner" aria-hidden="true" />
+                          ) : (
+                            <Icon name="check" size={14} />
+                          )}
                           {t('leaves.approve')}
                         </button>
                         <button className="btn btn-sm btn-danger-ghost" onClick={() => setRejecting(l)}>
