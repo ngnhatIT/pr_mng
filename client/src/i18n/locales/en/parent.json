@@ -161,7 +161,10 @@
     "sent": "Leave request sent",
     "submit": "Send request",
     "title": "Leave requests",
-    "toDate": "To *"
+    "toDate": "To *",
+    "fromRequired": "Please pick the first day of leave",
+    "toRequired": "Please pick the last day of leave",
+    "dateRangeInvalid": "The end date must be on or after the start date"
   },
   "payment": {
     "backHome": "Back to home",

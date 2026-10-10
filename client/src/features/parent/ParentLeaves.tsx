@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { parentApi } from './parent.api';
 import { useToast } from '../../shared/ui/toast';
 import { Modal } from '../../shared/components/Modal';
-import { Field } from '../../shared/components/Form';
+import { Field, useFieldErrors } from '../../shared/components/Form';
 import { EmptyState } from '../../shared/components/EmptyState';
 import { Skeleton } from '../../shared/components/Skeleton';
 import { LeaveRequest, ParentChild, formatDate } from '../../shared/types';
@@ -55,7 +55,17 @@ export function ParentLeaves() {
           ))}
         </div>
       ) : leaves.length === 0 ? (
-        <EmptyState icon="calendar-x" title={t('leaves.emptyTitle')} desc={t('leaves.emptyDesc')} />
+        <EmptyState
+          icon="calendar-x"
+          title={t('leaves.emptyTitle')}
+          desc={t('leaves.emptyDesc')}
+          action={
+            <button className="btn btn-primary btn-inline" onClick={() => setShowForm(true)}>
+              <Icon name="plus" size={15} />
+              {t('leaves.create')}
+            </button>
+          }
+        />
       ) : (
         <div className="leave-list">
           {leaves.map((l) => (
@@ -97,6 +107,8 @@ function LeaveFormModal({ onClose, onDone }: { onClose: () => void; onDone: () =
   const [toDate, setToDate] = useState('');
   const [reason, setReason] = useState('');
   const [busy, setBusy] = useState(false);
+  const [submitError, setSubmitError] = useState('');
+  const { errors, refFor, show, clear } = useFieldErrors<'child' | 'fromDate' | 'toDate'>();
   const toast = useToast();
 
   useEffect(() => {
@@ -112,11 +124,15 @@ function LeaveFormModal({ onClose, onDone }: { onClose: () => void; onDone: () =
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (busy) return;
-    if (!studentId) {
-      toast(t('leaves.childRequired'), 'error');
-      return;
-    }
+    // Lỗi form hiện inline dưới field, focus vào field đầu tiên (skill 8.2)
+    const errs: { child?: string; fromDate?: string; toDate?: string } = {};
+    if (!studentId) errs.child = t('leaves.childRequired');
+    if (!fromDate) errs.fromDate = t('leaves.fromRequired');
+    if (!toDate) errs.toDate = t('leaves.toRequired');
+    else if (fromDate && toDate < fromDate) errs.toDate = t('leaves.dateRangeInvalid');
+    if (!show(errs)) return;
     setBusy(true);
+    setSubmitError(''); // dữ liệu giữ nguyên, lỗi hiện ngay dưới nút gửi
     try {
       await parentApi.createLeave({
         student_id: Number(studentId),
@@ -128,7 +144,7 @@ function LeaveFormModal({ onClose, onDone }: { onClose: () => void; onDone: () =
       toast(t('leaves.sent'), 'success');
       onDone();
     } catch (err) {
-      toast(err instanceof Error ? err.message : t('leaves.sendError'), 'error');
+      setSubmitError(err instanceof Error ? err.message : t('leaves.sendError'));
     } finally {
       setBusy(false);
     }
@@ -136,17 +152,18 @@ function LeaveFormModal({ onClose, onDone }: { onClose: () => void; onDone: () =
 
   return (
     <Modal title={t('leaves.formTitle')} onClose={onClose}>
-      <form onSubmit={submit}>
+      <form onSubmit={submit} noValidate>
         <div className="form-grid">
-          <Field label={t('leaves.child')} span>
+          <Field label={t('leaves.child')} error={errors.child} span required>
             <select
               className="text-input"
               value={studentId}
               onChange={(e) => {
                 setStudentId(e.target.value);
                 setClassId('');
+                clear('child');
               }}
-              required
+              ref={refFor('child')}
             >
               <option value="">{t('leaves.selectChild')}</option>
               {children.map((c) => (
@@ -166,22 +183,28 @@ function LeaveFormModal({ onClose, onDone }: { onClose: () => void; onDone: () =
               ))}
             </select>
           </Field>
-          <Field label={t('leaves.fromDate')}>
+          <Field label={t('leaves.fromDate')} error={errors.fromDate} required>
             <input
               className="text-input"
               type="date"
               value={fromDate}
-              onChange={(e) => setFromDate(e.target.value)}
-              required
+              onChange={(e) => {
+                setFromDate(e.target.value);
+                clear('fromDate');
+              }}
+              ref={refFor('fromDate')}
             />
           </Field>
-          <Field label={t('leaves.toDate')}>
+          <Field label={t('leaves.toDate')} error={errors.toDate} required>
             <input
               className="text-input"
               type="date"
               value={toDate}
-              onChange={(e) => setToDate(e.target.value)}
-              required
+              onChange={(e) => {
+                setToDate(e.target.value);
+                clear('toDate');
+              }}
+              ref={refFor('toDate')}
             />
           </Field>
           <Field label={t('leaves.reason')} span>
@@ -198,9 +221,15 @@ function LeaveFormModal({ onClose, onDone }: { onClose: () => void; onDone: () =
             {t('actions.cancel', { ns: 'common' })}
           </button>
           <button type="submit" className="btn btn-primary" disabled={busy}>
+            {busy && <span className="spinner" aria-hidden="true" />}
             {busy ? t('actions.sending', { ns: 'common' }) : t('leaves.submit')}
           </button>
         </div>
+        {submitError && (
+          <p className="field-error" role="alert" style={{ marginTop: 8 }}>
+            {submitError}
+          </p>
+        )}
       </form>
     </Modal>
   );

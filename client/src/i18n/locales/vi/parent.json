@@ -161,7 +161,10 @@
     "sent": "Đã gửi đơn xin nghỉ phép",
     "submit": "Gửi đơn",
     "title": "Xin nghỉ phép",
-    "toDate": "Đến ngày *"
+    "toDate": "Đến ngày *",
+    "fromRequired": "Vui lòng chọn ngày bắt đầu nghỉ",
+    "toRequired": "Vui lòng chọn ngày kết thúc nghỉ",
+    "dateRangeInvalid": "Ngày kết thúc phải từ ngày bắt đầu trở đi"
   },
   "payment": {
     "backHome": "Về trang chủ",
