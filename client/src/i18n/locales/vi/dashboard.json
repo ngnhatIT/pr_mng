@@ -1,5 +1,5 @@
 {
-  "debtEmpty": "Không có công nợ.",
+  "debtEmpty": "Không có khoản nợ nào cần thu.",
   "debtTitle": "Công nợ cao nhất",
   "fallbackName": "bạn",
   "greeting": {
@@ -28,7 +28,7 @@
     "classes": "Lớp đang mở",
     "classesSub": "{{total}} giáo viên",
     "debt": "Công nợ cần thu",
-    "debtSub": "hóa đơn chưa thanh toán hết",
+    "debtSub": "từ các hóa đơn chưa thanh toán hết",
     "revenue": "Doanh thu tháng này",
     "revenueSub": "từ các khoản đã thu",
     "students": "Học viên đang học",
@@ -38,7 +38,6 @@
     "attendance": "Điểm danh",
     "count": "Hôm nay có {{count}} buổi học",
     "empty": "Hôm nay không có buổi học nào.",
-    "none": "Hôm nay không có buổi học nào",
     "title": "Buổi học hôm nay",
     "topic": "Chủ đề: {{topic}}",
     "unassigned": "Chưa phân công"

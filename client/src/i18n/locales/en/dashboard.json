@@ -1,5 +1,5 @@
 {
-  "debtEmpty": "No outstanding debt.",
+  "debtEmpty": "No outstanding debt to collect.",
   "debtTitle": "Top debtors",
   "fallbackName": "you",
   "greeting": {
@@ -28,7 +28,7 @@
     "classes": "Open classes",
     "classesSub": "{{total}} teachers",
     "debt": "Outstanding debt",
-    "debtSub": "unpaid invoices",
+    "debtSub": "from unpaid invoices",
     "revenue": "This month's revenue",
     "revenueSub": "collected payments",
     "students": "Active students",
@@ -38,7 +38,6 @@
     "attendance": "Take attendance",
     "count": "{{count}} sessions today",
     "empty": "No sessions today.",
-    "none": "No sessions today",
     "title": "Today's sessions",
     "topic": "Topic: {{topic}}",
     "unassigned": "Unassigned"

@@ -152,7 +152,7 @@ export function Dashboard() {
             {todayLine(i18n.language)} ·{' '}
             {data.todaySessions.length > 0
               ? t('today.count', { count: data.todaySessions.length })
-              : t('today.none')}
+              : t('today.empty')}
           </p>
         </div>
       </div>
