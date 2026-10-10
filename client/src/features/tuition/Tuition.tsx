@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useTranslation, Trans } from 'react-i18next';
 import { invoicesApi, paymentsApi, InvoiceItem, PendingPayment, DebtRow } from './tuition.api';
@@ -497,6 +497,9 @@ function InvoiceFormModal({ onClose, onDone }: { onClose: () => void; onDone: ()
   const [note, setNote] = useState('');
   const [busy, setBusy] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  // Focus vào field lỗi đầu tiên sau submit (skill 8.2)
+  const studentRef = useRef<HTMLSelectElement>(null);
+  const amountRef = useRef<HTMLInputElement>(null);
   const toast = useToast();
 
   useEffect(() => {
@@ -527,7 +530,12 @@ function InvoiceFormModal({ onClose, onDone }: { onClose: () => void; onDone: ()
       errs.amount = t('invoiceForm.amountInvalid');
     }
     setFieldErrors(errs);
-    if (Object.keys(errs).length > 0) return;
+    if (Object.keys(errs).length > 0) {
+      // Focus field lỗi đầu tiên (theo thứ tự hiển thị trên form)
+      if (errs.studentId) studentRef.current?.focus();
+      else if (errs.amount) amountRef.current?.focus();
+      return;
+    }
     setBusy(true);
     try {
       await invoicesApi.create({
@@ -552,6 +560,7 @@ function InvoiceFormModal({ onClose, onDone }: { onClose: () => void; onDone: ()
         <div className="form-grid">
           <Field label={t('invoiceForm.student')} span error={fieldErrors.studentId} required>
             <select
+              ref={studentRef}
               className="text-input"
               value={studentId}
               onChange={(e) => setStudentId(e.target.value)}
@@ -577,6 +586,7 @@ function InvoiceFormModal({ onClose, onDone }: { onClose: () => void; onDone: ()
           </Field>
           <Field label={t('invoiceForm.amount')} error={fieldErrors.amount} required>
             <input
+              ref={amountRef}
               className="text-input"
               type="number"
               min={1}
