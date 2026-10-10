@@ -80,8 +80,8 @@ export function ForgotPasswordModal({
             autoFocus
           />
         </Field>
-        <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 16 }}>
-          <button type="button" className="btn btn-ghost" onClick={onClose}>
+        <div className="modal-actions">
+          <button type="button" className="btn btn-ghost" onClick={onClose} disabled={busy}>
             {t('actions.cancel')}
           </button>
           <button type="submit" className="btn btn-primary" disabled={busy}>

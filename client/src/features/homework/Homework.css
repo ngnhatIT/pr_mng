@@ -295,7 +295,9 @@ a:hover .submission-thumb {
 .hw-quiz-badge {
   margin-right: 6px;
 }
-@media (max-width: 900px) {
+/* Tablet: 4 cột xuống 2 cột. Ngưỡng 1100px thay vì 900px vì sidebar 248px vẫn hiện
+   ở 901-1100px, content thực chỉ ~700px, 4 cột mỗi card ~162px quá chật. */
+@media (max-width: 1100px) {
   .hw-stat-grid {
     grid-template-columns: repeat(2, 1fr);
   }

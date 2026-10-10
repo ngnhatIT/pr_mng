@@ -99,7 +99,11 @@
     "tagline": "Quản lý trung tâm",
     "main": "Điều hướng chính",
     "skipToContent": "Bỏ qua tới nội dung chính",
-    "changePassword": "Đổi mật khẩu"
+    "changePassword": "Đổi mật khẩu",
+    "pendingLeavesBadge": "{{count}} đơn nghỉ phép chờ duyệt",
+    "newTrialsBadge": "{{count}} lịch học thử mới",
+    "logoutConfirmTitle": "Xác nhận đăng xuất",
+    "logoutConfirmMessage": "Bạn có chắc muốn đăng xuất khỏi EduCenter Pro?"
   },
   "states": {
     "deleteError": "Không xóa được, vui lòng thử lại",

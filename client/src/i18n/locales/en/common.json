@@ -99,7 +99,11 @@
     "tagline": "Center management",
     "main": "Main navigation",
     "skipToContent": "Skip to main content",
-    "changePassword": "Change password"
+    "changePassword": "Change password",
+    "pendingLeavesBadge": "{{count}} leave requests pending",
+    "newTrialsBadge": "{{count}} new trial classes",
+    "logoutConfirmTitle": "Confirm log out",
+    "logoutConfirmMessage": "Are you sure you want to log out of EduCenter Pro?"
   },
   "states": {
     "deleteError": "Couldn't delete, please try again",

@@ -297,11 +297,11 @@ a {
   background: rgba(255, 255, 255, 0.06);
   color: #fff;
 }
+/* Active: nền tint + chữ đậm, không side-stripe (skill 3b) */
 .nav-link.active {
-  background: var(--primary);
+  background: rgba(94, 144, 255, 0.16);
   color: #fff;
-  font-weight: 600;
-  box-shadow: 0 2px 8px rgba(36, 86, 224, 0.45);
+  font-weight: 700;
 }
 .nav-icon {
   display: inline-flex;
@@ -1897,6 +1897,16 @@ button.search-clear:active {
   }
 }
 
+/* Tablet 641-900px: hero landing xếp chồng 1 cột. 2 cột ở khoảng này mỗi cột
+   chỉ còn ~330-400px với gap 56px, chữ H1 bị ép chật; xếp chồng thì copy full
+   chiều rộng, visual nằm dưới (đúng thứ tự DOM). Desktop từ 901px giữ 2 cột. */
+@media (max-width: 900px) {
+  .landing-hero-inner {
+    grid-template-columns: 1fr;
+    gap: 40px;
+  }
+}
+
 /* ================================================================
    DESIGN SYSTEM 2.0 - tokens, components & polish (append-only)
    ================================================================ */
@@ -2492,11 +2502,9 @@ button.search-clear:active {
   display: none;
 }
 .nav-section-label {
-  font-size: 12px;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  font-weight: 700;
-  color: #8fa0c2;
+  font-size: 13px;
+  font-weight: 600;
+  color: #93a1c0;
   padding: 14px 12px 5px;
 }
 .nav-section-label:first-child {
@@ -2515,8 +2523,30 @@ button.search-clear:active {
 .nav-link.active .nav-icon {
   opacity: 1;
 }
-.nav-link.active {
-  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.4);
+/* Badge đếm việc chờ xử lý: pill nhỏ trên nền tint, chỉ hiện khi có số thật */
+.nav-badge {
+  margin-left: auto;
+  flex: none;
+  min-width: 22px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.14);
+  color: #eef2fb;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+/* Cụm nút chân sidebar: theme + đăng xuất (dùng .btn-ghost-dark cho nền tối) */
+.sidebar-foot-actions {
+  display: flex;
+  gap: 8px;
+}
+.sidebar-foot-actions .btn {
+  flex: 1;
 }
 .scrim {
   position: fixed;
@@ -3771,6 +3801,117 @@ a:focus-visible,
 [data-theme='dark'] .btn-danger:hover:not(:disabled) {
   background: #b91c1c;
   border-color: #b91c1c;
+}
+
+/* ---------- Dark mode: badge trạng thái còn lại (dùng tông soft của theme) ---------- */
+[data-theme='dark'] .badge-new {
+  background: var(--info-soft);
+  color: var(--info);
+}
+[data-theme='dark'] .badge-contacted {
+  background: var(--warning-soft);
+  color: var(--warning);
+}
+[data-theme='dark'] .badge-trial,
+[data-theme='dark'] .badge-trialed {
+  background: var(--primary-soft);
+  color: var(--primary);
+}
+[data-theme='dark'] .badge-enrolled,
+[data-theme='dark'] .badge-converted,
+[data-theme='dark'] .badge-rewarded,
+[data-theme='dark'] .badge-payment_confirmed {
+  background: var(--success-soft);
+  color: var(--success);
+}
+
+/* ---------- Dark mode: topbar + thanh lưu điểm danh ăn theo nền theme ---------- */
+[data-theme='dark'] .topbar {
+  background: rgba(13, 18, 32, 0.88);
+}
+[data-theme='dark'] .att-savebar {
+  background: rgba(13, 18, 32, 0.96);
+}
+
+/* ---------- Dark mode: icon stat tone sáng chuyển sang tông soft ---------- */
+[data-theme='dark'] .stat-icon.tone-blue {
+  background: var(--primary-soft);
+  color: var(--primary);
+}
+[data-theme='dark'] .stat-icon.tone-green {
+  background: var(--success-soft);
+  color: var(--success);
+}
+[data-theme='dark'] .stat-icon.tone-violet {
+  background: var(--bg-muted);
+  color: var(--text-muted);
+}
+[data-theme='dark'] .stat-icon.tone-amber {
+  background: var(--warning-soft);
+  color: var(--warning);
+}
+[data-theme='dark'] .tone-violet .stat-icon {
+  background: var(--bg-muted);
+  color: var(--text-muted);
+}
+
+/* ---------- Dark mode: rich toolbar + thanh tiến trình quiz ---------- */
+[data-theme='dark'] .rich-toolbar {
+  background: var(--bg-muted);
+  border-color: var(--border);
+}
+[data-theme='dark'] .rich-tool {
+  color: var(--text-muted);
+}
+[data-theme='dark'] .rich-tool:hover {
+  background: var(--bg-hover);
+  border-color: var(--border-strong);
+}
+[data-theme='dark'] .progress-bar {
+  background: var(--bg-muted);
+}
+[data-theme='dark'] .quiz-review-opt {
+  background: var(--bg-muted);
+}
+[data-theme='dark'] .quiz-review-opt.is-correct {
+  background: var(--success-soft);
+  color: var(--success);
+}
+[data-theme='dark'] .quiz-info-bar {
+  background: var(--bg-muted);
+  border-color: var(--border);
+}
+
+/* ---------- Dark mode: viền card + quiz đúng/sai ăn theo theme ---------- */
+[data-theme='dark'] .pipeline-card,
+[data-theme='dark'] .bank-item,
+[data-theme='dark'] .submission-item,
+[data-theme='dark'] .quiz-review-q {
+  border-color: var(--border);
+}
+[data-theme='dark'] .bank-form {
+  border-color: var(--border-strong);
+}
+[data-theme='dark'] .quiz-review-q.correct {
+  background: var(--success-soft);
+  border-color: var(--border-strong);
+}
+[data-theme='dark'] .quiz-review-q.wrong {
+  background: var(--danger-soft);
+  border-color: var(--border-strong);
+}
+
+/* ---------- Đồng bộ token theme (cả 2 mode): validation + rubric banner ---------- */
+.field-invalid input,
+.field-invalid select,
+.field-invalid textarea {
+  border-color: var(--danger);
+}
+.field-required {
+  color: var(--danger);
+}
+.rubric-banner {
+  border: 1px solid var(--border-strong);
 }
 
 @media (max-width: 768px) {

@@ -25,9 +25,8 @@ export function ChangePasswordModal({ onClose }: Props) {
     e.preventDefault();
     setError('');
     const errs: { new?: string; confirm?: string } = {};
-    if (newPassword.length < 8) errs.new = t('changePassword.tooShort', 'Mật khẩu phải từ 8 ký tự');
-    else if (newPassword !== confirmPw)
-      errs.confirm = t('changePassword.mismatch', 'Mật khẩu mới không khớp');
+    if (newPassword.length < 8) errs.new = t('changePassword.tooShort');
+    else if (newPassword !== confirmPw) errs.confirm = t('changePassword.mismatch');
     if (!show(errs)) return;
     setBusy(true);
     try {
@@ -38,11 +37,11 @@ export function ChangePasswordModal({ onClose }: Props) {
           new_password: newPassword,
         }),
       });
-      toast(t('changePassword.success', 'Đổi mật khẩu thành công'), 'success');
+      toast(t('changePassword.success'), 'success');
       onClose();
     } catch (err) {
       // Lỗi server (thường là sai mật khẩu hiện tại): hiện ngay dưới field đó
-      show({ old: err instanceof Error ? err.message : t('changePassword.fail', 'Đổi mật khẩu thất bại') });
+      show({ old: err instanceof Error ? err.message : t('changePassword.fail') });
     } finally {
       setBusy(false);
     }
@@ -55,10 +54,10 @@ export function ChangePasswordModal({ onClose }: Props) {
     setBusy(true);
     try {
       await api('/auth/logout-all', { method: 'POST' });
-      toast(t('changePassword.logoutAllSuccess', 'Đã đăng xuất khỏi tất cả thiết bị'), 'success');
+      toast(t('changePassword.logoutAllSuccess'), 'success');
       onClose();
     } catch (err) {
-      setError(err instanceof Error ? err.message : t('changePassword.fail', 'Thất bại'));
+      setError(err instanceof Error ? err.message : t('changePassword.fail'));
     } finally {
       setBusy(false);
     }
@@ -66,14 +65,14 @@ export function ChangePasswordModal({ onClose }: Props) {
 
   return (
     <>
-      <Modal title={t('changePassword.title', 'Đổi mật khẩu')} onClose={onClose}>
+      <Modal title={t('changePassword.title')} onClose={onClose}>
         <form onSubmit={submit} className="form-grid">
           {error && (
             <div className="error-box" role="alert">
               {error}
             </div>
           )}
-          <Field label={t('changePassword.old', 'Mật khẩu hiện tại')} required error={errors.old}>
+          <Field label={t('changePassword.old')} required error={errors.old}>
             <input
               ref={refFor('old')}
               type="password"
@@ -87,7 +86,7 @@ export function ChangePasswordModal({ onClose }: Props) {
               autoComplete="current-password"
             />
           </Field>
-          <Field label={t('changePassword.new', 'Mật khẩu mới')} required error={errors.new}>
+          <Field label={t('changePassword.new')} required error={errors.new}>
             <input
               ref={refFor('new')}
               type="password"
@@ -102,7 +101,7 @@ export function ChangePasswordModal({ onClose }: Props) {
               minLength={8}
             />
           </Field>
-          <Field label={t('changePassword.confirm', 'Nhập lại mật khẩu mới')} required error={errors.confirm}>
+          <Field label={t('changePassword.confirm')} required error={errors.confirm}>
             <input
               ref={refFor('confirm')}
               type="password"
@@ -116,9 +115,10 @@ export function ChangePasswordModal({ onClose }: Props) {
               autoComplete="new-password"
             />
           </Field>
-          <div className="form-actions">
+          {/* Dùng modal-actions chuẩn (form-actions không có CSS) */}
+          <div className="modal-actions">
             <button type="button" className="btn" onClick={onClose} disabled={busy}>
-              {t('actions.cancel', 'Hủy')}
+              {t('actions.cancel')}
             </button>
             <button
               type="button"
@@ -126,10 +126,11 @@ export function ChangePasswordModal({ onClose }: Props) {
               onClick={() => setConfirmingLogout(true)}
               disabled={busy}
             >
-              {t('changePassword.logoutAll', 'Đăng xuất mọi thiết bị')}
+              {t('changePassword.logoutAll')}
             </button>
             <button type="submit" className="btn btn-primary" disabled={busy}>
-              {busy ? t('actions.saving', 'Đang lưu...') : t('changePassword.submit', 'Đổi mật khẩu')}
+              {busy && <span className="spinner" aria-hidden="true" />}
+              {busy ? t('actions.saving') : t('changePassword.submit')}
             </button>
           </div>
         </form>

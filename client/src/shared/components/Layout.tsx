@@ -4,8 +4,12 @@ import { useTranslation } from 'react-i18next';
 import { getUser, logout as doLogout } from '../../shared/api/client';
 import { Icon, IconName } from './icons';
 import { ThemeLangSwitch } from '../ui/ThemeLangSwitch';
+import { useTheme } from '../ui/theme';
 import { ChangePasswordModal } from './ChangePasswordModal';
+import { ConfirmDialog } from './Modal';
 import { rolesApi } from '../../features/system/roles.api';
+import { leavesApi } from '../../features/leaves/leaves.api';
+import { trialsApi } from '../../features/admissions/admissions.api';
 
 interface NavItem {
   to: string;
@@ -14,6 +18,8 @@ interface NavItem {
   icon: IconName;
   /** Permission cần có để thấy menu này (không có = ai cũng thấy). */
   perm?: string;
+  /** Badge đếm: chỉ render khi API thật trả về số > 0 (không bịa số). */
+  badge?: 'pendingLeaves' | 'newTrials';
 }
 
 const SECTIONS: { labelKey: string; items: NavItem[] }[] = [
@@ -31,8 +37,20 @@ const SECTIONS: { labelKey: string; items: NavItem[] }[] = [
     labelKey: 'nav.sections.ops',
     items: [
       { to: '/app/rooms', labelKey: 'nav.rooms', icon: 'building', perm: 'rooms.view' },
-      { to: '/app/leaves', labelKey: 'nav.leaves', icon: 'calendar-x', perm: 'leaves.view' },
-      { to: '/app/trials', labelKey: 'nav.trials', icon: 'play', perm: 'trials.view' },
+      {
+        to: '/app/leaves',
+        labelKey: 'nav.leaves',
+        icon: 'calendar-x',
+        perm: 'leaves.view',
+        badge: 'pendingLeaves',
+      },
+      {
+        to: '/app/trials',
+        labelKey: 'nav.trials',
+        icon: 'play',
+        perm: 'trials.view',
+        badge: 'newTrials',
+      },
       { to: '/app/homework', labelKey: 'nav.homework', icon: 'file', perm: 'homework.view' },
       { to: '/app/payroll', labelKey: 'nav.payroll', icon: 'chart', perm: 'payroll.view' },
       { to: '/app/teachers', labelKey: 'nav.teachers', icon: 'cap', perm: 'teachers.view' },
@@ -81,8 +99,11 @@ export function Layout() {
   const navigate = useNavigate();
   const location = useLocation();
   const user = getUser();
+  const { theme, toggle: toggleTheme } = useTheme();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [showChangePw, setShowChangePw] = useState(false);
+  // Xác nhận đăng xuất ở chân sidebar (dùng ConfirmDialog có sẵn, không dùng confirm() native).
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   // Nút mở drawer: trả focus về đây khi drawer đóng bằng Esc/scrim.
   const menuBtnRef = useRef<HTMLButtonElement>(null);
   // Đóng drawer; restoreFocus=true khi user chủ động đóng (Esc/scrim) để không mất focus.
@@ -100,6 +121,12 @@ export function Layout() {
   }, []);
   const [myPerms, setMyPerms] = useState<Set<string> | null>(null);
   const isSuperadmin = user?.role === 'superadmin';
+  // Số việc chờ xử lý từ API thật (null = chưa tải / lỗi -> ẩn badge, không bịa số).
+  // shortcut: badge chỉ tải 1 lần khi mở app; thao tác xử lý trong trang không tự refresh số.
+  const [badges, setBadges] = useState<{ pendingLeaves: number | null; newTrials: number | null }>({
+    pendingLeaves: null,
+    newTrials: null,
+  });
 
   // Tải quyền của mình để ẩn menu không được phép (fail-open: lỗi thì hiện tất cả)
   useEffect(() => {
@@ -122,6 +149,35 @@ export function Layout() {
     if (myPerms === null) return true;
     return myPerms.has(item.perm);
   };
+
+  // Tải số badge từ API thật, chỉ cho menu user được phép thấy (limit 1: chỉ cần total).
+  useEffect(() => {
+    if (myPerms === null) return;
+    let cancelled = false;
+    const load = async () => {
+      const next: { pendingLeaves: number | null; newTrials: number | null } = {
+        pendingLeaves: null,
+        newTrials: null,
+      };
+      try {
+        if (myPerms.has('leaves.view')) {
+          const r = await leavesApi.list('pending', { page: 1, limit: 1 });
+          next.pendingLeaves = r.pagination.total;
+        }
+        if (myPerms.has('trials.view')) {
+          const r = await trialsApi.list('new', { page: 1, limit: 1 });
+          next.newTrials = r.pagination.total;
+        }
+      } catch {
+        // Lỗi API: giữ null để ẩn badge thay vì hiện số sai.
+      }
+      if (!cancelled) setBadges(next);
+    };
+    void load();
+    return () => {
+      cancelled = true;
+    };
+  }, [myPerms]);
 
   const logout = () => {
     void doLogout().then(() => navigate('/login'));
@@ -208,19 +264,27 @@ export function Layout() {
             return (
               <div key={s.labelKey}>
                 <div className="nav-section-label">{t(s.labelKey)}</div>
-                {items.map((n) => (
-                  <NavLink
-                    key={n.to}
-                    to={n.to}
-                    end={n.end}
-                    className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`}
-                  >
-                    <span className="nav-icon">
-                      <Icon name={n.icon} size={16} />
-                    </span>
-                    {t(n.labelKey)}
-                  </NavLink>
-                ))}
+                {items.map((n) => {
+                  const count = n.badge ? badges[n.badge] : null;
+                  return (
+                    <NavLink
+                      key={n.to}
+                      to={n.to}
+                      end={n.end}
+                      className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`}
+                    >
+                      <span className="nav-icon">
+                        <Icon name={n.icon} size={16} />
+                      </span>
+                      <span className="nav-label">{t(n.labelKey)}</span>
+                      {count !== null && count > 0 && (
+                        <span className="nav-badge" aria-label={t(`nav.${n.badge}Badge`, { count })}>
+                          {count}
+                        </span>
+                      )}
+                    </NavLink>
+                  );
+                })}
               </div>
             );
           })}
@@ -245,6 +309,26 @@ export function Layout() {
               <div className="user-name">{user?.name}</div>
               <div className="user-role">{t('roles.' + (user?.role || ''))}</div>
             </div>
+          </div>
+          <div className="sidebar-foot-actions">
+            <button
+              type="button"
+              className="btn btn-icon btn-ghost-dark"
+              onClick={toggleTheme}
+              aria-label={t('theme.toggle')}
+              title={t('theme.toggle')}
+            >
+              <Icon name={theme === 'light' ? 'moon' : 'sun'} size={18} />
+            </button>
+            <button
+              type="button"
+              className="btn btn-icon btn-ghost-dark"
+              onClick={() => setShowLogoutConfirm(true)}
+              aria-label={t('nav.logout')}
+              title={t('nav.logout')}
+            >
+              <Icon name="logout" size={18} />
+            </button>
           </div>
         </div>
       </aside>
@@ -290,6 +374,14 @@ export function Layout() {
         </main>
       </div>
       {showChangePw && <ChangePasswordModal onClose={() => setShowChangePw(false)} />}
+      {showLogoutConfirm && (
+        <ConfirmDialog
+          title={t('nav.logoutConfirmTitle')}
+          message={t('nav.logoutConfirmMessage')}
+          onClose={() => setShowLogoutConfirm(false)}
+          onConfirm={logout}
+        />
+      )}
     </div>
   );
 }
