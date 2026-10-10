@@ -30,6 +30,7 @@ export interface QuizQuestionForm {
 
 export interface QuizQuestionEdit {
   id: number;
+  qtype: 'single' | 'multiple' | 'truefalse' | 'essay';
   question: string;
   points: number;
   options: { id: number; text: string; is_correct: boolean }[];

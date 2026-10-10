@@ -11,6 +11,13 @@ import { RichTextarea } from '../../shared/components/RichTextarea';
 import { QuestionBank } from './QuestionBank';
 import type { BankQuestion } from './homework.api';
 
+type QType = 'single' | 'multiple' | 'truefalse' | 'essay';
+
+const BLANK_QTYPE_OPTIONS: { text: string; is_correct: boolean }[] = [
+  { text: '', is_correct: true },
+  { text: '', is_correct: false },
+];
+
 function quickDate(kind: 'today' | 'tomorrow' | 'weekend' | 'nextweek'): string {
   const d = new Date();
   if (kind === 'tomorrow') d.setDate(d.getDate() + 1);
@@ -80,10 +87,8 @@ export function HomeworkFormModal({
     {
       question: '',
       points: 1,
-      options: [
-        { text: '', is_correct: true },
-        { text: '', is_correct: false },
-      ],
+      qtype: 'single',
+      options: BLANK_QTYPE_OPTIONS.map((o) => ({ ...o })),
     },
   ]);
   const [quizLocked, setQuizLocked] = useState(false); // đã có người làm → không sửa đề
@@ -99,6 +104,7 @@ export function HomeworkFormModal({
               qs.map((q) => ({
                 question: q.question,
                 points: q.points,
+                qtype: (q.qtype ?? 'single') as QType,
                 options: q.options.map((o) => ({ text: o.text, is_correct: !!o.is_correct })),
               }))
             );
@@ -122,6 +128,7 @@ export function HomeworkFormModal({
     const mapped = bank.map((b) => ({
       question: b.question,
       points: b.points,
+      qtype: b.qtype as QType,
       options: b.options.map((o) => ({ text: o.text, is_correct: o.is_correct })),
     }));
     setQuestions((qs) => {
@@ -229,15 +236,40 @@ export function HomeworkFormModal({
       {
         question: '',
         points: 1,
-        options: [
-          { text: '', is_correct: true },
-          { text: '', is_correct: false },
-        ],
+        qtype: 'single' as QType,
+        options: BLANK_QTYPE_OPTIONS.map((o) => ({ ...o })),
       },
     ]);
   const updateQuestion = (i: number, patch: Partial<QuizQuestionForm>) => {
     clear('quiz');
     setQuestions((qs) => qs.map((q, j) => (j === i ? { ...q, ...patch } : q)));
+  };
+  /** Đổi loại câu hỏi: truefalse tự tạo sẵn 2 đáp án Đúng/Sai, essay ẩn đáp án. */
+  const changeQuestionType = (qi: number, next: QType) => {
+    clear('quiz');
+    setQuestions((qs) =>
+      qs.map((q, j) => {
+        if (j !== qi) return q;
+        if (next === 'truefalse') {
+          return {
+            ...q,
+            qtype: next,
+            options: [
+              { text: t('bank.trueLabel'), is_correct: true },
+              { text: t('bank.falseLabel'), is_correct: false },
+            ],
+          };
+        }
+        if (next === 'essay') return { ...q, qtype: next, options: [] };
+        const options = q.options.length >= 2 ? q.options : BLANK_QTYPE_OPTIONS.map((o) => ({ ...o }));
+        // Chuyển về single: đảm bảo chỉ 1 đáp án đúng
+        const fixed =
+          next === 'single' && options.filter((o) => o.is_correct).length !== 1
+            ? options.map((o, k) => ({ ...o, is_correct: k === 0 }))
+            : options;
+        return { ...q, qtype: next, options: fixed };
+      })
+    );
   };
   const addOption = (qi: number) =>
     setQuestions((qs) =>
@@ -245,16 +277,22 @@ export function HomeworkFormModal({
     );
   const updateOption = (qi: number, oi: number, patch: Partial<{ text: string; is_correct: boolean }>) =>
     setQuestions((qs) =>
-      qs.map((q, j) =>
-        j === qi
-          ? {
-              ...q,
-              options: q.options.map((o, k) =>
-                k === oi ? { ...o, ...patch } : patch.is_correct ? { ...o, is_correct: false } : o
-              ),
-            }
-          : q
-      )
+      qs.map((q, j) => {
+        if (j !== qi) return q;
+        const qtype = q.qtype ?? 'single';
+        return {
+          ...q,
+          // single/truefalse: 1 đáp án đúng — bỏ chọn các đáp án khác;
+          // multiple: bật/tắt từng đáp án, giữ nguyên các đáp án còn lại
+          options: q.options.map((o, k) =>
+            k === oi
+              ? { ...o, ...patch }
+              : patch.is_correct && (qtype === 'single' || qtype === 'truefalse')
+                ? { ...o, is_correct: false }
+                : o
+          ),
+        };
+      })
     );
   const removeOption = (qi: number, oi: number) =>
     setQuestions((qs) =>
@@ -264,9 +302,25 @@ export function HomeworkFormModal({
   const selectedRubric = rubrics.find((r) => String(r.id) === rubricId);
   const quizTotal = questions.reduce((s, q) => s + (Number(q.points) || 0), 0);
 
-  const quizInvalidCount = questions.filter(
-    (q) => !q.question.trim() || q.options.length < 2 || !q.options.some((o) => o.is_correct && o.text.trim())
-  ).length;
+  /** Validate builder theo loại câu hỏi (server validate lại từ B1). */
+  const quizInvalidCount = questions.filter((q) => {
+    const qtype = q.qtype ?? 'single';
+    if (!q.question.trim()) return true;
+    if (qtype === 'essay') return false;
+    const filled = q.options.filter((o) => o.text.trim());
+    if (qtype === 'truefalse')
+      return filled.length !== 2 || filled.filter((o) => o.is_correct).length !== 1;
+    if (filled.length < 2) return true;
+    const correctCount = filled.filter((o) => o.is_correct).length;
+    return qtype === 'single' ? correctCount !== 1 : correctCount < 1;
+  }).length;
+
+  // Lọc đáp án trống trước khi gửi (server cũng validate lại)
+  const cleanedQuestions: QuizQuestionForm[] = questions.map((q) => ({
+    ...q,
+    qtype: q.qtype ?? 'single',
+    options: q.qtype === 'essay' ? [] : q.options.filter((o) => o.text.trim()),
+  }));
 
   const validate = () => {
     const errs: Partial<Record<HwErrKey, string>> = {};
@@ -304,7 +358,7 @@ export function HomeworkFormModal({
           close_date: closeDate || null,
           rubric_id: rubricId ? Number(rubricId) : null,
         });
-        if (kind === 'quiz') await homeworkApi.saveQuiz(initial.id, questions);
+        if (kind === 'quiz') await homeworkApi.saveQuiz(initial.id, cleanedQuestions);
         toast(t('form.toast.updated'), 'success');
       } else {
         const res = await homeworkApi.create({
@@ -320,7 +374,7 @@ export function HomeworkFormModal({
           rubric_id: rubricId ? Number(rubricId) : null,
           attachments,
           target_student_ids: targetMode === 'selected' ? selectedStudents : [],
-          questions: kind === 'quiz' ? questions : [],
+          questions: kind === 'quiz' ? cleanedQuestions : [],
         });
         toast(
           status === 'draft'
@@ -741,7 +795,9 @@ export function HomeworkFormModal({
                 <span>{t('form.quizLocked')}</span>
               </div>
             )}
-            {questions.map((q, qi) => (
+            {questions.map((q, qi) => {
+              const qtype = q.qtype ?? 'single';
+              return (
               <div key={qi} className="quiz-q">
                 <div className="hw-flex hw-mb-8">
                   <span className="quiz-num">{qi + 1}</span>
@@ -751,16 +807,6 @@ export function HomeworkFormModal({
                     value={q.question}
                     disabled={quizLocked}
                     onChange={(e) => updateQuestion(qi, { question: e.target.value })}
-                  />
-                  <input
-                    className="text-input hw-w-80"
-                    type="number"
-                    min="0.5"
-                    step="0.5"
-                    value={q.points}
-                    disabled={quizLocked}
-                    onChange={(e) => updateQuestion(qi, { points: Number(e.target.value) || 1 })}
-                    title={t('form.points')}
                   />
                   {questions.length > 1 && (
                     <button
@@ -773,46 +819,84 @@ export function HomeworkFormModal({
                     </button>
                   )}
                 </div>
-                {q.options.map((o, oi) => (
-                  <div key={oi} className="quiz-opt">
-                    <button
-                      type="button"
-                      className={`quiz-correct ${o.is_correct ? 'active' : ''}`}
-                      disabled={quizLocked}
-                      onClick={() => updateOption(qi, oi, { is_correct: true })}
-                      title={t('form.correctAnswer')}
-                    >
-                      {o.is_correct ? '●' : '○'}
-                    </button>
-                    <input
-                      className="text-input input-sm hw-flex-1"
-                      placeholder={t('form.optionPh', { letter: String.fromCharCode(65 + oi) })}
-                      value={o.text}
-                      disabled={quizLocked}
-                      onChange={(e) => updateOption(qi, oi, { text: e.target.value })}
-                    />
-                    {q.options.length > 2 && (
+                <div className="hw-flex-wrap hw-mb-8">
+                  <select
+                    className="text-input"
+                    aria-label={t('bank.qtype')}
+                    value={qtype}
+                    disabled={quizLocked}
+                    onChange={(e) => changeQuestionType(qi, e.target.value as QType)}
+                  >
+                    <option value="single">{t('bank.qtypeSingle')}</option>
+                    <option value="multiple">{t('bank.qtypeMultiple')}</option>
+                    <option value="truefalse">{t('bank.qtypeTruefalse')}</option>
+                    <option value="essay">{t('bank.qtypeEssay')}</option>
+                  </select>
+                  <input
+                    className="text-input hw-w-80"
+                    type="number"
+                    min="0.5"
+                    step="0.5"
+                    value={q.points}
+                    disabled={quizLocked}
+                    onChange={(e) => updateQuestion(qi, { points: Number(e.target.value) || 1 })}
+                    title={t('form.points')}
+                    aria-label={t('form.points')}
+                  />
+                </div>
+                {qtype === 'essay' ? (
+                  <p className="muted-sm hw-mb-8">{t('bank.essayHint')}</p>
+                ) : (
+                  <>
+                    {qtype === 'multiple' && <p className="muted-sm">{t('bank.answersMultiple')}</p>}
+                    {q.options.map((o, oi) => (
+                      <div key={oi} className="quiz-opt">
+                        <button
+                          type="button"
+                          className={`quiz-correct ${o.is_correct ? 'active' : ''}`}
+                          disabled={quizLocked}
+                          onClick={() =>
+                            updateOption(qi, oi, { is_correct: qtype === 'multiple' ? !o.is_correct : true })
+                          }
+                          title={t('form.correctAnswer')}
+                          aria-pressed={o.is_correct}
+                        >
+                          {qtype === 'multiple' ? (o.is_correct ? '☑' : '☐') : o.is_correct ? '●' : '○'}
+                        </button>
+                        <input
+                          className="text-input input-sm hw-flex-1"
+                          placeholder={t('form.optionPh', { letter: String.fromCharCode(65 + oi) })}
+                          value={o.text}
+                          disabled={quizLocked || qtype === 'truefalse'}
+                          onChange={(e) => updateOption(qi, oi, { text: e.target.value })}
+                        />
+                        {qtype !== 'truefalse' && q.options.length > 2 && (
+                          <button
+                            type="button"
+                            className="btn btn-sm btn-danger-ghost"
+                            disabled={quizLocked}
+                            onClick={() => removeOption(qi, oi)}
+                          >
+                            ×
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                    {qtype !== 'truefalse' && (
                       <button
                         type="button"
-                        className="btn btn-sm btn-danger-ghost"
+                        className="btn btn-sm hw-mt-4"
                         disabled={quizLocked}
-                        onClick={() => removeOption(qi, oi)}
+                        onClick={() => addOption(qi)}
                       >
-                        ×
+                        {t('form.addOption')}
                       </button>
                     )}
-                  </div>
-                ))}
-                <button
-                  type="button"
-                  className="btn btn-sm hw-mt-4"
-                  disabled={quizLocked}
-                  onClick={() => addOption(qi)}
-                >
-                  {t('form.addOption')}
-                </button>
+                  </>
+                )}
               </div>
-            ))}
+              );
+            })}
             <div className="hw-flex">
               <button type="button" className="btn" disabled={quizLocked} onClick={addQuestion}>
                 {t('form.addQuestion')}
