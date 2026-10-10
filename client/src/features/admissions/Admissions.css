@@ -5,6 +5,12 @@
   overflow-x: auto;
   padding-bottom: 4px;
   scrollbar-width: thin;
+  transition: opacity 0.15s ease-out;
+}
+/* Đang tải trang mới: giữ pipeline cũ hiển thị mờ thay vì thay bằng skeleton (không nhảy layout) */
+.lead-pipeline[aria-busy='true'] {
+  opacity: 0.55;
+  pointer-events: none;
 }
 
 .lead-pipeline .pipeline {

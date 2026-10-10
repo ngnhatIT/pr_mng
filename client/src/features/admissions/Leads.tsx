@@ -98,7 +98,7 @@ export function Leads() {
         }
       />
 
-      {loading ? (
+      {loading && leads.length === 0 ? (
         <div className="pipeline" aria-hidden="true">
           {COLUMNS.map((col) => (
             <div key={col} className="pipeline-col">
@@ -125,7 +125,7 @@ export function Leads() {
           }
         />
       ) : (
-        <div className="lead-pipeline">
+        <div className="lead-pipeline" aria-busy={loading || undefined}>
           <div className="pipeline" role="list" aria-label={t('leads.pipelineLabel')}>
             {COLUMNS.map((col) => {
               const items = leads.filter((l) => l.status === col);
@@ -206,7 +206,7 @@ export function Leads() {
         </div>
       )}
 
-      {pagination && <Pagination pagination={pagination} onChange={(p) => setPage(p)} />}
+      {pagination && <Pagination pagination={pagination} onChange={(p) => setPage(p)} loading={loading} />}
 
       {editing && (
         <LeadFormModal
