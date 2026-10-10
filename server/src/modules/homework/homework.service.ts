@@ -5,7 +5,7 @@ import { countQuizQuestions } from './quiz.service';
 import { parsePagination, paginate, type PageOptions, type Paginated } from '../../shared/pagination';
 import { DAY_MS } from '../../shared/time';
 import { AppError } from '../../shared/errors';
-import { nowVNMinute, assignedCountExpr, assertValidDates, sumQuestionPoints } from './homework.helpers';
+import { nowVNMinute, assignedCountExpr, assertValidDates, sumQuestionPoints, normalizeQtype } from './homework.helpers';
 import { todayVN } from '../../shared/vnTime';
 import { homeworkRepo, deleteHomeworkCascade } from './homework.repo';
 import { eventBus } from '../../shared/events/eventBus';
@@ -461,12 +461,12 @@ export async function reuseHomework(
   const targets = (await db
     .prepare('SELECT student_id FROM homework_targets WHERE homework_id = ?')
     .all(id)) as { student_id: number }[];
-  let qs: { id: number; question: string; points: number }[] = [];
+  let qs: { id: number; qtype: string; question: string; points: number }[] = [];
   let optsAll: { question_id: number; text: string; is_correct: number }[] = [];
   if (src.kind === 'quiz') {
     qs = (await db
-      .prepare('SELECT id, question, points FROM quiz_questions WHERE homework_id = ? ORDER BY position')
-      .all(id)) as { id: number; question: string; points: number }[];
+      .prepare('SELECT id, qtype, question, points FROM quiz_questions WHERE homework_id = ? ORDER BY position')
+      .all(id)) as { id: number; qtype: string; question: string; points: number }[];
     optsAll = (await db
       .prepare(
         `SELECT qo.question_id, qo.text, qo.is_correct
@@ -494,13 +494,13 @@ export async function reuseHomework(
     });
     if (src.kind === 'quiz') {
       const qStmt = await tx.prepare(
-        'INSERT INTO quiz_questions (homework_id, position, question, points) VALUES (?, ?, ?, ?)'
+        'INSERT INTO quiz_questions (homework_id, position, qtype, question, points) VALUES (?, ?, ?, ?, ?)'
       );
       const oStmt = await tx.prepare(
         'INSERT INTO quiz_options (question_id, position, text, is_correct) VALUES (?, ?, ?, ?)'
       );
       for (const [qi, q] of qs.entries()) {
-        const qr = await qStmt.run(hid, qi, q.question, q.points);
+        const qr = await qStmt.run(hid, qi, normalizeQtype(q.qtype), q.question, q.points);
         const nqid = Number(qr.lastInsertRowid);
         const opts = optsAll.filter((o) => o.question_id === q.id);
         for (const [oi, o] of opts.entries()) await oStmt.run(nqid, oi, o.text, o.is_correct);
