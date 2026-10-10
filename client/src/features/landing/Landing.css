@@ -98,6 +98,17 @@
   }
 }
 
+/* 360px: CTA hero xếp dọc full-width, dễ bấm bằng ngón tay */
+@media (max-width: 480px) {
+  .landing-hero-cta {
+    flex-direction: column;
+  }
+  .landing-hero-cta .btn {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
 /* Đội ngũ giáo viên: danh sách roster gọn, khác layout với grid khóa học */
 .teacher-list {
   display: grid;
