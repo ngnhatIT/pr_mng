@@ -37,8 +37,7 @@ export function Dashboard() {
   // dùng làm sub-info cho hero; null khi không tải được hoặc không có quyền
   const [debtTotal, setDebtTotal] = useState<number | null>(null);
   const [debtsError, setDebtsError] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const toast = useToast();
+  const [loading, setLoading] = useState(true);  const toast = useToast();
   const user = getUser();
 
   const quickActions: { to: string; label: string; desc: string; icon: IconName }[] = [
