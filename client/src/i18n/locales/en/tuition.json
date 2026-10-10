@@ -162,7 +162,8 @@
       "note": "Note",
       "reportedAt": "Reported at",
       "student": "Student"
-    }
+    },
+    "viewInvoices": "View invoices"
   },
   "searchAllStatuses": "All statuses",
   "title": "Tuition",

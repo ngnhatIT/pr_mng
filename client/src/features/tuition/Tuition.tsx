@@ -46,12 +46,18 @@ export function Tuition() {
           {t('pending.tab')}
         </button>
       </div>
-      {tab === 'invoices' ? <InvoiceList /> : tab === 'debt' ? <DebtList /> : <PendingPayments />}
+      {tab === 'invoices' ? (
+        <InvoiceList />
+      ) : tab === 'debt' ? (
+        <DebtList />
+      ) : (
+        <PendingPayments onViewInvoices={() => switchTab('invoices')} />
+      )}
     </div>
   );
 }
 
-function PendingPayments() {
+function PendingPayments({ onViewInvoices }: { onViewInvoices: () => void }) {
   const { t } = useTranslation(['tuition', 'common']);
   const [items, setItems] = useState<PendingPayment[]>([]);
   const [loading, setLoading] = useState(true);
@@ -99,7 +105,16 @@ function PendingPayments() {
       {loading ? (
         <TableSkeleton cols={6} />
       ) : items.length === 0 ? (
-        <EmptyState icon="check-circle" title={t('pending.emptyTitle')} desc={t('pending.emptyDesc')} />
+        <EmptyState
+          icon="check-circle"
+          title={t('pending.emptyTitle')}
+          desc={t('pending.emptyDesc')}
+          action={
+            <button className="btn btn-secondary btn-inline" onClick={onViewInvoices}>
+              {t('pending.viewInvoices')}
+            </button>
+          }
+        />
       ) : (
         <div className="table-wrap sticky">
           <table className="table">

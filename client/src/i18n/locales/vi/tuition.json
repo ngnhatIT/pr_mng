@@ -162,7 +162,8 @@
       "note": "Ghi chú",
       "reportedAt": "Thời gian báo",
       "student": "Học viên"
-    }
+    },
+    "viewInvoices": "Xem hóa đơn"
   },
   "searchAllStatuses": "Tất cả trạng thái",
   "title": "Học phí",
