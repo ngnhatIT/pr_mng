@@ -110,7 +110,9 @@ function PendingPayments() {
                 <th scope="col">{t('pending.table.method')}</th>
                 <th scope="col">{t('pending.table.reportedAt')}</th>
                 <th scope="col">{t('pending.table.note')}</th>
-                <th scope="col" className="th-right">{t('pending.table.actions')}</th>
+                <th scope="col" className="th-right">
+                  {t('pending.table.actions')}
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -130,6 +132,7 @@ function PendingPayments() {
                         onClick={() => void moderate(p, 'approve')}
                         disabled={busyId === p.id}
                       >
+                        {busyId === p.id && <span className="spinner" aria-hidden="true" />}
                         {t('pending.approve')}
                       </button>
                       <button
@@ -137,6 +140,7 @@ function PendingPayments() {
                         onClick={() => void moderate(p, 'reject')}
                         disabled={busyId === p.id}
                       >
+                        {busyId === p.id && <span className="spinner spinner-dark" aria-hidden="true" />}
                         {t('pending.reject')}
                       </button>
                     </span>
@@ -269,12 +273,20 @@ function InvoiceList() {
               <tr>
                 <th scope="col">{t('invoice.table.student')}</th>
                 <th scope="col">{t('invoice.table.class')}</th>
-                <th scope="col" className="th-right">{t('invoice.table.amount')}</th>
-                <th scope="col" className="th-right">{t('invoice.table.paid')}</th>
-                <th scope="col" className="th-right">{t('invoice.table.debt')}</th>
+                <th scope="col" className="th-right">
+                  {t('invoice.table.amount')}
+                </th>
+                <th scope="col" className="th-right">
+                  {t('invoice.table.paid')}
+                </th>
+                <th scope="col" className="th-right">
+                  {t('invoice.table.debt')}
+                </th>
                 <th scope="col">{t('invoice.table.dueDate')}</th>
                 <th scope="col">{t('invoice.table.status')}</th>
-                <th scope="col" className="th-right">{t('invoice.table.actions')}</th>
+                <th scope="col" className="th-right">
+                  {t('invoice.table.actions')}
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -303,6 +315,9 @@ function InvoiceList() {
                               disabled={remindingId === inv.id}
                               title={t('invoice.remindTitle')}
                             >
+                              {remindingId === inv.id && (
+                                <span className="spinner spinner-dark" aria-hidden="true" />
+                              )}
                               {remindingId === inv.id ? t('invoice.sending') : t('invoice.remindZalo')}
                             </button>
                             <button
@@ -462,6 +477,7 @@ function ApplyCreditModal({
             {t('actions.cancel', { ns: 'common' })}
           </button>
           <button type="submit" className="btn btn-primary" disabled={busy}>
+            {busy && <span className="spinner" aria-hidden="true" />}
             {busy ? t('credit.applying') : t('credit.apply')}
           </button>
         </div>
@@ -586,6 +602,7 @@ function InvoiceFormModal({ onClose, onDone }: { onClose: () => void; onDone: ()
             {t('actions.cancel', { ns: 'common' })}
           </button>
           <button type="submit" className="btn btn-primary" disabled={busy}>
+            {busy && <span className="spinner" aria-hidden="true" />}
             {busy ? t('invoiceForm.creating') : t('invoiceForm.create')}
           </button>
         </div>
@@ -690,6 +707,7 @@ function PayModal({
             {t('actions.cancel', { ns: 'common' })}
           </button>
           <button type="submit" className="btn btn-primary" disabled={busy}>
+            {busy && <span className="spinner" aria-hidden="true" />}
             {busy ? t('pay.collecting') : t('pay.confirm')}
           </button>
         </div>
@@ -863,10 +881,18 @@ function DebtList() {
               <tr>
                 <th scope="col">{t('debt.table.student')}</th>
                 <th scope="col">{t('debt.table.phone')}</th>
-                <th scope="col" className="th-right">{t('debt.table.total')}</th>
-                <th scope="col" className="th-right">{t('debt.table.paid')}</th>
-                <th scope="col" className="th-right">{t('debt.table.debt')}</th>
-                <th scope="col" className="th-right">{t('debt.table.actions')}</th>
+                <th scope="col" className="th-right">
+                  {t('debt.table.total')}
+                </th>
+                <th scope="col" className="th-right">
+                  {t('debt.table.paid')}
+                </th>
+                <th scope="col" className="th-right">
+                  {t('debt.table.debt')}
+                </th>
+                <th scope="col" className="th-right">
+                  {t('debt.table.actions')}
+                </th>
               </tr>
             </thead>
             <tbody>
