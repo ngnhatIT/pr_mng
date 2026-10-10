@@ -36,7 +36,10 @@
     "thDate": "Ngày nhập",
     "thScore": "Điểm",
     "thTest": "Bài kiểm tra",
-    "title": "Điểm số"
+    "title": "Điểm số",
+    "titleRequired": "Vui lòng nhập tên bài kiểm tra",
+    "scoreRequired": "Vui lòng nhập điểm",
+    "scoreRange": "Điểm phải từ 0 đến {{max}}"
   },
   "salary": {
     "desc": "Chi tiết lương theo từng tháng",

@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { teacherApi } from './teacher.api';
 import { useToast } from '../../shared/ui/toast';
 import { Modal, ConfirmDialog } from '../../shared/components/Modal';
-import { Field } from '../../shared/components/Form';
+import { Field, useFieldErrors } from '../../shared/components/Form';
 import { PageHeader } from '../../shared/components/PageHeader';
 import { EmptyState } from '../../shared/components/EmptyState';
 import { TableSkeleton } from '../../shared/components/Skeleton';
@@ -100,7 +100,7 @@ export function TeacherGrades() {
 
       <div className="toolbar grades-toolbar">
         <select
-          aria-label="Chọn lớp"
+          aria-label={t('grades.selectClass')}
           className="text-input"
           value={classId}
           onChange={(e) => void pickClass(e.target.value)}
@@ -113,7 +113,7 @@ export function TeacherGrades() {
           ))}
         </select>
         <select
-          aria-label="Chọn môn"
+          aria-label={t('grades.selectStudent')}
           className="text-input"
           value={studentId}
           onChange={(e) => {
@@ -235,25 +235,38 @@ function GradeFormModal({
   const [maxScore, setMaxScore] = useState('10');
   const [comment, setComment] = useState('');
   const [busy, setBusy] = useState(false);
+  const [submitError, setSubmitError] = useState('');
+  const { errors, refFor, show, clear } = useFieldErrors<'title' | 'score'>();
   const toast = useToast();
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (busy) return;
+    // Validate inline: tên bài + điểm hợp lệ trong thang điểm (skill 8.2)
+    const max = Number(maxScore) || 10;
+    const errs: { title?: string; score?: string } = {};
+    if (!title.trim()) errs.title = t('grades.titleRequired');
+    if (!score.trim()) errs.score = t('grades.scoreRequired');
+    else {
+      const v = Number(score);
+      if (!Number.isFinite(v) || v < 0 || v > max) errs.score = t('grades.scoreRange', { max });
+    }
+    if (!show(errs)) return;
     setBusy(true);
+    setSubmitError(''); // dữ liệu giữ nguyên, lỗi hiện ngay dưới nút lưu
     try {
       await teacherApi.createGrade({
         student_id: studentId,
         class_id: classId,
-        title,
+        title: title.trim(),
         score: Number(score),
-        max_score: Number(maxScore) || 10,
+        max_score: max,
         comment: comment || null,
       });
       toast(t('grades.saved'), 'success');
       onDone();
     } catch (err) {
-      toast(err instanceof Error ? err.message : t('grades.saveFail'), 'error');
+      setSubmitError(err instanceof Error ? err.message : t('grades.saveFail'));
     } finally {
       setBusy(false);
     }
@@ -261,20 +274,31 @@ function GradeFormModal({
 
   return (
     <Modal title={t('grades.formTitle')} onClose={onClose}>
-      <form onSubmit={submit}>
+      <form onSubmit={submit} noValidate>
         <div className="form-grid">
-          <Field label={t('grades.formTestName')} span>
-            <input className="text-input" value={title} onChange={(e) => setTitle(e.target.value)} required />
+          <Field label={t('grades.formTestName')} error={errors.title} span>
+            <input
+              className="text-input"
+              value={title}
+              onChange={(e) => {
+                setTitle(e.target.value);
+                clear('title');
+              }}
+              ref={refFor('title')}
+            />
           </Field>
-          <Field label={t('grades.formScore')}>
+          <Field label={t('grades.formScore')} error={errors.score}>
             <input
               className="text-input"
               type="number"
               step="0.25"
               min={0}
               value={score}
-              onChange={(e) => setScore(e.target.value)}
-              required
+              onChange={(e) => {
+                setScore(e.target.value);
+                clear('score');
+              }}
+              ref={refFor('score')}
             />
           </Field>
           <Field label={t('grades.formMaxScore')}>
@@ -300,9 +324,15 @@ function GradeFormModal({
             {t('actions.cancel', { ns: 'common' })}
           </button>
           <button type="submit" className="btn btn-primary" disabled={busy}>
+            {busy && <span className="spinner" aria-hidden="true" />}
             {busy ? t('actions.saving', { ns: 'common' }) : t('actions.save', { ns: 'common' })}
           </button>
         </div>
+        {submitError && (
+          <p className="field-error" role="alert" style={{ marginTop: 8 }}>
+            {submitError}
+          </p>
+        )}
       </form>
     </Modal>
   );

@@ -36,7 +36,10 @@
     "thDate": "Date entered",
     "thScore": "Score",
     "thTest": "Test",
-    "title": "Grades"
+    "title": "Grades",
+    "titleRequired": "Please enter the test name",
+    "scoreRequired": "Please enter the score",
+    "scoreRange": "Score must be between 0 and {{max}}"
   },
   "salary": {
     "desc": "Salary details by month",
