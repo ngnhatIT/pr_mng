@@ -259,7 +259,6 @@
     "toast": {
       "assigned_one": "Assigned to {{count}} class",
       "assigned_other": "Assigned to {{count}} classes",
-      "attRequired": "Please enter the attachment name and link",
       "bankImported_one": "Added {{count}} question from the bank",
       "bankImported_other": "Added {{count}} questions from the bank",
       "rubricCreated": "Rubric created",
@@ -282,6 +281,7 @@
       "classRequired": "Please select at least 1 class",
       "titleRequired": "Please enter the homework title",
       "maxScoreInvalid": "Max score must be a non-negative number",
+      "attRequired": "Please enter the attachment name and link",
       "attUrlInvalid": "Attachment link must start with http:// or https://",
       "closeBeforeDue": "Close date must be after the due date",
       "duePast": "Due date cannot be in the past",

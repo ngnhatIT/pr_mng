@@ -254,7 +254,6 @@
     "titlePhQuiz": "VD: Quiz từ vựng Unit 5",
     "toast": {
       "assigned": "Đã giao cho {{count}} lớp",
-      "attRequired": "Vui lòng nhập tên và link đính kèm",
       "bankImported": "Đã thêm {{count}} câu từ ngân hàng",
       "rubricCreated": "Đã tạo rubric",
       "rubricFail": "Không tạo được rubric, vui lòng thử lại",
@@ -282,6 +281,7 @@
       "classRequired": "Vui lòng chọn ít nhất 1 lớp",
       "titleRequired": "Vui lòng nhập tiêu đề bài tập",
       "maxScoreInvalid": "Điểm tối đa phải là số không âm",
+      "attRequired": "Vui lòng nhập tên và link đính kèm",
       "attUrlInvalid": "Link đính kèm phải bắt đầu bằng http:// hoặc https://",
       "closeBeforeDue": "Hạn chót phải sau hạn nộp",
       "duePast": "Hạn nộp không được là ngày đã qua",

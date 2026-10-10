@@ -209,17 +209,26 @@ export function HomeworkFormModal({
   };
 
   const addAttachment = () => {
-    if (!attName.trim() || !attUrl.trim()) {
-      toast(t('form.toast.attRequired'), 'error');
+    // P1-4: mọi lỗi thêm đính kèm báo inline dưới cụm đính kèm (đúng pattern useFieldErrors), không toast
+    const name = attName.trim();
+    const url = attUrl.trim();
+    if (!name) {
+      show({ ...errors, attachment: t('form.errors.attRequired') });
+      attNameRef.current?.focus();
       return;
     }
-    // P0-3: URL phải đúng định dạng http/https → lỗi inline dưới cụm đính kèm (không toast)
-    if (!isValidHttpUrl(attUrl)) {
+    if (!url) {
+      show({ ...errors, attachment: t('form.errors.attRequired') });
+      attUrlRef.current?.focus();
+      return;
+    }
+    // P0-3: URL phải đúng định dạng http/https
+    if (!isValidHttpUrl(url)) {
       show({ ...errors, attachment: t('form.errors.attUrlInvalid') });
       attUrlRef.current?.focus();
       return;
     }
-    setAttachments((a) => [...a, { name: attName.trim(), url: attUrl.trim(), kind: 'link' }]);
+    setAttachments((a) => [...a, { name, url, kind: 'link' }]);
     setAttName('');
     setAttUrl('');
     clear('attachment');
