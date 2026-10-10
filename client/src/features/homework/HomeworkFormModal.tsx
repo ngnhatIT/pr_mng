@@ -23,6 +23,19 @@ export function isValidHttpUrl(s: string): boolean {
   }
 }
 
+/** Câu hỏi quiz chưa hợp lệ: thiếu nội dung / đáp án / đáp án đúng. Hàm thuần để test được. */
+export function isQuizQuestionInvalid(q: QuizQuestionForm): boolean {
+  const qtype = q.qtype ?? 'single';
+  if (!q.question.trim()) return true;
+  if (qtype === 'essay') return false;
+  const filled = q.options.filter((o) => o.text.trim());
+  if (qtype === 'truefalse')
+    return filled.length !== 2 || filled.filter((o) => o.is_correct).length !== 1;
+  if (filled.length < 2) return true;
+  const correctCount = filled.filter((o) => o.is_correct).length;
+  return qtype === 'single' ? correctCount !== 1 : correctCount < 1;
+}
+
 const BLANK_QTYPE_OPTIONS: { text: string; is_correct: boolean }[] = [
   { text: '', is_correct: true },
   { text: '', is_correct: false },
@@ -79,6 +92,8 @@ export function HomeworkFormModal({
   const [attUrl, setAttUrl] = useState('');
   const attNameRef = useRef<HTMLInputElement>(null);
   const attUrlRef = useRef<HTMLInputElement>(null);
+  // P1-2: ref từng khối câu hỏi để cuộn + focus tới câu lỗi đầu tiên
+  const qBlockRefs = useRef<(HTMLDivElement | null)[]>([]);
   // Rubric
   const [rubrics, setRubrics] = useState<Rubric[]>([]);
   const [rubricId, setRubricId] = useState<string>(initial?.rubric_id?.toString() || '');
@@ -339,17 +354,7 @@ export function HomeworkFormModal({
   const quizTotal = questions.reduce((s, q) => s + (Number(q.points) || 0), 0);
 
   /** Validate builder theo loại câu hỏi (server validate lại từ B1). */
-  const quizInvalidCount = questions.filter((q) => {
-    const qtype = q.qtype ?? 'single';
-    if (!q.question.trim()) return true;
-    if (qtype === 'essay') return false;
-    const filled = q.options.filter((o) => o.text.trim());
-    if (qtype === 'truefalse')
-      return filled.length !== 2 || filled.filter((o) => o.is_correct).length !== 1;
-    if (filled.length < 2) return true;
-    const correctCount = filled.filter((o) => o.is_correct).length;
-    return qtype === 'single' ? correctCount !== 1 : correctCount < 1;
-  }).length;
+  const quizInvalidCount = questions.filter(isQuizQuestionInvalid).length;
 
   // Lọc đáp án trống trước khi gửi (server cũng validate lại)
   const cleanedQuestions: QuizQuestionForm[] = questions.map((q) => ({
@@ -376,7 +381,21 @@ export function HomeworkFormModal({
       errs.quiz = t('form.errors.quizInvalid', { count: quizInvalidCount });
     if (!initial && publishMode === 'schedule' && !publishAt)
       errs.publishAt = t('form.errors.publishAtRequired');
-    return show(errs);
+    const ok = show(errs);
+    // P1-2: lỗi quiz là lỗi đầu tiên → cuộn + focus tới câu hỏi lỗi đầu tiên (pattern QuizTaker)
+    if (!ok && (Object.keys(errs) as HwErrKey[])[0] === 'quiz') {
+      const firstBad = questions.findIndex(isQuizQuestionInvalid);
+      if (firstBad >= 0) {
+        requestAnimationFrame(() => {
+          const el = qBlockRefs.current[firstBad];
+          if (!el) return;
+          const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+          el.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'center' });
+          el.focus({ preventScroll: true });
+        });
+      }
+    }
+    return ok;
   };
 
   const submit = async (publishOverride?: 'now' | 'draft' | 'schedule') => {
@@ -880,7 +899,14 @@ export function HomeworkFormModal({
             {questions.map((q, qi) => {
               const qtype = q.qtype ?? 'single';
               return (
-              <div key={qi} className="quiz-q">
+              <div
+                key={qi}
+                className="quiz-q"
+                tabIndex={-1}
+                ref={(el) => {
+                  qBlockRefs.current[qi] = el;
+                }}
+              >
                 <div className="hw-flex hw-mb-8">
                   <span className="quiz-num">{qi + 1}</span>
                   <input
