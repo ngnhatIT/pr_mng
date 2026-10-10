@@ -59,7 +59,10 @@
     "personalInfo": "Personal information",
     "phone": "Phone"
   },
-  "empty": { "desc": "Add your first student to start managing the list.", "title": "No students yet" },
+  "empty": {
+    "desc": "Add your first student to start managing the list.",
+    "title": "No students yet"
+  },
   "form": {
     "addTitle": "Add student",
     "address": "Address",
@@ -70,11 +73,24 @@
     "name": "Full name *",
     "note": "Note",
     "phone": "Phone",
-    "status": "Status"
+    "status": "Status",
+    "errors": {
+      "nameRequired": "Please enter the student name",
+      "phoneInvalid": "Invalid phone number",
+      "emailInvalid": "Invalid email address"
+    }
   },
-  "invoiceStatus": { "paid": "Paid", "partial": "Partially paid", "unpaid": "Unpaid" },
+  "invoiceStatus": {
+    "paid": "Paid",
+    "partial": "Partially paid",
+    "unpaid": "Unpaid"
+  },
   "searchPlaceholder": "Search by name, code, phone...",
-  "status": { "paused": "Paused", "quit": "Withdrawn", "studying": "Studying" },
+  "status": {
+    "paused": "Paused",
+    "quit": "Withdrawn",
+    "studying": "Studying"
+  },
   "table": {
     "actions": "Actions",
     "code": "Code",
@@ -83,5 +99,9 @@
     "status": "Status"
   },
   "title": "Students",
-  "toast": { "deleted": "Student deleted", "loadError": "Could not load the list", "saved": "Student saved" }
+  "toast": {
+    "deleted": "Student deleted",
+    "loadError": "Could not load the list",
+    "saved": "Student saved"
+  }
 }

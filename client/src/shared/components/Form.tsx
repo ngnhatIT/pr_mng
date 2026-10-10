@@ -1,4 +1,12 @@
-import { ReactNode, cloneElement, isValidElement, type ReactElement } from 'react';
+import {
+  ReactNode,
+  cloneElement,
+  isValidElement,
+  useCallback,
+  useRef,
+  useState,
+  type ReactElement,
+} from 'react';
 
 export function Field({
   label,
@@ -41,4 +49,38 @@ export function Field({
       )}
     </label>
   );
+}
+
+/**
+ * Lỗi validation inline dùng chung cho các form (skill 8.2):
+ * giữ map lỗi theo tên field, hiển thị dưới field qua `Field error={...}`,
+ * và focus vào field đầu tiên bị lỗi sau submit. Dữ liệu đã nhập giữ nguyên.
+ */
+export function useFieldErrors<T extends string>() {
+  const [errors, setErrors] = useState<Partial<Record<T, string>>>({});
+  const refs = useRef<Partial<Record<T, HTMLElement | null>>>({});
+
+  // ref gán cho input/select/textarea trong Field: ref={refFor('name')}
+  const refFor = useCallback(
+    (k: T) => (el: HTMLElement | null) => {
+      refs.current[k] = el;
+    },
+    []
+  );
+
+  // Hiển thị lỗi; trả về true nếu không có lỗi nào. Focus field lỗi đầu tiên
+  // (theo thứ tự field trong object errs truyền vào).
+  const show = useCallback((errs: Partial<Record<T, string>>) => {
+    setErrors(errs);
+    const first = (Object.keys(errs) as T[])[0];
+    if (first) refs.current[first]?.focus();
+    return Object.keys(errs).length === 0;
+  }, []);
+
+  // Xóa lỗi của 1 field khi user sửa lại
+  const clear = useCallback((k: T) => {
+    setErrors((e) => (e[k] ? { ...e, [k]: undefined } : e));
+  }, []);
+
+  return { errors, refFor, show, clear };
 }

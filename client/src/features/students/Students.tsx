@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { studentsApi, type Student } from './students.api';
 import { useToast } from '../../shared/ui/toast';
 import { Modal, ConfirmDialog } from '../../shared/components/Modal';
-import { Field } from '../../shared/components/Form';
+import { Field, useFieldErrors } from '../../shared/components/Form';
 import { PageHeader } from '../../shared/components/PageHeader';
 import { EmptyState } from '../../shared/components/EmptyState';
 import { TableSkeleton } from '../../shared/components/Skeleton';
@@ -231,14 +231,29 @@ function StudentForm({
     note: initial?.note || '',
   });
   const [busy, setBusy] = useState(false);
+  // Lỗi inline dưới field + focus field lỗi đầu tiên (skill 8.2); dữ liệu giữ nguyên khi lỗi
+  const { errors, refFor, show, clear } = useFieldErrors<'name' | 'phone' | 'email'>();
   const set =
     (k: keyof typeof emptyForm) =>
-    (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) =>
+    (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
       setForm((f) => ({ ...f, [k]: e.target.value }));
+      if (k === 'name' || k === 'phone' || k === 'email') clear(k);
+    };
+
+  const validate = () => {
+    const errs: { name?: string; phone?: string; email?: string } = {};
+    if (!form.name.trim()) errs.name = t('form.errors.nameRequired');
+    if (form.phone.trim() && !/^\+?[0-9][0-9\s.-]{6,13}[0-9]$/.test(form.phone.trim()))
+      errs.phone = t('form.errors.phoneInvalid');
+    if (form.email.trim() && !/^\S+@\S+\.\S+$/.test(form.email.trim()))
+      errs.email = t('form.errors.emailInvalid');
+    return show(errs);
+  };
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (busy) return;
+    if (!validate()) return;
     setBusy(true);
     try {
       await onSave(form, initial?.id);
@@ -254,14 +269,28 @@ function StudentForm({
           <Field label={t('form.code')}>
             <input className="text-input" value={form.code} onChange={set('code')} disabled={!!initial} />
           </Field>
-          <Field label={t('form.name')}>
-            <input className="text-input" value={form.name} onChange={set('name')} required />
+          <Field label={t('form.name')} error={errors.name}>
+            <input ref={refFor('name')} className="text-input" value={form.name} onChange={set('name')} />
           </Field>
-          <Field label={t('form.phone')}>
-            <input className="text-input" value={form.phone} onChange={set('phone')} />
+          <Field label={t('form.phone')} error={errors.phone}>
+            <input
+              ref={refFor('phone')}
+              className="text-input"
+              value={form.phone}
+              onChange={set('phone')}
+              inputMode="tel"
+              autoComplete="tel"
+            />
           </Field>
-          <Field label={t('form.email')}>
-            <input className="text-input" value={form.email} onChange={set('email')} />
+          <Field label={t('form.email')} error={errors.email}>
+            <input
+              ref={refFor('email')}
+              className="text-input"
+              value={form.email}
+              onChange={set('email')}
+              inputMode="email"
+              autoComplete="email"
+            />
           </Field>
           <Field label={t('form.dob')}>
             <input className="text-input" type="date" value={form.dob} onChange={set('dob')} />

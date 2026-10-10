@@ -73,7 +73,12 @@
     "name": "Họ tên *",
     "note": "Ghi chú",
     "phone": "Điện thoại",
-    "status": "Trạng thái"
+    "status": "Trạng thái",
+    "errors": {
+      "nameRequired": "Vui lòng nhập họ tên học viên",
+      "phoneInvalid": "Số điện thoại không đúng định dạng",
+      "emailInvalid": "Email không đúng định dạng"
+    }
   },
   "invoiceStatus": {
     "paid": "Đã thanh toán",
