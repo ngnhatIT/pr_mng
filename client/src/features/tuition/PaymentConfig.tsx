@@ -203,6 +203,7 @@ export function PaymentConfig() {
         <div className="toolbar payment-savebar">
           <span className="spacer" />
           <button type="submit" className="btn btn-primary btn-lg" disabled={busy}>
+            {busy && <span className="spinner" aria-hidden="true" />}
             {busy ? t('actions.saving', { ns: 'common' }) : t('config.saveConfig')}
           </button>
         </div>

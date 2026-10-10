@@ -288,6 +288,7 @@ function LeadForm() {
           </Field>
         </div>
         <button className="btn btn-primary btn-block" type="submit" disabled={busy}>
+          {busy && <span className="spinner" aria-hidden="true" />}
           {busy ? t('sending') : t('lead.submit')}
         </button>
       </form>
@@ -380,6 +381,7 @@ function TrialForm({ refCode, courses }: { refCode: string; courses: PublicClass
           </Field>
         </div>
         <button className="btn btn-primary btn-block" type="submit" disabled={busy}>
+          {busy && <span className="spinner" aria-hidden="true" />}
           {busy ? t('sending') : t('trial.submit')}
         </button>
       </form>

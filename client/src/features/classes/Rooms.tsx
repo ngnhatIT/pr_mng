@@ -103,7 +103,9 @@ export function Rooms() {
                 <th scope="col">{t('rooms.table.capacity')}</th>
                 <th scope="col">{t('rooms.table.classesUsing')}</th>
                 <th scope="col">{t('rooms.table.status')}</th>
-                <th scope="col" className="th-right">{t('rooms.table.actions')}</th>
+                <th scope="col" className="th-right">
+                  {t('rooms.table.actions')}
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -211,6 +213,7 @@ function RoomFormModal({
             {t('actions.cancel', { ns: 'common' })}
           </button>
           <button type="submit" className="btn btn-primary" disabled={busy}>
+            {busy && <span className="spinner" aria-hidden="true" />}
             {busy ? t('actions.saving', { ns: 'common' }) : t('actions.save', { ns: 'common' })}
           </button>
         </div>

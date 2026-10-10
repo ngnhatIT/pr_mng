@@ -787,6 +787,7 @@ function RefundModal({
             {t('actions.cancel', { ns: 'common' })}
           </button>
           <button type="submit" className="btn btn-danger" disabled={busy}>
+            {busy && <span className="spinner" aria-hidden="true" />}
             {busy ? t('refund.processing') : t('refund.confirm')}
           </button>
         </div>

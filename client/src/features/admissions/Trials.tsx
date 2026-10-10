@@ -94,7 +94,9 @@ export function Trials() {
                 <th scope="col">{t('trials.col.desiredDate')}</th>
                 <th scope="col">{t('trials.col.referral')}</th>
                 <th scope="col">{t('trials.col.status')}</th>
-                <th scope="col" className="th-right">{t('trials.col.actions')}</th>
+                <th scope="col" className="th-right">
+                  {t('trials.col.actions')}
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -213,6 +215,7 @@ export function ConvertModal({
             {t('actions.cancel', { ns: 'common' })}
           </button>
           <button type="submit" className="btn btn-primary" disabled={busy}>
+            {busy && <span className="spinner" aria-hidden="true" />}
             {busy ? t('trials.convertForm.converting') : t('trials.convertForm.confirm')}
           </button>
         </div>
