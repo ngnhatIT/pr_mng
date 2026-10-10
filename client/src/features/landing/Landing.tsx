@@ -41,6 +41,8 @@ export function Landing() {
   const [reviews, setReviews] = useState<{ avg: number; total: number; items: PublicReview[] } | null>(null);
   const leadRef = useRef<HTMLDivElement>(null);
   const trialRef = useRef<HTMLDivElement>(null);
+  // Khóa học user vừa bấm "Đăng ký học thử" trên thẻ khóa học -> preselect trong TrialForm
+  const [trialClassId, setTrialClassId] = useState<number | null>(null);
 
   useEffect(() => {
     void (async () => {
@@ -146,7 +148,13 @@ export function Landing() {
                   <dt>{t('courses.capacity')}</dt>
                   <dd>{t('courses.students', { count: c.student_count })}</dd>
                 </dl>
-                <button className="btn btn-primary btn-block" onClick={scrollToTrial}>
+                <button
+                  className="btn btn-primary btn-block"
+                  onClick={() => {
+                    setTrialClassId(c.id);
+                    scrollToTrial();
+                  }}
+                >
                   {t('courses.trial')}
                 </button>
               </div>
@@ -218,7 +226,11 @@ export function Landing() {
             <LeadForm />
           </div>
           <div ref={trialRef} id="dang-ky-hoc-thu" className="landing-form-anchor">
-            <TrialForm refCode={searchParams.get('ref') || ''} courses={courses} />
+            <TrialForm
+              refCode={searchParams.get('ref') || ''}
+              courses={courses}
+              preselectClassId={trialClassId}
+            />
           </div>
         </div>
       </section>
@@ -308,7 +320,15 @@ function LeadForm() {
   );
 }
 
-function TrialForm({ refCode, courses }: { refCode: string; courses: PublicClassItem[] }) {
+function TrialForm({
+  refCode,
+  courses,
+  preselectClassId,
+}: {
+  refCode: string;
+  courses: PublicClassItem[];
+  preselectClassId: number | null;
+}) {
   const { t } = useTranslation(['landing', 'common']);
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
@@ -318,6 +338,11 @@ function TrialForm({ refCode, courses }: { refCode: string; courses: PublicClass
   const [referralCode, setReferralCode] = useState(refCode);
   const [busy, setBusy] = useState(false);
   const toast = useToast();
+
+  // Bấm "Đăng ký học thử" trên thẻ khóa học -> dropdown "Lớp muốn học thử" chọn sẵn lớp đó
+  useEffect(() => {
+    if (preselectClassId !== null) setClassId(String(preselectClassId));
+  }, [preselectClassId]);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
