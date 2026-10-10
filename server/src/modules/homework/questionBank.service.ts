@@ -84,18 +84,30 @@ export async function listBankTags(centerId: number | null): Promise<string[]> {
   return rows.map((r) => r.tag);
 }
 
+/**
+ * Validate input câu hỏi bank dùng chung cho thêm/sửa: thiếu field bắt buộc →
+ * 400 (không để trim() trên undefined gây 500).
+ */
+function validateBankInput(input: BankQuestionInput): { question: string; options: { text: string; is_correct: boolean }[] } {
+  const question = typeof input.question === 'string' ? input.question.trim() : '';
+  if (!question) throw AppError.badRequest('Câu hỏi trống');
+  const options = Array.isArray(input.options) ? input.options : [];
+  if (options.length < 2) throw AppError.badRequest('Cần ít nhất 2 đáp án');
+  if (!options.some((o) => o.is_correct)) throw AppError.badRequest('Chưa chọn đáp án đúng');
+  options.forEach((o, i) => {
+    if (typeof o?.text !== 'string' || !o.text.trim())
+      throw AppError.badRequest(`Đáp án ${i + 1} trống`);
+  });
+  return { question, options };
+}
+
 /** Thêm câu hỏi vào ngân hàng. Validate hết trước khi insert (tránh câu mồ côi). */
 export async function addBankQuestion(
   centerId: number | null,
   createdBy: number,
   input: BankQuestionInput
 ): Promise<BankQuestion> {
-  if (!input.question.trim()) throw AppError.badRequest('Câu hỏi trống');
-  if (input.options.length < 2) throw AppError.badRequest('Cần ít nhất 2 đáp án');
-  if (!input.options.some((o) => o.is_correct)) throw AppError.badRequest('Chưa chọn đáp án đúng');
-  input.options.forEach((o, i) => {
-    if (!o.text.trim()) throw AppError.badRequest(`Đáp án ${i + 1} trống`);
-  });
+  const { question, options } = validateBankInput(input);
   const qid = await db.transaction(async (tx) => {
     const ins = await tx
       .prepare(
@@ -104,7 +116,7 @@ export async function addBankQuestion(
       .run(
         centerId,
         input.tag?.trim() || null,
-        input.question.trim(),
+        question,
         Math.max(0.5, Number(input.points) || 1),
         createdBy
       );
@@ -112,7 +124,7 @@ export async function addBankQuestion(
     const stmt = await tx.prepare(
       'INSERT INTO question_bank_options (question_id, position, text, is_correct) VALUES (?, ?, ?, ?)'
     );
-    for (const [i, o] of input.options.entries()) {
+    for (const [i, o] of options.entries()) {
       await stmt.run(qid, i, o.text.trim(), o.is_correct ? 1 : 0);
     }
     return qid;
@@ -131,18 +143,13 @@ export async function updateBankQuestion(
   if (!q || (centerId !== null && q.center_id !== null && q.center_id !== centerId)) {
     throw AppError.notFound('Không tìm thấy câu hỏi');
   }
-  if (!input.question.trim()) throw AppError.badRequest('Câu hỏi trống');
-  if (input.options.length < 2) throw AppError.badRequest('Cần ít nhất 2 đáp án');
-  if (!input.options.some((o) => o.is_correct)) throw AppError.badRequest('Chưa chọn đáp án đúng');
-  input.options.forEach((o, i) => {
-    if (!o.text.trim()) throw AppError.badRequest(`Đáp án ${i + 1} trống`);
-  });
+  const { question, options } = validateBankInput(input);
   await db.transaction(async (tx) => {
     await tx
       .prepare('UPDATE question_bank SET tag = ?, question = ?, points = ? WHERE id = ?')
       .run(
         input.tag?.trim() || null,
-        input.question.trim(),
+        question,
         Math.max(0.5, Number(input.points) || 1),
         id
       );
@@ -150,7 +157,7 @@ export async function updateBankQuestion(
     const stmt = await tx.prepare(
       'INSERT INTO question_bank_options (question_id, position, text, is_correct) VALUES (?, ?, ?, ?)'
     );
-    for (const [i, o] of input.options.entries()) {
+    for (const [i, o] of options.entries()) {
       await stmt.run(id, i, o.text.trim(), o.is_correct ? 1 : 0);
     }
   });

@@ -57,21 +57,25 @@ export async function createRubric(
   createdBy: number,
   data: { name: string; criteria: { name: string; max_score: number }[] }
 ): Promise<Rubric> {
-  if (!data.name.trim()) throw AppError.badRequest('Vui lòng nhập tên rubric');
-  if (!data.criteria.length) throw AppError.badRequest('Rubric cần ít nhất 1 tiêu chí');
+  // P1-3: thiếu field bắt buộc → 400, không để trim() trên undefined gây 500
+  const name = typeof data.name === 'string' ? data.name.trim() : '';
+  if (!name) throw AppError.badRequest('Vui lòng nhập tên rubric');
+  const criteria = Array.isArray(data.criteria) ? data.criteria : [];
+  if (!criteria.length) throw AppError.badRequest('Rubric cần ít nhất 1 tiêu chí');
   // Validate toàn bộ trước
-  data.criteria.forEach((c, i) => {
-    if (!c.name.trim()) throw AppError.badRequest(`Tiêu chí ${i + 1} chưa có tên`);
+  criteria.forEach((c, i) => {
+    if (typeof c?.name !== 'string' || !c.name.trim())
+      throw AppError.badRequest(`Tiêu chí ${i + 1} chưa có tên`);
   });
   const rid = await db.transaction(async (tx) => {
     const ins = await tx
       .prepare('INSERT INTO rubrics (center_id, name, created_by) VALUES (?, ?, ?)')
-      .run(centerId, data.name.trim(), createdBy);
+      .run(centerId, name, createdBy);
     const rid = Number(ins.lastInsertRowid);
     const stmt = await tx.prepare(
       'INSERT INTO rubric_criteria (rubric_id, name, max_score, position) VALUES (?, ?, ?, ?)'
     );
-    for (const [i, c] of data.criteria.entries()) {
+    for (const [i, c] of criteria.entries()) {
       await stmt.run(rid, c.name.trim(), Math.max(0, Number(c.max_score) || 0), i);
     }
     return rid;

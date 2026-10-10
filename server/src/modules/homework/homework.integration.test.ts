@@ -14,6 +14,7 @@ import * as homeworkService from './homework.service';
 import * as quizService from './quiz.service';
 import * as parentService from '../parent/parent.service';
 import { createRubric } from './rubric.service';
+import { addBankQuestion, updateBankQuestion } from './questionBank.service';
 import { eventBus } from '../../shared/events/eventBus';
 
 // ---------------------------------------------------------------------------
@@ -808,6 +809,70 @@ describe('homework.service - update validate rubric thuộc center (P1-1)', () =
       rubric_id: number;
     };
     assert.equal(Number(row.rubric_id), own.id);
+  });
+});
+
+describe('validate field bắt buộc bank/rubric (P1-3)', () => {
+  beforeEach(async () => {
+    await resetDb();
+  });
+
+  const twoOptions = [
+    { text: 'A', is_correct: true },
+    { text: 'B', is_correct: false },
+  ];
+
+  it('addBankQuestion thiếu question/options → 400 (không 500)', async () => {
+    await assert.rejects(
+      () =>
+        addBankQuestion(null, 1, {
+          question: undefined as unknown as string,
+          points: 1,
+          options: twoOptions,
+        }),
+      /Câu hỏi trống/
+    );
+    await assert.rejects(
+      () =>
+        addBankQuestion(null, 1, {
+          question: 'Q?',
+          points: 1,
+          options: undefined as unknown as { text: string; is_correct: boolean }[],
+        }),
+      /ít nhất 2 đáp án/
+    );
+  });
+
+  it('updateBankQuestion thiếu question → 400', async () => {
+    const q = await addBankQuestion(null, 1, { question: 'Q?', points: 1, options: twoOptions });
+    await assert.rejects(
+      () =>
+        updateBankQuestion(q.id, null, {
+          question: '   ',
+          points: 1,
+          options: twoOptions,
+        }),
+      /Câu hỏi trống/
+    );
+  });
+
+  it('createRubric thiếu name/criteria → 400 (không 500)', async () => {
+    await assert.rejects(
+      () =>
+        createRubric(null, 1, {
+          name: undefined as unknown as string,
+          criteria: [{ name: 'TC', max_score: 10 }],
+        }),
+      /tên rubric/
+    );
+    await assert.rejects(
+      () =>
+        createRubric(null, 1, {
+          name: 'R',
+          criteria: undefined as unknown as { name: string; max_score: number }[],
+        }),
+      /ít nhất 1 tiêu chí/
+    );
   });
 });
 
