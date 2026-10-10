@@ -115,6 +115,7 @@ router.delete(
 router.post(
   '/:id/refund',
   requirePermission('payments.refund'),
+  idempotency,
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const input = validate(req.body, {
       amount: v.number({ required: true, min: 1, label: 'Số tiền hoàn' }),
