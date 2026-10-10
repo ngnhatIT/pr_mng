@@ -915,6 +915,7 @@ button.search-clear:active {
 [data-theme='dark'] .badge-present,
 [data-theme='dark'] .badge-paid,
 [data-theme='dark'] .badge-sent,
+[data-theme='dark'] .badge-done,
 [data-theme='dark'] .badge-approved {
   background: var(--success-soft);
   color: var(--success);
@@ -1798,6 +1799,10 @@ button.search-clear:active {
 }
 
 /* ============================ Badges mới ============================ */
+.badge-done {
+  background: #dcfce7;
+  color: #166534;
+}
 .badge-pending {
   background: #fef3c7;
   color: #92400e;
