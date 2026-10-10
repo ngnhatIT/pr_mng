@@ -36,7 +36,7 @@
   "credit": {
     "applied": "Applied {{amount}} credits to the invoice",
     "apply": "Apply",
-    "applyError": "Could not apply",
+    "applyError": "Could not apply credits, please try again",
     "applying": "Applying...",
     "applyTitle": "Apply parent credits to the invoice",
     "confirmText": "{{name}} ({{code}}) - owes <strong>{{amount}}</strong>",
@@ -91,7 +91,7 @@
     "class": "Class",
     "classOption": "{{name}} - {{fee}}",
     "create": "Create invoice",
-    "createError": "Creation failed",
+    "createError": "Could not create the invoice, please try again",
     "created": "Invoice created",
     "creating": "Creating...",
     "dueDate": "Due date",
@@ -130,7 +130,7 @@
       "ewallet": "E-wallet"
     },
     "note": "Note",
-    "payError": "Collection failed",
+    "payError": "Could not collect the payment, please try again",
     "recorded": "Payment recorded",
     "title": "Collect tuition",
     "errors": {
@@ -170,7 +170,7 @@
     "confirm": "Confirm refund",
     "processing": "Processing refund...",
     "done": "Refund recorded",
-    "error": "Refund failed",
+    "error": "Could not process the refund, please try again",
     "confirmText": "Refund for student <strong>{{name}}</strong> (collected <strong>{{paid}}</strong>). The refund will reduce the outstanding balance.",
     "errors": {
       "amountInvalid": "Refund amount must be between 1 and the paid amount"

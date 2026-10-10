@@ -36,7 +36,7 @@
   "credit": {
     "applied": "Đã áp dụng {{amount}} credits vào hóa đơn",
     "apply": "Áp dụng",
-    "applyError": "Áp dụng thất bại",
+    "applyError": "Không áp dụng được credits, vui lòng thử lại",
     "applying": "Đang áp dụng...",
     "applyTitle": "Áp dụng credits của phụ huynh vào hóa đơn",
     "confirmText": "{{name}} ({{code}}) - còn nợ <strong>{{amount}}</strong>",
@@ -91,7 +91,7 @@
     "class": "Lớp học",
     "classOption": "{{name}} - {{fee}}",
     "create": "Tạo phiếu",
-    "createError": "Tạo thất bại",
+    "createError": "Không tạo được phiếu thu, vui lòng thử lại",
     "created": "Đã tạo phiếu thu",
     "creating": "Đang tạo...",
     "dueDate": "Hạn nộp",
@@ -130,7 +130,7 @@
       "ewallet": "Ví điện tử"
     },
     "note": "Ghi chú",
-    "payError": "Thu tiền thất bại",
+    "payError": "Không thu được tiền, vui lòng thử lại",
     "recorded": "Đã ghi nhận thanh toán",
     "title": "Thu tiền học phí",
     "errors": {
@@ -170,7 +170,7 @@
     "confirm": "Xác nhận hoàn tiền",
     "processing": "Đang hoàn tiền...",
     "done": "Đã ghi nhận hoàn tiền",
-    "error": "Hoàn tiền thất bại",
+    "error": "Không hoàn được tiền, vui lòng thử lại",
     "confirmText": "Hoàn tiền cho học viên <strong>{{name}}</strong> (đã thu <strong>{{paid}}</strong>). Số tiền hoàn sẽ trừ vào công nợ.",
     "errors": {
       "amountInvalid": "Số tiền hoàn phải từ 1 đến số đã thu"
