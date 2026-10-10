@@ -65,6 +65,7 @@ export function Login() {
               clear('username');
             }}
             autoComplete="username"
+            autoFocus
             ref={refFor('username')}
           />
         </Field>

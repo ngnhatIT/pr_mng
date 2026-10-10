@@ -52,6 +52,7 @@ export function ParentLogin() {
             }}
             autoComplete="tel"
             inputMode="tel"
+            autoFocus
             placeholder={t('auth.phonePlaceholder')}
             ref={refFor('phone')}
           />
