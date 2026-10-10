@@ -60,7 +60,9 @@
       "questionPh": "E.g. What does 'Apple' mean?",
       "questionRequired": "Enter the question",
       "save": "Save to bank",
-      "tag": "Topic"
+      "tag": "Topic",
+      "updated": "Question updated",
+      "update": "Update"
     },
     "import_one": "Add {{count}} question to quiz",
     "import_other": "Add {{count}} questions to quiz",
@@ -83,7 +85,9 @@
       "title": "No questions match your filters",
       "desc": "Try a different keyword or clear the filters.",
       "clear": "Clear filters"
-    }
+    },
+    "correctAnswer": "Correct answer",
+    "edit": "Edit question"
   },
   "delete": {
     "message": "Delete \"{{title}}\"?",

@@ -342,6 +342,15 @@ a:hover .submission-thumb {
 .bank-tag-badge {
   margin-right: 6px;
 }
+.bank-correct {
+  color: var(--success);
+}
+.bank-item-actions {
+  display: flex;
+  gap: 8px;
+  flex: none;
+  align-items: center;
+}
 .bank-form-row {
   display: flex;
   gap: 8px;

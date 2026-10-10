@@ -1,10 +1,11 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { homeworkApi, type BankQuestion } from './homework.api';
 import { useToast } from '../../shared/ui/toast';
 import { Modal, ConfirmDialog } from '../../shared/components/Modal';
-import { Field } from '../../shared/components/Form';
+import { Field, useFieldErrors } from '../../shared/components/Form';
 import { EmptyState } from '../../shared/components/EmptyState';
+import { Pagination, type PaginationMeta } from '../../shared/components/Pagination';
 import { Icon } from '../../shared/components/icons';
 import { useDebounce } from '../../shared/hooks/useDebounce';
 
@@ -29,27 +30,35 @@ export function QuestionBank({
   const [deletingId, setDeletingId] = useState<number | null>(null);
   const [selected, setSelected] = useState<number[]>([]);
   const [showForm, setShowForm] = useState(false);
+  const [editing, setEditing] = useState<BankQuestion | null>(null);
   const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(1);
+  const [pagination, setPagination] = useState<PaginationMeta | null>(null);
   // Cache mọi câu hỏi đã thấy để giữ lựa chọn khi đổi filter
   const allSeen = useRef(new Map<number, BankQuestion>());
 
-  const load = async () => {
+  const load = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await homeworkApi.bankList(search, tag);
+      const res = await homeworkApi.bankList(debouncedSearch, debouncedTag, page);
       setQuestions(res.data);
       setTags(res.tags);
+      setPagination(res.pagination);
       res.data.forEach((q) => allSeen.current.set(q.id, q));
     } catch (err) {
       toast(err instanceof Error ? err.message : t('bank.toast.loadFail'), 'error');
     } finally {
       setLoading(false);
     }
-  };
+  }, [debouncedSearch, debouncedTag, page, toast, t]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [debouncedSearch, debouncedTag]);
 
   useEffect(() => {
     void load();
-  }, [debouncedSearch, debouncedTag]);
+  }, [load]);
 
   const filteringBank = search.trim() !== '' || tag !== '';
 
@@ -127,12 +136,17 @@ export function QuestionBank({
         </button>
       </div>
 
-      {showForm && (
+      {(showForm || editing) && (
         <BankQuestionForm
           tags={tags}
-          onClose={() => setShowForm(false)}
+          initial={editing}
+          onClose={() => {
+            setShowForm(false);
+            setEditing(null);
+          }}
           onSaved={() => {
             setShowForm(false);
+            setEditing(null);
             void load();
           }}
         />
@@ -183,14 +197,31 @@ export function QuestionBank({
                   {q.tag && <span className="badge badge-general bank-tag-badge">{q.tag}</span>}
                   {t('bank.meta', { points: q.points, count: q.options.length })}
                 </div>
+                <BankCorrectAnswer q={q} />
               </div>
-              <button className="btn btn-sm btn-danger-ghost" onClick={() => void doDelete(q.id)}>
-                {t('actions.delete', { ns: 'common' })}
-              </button>
+              <span className="bank-item-actions">
+                <button
+                  type="button"
+                  className="btn btn-sm btn-ghost"
+                  onClick={() => {
+                    setEditing(q);
+                    setShowForm(false);
+                  }}
+                  title={t('bank.edit')}
+                >
+                  <Icon name="pencil" size={14} />
+                  {t('actions.edit', { ns: 'common' })}
+                </button>
+                <button className="btn btn-sm btn-danger-ghost" onClick={() => void doDelete(q.id)}>
+                  {t('actions.delete', { ns: 'common' })}
+                </button>
+              </span>
             </div>
           ))}
         </div>
       )}
+
+      {pagination && <Pagination pagination={pagination} onChange={(p) => setPage(p)} loading={loading} />}
 
       {selectMode && (
         <div className="modal-actions">
@@ -217,45 +248,71 @@ export function QuestionBank({
   );
 }
 
+/** Dòng đáp án đúng của câu hỏi (phía giáo viên, không lộ gì). */
+function BankCorrectAnswer({ q }: { q: BankQuestion }) {
+  const { t } = useTranslation('homework');
+  const idx = q.options.findIndex((o) => o.is_correct);
+  if (idx < 0) return null;
+  return (
+    <div className="muted bank-item-meta">
+      {t('bank.correctAnswer')}:{' '}
+      <strong className="bank-correct">
+        {String.fromCharCode(65 + idx)}. {q.options[idx].text}
+      </strong>
+    </div>
+  );
+}
+
 function BankQuestionForm({
   tags,
+  initial,
   onClose,
   onSaved,
 }: {
   tags: string[];
+  /** Sửa: prefill từ câu hỏi có sẵn; null/undefined = thêm mới. */
+  initial?: BankQuestion | null;
   onClose: () => void;
   onSaved: () => void;
 }) {
   const { t } = useTranslation(['homework', 'common']);
   const toast = useToast();
-  const [question, setQuestion] = useState('');
-  const [tag, setTag] = useState('');
+  const [question, setQuestion] = useState(initial?.question ?? '');
+  const [tag, setTag] = useState(initial?.tag ?? '');
   const [newTag, setNewTag] = useState('');
-  const [points, setPoints] = useState('1');
-  const [options, setOptions] = useState([
-    { text: '', is_correct: true },
-    { text: '', is_correct: false },
-  ]);
+  const [points, setPoints] = useState(String(initial?.points ?? 1));
+  const [options, setOptions] = useState(
+    initial?.options.map((o) => ({ text: o.text, is_correct: o.is_correct })) ?? [
+      { text: '', is_correct: true },
+      { text: '', is_correct: false },
+    ]
+  );
   const [busy, setBusy] = useState(false);
+  // Lỗi inline dưới field (skill 8.2), focus vào field lỗi đầu tiên
+  const { errors, refFor, show, clear } = useFieldErrors<'question' | 'answers'>();
 
   const save = async () => {
-    if (!question.trim()) {
-      toast(t('bank.form.questionRequired'), 'error');
-      return;
-    }
-    if (options.length < 2 || !options.some((o) => o.is_correct && o.text.trim())) {
-      toast(t('bank.form.answersRequired'), 'error');
-      return;
-    }
+    if (busy) return;
+    const errs: { question?: string; answers?: string } = {};
+    if (!question.trim()) errs.question = t('bank.form.questionRequired');
+    if (options.length < 2 || !options.some((o) => o.is_correct && o.text.trim()))
+      errs.answers = t('bank.form.answersRequired');
+    if (!show(errs)) return;
     setBusy(true);
     try {
-      await homeworkApi.bankCreate({
+      const payload = {
         tag: newTag.trim() || tag || null,
         question: question.trim(),
         points: Number(points) || 1,
         options: options.map((o) => ({ text: o.text.trim(), is_correct: o.is_correct })),
-      });
-      toast(t('bank.form.added'), 'success');
+      };
+      if (initial) {
+        await homeworkApi.bankUpdate(initial.id, payload);
+        toast(t('bank.form.updated'), 'success');
+      } else {
+        await homeworkApi.bankCreate(payload);
+        toast(t('bank.form.added'), 'success');
+      }
       onSaved();
     } catch (err) {
       toast(err instanceof Error ? err.message : t('form.toast.saveFail'), 'error');
@@ -266,11 +323,15 @@ function BankQuestionForm({
 
   return (
     <div className="bank-form">
-      <Field label={t('bank.form.question')}>
+      <Field label={t('bank.form.question')} error={errors.question}>
         <input
+          ref={refFor('question')}
           className="text-input"
           value={question}
-          onChange={(e) => setQuestion(e.target.value)}
+          onChange={(e) => {
+            setQuestion(e.target.value);
+            clear('question');
+          }}
           placeholder={t('bank.form.questionPh')}
         />
       </Field>
@@ -304,50 +365,53 @@ function BankQuestionForm({
           />
         </Field>
       </div>
-      <Field label={t('bank.form.answers')}>
-        {options.map((o, i) => (
-          <div key={i} className="quiz-opt bank-opt">
-            <button
-              type="button"
-              className={`quiz-correct ${o.is_correct ? 'active' : ''}`}
-              onClick={() => setOptions((x) => x.map((y, j) => ({ ...y, is_correct: j === i })))}
-            >
-              {o.is_correct ? '●' : '○'}
-            </button>
-            <input
-              className="text-input input-sm bank-opt-input"
-              value={o.text}
-              onChange={(e) =>
-                setOptions((x) => x.map((y, j) => (j === i ? { ...y, text: e.target.value } : y)))
-              }
-              placeholder={t('form.optionPh', { letter: String.fromCharCode(65 + i) })}
-            />
-            {options.length > 2 && (
+      <div ref={refFor('answers')} tabIndex={-1}>
+        <Field label={t('bank.form.answers')} error={errors.answers}>
+          {options.map((o, i) => (
+            <div key={i} className="quiz-opt bank-opt">
               <button
                 type="button"
-                className="btn btn-sm btn-danger-ghost"
-                onClick={() => setOptions((x) => x.filter((_, j) => j !== i))}
+                className={`quiz-correct ${o.is_correct ? 'active' : ''}`}
+                onClick={() => setOptions((x) => x.map((y, j) => ({ ...y, is_correct: j === i })))}
               >
-                ×
+                {o.is_correct ? '●' : '○'}
               </button>
-            )}
-          </div>
-        ))}
-        <button
-          type="button"
-          className="btn btn-sm"
-          onClick={() => setOptions((x) => [...x, { text: '', is_correct: false }])}
-        >
-          {t('form.addOption')}
-        </button>
-      </Field>
+              <input
+                className="text-input input-sm bank-opt-input"
+                value={o.text}
+                onChange={(e) => {
+                  setOptions((x) => x.map((y, j) => (j === i ? { ...y, text: e.target.value } : y)));
+                  clear('answers');
+                }}
+                placeholder={t('form.optionPh', { letter: String.fromCharCode(65 + i) })}
+              />
+              {options.length > 2 && (
+                <button
+                  type="button"
+                  className="btn btn-sm btn-danger-ghost"
+                  onClick={() => setOptions((x) => x.filter((_, j) => j !== i))}
+                >
+                  ×
+                </button>
+              )}
+            </div>
+          ))}
+          <button
+            type="button"
+            className="btn btn-sm"
+            onClick={() => setOptions((x) => [...x, { text: '', is_correct: false }])}
+          >
+            {t('form.addOption')}
+          </button>
+        </Field>
+      </div>
       <div className="bank-form-actions">
         <button type="button" className="btn" onClick={onClose}>
           {t('actions.cancel', { ns: 'common' })}
         </button>
         <button type="button" className="btn btn-primary" disabled={busy} onClick={save}>
           {busy && <span className="spinner" aria-hidden="true" />}
-          {busy ? t('actions.saving', { ns: 'common' }) : t('bank.form.save')}
+          {busy ? t('actions.saving', { ns: 'common' }) : initial ? t('bank.form.update') : t('bank.form.save')}
         </button>
       </div>
     </div>

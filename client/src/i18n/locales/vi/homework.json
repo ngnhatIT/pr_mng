@@ -60,7 +60,9 @@
       "questionPh": "VD: 'Apple' nghĩa là gì?",
       "questionRequired": "Nhập câu hỏi",
       "save": "Lưu vào ngân hàng",
-      "tag": "Chủ đề"
+      "tag": "Chủ đề",
+      "updated": "Đã cập nhật câu hỏi",
+      "update": "Cập nhật"
     },
     "import": "Thêm {{count}} câu vào đề",
     "meta": "{{points}}đ · {{count}} đáp án",
@@ -83,7 +85,9 @@
       "title": "Không tìm thấy câu hỏi",
       "desc": "Thử từ khóa khác hoặc xóa bộ lọc.",
       "clear": "Xóa bộ lọc"
-    }
+    },
+    "correctAnswer": "Đáp án đúng",
+    "edit": "Sửa câu hỏi"
   },
   "delete": {
     "message": "Xóa bài tập \"{{title}}\"?",

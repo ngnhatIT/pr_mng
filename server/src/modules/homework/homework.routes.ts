@@ -36,6 +36,7 @@ import {
   listBankQuestions,
   listBankTags,
   addBankQuestion,
+  updateBankQuestion,
   deleteBankQuestion,
   importFromBank,
 } from './questionBank.service';
@@ -390,6 +391,34 @@ router.post(
       meta: { question: q.question.slice(0, 100) },
     });
     res.status(201).json(q);
+  })
+);
+
+router.put(
+  '/bank/questions/:bid',
+  requirePermission('homework.create'),
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const bid = paramId(req.params, 'bid');
+    const { tag, question, points, options } = req.body as {
+      tag: string;
+      question: string;
+      points: number;
+      options: { text: string; is_correct: boolean }[];
+    };
+    if (!Array.isArray(options)) {
+      throw AppError.badRequest('Thiếu đáp án');
+    }
+    const q = await updateBankQuestion(bid, reqCenterId(req), { tag, question, points, options });
+    await audit({
+      centerId: reqCenterId(req),
+      actor: actorFromReq(req),
+      action: 'update',
+      entity: 'question_bank',
+      entityId: bid,
+      summary: `Sửa câu hỏi #${bid} trong ngân hàng`,
+      meta: { question: q.question.slice(0, 100) },
+    });
+    res.json(q);
   })
 );
 

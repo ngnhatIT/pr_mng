@@ -120,6 +120,43 @@ export async function addBankQuestion(
   return (await listBankQuestions(centerId)).data.find((q) => q.id === qid)!;
 }
 
+/** Sửa câu hỏi trong ngân hàng: validate trước, update + thay toàn bộ đáp án trong 1 transaction. */
+export async function updateBankQuestion(
+  id: number,
+  centerId: number | null,
+  input: BankQuestionInput
+): Promise<BankQuestion> {
+  const q = (await db.prepare('SELECT center_id FROM question_bank WHERE id = ?').get(id)) as
+    { center_id: number | null } | undefined;
+  if (!q || (centerId !== null && q.center_id !== null && q.center_id !== centerId)) {
+    throw AppError.notFound('Không tìm thấy câu hỏi');
+  }
+  if (!input.question.trim()) throw AppError.badRequest('Câu hỏi trống');
+  if (input.options.length < 2) throw AppError.badRequest('Cần ít nhất 2 đáp án');
+  if (!input.options.some((o) => o.is_correct)) throw AppError.badRequest('Chưa chọn đáp án đúng');
+  input.options.forEach((o, i) => {
+    if (!o.text.trim()) throw AppError.badRequest(`Đáp án ${i + 1} trống`);
+  });
+  await db.transaction(async (tx) => {
+    await tx
+      .prepare('UPDATE question_bank SET tag = ?, question = ?, points = ? WHERE id = ?')
+      .run(
+        input.tag?.trim() || null,
+        input.question.trim(),
+        Math.max(0.5, Number(input.points) || 1),
+        id
+      );
+    await tx.prepare('DELETE FROM question_bank_options WHERE question_id = ?').run(id);
+    const stmt = await tx.prepare(
+      'INSERT INTO question_bank_options (question_id, position, text, is_correct) VALUES (?, ?, ?, ?)'
+    );
+    for (const [i, o] of input.options.entries()) {
+      await stmt.run(id, i, o.text.trim(), o.is_correct ? 1 : 0);
+    }
+  });
+  return (await listBankQuestions(centerId)).data.find((r) => r.id === id)!;
+}
+
 /** Xóa câu hỏi khỏi ngân hàng (kiểm tra center để chống cross-tenant). */
 export async function deleteBankQuestion(id: number, centerId: number | null): Promise<void> {
   const q = (await db.prepare('SELECT center_id FROM question_bank WHERE id = ?').get(id)) as

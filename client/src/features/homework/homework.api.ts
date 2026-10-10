@@ -128,6 +128,8 @@ export const homeworkApi = {
       `/homework/bank/questions?search=${encodeURIComponent(search)}&tag=${encodeURIComponent(tag)}&page=${page}&limit=${limit}`
     ),
   bankCreate: (q: BankQuestionForm) => http.post<BankQuestion>('/homework/bank/questions', q),
+  bankUpdate: (id: number, q: BankQuestionForm) =>
+    http.put<BankQuestion>(`/homework/bank/questions/${id}`, q),
   bankDelete: (id: number) => http.del<{ ok: boolean }>(`/homework/bank/questions/${id}`),
   bankImport: (homeworkId: number, bankIds: number[]) =>
     http.post<{ ok: boolean; count: number }>(`/homework/${homeworkId}/quiz/import`, { bank_ids: bankIds }),

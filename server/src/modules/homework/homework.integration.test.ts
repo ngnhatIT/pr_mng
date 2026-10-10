@@ -1006,3 +1006,61 @@ describe('homework.service - listHomework JOIN/GROUP BY (P1-4)', () => {
     assert.equal(review[0].options.filter((o) => o.chosen).length, 1);
   });
 });
+
+describe('questionBank.service - sửa câu hỏi', () => {
+  beforeEach(async () => {
+    await resetDb();
+  });
+
+  it('updateBankQuestion thay câu hỏi + toàn bộ đáp án trong 1 lần', async () => {
+    const { addBankQuestion, updateBankQuestion, listBankQuestions } = await import(
+      './questionBank.service'
+    );
+    const bq = await addBankQuestion(null, 1, {
+      question: 'Câu cũ',
+      points: 1,
+      options: [
+        { text: 'A', is_correct: true },
+        { text: 'B', is_correct: false },
+      ],
+    });
+    const updated = await updateBankQuestion(bq.id, null, {
+      question: 'Câu mới',
+      points: 2,
+      options: [
+        { text: 'X', is_correct: false },
+        { text: 'Y', is_correct: true },
+        { text: 'Z', is_correct: false },
+      ],
+    });
+    assert.equal(updated.question, 'Câu mới');
+    assert.equal(updated.points, 2);
+    assert.deepEqual(
+      updated.options.map((o) => [o.text, o.is_correct]),
+      [
+        ['X', false],
+        ['Y', true],
+        ['Z', false],
+      ]
+    );
+    // Không để lại đáp án cũ: tổng số đáp án đúng bằng số mới
+    const all = await listBankQuestions(null);
+    assert.equal(all.data.find((q) => q.id === bq.id)!.options.length, 3);
+  });
+
+  it('updateBankQuestion validate trước khi ghi, id lạ → 404', async () => {
+    const { updateBankQuestion } = await import('./questionBank.service');
+    await assert.rejects(
+      () =>
+        updateBankQuestion(999999, null, {
+          question: 'x',
+          points: 1,
+          options: [
+            { text: 'A', is_correct: true },
+            { text: 'B', is_correct: false },
+          ],
+        }),
+      /Không tìm thấy câu hỏi/
+    );
+  });
+});
