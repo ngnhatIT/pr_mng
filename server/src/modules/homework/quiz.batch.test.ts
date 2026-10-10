@@ -44,6 +44,7 @@ function stmtFor(sql: string) {
     get: async (..._args: unknown[]) => {
       if (sql.startsWith('SELECT close_date')) return { close_date: null }; // chưa quá hạn
       if (sql.includes('COUNT(*)')) return { c: 0 }; // lượt làm đầu tiên
+      if (sql.includes('FOR UPDATE')) return { id: 1 }; // P1-13: lock row homework
       throw new Error('unexpected get: ' + sql);
     },
     all: async (...args: unknown[]) => {
