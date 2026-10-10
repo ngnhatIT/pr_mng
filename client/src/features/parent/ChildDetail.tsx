@@ -281,46 +281,51 @@ function PayModal({
   const { t } = useTranslation(['parent', 'common']);
   const [mode, setMode] = useState<'menu' | 'qr'>('menu');
   const [qr, setQr] = useState<VietQRInfo | null>(null);
-  const [busy, setBusy] = useState(false);
+  const [busyAction, setBusyAction] = useState<'qr' | 'vnpay' | 'claim' | null>(null);
+  const [payError, setPayError] = useState('');
+  const busy = busyAction !== null;
   const toast = useToast();
   const remain = invoice.amount - (invoice.paid || 0);
 
   const loadQR = async () => {
-    setBusy(true);
+    setBusyAction('qr');
+    setPayError('');
     try {
       const data = await parentApi.vietqr(invoice.id);
       setQr(data);
       setMode('qr');
     } catch (err) {
-      toast(err instanceof Error ? err.message : t('child.pay.qrError'), 'error');
+      setPayError(err instanceof Error ? err.message : t('child.pay.qrError'));
     } finally {
-      setBusy(false);
+      setBusyAction(null);
     }
   };
 
   const payVNPay = async () => {
-    setBusy(true);
+    setBusyAction('vnpay');
+    setPayError('');
     try {
       const data = await parentApi.vnpay(invoice.id);
       window.open(data.pay_url, '_blank', 'noopener');
       toast(t('child.pay.vnpayOpened'), 'info');
     } catch (err) {
-      toast(err instanceof Error ? err.message : t('child.pay.vnpayError'), 'error');
+      setPayError(err instanceof Error ? err.message : t('child.pay.vnpayError'));
     } finally {
-      setBusy(false);
+      setBusyAction(null);
     }
   };
 
   const claimPaid = async () => {
-    setBusy(true);
+    setBusyAction('claim');
+    setPayError('');
     try {
       await parentApi.claimPaid(invoice.id);
       toast(t('child.pay.claimed'), 'success');
       onDone();
     } catch (err) {
-      toast(err instanceof Error ? err.message : t('child.pay.claimError'), 'error');
+      setPayError(err instanceof Error ? err.message : t('child.pay.claimError'));
     } finally {
-      setBusy(false);
+      setBusyAction(null);
     }
   };
 
@@ -336,17 +341,34 @@ function PayModal({
             onClick={() => void loadQR()}
             disabled={busy}
           >
-            <Icon name="qr" size={20} />
-            {busy ? t('child.pay.creatingQr') : t('child.pay.vietqr')}
+            {busyAction === 'qr' ? (
+              <span className="spinner" aria-hidden="true" />
+            ) : (
+              <Icon name="qr" size={20} />
+            )}
+            {busyAction === 'qr' ? t('child.pay.creatingQr') : t('child.pay.vietqr')}
           </button>
           <button className="btn btn-block pay-option" onClick={() => void payVNPay()} disabled={busy}>
-            <Icon name="card" size={20} />
-            {busy ? t('child.pay.creatingLink') : t('child.pay.vnpay')}
+            {busyAction === 'vnpay' ? (
+              <span className="spinner" aria-hidden="true" />
+            ) : (
+              <Icon name="card" size={20} />
+            )}
+            {busyAction === 'vnpay' ? t('child.pay.creatingLink') : t('child.pay.vnpay')}
           </button>
           <button className="btn btn-block pay-option" onClick={() => void claimPaid()} disabled={busy}>
-            <Icon name="check-circle" size={20} />
-            {busy ? t('actions.sending', { ns: 'common' }) : t('child.pay.claimPaid')}
+            {busyAction === 'claim' ? (
+              <span className="spinner" aria-hidden="true" />
+            ) : (
+              <Icon name="check-circle" size={20} />
+            )}
+            {busyAction === 'claim' ? t('actions.sending', { ns: 'common' }) : t('child.pay.claimPaid')}
           </button>
+          {payError && (
+            <p className="field-error" role="alert">
+              {payError}
+            </p>
+          )}
         </div>
       )}
       {mode === 'qr' && qr && (
