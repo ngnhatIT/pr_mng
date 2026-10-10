@@ -55,7 +55,12 @@ export function ReviewsAdmin() {
     void load();
   }, [load]);
 
+  // Id review đang duyệt/từ chối: chống bấm 2 lần (pattern như Tuition moderate)
+  const [busyId, setBusyId] = useState<number | null>(null);
+
   const moderate = async (r: ReviewItem, action: 'approve' | 'reject') => {
+    if (busyId !== null) return;
+    setBusyId(r.id);
     try {
       if (action === 'approve') await reviewsApi.approve(r.id);
       else await reviewsApi.reject(r.id);
@@ -63,6 +68,8 @@ export function ReviewsAdmin() {
       void load();
     } catch (err) {
       toast(err instanceof Error ? err.message : t('reviews.toast.moderateFail'), 'error');
+    } finally {
+      setBusyId(null);
     }
   };
 
@@ -123,15 +130,28 @@ export function ReviewsAdmin() {
               <div className="review-foot">
                 {tab === 'pending' ? (
                   <>
-                    <button className="btn btn-sm btn-primary" onClick={() => void moderate(r, 'approve')}>
-                      <Icon name="check" size={14} />
+                    <button
+                      className="btn btn-sm btn-primary"
+                      onClick={() => void moderate(r, 'approve')}
+                      disabled={busyId === r.id}
+                    >
+                      {busyId === r.id ? (
+                        <span className="spinner" aria-hidden="true" />
+                      ) : (
+                        <Icon name="check" size={14} />
+                      )}
                       {t('reviews.approve')}
                     </button>
                     <button
                       className="btn btn-sm btn-danger-ghost"
                       onClick={() => void moderate(r, 'reject')}
+                      disabled={busyId === r.id}
                     >
-                      <Icon name="x" size={14} />
+                      {busyId === r.id ? (
+                        <span className="spinner spinner-dark" aria-hidden="true" />
+                      ) : (
+                        <Icon name="x" size={14} />
+                      )}
                       {t('reviews.reject')}
                     </button>
                   </>
