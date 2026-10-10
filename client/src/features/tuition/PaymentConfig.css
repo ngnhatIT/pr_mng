@@ -5,7 +5,7 @@
 .payment-savebar {
   position: sticky;
   bottom: 0;
-  z-index: 10;
+  z-index: var(--z-sticky);
   background: var(--surface);
   border-top: 1px solid var(--border);
   padding: 12px 4px;

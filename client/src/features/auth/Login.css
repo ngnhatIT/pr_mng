@@ -9,7 +9,7 @@
   position: absolute;
   top: 16px;
   right: 16px;
-  z-index: 5;
+  z-index: var(--z-float);
 }
 
 /* Switch ngôn ngữ/theme trên nền navy: dùng tông sáng mờ để nhìn rõ ở cả 2 mode */

@@ -68,6 +68,20 @@
   --font-size-xl: 20px;
   --font-size-2xl: 24px;
 
+  /* ---------- Z-index: thang stacking duy nhất, tăng dần theo tầng ---------- */
+  --z-raised: 1; /* nổi nhẹ trong cùng khối (timeline-dot) */
+  --z-cell: 2; /* header bảng sticky */
+  --z-float: 5; /* phần tử nổi trong trang (login topbar) */
+  --z-sticky: 10; /* thanh dính, nav */
+  --z-header: 20; /* header cố định */
+  --z-topbar: 40; /* topbar admin */
+  --z-scrim: 55; /* lớp phủ mờ */
+  --z-avatar: 60; /* avatar nổi trên card (profile) */
+  --z-modal: 100; /* modal */
+  --z-toast: 200; /* toast */
+  --z-skip: 1000; /* skip link */
+  --z-banner: 9999; /* banner mạng toàn cục */
+
   --sidebar-w: 248px;
 }
 
@@ -1070,7 +1084,7 @@ button.search-clear:active {
   align-items: flex-start;
   justify-content: center;
   padding: var(--sp-8) var(--sp-4);
-  z-index: 100;
+  z-index: var(--z-modal);
   overflow-y: auto;
 }
 .modal {
@@ -1221,7 +1235,7 @@ button.search-clear:active {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  z-index: 200;
+  z-index: var(--z-toast);
 }
 /* Mobile: toast hiện trên bottom nav (cao ~60px) để không che tab */
 @media (max-width: 768px) {
@@ -1284,7 +1298,7 @@ button.search-clear:active {
   position: sticky;
   top: 0;
   background: rgba(255, 255, 255, 0.95);
-  z-index: 10;
+  z-index: var(--z-sticky);
 }
 .landing-brand {
   display: flex;
@@ -1450,7 +1464,7 @@ button.search-clear:active {
 .parent-topbar {
   position: sticky;
   top: 0;
-  z-index: 20;
+  z-index: var(--z-header);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -1521,7 +1535,7 @@ button.search-clear:active {
   bottom: 0;
   left: 0;
   right: 0;
-  z-index: 20;
+  z-index: var(--z-header);
   display: flex;
   background: var(--bg-soft);
   border-top: 1px solid var(--border);
@@ -1891,6 +1905,19 @@ button.search-clear:active {
   --shadow-sm: 0 1px 2px rgba(16, 24, 40, 0.05);
   --shadow-md: 0 4px 12px rgba(16, 24, 40, 0.09), 0 2px 4px rgba(16, 24, 40, 0.06);
   --shadow-lg: 0 12px 32px rgba(16, 24, 40, 0.14), 0 4px 8px rgba(16, 24, 40, 0.08);
+  /* Z-index: giữ đồng bộ với :root gốc (DESIGN SYSTEM 2.0 ghi đè) */
+  --z-raised: 1;
+  --z-cell: 2;
+  --z-float: 5;
+  --z-sticky: 10;
+  --z-header: 20;
+  --z-topbar: 40;
+  --z-scrim: 55;
+  --z-avatar: 60;
+  --z-modal: 100;
+  --z-toast: 200;
+  --z-skip: 1000;
+  --z-banner: 9999;
   --radius-sm: 6px;
   --radius-md: 10px;
   --radius-lg: 14px;
@@ -1965,7 +1992,7 @@ button.search-clear:active {
 .table-wrap.sticky thead th {
   position: sticky;
   top: 0;
-  z-index: 2;
+  z-index: var(--z-cell);
   box-shadow: 0 1px 0 var(--border);
 }
 .table tbody tr {
@@ -2230,7 +2257,7 @@ button.search-clear:active {
 .att-savebar {
   position: sticky;
   bottom: 12px;
-  z-index: 10;
+  z-index: var(--z-sticky);
   display: flex;
   align-items: center;
   gap: 10px;
@@ -2286,7 +2313,7 @@ button.search-clear:active {
   align-items: center;
   justify-content: center;
   color: #fff;
-  z-index: 1;
+  z-index: var(--z-raised);
 }
 .timeline-dot.done {
   background: var(--success);
@@ -2408,7 +2435,7 @@ button.search-clear:active {
 .topbar {
   position: sticky;
   top: 0;
-  z-index: 40;
+  z-index: var(--z-topbar);
   display: flex;
   align-items: center;
   gap: 12px;
@@ -2486,7 +2513,7 @@ button.search-clear:active {
   position: fixed;
   inset: 0;
   background: rgba(15, 23, 42, 0.5);
-  z-index: 55;
+  z-index: var(--z-scrim);
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.2s ease;
@@ -2802,7 +2829,7 @@ button.search-clear:active {
     top: 0;
     bottom: 0;
     height: 100dvh;
-    z-index: 60;
+    z-index: var(--z-avatar);
     transform: translateX(-105%);
     transition: transform 0.25s ease;
     box-shadow: none;
@@ -3538,7 +3565,7 @@ a:focus-visible,
   top: 0;
   left: 0;
   right: 0;
-  z-index: 9999;
+  z-index: var(--z-banner);
   padding: 10px 16px;
   text-align: center;
   font-size: 14px;
@@ -3680,7 +3707,7 @@ a:focus-visible,
   position: absolute;
   top: -48px;
   left: 12px;
-  z-index: 1000;
+  z-index: var(--z-skip);
   padding: 8px 16px;
   background: var(--primary);
   color: #fff;
