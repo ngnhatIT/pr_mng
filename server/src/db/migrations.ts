@@ -28,7 +28,7 @@ interface Migration {
 
 // shortcut: các migration cũ (v2-v13) chưa triển khai down (rollback cần can
 // thiệp thủ công) — chỉ migration mới nhất bắt buộc có down, xem v14.
-const MIGRATIONS: Migration[] = [
+export const MIGRATIONS: Migration[] = [
   {
     version: 2,
     name: 'reminder_kinds',
@@ -367,6 +367,37 @@ const MIGRATIONS: Migration[] = [
     down: async (tx) => {
       // Đảo ngược v18: gỡ bảng yêu cầu đặt lại mật khẩu (mất các yêu cầu đang chờ).
       await tx.exec('DROP TABLE IF EXISTS reset_requests');
+    },
+  },
+  {
+    version: 19,
+    name: 'submissions_unique_hw_student',
+    up: async (tx) => {
+      // P1-6: nộp bài idempotent — 1 học viên chỉ có 1 bản nộp / bài tập.
+      // Dữ liệu trùng cũ (double-click/mạng rớt): GIỮ BẢN MỚI NHẤT (id lớn nhất)
+      // vì lần nộp sau cùng phản ánh ý định mới nhất của phụ huynh (file/ghi chú
+      // đã sửa), xóa các bản cũ hơn. Idempotent: DB mới tạo từ schema.ts đã có
+      // sẵn constraint cùng tên nên bỏ qua bước tạo index.
+      await tx.exec(
+        `DELETE FROM homework_submissions a
+         USING homework_submissions b
+         WHERE a.homework_id = b.homework_id
+           AND a.student_id = b.student_id
+           AND a.id < b.id`
+      );
+      await tx.exec(`DO $$
+        BEGIN
+          IF NOT EXISTS (SELECT 1 FROM pg_indexes WHERE indexname = 'uq_submissions_hw_student')
+             AND NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'uq_submissions_hw_student') THEN
+            CREATE UNIQUE INDEX uq_submissions_hw_student
+              ON homework_submissions(homework_id, student_id);
+          END IF;
+        END $$;`);
+    },
+    down: async (tx) => {
+      // Đảo ngược v19: gỡ unique (các bản nộp trùng đã gộp ở up không khôi phục được).
+      await tx.exec('DROP INDEX IF EXISTS uq_submissions_hw_student');
+      await tx.exec('ALTER TABLE homework_submissions DROP CONSTRAINT IF EXISTS uq_submissions_hw_student');
     },
   },
 ];

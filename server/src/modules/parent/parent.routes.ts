@@ -393,11 +393,13 @@ router.post(
     }
     const note = String(req.body.note || '').slice(0, 1000);
     try {
-      await parentService.submitHomework(parentId, studentId, homeworkId, {
+      const result = await parentService.submitHomework(parentId, studentId, homeworkId, {
         file_url: req.file ? `/uploads/${req.file.filename}` : null,
         file_name: req.file ? req.file.originalname : null,
         note: note || null,
       });
+      // Nộp trùng (idempotent): file vừa upload không dùng tới → xóa để khỏi mồ côi
+      if (!result.inserted) cleanupUploadedFile(req.file);
     } catch (err) {
       cleanupUploadedFile(req.file);
       throw err;

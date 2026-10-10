@@ -717,13 +717,15 @@ export async function getChildAttemptReview(parentId: number, studentId: number,
 
 /* ------------------------------- Nộp bài ------------------------------- */
 
-/** Phụ huynh nộp bài cho con (file + ghi chú). */
+/** Phụ huynh nộp bài cho con (file + ghi chú).
+ * Idempotent: double-click/mạng rớt gửi trùng POST không tạo bản ghi thứ 2 —
+ * lần nộp trùng trả về bản nộp đã có. */
 export async function submitHomework(
   parentId: number,
   studentId: number,
   homeworkId: number,
   data: { file_url: string | null; file_name: string | null; note: string | null }
-): Promise<void> {
+): Promise<{ id: number; inserted: boolean }> {
   await getLinkedStudent(parentId, studentId);
   const hw = (await db
     .prepare(
@@ -738,18 +740,23 @@ export async function submitHomework(
   const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Ho_Chi_Minh' });
   if (hw.close_date && hw.close_date < today) throw AppError.badRequest('Đã quá hạn chót');
   if (!data.file_url && !data.note) throw AppError.badRequest('Vui lòng đính kèm file hoặc ghi chú');
-  await db
+  const r = await db
     .prepare(
       `INSERT INTO homework_submissions (homework_id, student_id, file_url, file_name, note)
-     VALUES (?, ?, ?, ?, ?)`
+     VALUES (?, ?, ?, ?, ?)
+     ON CONFLICT (homework_id, student_id) DO NOTHING`
     )
     .run(homeworkId, studentId, data.file_url, data.file_name, data.note);
+  const sub = (await db
+    .prepare('SELECT id FROM homework_submissions WHERE homework_id = ? AND student_id = ?')
+    .get(homeworkId, studentId)) as { id: number };
   await db
     .prepare(
       `INSERT INTO homework_completions (homework_id, student_id, completed_by)
      VALUES (?, ?, 'parent') ON CONFLICT(homework_id, student_id) DO NOTHING`
     )
     .run(homeworkId, studentId);
+  return { id: Number(sub.id), inserted: r.changes > 0 };
 }
 
 /** Bài đã nộp của con. */

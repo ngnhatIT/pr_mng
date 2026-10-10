@@ -867,3 +867,30 @@ describe('questionBank.service - chặn import sai loại bài (P1-7)', () => {
     assert.equal(Number(row.max_score), 10); // max_score giữ nguyên
   });
 });
+
+describe('parent.service - nộp bài idempotent (P1-6)', () => {
+  beforeEach(async () => {
+    await resetDb();
+  });
+
+  it('2 POST liên tiếp chỉ tạo 1 bản nộp, trả về cùng id', async () => {
+    const [hw] = await homeworkService.createHomeworkBatch({
+      class_ids: [classId],
+      title: 'Bài nộp',
+      created_by: 1,
+      centerId: null,
+      kind: 'homework',
+      status: 'published',
+    });
+    const data = { file_url: null, file_name: null, note: 'làm xong' };
+    const first = await parentService.submitHomework(parent1Id, student1Id, hw.id, data);
+    const second = await parentService.submitHomework(parent1Id, student1Id, hw.id, data);
+    assert.equal(first.inserted, true);
+    assert.equal(second.inserted, false);
+    assert.equal(second.id, first.id);
+    const rows = (await db
+      .prepare('SELECT id FROM homework_submissions WHERE homework_id = ? AND student_id = ?')
+      .all(hw.id, student1Id)) as { id: number }[];
+    assert.equal(rows.length, 1); // không tạo bản ghi thứ 2
+  });
+});

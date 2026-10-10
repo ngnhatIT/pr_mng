@@ -1196,7 +1196,9 @@ CREATE TABLE IF NOT EXISTS homework_submissions (
   file_name TEXT,
   note TEXT,
   submitted_at TEXT NOT NULL DEFAULT (to_char(NOW(), 'YYYY-MM-DD HH24:MI:SS')),
-  updated_at TEXT NOT NULL DEFAULT (to_char(NOW(), 'YYYY-MM-DD HH24:MI:SS'))
+  updated_at TEXT NOT NULL DEFAULT (to_char(NOW(), 'YYYY-MM-DD HH24:MI:SS')),
+  -- P1-6: nộp bài idempotent — 1 học viên chỉ có 1 bản nộp / bài tập
+  CONSTRAINT uq_submissions_hw_student UNIQUE (homework_id, student_id)
 );
 
 CREATE TABLE IF NOT EXISTS quiz_questions (

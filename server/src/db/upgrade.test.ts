@@ -50,7 +50,8 @@ describe('migrations PostgreSQL', () => {
   });
 
   it('migration v3: tồn tại unique index parent_reviews_unique', async () => {
-    const r = await db.query(`SELECT indexname FROM pg_indexes WHERE indexname = 'parent_reviews_unique'`);
+    // v14 đổi tên thành parent_reviews_unique_full (drop partial cũ) — test bám theo tên mới
+    const r = await db.query(`SELECT indexname FROM pg_indexes WHERE indexname = 'parent_reviews_unique_full'`);
     assert.equal(r.rows.length, 1);
   });
 
@@ -77,5 +78,62 @@ describe('migrations PostgreSQL', () => {
     );
     await assert.rejects(() => runMigrations(db as never), /mới hơn code/);
     await db.query('DELETE FROM schema_migrations WHERE version = 999');
+  });
+
+  describe('migration v19 - submissions unique (P1-6)', () => {
+    it('up: gộp bản nộp trùng, giữ bản mới nhất + tạo unique', async () => {
+      // Giả lập DB cũ: gỡ constraint rồi chèn dữ liệu trùng
+      await db.exec('ALTER TABLE homework_submissions DROP CONSTRAINT IF EXISTS uq_submissions_hw_student');
+      await db.exec('DROP INDEX IF EXISTS uq_submissions_hw_student');
+      const u = await db.prepare("INSERT INTO users (username, password_hash, role, name) VALUES ('u19', 'x', 'staff', 'U19')").run();
+      const c = await db.prepare("INSERT INTO classes (name) VALUES ('Lớp v19')").run();
+      const hw = await db
+        .prepare('INSERT INTO homework (class_id, title, created_by) VALUES (?, ?, ?)')
+        .run(Number(c.lastInsertRowid), 'T', Number(u.lastInsertRowid));
+      const hwid = Number(hw.lastInsertRowid);
+      const st = await db.prepare("INSERT INTO students (code, name) VALUES ('DUP1', 'Trùng')").run();
+      const sid = Number(st.lastInsertRowid);
+      await db
+        .prepare('INSERT INTO homework_submissions (homework_id, student_id, note) VALUES (?, ?, ?)')
+        .run(hwid, sid, 'bản cũ');
+      await db
+        .prepare('INSERT INTO homework_submissions (homework_id, student_id, note) VALUES (?, ?, ?)')
+        .run(hwid, sid, 'bản mới nhất');
+      // Chạy lại up của v19
+      await db.query('DELETE FROM schema_migrations WHERE version = 19');
+      await runMigrations(db as never);
+      const rows = (await db
+        .prepare('SELECT note FROM homework_submissions WHERE homework_id = ? AND student_id = ?')
+        .all(hwid, sid)) as { note: string }[];
+      assert.equal(rows.length, 1);
+      assert.equal(rows[0].note, 'bản mới nhất'); // giữ bản mới nhất
+      const idx = await db.query(
+        `SELECT 1 FROM pg_indexes WHERE indexname = 'uq_submissions_hw_student'`
+      );
+      assert.equal(idx.rows.length, 1);
+      // Insert trùng mới bị chặn ở tầng DB
+      await assert.rejects(
+        db
+          .prepare('INSERT INTO homework_submissions (homework_id, student_id) VALUES (?, ?)')
+          .run(hwid, sid),
+        /uq_submissions_hw_student|duplicate/
+      );
+    });
+
+    it('down: gỡ unique, insert trùng lại được', async () => {
+      const { MIGRATIONS } = await import('./migrations');
+      const v19 = MIGRATIONS.find((m) => m.version === 19)!;
+      assert.ok(v19.down, 'v19 phải có down');
+      await db.transaction(async (tx) => {
+        await v19.down!(tx as never);
+      });
+      const idx = await db.query(
+        `SELECT 1 FROM pg_indexes WHERE indexname = 'uq_submissions_hw_student'`
+      );
+      assert.equal(idx.rows.length, 0);
+      // Khôi phục lại up để các test khác không ảnh hưởng
+      await db.query('DELETE FROM schema_migrations WHERE version = 19');
+      await runMigrations(db as never);
+    });
   });
 });
