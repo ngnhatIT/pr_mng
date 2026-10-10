@@ -196,7 +196,7 @@ export function GradeModal({ homework, onClose }: { homework: HomeworkItem; onCl
                 </div>
               </>
             ) : (
-              <EmptyState icon="pencil" title={t('grade.pickStudent')} desc={t('grade.pickStudentDesc')} />
+              <EmptyState icon="users" title={t('grade.pickStudent')} desc={t('grade.pickStudentDesc')} />
             )}
           </div>
         </div>
