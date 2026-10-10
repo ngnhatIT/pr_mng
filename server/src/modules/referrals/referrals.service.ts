@@ -1,4 +1,5 @@
 import { db } from '../../db';
+import { AppError } from '../../shared/errors';
 import { parsePagination, paginate, type PageOptions, type Paginated } from '../../shared/pagination';
 
 /* ---------------------------------- Types ---------------------------------- */
@@ -27,6 +28,11 @@ export async function listReferrals(
   pageOpts: PageOptions = {}
 ): Promise<Paginated<ReferralRow>> {
   const { status = '' } = query;
+  // Validate status (tránh typo trả toàn bộ lặng lẽ)
+  const VALID_STATUS = ['pending', 'rewarded'];
+  if (status && !VALID_STATUS.includes(status)) {
+    throw AppError.badRequest('Trạng thái không hợp lệ');
+  }
   const conds: string[] = [];
   const params: unknown[] = [];
   if (centerId !== null) {
