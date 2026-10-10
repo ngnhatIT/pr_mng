@@ -25,7 +25,9 @@ export function ParentProfile() {
     parentApi
       .consent()
       .then((r) => {
-        setConsentState(r.zalo_consent === 'granted' || r.zalo_consent === 'denied' ? r.zalo_consent : 'unknown');
+        setConsentState(
+          r.zalo_consent === 'granted' || r.zalo_consent === 'denied' ? r.zalo_consent : 'unknown'
+        );
       })
       .catch(() => {
         /* giữ unknown */
