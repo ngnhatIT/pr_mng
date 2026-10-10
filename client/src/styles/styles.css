@@ -1988,7 +1988,7 @@ textarea.text-input {
 }
 /* Dark mode: skeleton dùng tông tối, không nháy sáng */
 [data-theme='dark'] .skeleton {
-  background: linear-gradient(90deg, #1a2338 25%, #232d49 50%, #1a2338 75%);
+  background: linear-gradient(90deg, var(--bg-muted) 25%, var(--border) 50%, var(--bg-muted) 75%);
   background-size: 200% 100%;
 }
 @keyframes shimmer {
