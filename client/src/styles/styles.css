@@ -3647,6 +3647,11 @@ a:focus-visible,
   color: var(--text-strong);
 }
 
+/* Dark mode: modal thêm viền để tách khỏi backdrop tối */
+[data-theme='dark'] .modal {
+  border: 1px solid var(--border);
+}
+
 /* ---------- Dark mode: button contrast (WCAG AA) ---------- */
 [data-theme='dark'] .btn-primary {
   background: #3b5fd9;
