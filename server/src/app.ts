@@ -31,6 +31,7 @@ import paymentRoutes from './modules/payments/payments.routes';
 import leaveRoutes from './modules/leaves/leaves.routes';
 import gradeRoutes from './modules/grades/grades.routes';
 import homeworkRoutes from './modules/homework/homework.routes';
+import uploadRoutes from './modules/uploads/uploads.routes';
 import roomRoutes from './modules/rooms/rooms.routes';
 import payrollRoutes from './modules/payroll/payroll.routes';
 import trialRoutes from './modules/trials/trials.routes';
@@ -237,6 +238,7 @@ export function createApp(): Express {
   v1.use('/leaves', ...staff, leaveRoutes);
   v1.use('/grades', ...staff, gradeRoutes);
   v1.use('/homework', ...staff, homeworkRoutes);
+  v1.use('/uploads', ...staff, uploadRoutes); // staff: giáo viên/admin tải file đính kèm bài tập
   v1.use('/rooms', ...staff, roomRoutes);
   v1.use('/payroll', ...staff, payrollRoutes); // C1: denyParents — parent không chạm API lương
   v1.use('/trials', ...staff, trialRoutes);

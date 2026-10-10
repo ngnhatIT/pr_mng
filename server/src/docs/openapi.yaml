@@ -3578,3 +3578,68 @@ paths:
       responses:
         '200':
           description: text/plain; version=0.0.4
+  /api/v1/uploads:
+    post:
+      tags:
+        - Homework
+      summary: Giáo viên tải file đính kèm lên (chưa gắn vào bài nào)
+      description: |
+        Nhận multipart/form-data (field "file"): ảnh, PDF, Word, MP3, MP4, tối đa 10MB.
+        Kiểm tra magic bytes sau khi ghi đĩa. Trả về URL /uploads/... để client gắn
+        vào attachments khi tạo/sửa bài tập. Rate limit: 30 lượt / 15 phút / tài khoản.
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        '201':
+          description: Tải lên thành công
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  url:
+                    type: string
+                    example: /uploads/hw_1728_ab12cd.jpg
+                  name:
+                    type: string
+                    example: bai-nghe.mp3
+                  size:
+                    type: integer
+                    example: 524288
+        '400':
+          description: Sai định dạng / magic bytes không khớp
+        '401':
+          description: Chưa đăng nhập
+        '403':
+          description: Không có quyền homework.create
+        '413':
+          description: File vượt quá 10MB
+  /api/v1/uploads/{filename}:
+    delete:
+      tags:
+        - Homework
+      summary: Xóa file đã upload nhưng chưa dùng (dọn file mồ côi)
+      parameters:
+        - in: path
+          name: filename
+          required: true
+          schema:
+            type: string
+          description: "Tên file do server sinh (vd: hw_<uuid>.png)"
+      responses:
+        '200':
+          description: Đã xóa
+        '400':
+          description: Tên file không hợp lệ
+        '401':
+          description: Chưa đăng nhập
+        '403':
+          description: Không có quyền homework.create

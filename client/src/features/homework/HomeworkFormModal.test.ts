@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { isValidHttpUrl, isQuizQuestionInvalid, quickDate } from './HomeworkFormModal';
+import { isValidHttpUrl, isQuizQuestionInvalid, quickDate, validateLocalUpload } from './HomeworkFormModal';
 import type { QuizQuestionForm } from './homework.api';
 import { todayVN } from '../../shared/types';
 
@@ -113,5 +113,21 @@ describe('quickDate', () => {
     const [y, m, d] = w.split('-').map(Number);
     expect(new Date(y, m - 1, d).getDay()).toBe(0);
     expect(w > todayVN()).toBe(true);
+  });
+});
+
+describe('validateLocalUpload', () => {
+  it('chấp nhận file đúng định dạng trong giới hạn 10MB', () => {
+    expect(validateLocalUpload('bai-nghe.mp3', 5 * 1024 * 1024)).toBe(null);
+    expect(validateLocalUpload('Anh Dai Dien.PNG', 1024)).toBe(null);
+    expect(validateLocalUpload('tai-lieu.docx', 1024)).toBe(null);
+  });
+  it('từ chối đuôi lạ', () => {
+    expect(validateLocalUpload('virus.exe', 1024)).toBe('type');
+    expect(validateLocalUpload('khong-duoi', 1024)).toBe('type');
+  });
+  it('từ chối file quá 10MB', () => {
+    expect(validateLocalUpload('lon.mp4', 10 * 1024 * 1024 + 1)).toBe('size');
+    expect(validateLocalUpload('lon.mp4', 10 * 1024 * 1024)).toBe(null);
   });
 });

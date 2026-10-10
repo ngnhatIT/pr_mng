@@ -628,6 +628,10 @@ router.put(
         status: body.status as 'draft' | 'scheduled' | 'published' | undefined,
         publish_at: body.publish_at || null,
         rubric_id: body.rubric_id != null ? Number(body.rubric_id) : null,
+        // YC1: attachments gửi kèm → đồng bộ (thêm/xóa); không gửi → giữ nguyên (không breaking)
+        attachments: (req.body as { attachments?: unknown }).attachments as
+          | { name: string; url: string; kind: string }[]
+          | undefined,
       },
       reqCenterId(req) // P1-1: validate rubric_id thuộc center
     );

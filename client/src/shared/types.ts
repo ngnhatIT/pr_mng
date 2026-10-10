@@ -324,6 +324,7 @@ export interface HomeworkItem {
   completed?: number | boolean; // parent view: đã hoàn thành chưa
   score?: number | null; // parent view: điểm
   feedback?: string | null;
+  attachments?: { id: number; name: string; url: string; kind: string }[]; // GET /homework/:id trả kèm
 }
 
 export interface Room {

@@ -1,6 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { homeworkApi, type QuizQuestionForm, type Rubric } from './homework.api';
+import {
+  homeworkApi,
+  uploadFile,
+  UPLOAD_ACCEPT,
+  MAX_UPLOAD_BYTES,
+  type QuizQuestionForm,
+  type Rubric,
+} from './homework.api';
 import { ClassItem, classesApi } from '../classes/classes.api';
 import { HomeworkItem, formatDate, todayVN, nowVN } from '../../shared/types';
 import { useToast } from '../../shared/ui/toast';
@@ -54,7 +61,16 @@ export function quickDate(kind: 'today' | 'tomorrow' | 'weekend' | 'nextweek'): 
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
 }
 
+/** Lỗi client check trước khi gửi file: 'type' | 'size' | null. Hàm thuần để test được. */
+export function validateLocalUpload(name: string, size: number): 'type' | 'size' | null {
+  const ext = name.slice(name.lastIndexOf('.')).toLowerCase();
+  if (!UPLOAD_ACCEPT.split(',').includes(ext)) return 'type';
+  if (size > MAX_UPLOAD_BYTES) return 'size';
+  return null;
+}
+
 interface Attachment {
+  id?: number; // có id = đính kèm đã lưu (chế độ sửa), không id = mới thêm trong phiên này
   name: string;
   url: string;
   kind: string;
@@ -91,12 +107,22 @@ export function HomeworkFormModal({
   const [studentsLoading, setStudentsLoading] = useState(false);
   const [selectedStudents, setSelectedStudents] = useState<number[]>([]);
   const [studentSearch, setStudentSearch] = useState('');
-  // Đính kèm
-  const [attachments, setAttachments] = useState<Attachment[]>([]);
+  // Đính kèm (YC1: hiện ở cả chế độ tạo và sửa; updateHomework đã đồng bộ)
+  const [attachments, setAttachments] = useState<Attachment[]>(initial?.attachments ?? []);
   const [attName, setAttName] = useState('');
   const [attUrl, setAttUrl] = useState('');
   const attNameRef = useRef<HTMLInputElement>(null);
   const attUrlRef = useRef<HTMLInputElement>(null);
+  // File đã upload trong phiên này nhưng chưa lưu bài (mồ côi nếu hủy modal)
+  const orphanUrls = useRef<Set<string>>(new Set());
+  // Upload file: tiến trình % + trạng thái đang tải
+  const [uploadPct, setUploadPct] = useState<number | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  // Chế độ sửa: đánh dấu đã đụng vào đính kèm (cho dirty-check khi đóng modal)
+  const [attDirty, setAttDirty] = useState(false);
+  const attDirtyRef = useRef(attDirty);
+  attDirtyRef.current = attDirty;
   // P1-2: ref từng khối câu hỏi để cuộn + focus tới câu lỗi đầu tiên
   const qBlockRefs = useRef<(HTMLDivElement | null)[]>([]);
   // Rubric
@@ -129,8 +155,7 @@ export function HomeworkFormModal({
 
   // Khi sửa quiz: tải đề cũ (kèm đáp án đúng) để không vô tình xóa
   useEffect(() => {
-    if (initial && initial.kind === 'quiz') {
-      homeworkApi
+    if (initial && initial.kind === 'quiz') {      homeworkApi
         .getQuizEdit(initial.id)
         .then((qs) => {
           if (qs.length > 0) {
@@ -151,6 +176,21 @@ export function HomeworkFormModal({
         .then((a) => setQuizLocked(a.length > 0))
         .catch(() => {});
     }
+  }, [initial]);
+  // Chế độ sửa: tải đính kèm hiện có của bài tập (danh sách không trả kèm attachments)
+  useEffect(() => {
+    if (!initial) return;
+    let cancelled = false;
+    homeworkApi
+      .get(initial.id)
+      .then((hw) => {
+        // Chỉ nạp khi user chưa đụng vào đính kèm (tránh fetch về sau ghi đè cái vừa thêm)
+        if (!cancelled && hw.attachments && !attDirtyRef.current) setAttachments(hw.attachments);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
   }, [initial]);
   // Xuất bản
   const [publishMode, setPublishMode] = useState<'now' | 'draft' | 'schedule'>('now');
@@ -256,8 +296,64 @@ export function HomeworkFormModal({
     setAttachments((a) => [...a, { name, url, kind: 'link' }]);
     setAttName('');
     setAttUrl('');
+    if (initial) setAttDirty(true);
     clear('attachment');
   };
+
+  /** Xóa đính kèm khỏi danh sách (chưa lưu DB).
+   * File vừa upload trong phiên này mà bị gỡ → xóa ngay trên server để khỏi mồ côi.
+   * File đã lưu từ trước mà bị gỡ → server dọn khi lưu bài (syncAttachments). */
+  const removeAttachment = (i: number) => {
+    setAttachments((list) => {
+      const a = list[i];
+      if (a && a.kind === 'file' && orphanUrls.current.has(a.url)) {
+        orphanUrls.current.delete(a.url);
+        const filename = a.url.split('/').pop() || '';
+        homeworkApi.deleteUpload(filename).catch(() => {});
+      }
+      return list.filter((_, j) => j !== i);
+    });
+    if (initial) setAttDirty(true);
+    clear('attachment');
+  };
+
+  /** Chọn file từ máy → validate client → upload qua XHR (có % tiến trình) → thêm vào đính kèm. */
+  const handleFileSelect = async (file: File | undefined) => {
+    if (!file || uploading) return;
+    const problem = validateLocalUpload(file.name, file.size);
+    if (problem === 'size') {
+      show({ ...errors, attachment: t('form.errors.attTooBig') });
+      return;
+    }
+    if (problem === 'type') {
+      show({ ...errors, attachment: t('form.errors.attTypeInvalid') });
+      return;
+    }
+    setUploading(true);
+    setUploadPct(0);
+    clear('attachment');
+    try {
+      const up = await uploadFile(file, setUploadPct);
+      setAttachments((a) => [...a, { name: up.name, url: up.url, kind: 'file' }]);
+      orphanUrls.current.add(up.url); // chưa lưu bài → mồ côi nếu hủy modal
+      if (initial) setAttDirty(true);
+    } catch (err) {
+      show({ ...errors, attachment: err instanceof Error ? err.message : t('form.errors.attUploadFailed') });
+    } finally {
+      setUploading(false);
+      setUploadPct(null);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
+  /** Dọn file mồ côi đã upload trong phiên này (khi hủy modal). Best-effort, không chặn đóng. */
+  const cleanupOrphans = useCallback(() => {
+    for (const url of orphanUrls.current) {
+      const filename = url.split('/').pop() || '';
+      homeworkApi.deleteUpload(filename).catch(() => {});
+    }
+    orphanUrls.current.clear();
+  }, []);
 
   const createRubricNow = async () => {
     if (rubricBusy) return;
@@ -428,6 +524,8 @@ export function HomeworkFormModal({
           max_score: kind === 'quiz' ? quizTotal || null : maxScore ? Number(maxScore) : null,
           close_date: closeDate || null,
           rubric_id: rubricId ? Number(rubricId) : null,
+          // YC1: đồng bộ đính kèm khi sửa (thêm/xóa); server giữ file đã gắn
+          attachments: attachments.map((a) => ({ name: a.name, url: a.url, kind: a.kind })),
         });
         if (kind === 'quiz') await homeworkApi.saveQuiz(initial.id, cleanedQuestions);
         toast(t('form.toast.updated'), 'success');
@@ -456,6 +554,8 @@ export function HomeworkFormModal({
           'success'
         );
       }
+      // Lưu thành công → file đã gắn vào bài, không còn mồ côi
+      orphanUrls.current.clear();
       onSaved();
     } catch (err) {
       toast(err instanceof Error ? err.message : t('form.toast.saveFail'), 'error');
@@ -475,6 +575,7 @@ export function HomeworkFormModal({
         closeDate !== (initial.close_date?.slice(0, 10) || '') ||
         maxScore !== (initial.max_score?.toString() || '') ||
         rubricId !== (initial.rubric_id?.toString() || '') ||
+        attDirty ||
         quizEdited
       );
     }
@@ -501,17 +602,23 @@ export function HomeworkFormModal({
   }, [
     initial, kind, title, content, dueDate, closeDate, maxScore, selectedClasses,
     selectedStudents, attachments, attName, attUrl, rubricId, newRubricName, publishMode, publishAt,
-    questions, quizEdited,
+    questions, quizEdited, attDirty,
   ]);
   const [confirmClose, setConfirmClose] = useState(false);
   // tryClose phải ổn định identity: Modal re-run effect (focus lại control đầu) mỗi khi onClose đổi,
   // nên đọc isDirty qua ref để không giật focus khi user đang gõ ký tự đầu tiên.
   const isDirtyRef = useRef(isDirty);
   isDirtyRef.current = isDirty;
+  /** Đóng modal: dọn file mồ côi đã upload trong phiên này rồi mới đóng. */
+  const finalizeClose = useCallback(() => {
+    setConfirmClose(false);
+    cleanupOrphans();
+    onClose();
+  }, [cleanupOrphans, onClose]);
   const tryClose = useCallback(() => {
     if (isDirtyRef.current) setConfirmClose(true);
-    else onClose();
-  }, [onClose]);
+    else finalizeClose();
+  }, [finalizeClose]);
 
   const quickDueOptions = [
     { k: 'today', label: t('form.dueToday') },
@@ -773,45 +880,75 @@ export function HomeworkFormModal({
           </Field>
         </div>
 
-        {/* Đính kèm: cả bài thường lẫn quiz đều đính kèm được (dùng chung cụm này).
-            Ẩn ở chế độ sửa vì updateHomework chưa nhận attachments (tránh bẫy nhập rồi mất im lặng). */}
-        {!initial && (
-          <Field label={t('form.attachments')} error={errors.attachment}>
-            {attachments.map((a, i) => (
-              <div key={i} className="att-row">
-                <Icon name="paperclip" size={14} />
-                <span>{a.name}</span>
-                <span className="muted hw-text-12">{a.url.slice(0, 40)}...</span>
-                <button
-                  type="button"
-                  className="btn btn-sm btn-danger-ghost"
-                  onClick={() => setAttachments((x) => x.filter((_, j) => j !== i))}
-                >
-                  {t('actions.delete', { ns: 'common' })}
-                </button>
-              </div>
-            ))}
-            <div className="hw-flex">
-              <input
-                ref={attNameRef}
-                className="text-input"
-                placeholder={t('form.attNamePh')}
-                value={attName}
-                onChange={(e) => setAttName(e.target.value)}
-              />
-              <input
-                ref={attUrlRef}
-                className="text-input"
-                placeholder={t('form.attUrlPh')}
-                value={attUrl}
-                onChange={(e) => setAttUrl(e.target.value)}
-              />
-              <button type="button" className="btn" onClick={addAttachment}>
-                {t('form.addAttachment')}
+        {/* Đính kèm: cả bài thường lẫn quiz, cả chế độ tạo và sửa (updateHomework đã đồng bộ). */}
+        <Field label={t('form.attachments')} error={errors.attachment}>
+          {attachments.map((a, i) => (
+            <div key={i} className="att-row">
+              <Icon name={a.kind === 'file' ? 'file' : 'paperclip'} size={14} />
+              <span>{a.name}</span>
+              <span className="muted hw-text-12">{a.url.slice(0, 40)}...</span>
+              <button
+                type="button"
+                className="btn btn-sm btn-danger-ghost"
+                onClick={() => removeAttachment(i)}
+                aria-label={t('form.removeAttachment', { name: a.name })}
+              >
+                {t('actions.delete', { ns: 'common' })}
               </button>
             </div>
-          </Field>
-        )}
+          ))}
+          {/* Tải file từ máy (YC1) */}
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept={UPLOAD_ACCEPT}
+            className="hw-hidden-input"
+            aria-label={t('form.uploadFile')}
+            onChange={(e) => void handleFileSelect(e.target.files?.[0])}
+          />
+          <div className="hw-flex-wrap">
+            <button
+              type="button"
+              className="btn hw-action-icon"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploading || busy}
+            >
+              {uploading && <span className="spinner spinner-dark" aria-hidden="true" />}
+              <Icon name="upload" size={16} />
+              {uploading && uploadPct !== null
+                ? t('form.uploadingPct', { pct: uploadPct })
+                : t('form.uploadFile')}
+            </button>
+            <button type="button" className="btn" onClick={addAttachment} disabled={uploading || busy}>
+              {t('form.addAttachment')}
+            </button>
+          </div>
+          {uploading && uploadPct !== null && (
+            <div className="upload-row" role="progressbar" aria-valuenow={uploadPct} aria-valuemin={0} aria-valuemax={100}>
+              <div className="upload-track">
+                <div className="upload-fill" style={{ width: `${uploadPct}%` }} />
+              </div>
+              <span className="upload-pct">{uploadPct}%</span>
+            </div>
+          )}
+          <div className="muted hw-text-12 hw-mt-8">{t('form.uploadHint')}</div>
+          <div className="hw-flex-wrap hw-mt-8">
+            <input
+              ref={attNameRef}
+              className="text-input"
+              placeholder={t('form.attNamePh')}
+              value={attName}
+              onChange={(e) => setAttName(e.target.value)}
+            />
+            <input
+              ref={attUrlRef}
+              className="text-input"
+              placeholder={t('form.attUrlPh')}
+              value={attUrl}
+              onChange={(e) => setAttUrl(e.target.value)}
+            />
+          </div>
+        </Field>
 
         {/* Rubric */}
         {kind === 'homework' && (
@@ -1168,7 +1305,7 @@ export function HomeworkFormModal({
           title={t('form.discardTitle')}
           message={t('form.discardMessage')}
           onClose={() => setConfirmClose(false)}
-          onConfirm={onClose}
+          onConfirm={finalizeClose}
         />
       )}
     </Modal>

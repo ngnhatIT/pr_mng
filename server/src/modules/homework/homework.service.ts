@@ -10,7 +10,7 @@ import { todayVN } from '../../shared/vnTime';
 import { homeworkRepo, deleteHomeworkCascade } from './homework.repo';
 import { eventBus } from '../../shared/events/eventBus';
 import { escapeLike } from '../../shared/like';
-import { copyUploadedFileByUrl } from '../../shared/upload';
+import { copyUploadedFileByUrl, deleteUploadFileByUrl, isValidUploadFilename } from '../../shared/upload';
 import { getRubric } from './rubric.service';
 
 /** Chuyển thành ID hợp lệ, throw 400 nếu không phải số nguyên dương. */
@@ -277,9 +277,10 @@ export function prepareCreateInput(raw: Record<string, unknown>): PreparedHomewo
     if (!Number.isFinite(max_score) || max_score < 0) throw AppError.badRequest('Điểm tối đa không hợp lệ');
   }
 
-  const attachments = Array.isArray(raw.attachments)
-    ? (raw.attachments as { name: string; url: string; kind: string }[]).filter((a) => a && a.name && a.url)
-    : [];
+  const attachments =
+    raw.attachments === undefined || raw.attachments === null
+      ? []
+      : validateAttachmentInputs(raw.attachments);
   const target_student_ids = Array.isArray(raw.target_student_ids)
     ? (raw.target_student_ids as unknown[]).map(Number).filter((n) => Number.isInteger(n) && n > 0)
     : [];
@@ -535,6 +536,8 @@ export async function updateHomework(
     status?: 'draft' | 'scheduled' | 'published';
     publish_at?: string | null;
     rubric_id?: number | null;
+    /** undefined = giữ nguyên đính kèm cũ (không breaking); mảng = đồng bộ theo danh sách mới */
+    attachments?: { name: string; url: string; kind: string }[];
   },
   centerId: number | null = null
 ): Promise<HomeworkRow> {
@@ -611,7 +614,73 @@ export async function updateHomework(
       rubricId,
       id
     );
+  // YC1: đồng bộ đính kèm khi sửa (thêm mới / xóa cái đã gỡ khỏi form)
+  if (data.attachments !== undefined) {
+    await syncAttachments(id, data.attachments);
+  }
   return (await db.prepare('SELECT * FROM homework WHERE id = ?').get(id)) as HomeworkRow;
+}
+
+/** Đính kèm hợp lệ gửi kèm khi tạo/sửa bài tập. */
+export interface HomeworkAttachmentInput {
+  name: string;
+  url: string;
+  kind: string;
+}
+
+/**
+ * Chuẩn hóa + validate danh sách đính kèm ở trust boundary (ném 400 nếu sai).
+ * - url file phải là /uploads/<tên do server sinh> → kind ép thành 'file'
+ * - url còn lại phải là link http/https → kind 'link'
+ */
+export function validateAttachmentInputs(raw: unknown): HomeworkAttachmentInput[] {
+  if (!Array.isArray(raw)) throw AppError.badRequest('Đính kèm không hợp lệ');
+  return raw.map((a) => {
+    const name = String((a as { name?: unknown })?.name ?? '').trim();
+    const url = String((a as { url?: unknown })?.url ?? '').trim();
+    if (!name || !url) throw AppError.badRequest('Đính kèm thiếu tên hoặc đường dẫn');
+    if (name.length > 200 || url.length > 2000) throw AppError.badRequest('Đính kèm quá dài');
+    if (url.startsWith('/uploads/')) {
+      if (!isValidUploadFilename(url.slice('/uploads/'.length))) {
+        throw AppError.badRequest('Đường dẫn file đính kèm không hợp lệ');
+      }
+      return { name, url, kind: 'file' };
+    }
+    if (!/^https?:\/\//i.test(url)) throw AppError.badRequest('Link đính kèm phải bắt đầu bằng http:// hoặc https://');
+    return { name, url, kind: 'link' };
+  });
+}
+
+/**
+ * Đồng bộ đính kèm của bài tập theo danh sách mới từ form:
+ * thêm dòng mới, xóa dòng đã gỡ. File vật lý của đính kèm loại 'file'
+ * bị gỡ được xóa khỏi đĩa (best-effort, sau khi transaction commit).
+ */
+async function syncAttachments(id: number, raw: unknown): Promise<void> {
+  const next = validateAttachmentInputs(raw);
+  const current = (await db
+    .prepare('SELECT id, url FROM homework_attachments WHERE homework_id = ?')
+    .all(id)) as { id: number; url: string }[];
+  const keepUrls = new Set(next.map((a) => a.url));
+  const currentUrls = new Set(current.map((c) => c.url));
+  const removedUrls: string[] = [];
+  await db.transaction(async (tx) => {
+    const delStmt = await tx.prepare('DELETE FROM homework_attachments WHERE id = ?');
+    for (const c of current) {
+      if (!keepUrls.has(c.url)) {
+        await delStmt.run(c.id);
+        removedUrls.push(c.url);
+      }
+    }
+    const insStmt = await tx.prepare(
+      'INSERT INTO homework_attachments (homework_id, name, url, kind) VALUES (?, ?, ?, ?)'
+    );
+    for (const a of next) {
+      if (!currentUrls.has(a.url)) await insStmt.run(id, a.name, a.url, a.kind);
+    }
+  });
+  // Dọn file vật lý của đính kèm đã gỡ (không chặn nếu xóa lỗi)
+  for (const u of removedUrls) await deleteUploadFileByUrl(u);
 }
 
 export async function deleteHomework(id: number, centerId: number | null = null): Promise<void> {

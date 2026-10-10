@@ -198,6 +198,13 @@ export const fileServeRateLimit = createRateLimit({
   message: 'Bạn tải file quá nhanh, vui lòng thử lại sau ít phút.',
 });
 
+/** 30 requests / 15 phút / tài khoản — giáo viên tải file đính kèm (ghi đĩa, tốn I/O hơn GET). */
+export const uploadRateLimit = createRateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 30,
+  message: 'Bạn tải file lên quá nhanh, vui lòng thử lại sau ít phút.',
+});
+
 /* ------------------------- Login rate limit ------------------------- */
 
 // key: `${ip}:${path}` → các timestamp request trong window hiện tại

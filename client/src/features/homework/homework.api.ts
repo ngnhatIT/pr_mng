@@ -1,9 +1,60 @@
 /**
  * API layer cho feature Bài tập về nhà.
  */
-import { http, type Paginated, type PageParams } from '../../shared/api/client';
+import { http, getToken, type Paginated, type PageParams } from '../../shared/api/client';
 import { HomeworkItem } from '../../shared/types';
 import { ClassItem } from '../classes/classes.api';
+
+/** Định dạng file giáo viên được tải lên (khớp ALLOWED_EXT của server). */
+export const UPLOAD_ACCEPT = '.jpg,.jpeg,.png,.gif,.webp,.pdf,.mp3,.mp4,.doc,.docx';
+/** Giới hạn dung lượng client check trước khi gửi (server check lại ở trust boundary). */
+export const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
+/** Kết quả upload file đính kèm từ POST /api/v1/uploads. */
+export interface UploadedFile {
+  url: string;
+  name: string;
+  size: number;
+}
+
+/**
+ * Upload file qua XMLHttpRequest để có tiến trình % (fetch không báo progress).
+ * Reject với Error mang message tiếng Việt của server (400/413) hoặc lỗi mạng.
+ */
+export function uploadFile(file: File, onProgress: (pct: number) => void): Promise<UploadedFile> {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', '/api/v1/uploads');
+    xhr.timeout = 60_000;
+    xhr.withCredentials = true;
+    const token = getToken();
+    if (token) xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+    xhr.upload.onprogress = (e) => {
+      if (e.lengthComputable) onProgress(Math.min(100, Math.round((e.loaded / e.total) * 100)));
+    };
+    xhr.onload = () => {
+      if (xhr.status === 201) {
+        try {
+          resolve(JSON.parse(xhr.responseText) as UploadedFile);
+        } catch {
+          reject(new Error('Phản hồi máy chủ không hợp lệ'));
+        }
+        return;
+      }
+      let msg = 'Tải file thất bại, vui lòng thử lại';
+      try {
+        msg = (JSON.parse(xhr.responseText) as { error?: string }).error || msg;
+      } catch {
+        /* giữ message mặc định */
+      }
+      reject(Object.assign(new Error(msg), { status: xhr.status }));
+    };
+    xhr.onerror = () => reject(new Error('Lỗi mạng khi tải file, vui lòng thử lại'));
+    xhr.ontimeout = () => reject(new Error('Tải file quá lâu, vui lòng thử lại'));
+    const fd = new FormData();
+    fd.append('file', file);
+    xhr.send(fd);
+  });
+}
 
 export interface HomeworkForm {
   class_ids: number[];
@@ -108,6 +159,10 @@ export const homeworkApi = {
   getScores: (id: number) => http.get<HomeworkScoreRow[]>(`/homework/${id}/scores`),
   grade: (id: number, studentId: number, score: number | null, feedback: string) =>
     http.post<{ ok: boolean }>(`/homework/${id}/scores`, { student_id: studentId, score, feedback }),
+  // Upload file đính kèm (giáo viên)
+  uploadFile,
+  /** Xóa file đã upload nhưng chưa gắn vào bài nào (dọn file mồ côi). */
+  deleteUpload: (filename: string) => http.del<{ ok: boolean }>(`/uploads/${filename}`),
   // Quiz
   getQuizEdit: (id: number) => http.get<QuizQuestionEdit[]>(`/homework/${id}/quiz/edit`),
   saveQuiz: (id: number, questions: QuizQuestionForm[]) =>
