@@ -8,7 +8,7 @@ import { DashboardData, formatVND } from '../../shared/types';
 import { getUser } from '../../shared/api/client';
 import { PageHeader } from '../../shared/components/PageHeader';
 import { StatCard } from '../../shared/components/StatCard';
-import { StatGridSkeleton } from '../../shared/components/Skeleton';
+import { StatGridSkeleton, Skeleton } from '../../shared/components/Skeleton';
 import { EmptyState } from '../../shared/components/EmptyState';
 import { Icon, IconName } from '../../shared/components/icons';
 import './Dashboard.css';
@@ -79,10 +79,44 @@ export function Dashboard() {
   }, [load]);
 
   if (loading) {
+    // Skeleton mô phỏng đúng từng khối của trang để không giật layout khi dữ liệu về
     return (
       <div className="page">
-        <PageHeader title={t('pageTitle')} desc={t('pageDesc')} />
+        <div className="dash-greet" aria-hidden="true">
+          <Skeleton width="45%" height={30} radius={8} />
+          <div style={{ marginTop: 8 }}>
+            <Skeleton width="32%" height={16} radius={6} />
+          </div>
+        </div>
         <StatGridSkeleton />
+        <div className="dash-section-label" aria-hidden="true">
+          <Skeleton width={180} height={18} radius={6} />
+        </div>
+        <div className="quick-actions dash-quick" aria-hidden="true">
+          {[0, 1, 2, 3].map((i) => (
+            <div key={i} className="quick-action">
+              <Skeleton width={42} height={42} radius={12} />
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <Skeleton width="60%" height={14} radius={6} />
+                <div style={{ marginTop: 6 }}>
+                  <Skeleton width="85%" height={12} radius={6} />
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+        <div className="two-col dash-cols" aria-hidden="true">
+          {[0, 1].map((i) => (
+            <div key={i} className="card">
+              <Skeleton width="40%" height={20} radius={6} />
+              <div style={{ marginTop: 16, display: 'grid', gap: 10 }}>
+                {[0, 1, 2].map((j) => (
+                  <Skeleton key={j} height={44} radius={8} />
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
     );
   }
