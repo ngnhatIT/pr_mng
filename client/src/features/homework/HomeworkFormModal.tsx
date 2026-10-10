@@ -699,10 +699,11 @@ export function HomeworkFormModal({
 
         {/* Quiz builder */}
         {kind === 'quiz' && (
-          <Field
-            label={t('form.quizQuestions', { count: questions.length, total: quizTotal })}
-            error={errors.quiz}
-          >
+          <div ref={refFor('quiz')} tabIndex={-1}>
+            <Field
+              label={t('form.quizQuestions', { count: questions.length, total: quizTotal })}
+              error={errors.quiz}
+            >
             {quizLocked && (
               <div className="alert alert-warning alert-with-icon hw-mb-12">
                 <Icon name="alert" size={16} />
@@ -794,7 +795,8 @@ export function HomeworkFormModal({
                 <Icon name="book" size={15} /> {t('form.fromBank')}
               </button>
             </div>
-          </Field>
+            </Field>
+          </div>
         )}
 
         {/* Xuất bản */}
