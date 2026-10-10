@@ -300,6 +300,7 @@ function EnrollModal({
               disabled={busyId === s.id}
               onClick={() => void enroll(s.id)}
             >
+              {busyId === s.id && <span className="spinner" aria-hidden="true" />}
               {busyId === s.id ? t('detail.enroll.adding') : t('detail.enroll.add')}
             </button>
           </li>
