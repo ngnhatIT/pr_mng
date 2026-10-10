@@ -501,10 +501,6 @@ a {
     border-color 0.15s ease,
     box-shadow 0.15s ease;
 }
-.text-input::placeholder {
-  color: var(--text-faint);
-  opacity: 1;
-}
 .text-input:hover:not(:disabled) {
   border-color: var(--border-strong);
 }
@@ -3535,12 +3531,6 @@ a:focus-visible,
 .field-invalid select,
 .field-invalid textarea {
   border-color: #dc2626;
-}
-.field-error {
-  display: block;
-  margin-top: 4px;
-  font-size: 12px;
-  color: var(--danger);
 }
 .field-required {
   color: #dc2626;
