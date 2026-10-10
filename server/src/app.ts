@@ -88,6 +88,9 @@ export function createApp(): Express {
 
   // Phục vụ client đã build (production 1 lệnh duy nhất)
   const clientDist = path.resolve(__dirname, '..', '..', 'client', 'dist');
+  // Asset Vite có tên file chứa content-hash → cache immutable 1 năm, an toàn.
+  // index.html và file public/ không hash vẫn serve không cache ở mount dưới.
+  app.use('/assets', express.static(path.join(clientDist, 'assets'), { maxAge: '1y', immutable: true }));
   app.use(express.static(clientDist));
 
   // Phục vụ file bài nộp — CÓ AUTH (ảnh bài làm của học viên, không public)
