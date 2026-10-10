@@ -1619,13 +1619,14 @@ button.search-clear:active {
 .invoice-list {
   display: flex;
   flex-direction: column;
-  gap: 12px;
 }
+/* Luật 3b: không nested-card - mục hóa đơn dùng divider phẳng như .class-info-card */
 .invoice-card {
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 14px;
-  background: var(--bg-muted);
+  padding: 14px 0;
+  border-bottom: 1px solid var(--border);
+}
+.invoice-card:last-child {
+  border-bottom: none;
 }
 .invoice-card-head {
   display: flex;
