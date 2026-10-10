@@ -506,7 +506,7 @@ a {
   opacity: 1;
 }
 .text-input:hover:not(:disabled) {
-  border-color: #c3cde0;
+  border-color: var(--border-strong);
 }
 .text-input:focus-visible {
   outline: 2px solid var(--primary);
