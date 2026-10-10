@@ -11,10 +11,13 @@ import { useSecureFileUrl } from '../../shared/components/SecureFile';
 export function SubmissionsModal({
   homeworkId,
   title,
+  closeDate,
   onClose,
 }: {
   homeworkId: number;
   title: string;
+  /** Hạn khóa nộp (YYYY-MM-DD). Chỉ hiện badge trễ khi có đủ dữ liệu. */
+  closeDate: string | null;
   onClose: () => void;
 }) {
   const { t } = useTranslation(['homework', 'common']);
@@ -45,7 +48,7 @@ export function SubmissionsModal({
           <div className="muted submissions-count">{t('submissions.count', { count: subs.length })}</div>
           <div className="submission-list">
             {subs.map((s) => (
-              <SubmissionRow key={s.id} s={s} isImage={isImage(s.file_url)} />
+              <SubmissionRow key={s.id} s={s} isImage={isImage(s.file_url)} closeDate={closeDate} />
             ))}
           </div>
         </>
@@ -55,15 +58,23 @@ export function SubmissionsModal({
 }
 
 /** Một dòng bài nộp: tải file qua Authorization header (blob URL), không gắn JWT vào URL. */
-function SubmissionRow({ s, isImage }: { s: Submission; isImage: boolean }) {
+function SubmissionRow({ s, isImage, closeDate }: { s: Submission; isImage: boolean; closeDate: string | null }) {
   const { t } = useTranslation(['homework', 'common']);
   const fileUrl = useSecureFileUrl(s.file_url);
+  // Nộp sau close_date (so sánh ngày, giờ VN) mới là trễ; thiếu dữ liệu thì không hiện
+  const isLate = !!closeDate && !!s.submitted_at && s.submitted_at.slice(0, 10) > closeDate;
   return (
     <div className="submission-item">
       <div className="submission-body">
         <div className="submission-student">{s.student_name}</div>
         <div className="muted submission-time">
           {t('submissions.submittedAt', { time: formatDateTime(s.submitted_at) })}
+          {isLate && (
+            <>
+              {' '}
+              <span className="badge badge-late">{t('submissions.late')}</span>
+            </>
+          )}
         </div>
         {s.note && <div className="submission-note">{s.note}</div>}
         {s.file_url && !isImage && fileUrl && (

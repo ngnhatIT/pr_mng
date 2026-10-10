@@ -496,7 +496,12 @@ export function Homework() {
       {showBank && <QuestionBank onClose={() => setShowBank(false)} />}
       {showAnalytics && <AnalyticsModal onClose={() => setShowAnalytics(false)} />}
       {viewSubs && (
-        <SubmissionsModal homeworkId={viewSubs.id} title={viewSubs.title} onClose={() => setViewSubs(null)} />
+        <SubmissionsModal
+          homeworkId={viewSubs.id}
+          title={viewSubs.title}
+          closeDate={viewSubs.close_date}
+          onClose={() => setViewSubs(null)}
+        />
       )}
       {deleting && (
         <ConfirmDialog

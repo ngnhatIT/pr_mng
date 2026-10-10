@@ -142,7 +142,10 @@
     "correctAnswer": "Correct answer",
     "criterion": "Criterion",
     "criterionScore": "{{score}} pts",
-    "defaultCriteria": ["Pronunciation", "Vocabulary"],
+    "defaultCriteria": [
+      "Pronunciation",
+      "Vocabulary"
+    ],
     "deselectAll": "Deselect",
     "dueDate": "Due date",
     "dueNextWeek": "Next week",
@@ -300,7 +303,8 @@
     "submittedAt": "Submitted {{time}}",
     "title": "Submissions - {{title}}",
     "viewLarge": "View full image",
-    "count": "{{count}} submissions"
+    "count": "{{count}} submissions",
+    "late": "Late"
   },
   "table": {
     "actions": "Actions",

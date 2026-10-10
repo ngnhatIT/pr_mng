@@ -142,7 +142,10 @@
     "correctAnswer": "Đáp án đúng",
     "criterion": "Tiêu chí",
     "criterionScore": "{{score}}đ",
-    "defaultCriteria": ["Phát âm", "Từ vựng"],
+    "defaultCriteria": [
+      "Phát âm",
+      "Từ vựng"
+    ],
     "deselectAll": "Bỏ chọn",
     "dueDate": "Hạn nộp",
     "dueNextWeek": "Tuần sau",
@@ -300,7 +303,8 @@
     "title": "Bài nộp - {{title}}",
     "viewLarge": "Xem ảnh lớn",
     "count_one": "{{count}} bài nộp",
-    "count_other": "{{count}} bài nộp"
+    "count_other": "{{count}} bài nộp",
+    "late": "Nộp trễ"
   },
   "table": {
     "actions": "Thao tác",
