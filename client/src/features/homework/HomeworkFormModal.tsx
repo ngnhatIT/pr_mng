@@ -376,7 +376,7 @@ export function HomeworkFormModal({
     if (!initial && targetMode === 'selected' && selectedStudents.length === 0)
       errs.students = t('form.errors.studentsRequired');
     if (!title.trim()) errs.title = t('form.errors.titleRequired');
-    if (maxScore) {
+    if (kind === 'homework' && maxScore) {
       const m = Number(maxScore);
       if (!Number.isFinite(m) || m < 0) errs.maxScore = t('form.errors.maxScoreInvalid');
     }
@@ -416,7 +416,7 @@ export function HomeworkFormModal({
           title: title.trim(),
           content: content.trim() || null,
           due_date: dueDate || null,
-          max_score: maxScore ? Number(maxScore) : null,
+          max_score: kind === 'quiz' ? quizTotal || null : maxScore ? Number(maxScore) : null,
           close_date: closeDate || null,
           rubric_id: rubricId ? Number(rubricId) : null,
         });
@@ -430,7 +430,7 @@ export function HomeworkFormModal({
           due_date: dueDate || null,
           status,
           publish_at: status === 'scheduled' ? publishAt : null,
-          max_score: maxScore ? Number(maxScore) : null,
+          max_score: kind === 'quiz' ? quizTotal || null : maxScore ? Number(maxScore) : null,
           close_date: closeDate || null,
           kind,
           rubric_id: rubricId ? Number(rubricId) : null,
@@ -686,21 +686,28 @@ export function HomeworkFormModal({
 
         {/* Điểm + Hạn */}
         <div className="form-grid">
-          <Field label={t('form.maxScore')} error={errors.maxScore}>
-            <input
-              ref={refFor('maxScore')}
-              className="text-input"
-              type="number"
-              min="0"
-              step="0.5"
-              value={maxScore}
-              onChange={(e) => {
-                setMaxScore(e.target.value);
-                clear('maxScore');
-              }}
-              placeholder={t('form.maxScorePh')}
-            />
-          </Field>
+          {kind === 'quiz' ? (
+            // P1-5: điểm quiz tự tính từ tổng điểm câu hỏi (server cũng re-sync), khóa nhập tay để khỏi lệch
+            <Field label={t('form.maxScore')} hint={t('form.quizScoreAuto')}>
+              <input className="text-input" type="number" value={quizTotal} disabled />
+            </Field>
+          ) : (
+            <Field label={t('form.maxScore')} error={errors.maxScore}>
+              <input
+                ref={refFor('maxScore')}
+                className="text-input"
+                type="number"
+                min="0"
+                step="0.5"
+                value={maxScore}
+                onChange={(e) => {
+                  setMaxScore(e.target.value);
+                  clear('maxScore');
+                }}
+                placeholder={t('form.maxScorePh')}
+              />
+            </Field>
+          )}
           <Field label={t('form.dueDate')} error={errors.dueDate}>
             <input
               ref={refFor('dueDate')}

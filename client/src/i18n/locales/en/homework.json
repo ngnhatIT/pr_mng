@@ -216,6 +216,7 @@
     "publishScheduleOpt": "Schedule",
     "publishSection": "Publish",
     "questionPh": "Question {{n}}",
+    "quizScoreAuto": "Auto-calculated from the total points of the questions",
     "quickDue": "Quick due date",
     "quickTemplates": "Quick templates",
     "quizLocked": "Students have already taken this quiz - questions are locked. Create a new quiz to make changes.",
