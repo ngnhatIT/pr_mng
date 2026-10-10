@@ -1,26 +1,49 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { homeworkApi, type HomeworkAnalytics } from './homework.api';
 import { Modal } from '../../shared/components/Modal';
+import { TableSkeleton } from '../../shared/components/Skeleton';
+import { EmptyState } from '../../shared/components/EmptyState';
 import { Icon } from '../../shared/components/icons';
 
 /** Phân tích bài tập: tỷ lệ hoàn thành & điểm TB theo lớp. */
 export function AnalyticsModal({ onClose }: { onClose: () => void }) {
   const { t } = useTranslation(['homework', 'common']);
   const [data, setData] = useState<HomeworkAnalytics | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError(false);
+    try {
+      setData(await homeworkApi.analytics());
+    } catch {
+      setError(true);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
-    void homeworkApi
-      .analytics()
-      .then(setData)
-      .catch(() => setData(null));
-  }, []);
+    void load();
+  }, [load]);
 
   return (
     <Modal title={t('analytics.title')} onClose={onClose} wide>
-      {!data ? (
-        <p className="muted">{t('actions.loading', { ns: 'common' })}</p>
-      ) : (
+      {loading ? (
+        <TableSkeleton rows={5} cols={4} />
+      ) : error ? (
+        <EmptyState
+          icon="alert"
+          title={t('states.loadError', { ns: 'common' })}
+          action={
+            <button className="btn btn-secondary btn-inline" onClick={() => void load()}>
+              <Icon name="rotate" size={14} /> {t('actions.retry', { ns: 'common' })}
+            </button>
+          }
+        />
+      ) : data ? (
         <div className="hw-analytics">
           <h4 className="section-title hw-action-icon">
             <Icon name="users" size={15} /> {t('analytics.byClass')}
@@ -87,7 +110,7 @@ export function AnalyticsModal({ onClose }: { onClose: () => void }) {
             </div>
           )}
         </div>
-      )}
+      ) : null}
     </Modal>
   );
 }
