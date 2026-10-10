@@ -171,7 +171,11 @@ export async function updateBankQuestion(
 ): Promise<BankQuestion> {
   const q = (await db.prepare('SELECT center_id FROM question_bank WHERE id = ?').get(id)) as
     { center_id: number | null } | undefined;
-  if (!q || (centerId !== null && q.center_id !== null && q.center_id !== centerId)) {
+  if (!q) throw AppError.notFound('Không tìm thấy câu hỏi');
+  // P1-10: câu hỏi global (center_id NULL, do superadmin tạo) chỉ superadmin
+  // (centerId null) được sửa — center thường chỉ được đọc/dùng chung, không sửa.
+  if (q.center_id === null && centerId !== null) throw AppError.notFound('Không tìm thấy câu hỏi');
+  if (centerId !== null && q.center_id !== null && q.center_id !== centerId) {
     throw AppError.notFound('Không tìm thấy câu hỏi');
   }
   const { question, options, points } = validateBankInput(input);
@@ -201,6 +205,8 @@ export async function deleteBankQuestion(id: number, centerId: number | null): P
   const q = (await db.prepare('SELECT center_id FROM question_bank WHERE id = ?').get(id)) as
     { center_id: number | null } | undefined;
   if (!q) return;
+  // P1-10: câu hỏi global chỉ superadmin (centerId null) được xóa
+  if (q.center_id === null && centerId !== null) throw AppError.notFound('Không tìm thấy câu hỏi');
   if (centerId !== null && q.center_id !== null && q.center_id !== centerId) {
     throw AppError.notFound('Không tìm thấy câu hỏi');
   }

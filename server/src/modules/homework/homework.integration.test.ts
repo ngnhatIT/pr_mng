@@ -14,7 +14,12 @@ import * as homeworkService from './homework.service';
 import * as quizService from './quiz.service';
 import * as parentService from '../parent/parent.service';
 import { createRubric } from './rubric.service';
-import { addBankQuestion, updateBankQuestion, importFromBank } from './questionBank.service';
+import {
+  addBankQuestion,
+  updateBankQuestion,
+  deleteBankQuestion,
+  importFromBank,
+} from './questionBank.service';
 import { eventBus } from '../../shared/events/eventBus';
 
 // ---------------------------------------------------------------------------
@@ -983,6 +988,39 @@ describe('importFromBank dedupe + giữ thứ tự (P1-9)', () => {
       rows.map((r) => r.question),
       ['Câu ba', 'Câu hai', 'Câu một']
     );
+  });
+});
+
+describe('bank global chỉ superadmin được sửa/xóa (P1-10)', () => {
+  beforeEach(async () => {
+    await resetDb();
+  });
+
+  const opts = [
+    { text: 'A', is_correct: true },
+    { text: 'B', is_correct: false },
+  ];
+
+  it('center thường sửa/xóa câu global → 404; superadmin được', async () => {
+    const g = await addBankQuestion(null, 1, { question: 'Global Q', points: 1, options: opts });
+    await assert.rejects(
+      () => updateBankQuestion(g.id, 1, { question: 'Sửa trộm', points: 1, options: opts }),
+      /Không tìm thấy câu hỏi/
+    );
+    await assert.rejects(() => deleteBankQuestion(g.id, 1), /Không tìm thấy câu hỏi/);
+    // Câu global vẫn còn nguyên
+    const still = await db.prepare('SELECT id FROM question_bank WHERE id = ?').get(g.id);
+    assert.ok(still);
+    // Superadmin (centerId null) sửa/xóa được
+    const u = await updateBankQuestion(g.id, null, {
+      question: 'Global Q sửa',
+      points: 1,
+      options: opts,
+    });
+    assert.equal(u.question, 'Global Q sửa');
+    await deleteBankQuestion(g.id, null);
+    const gone = await db.prepare('SELECT id FROM question_bank WHERE id = ?').get(g.id);
+    assert.equal(gone, undefined);
   });
 });
 
