@@ -290,7 +290,7 @@ router.post(
     await audit({
       centerId: target.center_id,
       actor: { id: admin.id, name: admin.name, role: admin.role },
-      action: 'reset-password',
+      action: 'change_password',
       entity: 'reset_requests',
       entityId: id,
       summary: `${admin.name} đặt lại mật khẩu cho ${target.name} (${r.identifier})`,

@@ -130,6 +130,14 @@
     "desc": "Create your first class with a schedule, teacher and tuition.",
     "title": "No classes yet"
   },
+  "enrollStudent": {
+    "title": "Enroll student in a class",
+    "forStudent": "Student: {{name}}",
+    "selectClass": "Select class",
+    "enroll": "Enroll",
+    "enrolling": "Enrolling...",
+    "noClasses": "No active classes yet."
+  },
   "form": {
     "addSlot": "Add slot",
     "addTitle": "Add class",

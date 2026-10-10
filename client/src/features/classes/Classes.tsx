@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { classesApi, roomsApi, ClassItem, Room } from './classes.api';
+import { studentsApi } from '../students/students.api';
 import { peopleApi } from '../people/people.api';
 import { useDebounce } from '../../shared/hooks/useDebounce';
 import { useToast } from '../../shared/ui/toast';
@@ -42,6 +43,17 @@ export function Classes() {
   const [page, setPage] = useState(1);
   const [pagination, setPagination] = useState<PaginationMeta | null>(null);
   const toast = useToast();
+
+  // Deep-link ghi danh: /app/classes?enrollStudent=<id> mở modal chọn lớp cho học viên này
+  const [searchParams, setSearchParams] = useSearchParams();
+  const enrollStudentRaw = searchParams.get('enrollStudent');
+  const enrollStudentId =
+    enrollStudentRaw && Number.isFinite(Number(enrollStudentRaw)) ? Number(enrollStudentRaw) : null;
+  const closeEnrollStudent = () => {
+    const p = new URLSearchParams(searchParams);
+    p.delete('enrollStudent');
+    setSearchParams(p, { replace: true });
+  };
 
   const debouncedSearch = useDebounce(search);
   const filtering = search.trim() !== '';
@@ -246,7 +258,77 @@ export function Classes() {
           danger
         />
       )}
+      {enrollStudentId != null && (
+        <EnrollStudentModal studentId={enrollStudentId} onClose={closeEnrollStudent} />
+      )}
     </div>
+  );
+}
+
+/** Modal ghi danh trực tiếp 1 học viên vào lớp (mở từ deep-link trang chi tiết học viên). */
+function EnrollStudentModal({ studentId, onClose }: { studentId: number; onClose: () => void }) {
+  const { t } = useTranslation(['classes', 'common']);
+  const [name, setName] = useState('');
+  const [options, setOptions] = useState<ClassItem[]>([]);
+  const [classId, setClassId] = useState('');
+  const [busy, setBusy] = useState(false);
+  const toast = useToast();
+
+  useEffect(() => {
+    Promise.all([studentsApi.get(studentId), classesApi.list('', { limit: 200 })])
+      .then(([s, r]) => {
+        setName(s.student.name);
+        setOptions(r.data.filter((c) => c.status === 'active'));
+      })
+      .catch((err: Error) => toast(err.message, 'error'));
+  }, [studentId, toast]);
+
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (busy || !classId) return;
+    setBusy(true);
+    try {
+      await classesApi.enroll(Number(classId), studentId);
+      toast(t('detail.enroll.added'), 'success');
+      onClose();
+    } catch (err) {
+      toast(err instanceof Error ? err.message : t('detail.enroll.addError'), 'error');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <Modal title={t('enrollStudent.title')} onClose={onClose}>
+      <p className="confirm-text">{t('enrollStudent.forStudent', { name })}</p>
+      <form onSubmit={submit}>
+        <Field label={t('enrollStudent.selectClass')}>
+          <select
+            className="text-input"
+            value={classId}
+            onChange={(e) => setClassId(e.target.value)}
+            required
+          >
+            <option value="">{t('enrollStudent.selectClass')}</option>
+            {options.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+              </option>
+            ))}
+          </select>
+        </Field>
+        {options.length === 0 && <p className="muted">{t('enrollStudent.noClasses')}</p>}
+        <div className="modal-actions">
+          <button type="button" className="btn" onClick={onClose}>
+            {t('actions.cancel', { ns: 'common' })}
+          </button>
+          <button type="submit" className="btn btn-primary" disabled={busy || !classId}>
+            {busy && <span className="spinner" aria-hidden="true" />}
+            {busy ? t('enrollStudent.enrolling') : t('enrollStudent.enroll')}
+          </button>
+        </div>
+      </form>
+    </Modal>
   );
 }
 

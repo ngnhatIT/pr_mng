@@ -130,6 +130,14 @@
     "desc": "Tạo lớp học đầu tiên với lịch học, giáo viên và học phí.",
     "title": "Chưa có lớp học nào"
   },
+  "enrollStudent": {
+    "title": "Ghi danh học viên vào lớp",
+    "forStudent": "Học viên: {{name}}",
+    "selectClass": "Chọn lớp",
+    "enroll": "Ghi danh",
+    "enrolling": "Đang ghi danh...",
+    "noClasses": "Chưa có lớp học đang hoạt động."
+  },
   "form": {
     "addSlot": "Thêm buổi",
     "addTitle": "Thêm lớp học",

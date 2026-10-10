@@ -469,6 +469,24 @@ export async function createVnpayPayment(
   return { pay_url: payUrl };
 }
 
+/**
+ * Trạng thái giao dịch VNPay theo ref — cho trang kết quả poll khi IPN chưa tới.
+ * Ref có dạng đoán được (HD<invoice_id>_<timestamp>) nên KHÔNG để public:
+ * yêu cầu parentAuth + kiểm tra hóa đơn thuộc con của phụ huynh.
+ */
+export async function getVnpayTxnStatus(
+  parentId: number,
+  ref: string
+): Promise<{ status: 'confirmed' | 'pending' | 'failed' }> {
+  const txn = (await db
+    .prepare('SELECT invoice_id, status FROM payment_txns WHERE ref = ?')
+    .get(ref)) as { invoice_id: number; status: string } | undefined;
+  if (!txn) throw AppError.notFound('Không tìm thấy giao dịch');
+  await getParentInvoice(parentId, txn.invoice_id); // throw 404 nếu hóa đơn không thuộc phụ huynh
+  const status = txn.status === 'confirmed' ? 'confirmed' : txn.status === 'failed' ? 'failed' : 'pending';
+  return { status };
+}
+
 /* --------------------------------- Nghỉ phép --------------------------------- */
 
 export async function createLeave(

@@ -120,7 +120,7 @@ export function StudentDetail() {
               title={t('detail.noClasses')}
               desc={t('detail.noClassesDesc')}
               action={
-                <Link className="btn btn-primary btn-sm" to="/app/classes">
+                <Link className="btn btn-primary btn-sm" to={`/app/classes?enrollStudent=${id}`}>
                   {t('detail.noClassesAction')}
                 </Link>
               }

@@ -220,6 +220,19 @@ router.post(
   })
 );
 
+/**
+ * Trạng thái giao dịch VNPay theo ref — trang kết quả poll mỗi 5s khi IPN chưa tới.
+ * parentAuth (áp dụng cho cả router phía dưới) + service kiểm tra hóa đơn thuộc phụ huynh.
+ */
+router.get(
+  '/vnpay-txn-status',
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const ref = String(req.query.ref || '').slice(0, 120);
+    if (!ref) throw AppError.badRequest('Thiếu mã giao dịch');
+    res.json(await parentService.getVnpayTxnStatus(ctx(req).parentId, ref));
+  })
+);
+
 router.post(
   '/leaves',
   asyncHandler(async (req: AuthRequest, res: Response) => {
