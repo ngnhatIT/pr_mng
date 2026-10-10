@@ -128,9 +128,9 @@
     },
     "title": "Quản lý đơn xin nghỉ phép",
     "toast": {
-      "approveFail": "Duyệt thất bại",
+      "approveFail": "Không duyệt được đơn nghỉ phép, vui lòng thử lại",
       "loadFail": "Không tải được đơn xin nghỉ phép",
-      "rejectFail": "Thất bại",
+      "rejectFail": "Không từ chối được đơn nghỉ phép, vui lòng thử lại",
       "rejected": "Đã từ chối đơn xin nghỉ phép"
     },
     "totalCount": "Tổng {{total}} đơn",
@@ -194,10 +194,10 @@
     "title": "Đánh giá của phụ huynh",
     "toast": {
       "approved": "Đã duyệt đánh giá",
-      "deleteFail": "Xóa thất bại",
+      "deleteFail": "Không xóa được đánh giá, vui lòng thử lại",
       "deleted": "Đã xóa đánh giá",
       "loadFail": "Không tải được đánh giá",
-      "moderateFail": "Thất bại",
+      "moderateFail": "Không xử lý được đánh giá, vui lòng thử lại",
       "rejected": "Đã từ chối đánh giá"
     }
   },

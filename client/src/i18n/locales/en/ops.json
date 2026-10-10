@@ -128,9 +128,9 @@
     },
     "title": "Leave requests",
     "toast": {
-      "approveFail": "Approval failed",
+      "approveFail": "Couldn't approve the leave request, please try again",
       "loadFail": "Could not load leave requests",
-      "rejectFail": "Failed",
+      "rejectFail": "Couldn't reject the leave request, please try again",
       "rejected": "Leave request rejected"
     },
     "totalCount_one": "{{total}} request total",
@@ -194,10 +194,10 @@
     "title": "Parent reviews",
     "toast": {
       "approved": "Review approved",
-      "deleteFail": "Delete failed",
+      "deleteFail": "Couldn't delete the review, please try again",
       "deleted": "Review deleted",
       "loadFail": "Could not load reviews",
-      "moderateFail": "Failed",
+      "moderateFail": "Couldn't process the review, please try again",
       "rejected": "Review rejected"
     }
   },
