@@ -280,9 +280,19 @@ router.post(
       student_id: v.number({ integer: true, min: 1, label: 'Học viên' }),
       answers: v.any({ label: 'Bài làm' }),
     });
-    if (!Array.isArray(answers)) {
-      res.status(400).json({ error: 'Bài làm không hợp lệ', code: 'VALIDATION_INVALID' });
-      return;
+    if (
+      !Array.isArray(answers) ||
+      answers.some(
+        (a) =>
+          typeof a !== 'object' ||
+          a === null ||
+          !Number.isInteger((a as { question_id?: unknown }).question_id) ||
+          !Number.isInteger((a as { option_id?: unknown }).option_id)
+      )
+    ) {
+      // Validate shape ở trust boundary: phần tử sai shape (null, thiếu id)
+      // sẽ làm submitQuiz 500 khi đọc a.question_id
+      throw AppError.badRequest('Bài làm không hợp lệ');
     }
     res
       .status(201)
