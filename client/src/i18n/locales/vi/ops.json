@@ -37,8 +37,8 @@
       "loadFail": "Không tải được nhật ký"
     },
     "totalCount": "Tổng {{total}} dòng nhật ký",
-    "totalCount_one": "{{total}} log entry total",
-    "totalCount_other": "{{total}} log entries total"
+    "totalCount_one": "Tổng {{total}} dòng nhật ký",
+    "totalCount_other": "Tổng {{total}} dòng nhật ký"
   },
   "leads": {
     "add": "Thêm lead",
@@ -89,7 +89,7 @@
       "updateFail": "Cập nhật thất bại"
     },
     "countTitle_one": "{{count}} lead",
-    "countTitle_other": "{{count}} leads"
+    "countTitle_other": "{{count}} lead"
   },
   "leaves": {
     "allStatuses": "Tất cả trạng thái",
@@ -129,8 +129,8 @@
       "rejected": "Đã từ chối đơn xin nghỉ phép"
     },
     "totalCount": "Tổng {{total}} đơn",
-    "totalCount_one": "{{total}} request total",
-    "totalCount_other": "{{total}} requests total"
+    "totalCount_one": "Tổng {{total}} đơn",
+    "totalCount_other": "Tổng {{total}} đơn"
   },
   "referrals": {
     "allStatuses": "Tất cả trạng thái",

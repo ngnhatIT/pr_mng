@@ -37,7 +37,7 @@
     },
     "empty": "Chưa có ai làm bài",
     "title": "Kết quả quiz: {{title}}",
-    "attempts_one": "attempt",
+    "attempts_one": "lượt nộp",
     "attempts_other": "lượt nộp"
   },
   "bank": {
@@ -69,14 +69,14 @@
       "deleteFail": "Xóa thất bại",
       "loadFail": "Không tải được ngân hàng",
       "staleSelection": "Có {{count}} câu đã chọn không còn trong danh sách",
-      "staleSelection_one": "{{count}} selected question is no longer in the list",
-      "staleSelection_other": "{{count}} selected questions are no longer in the list"
+      "staleSelection_one": "Có {{count}} câu đã chọn không còn trong danh sách",
+      "staleSelection_other": "Có {{count}} câu đã chọn không còn trong danh sách"
     },
     "deleteTitle": "Xóa câu hỏi",
-    "import_one": "Add {{count}} question to quiz",
-    "import_other": "Add {{count}} questions to quiz",
-    "selected_one": "{{count}} question selected",
-    "selected_other": "{{count}} questions selected"
+    "import_one": "Thêm {{count}} câu vào quiz",
+    "import_other": "Thêm {{count}} câu vào quiz",
+    "selected_one": "Đã chọn {{count}} câu",
+    "selected_other": "Đã chọn {{count}} câu"
   },
   "delete": {
     "message": "Xóa bài tập \"{{title}}\"?",
@@ -86,10 +86,10 @@
     "daysLeft": "Còn {{count}} ngày",
     "overdueDays": "Quá hạn {{count}} ngày",
     "today": "Hết hạn hôm nay",
-    "daysLeft_one": "{{count}} day left",
+    "daysLeft_one": "Còn {{count}} ngày",
     "daysLeft_other": "{{count}} ngày còn lại",
-    "overdueDays_one": "Overdue by {{count}} day",
-    "overdueDays_other": "Overdue by {{count}} days"
+    "overdueDays_one": "Quá hạn {{count}} ngày",
+    "overdueDays_other": "Quá hạn {{count}} ngày"
   },
   "editor": {
     "bold": "In đậm",
@@ -212,22 +212,22 @@
       "savedDraft": "Đã lưu nháp",
       "scheduled": "Đã hẹn đăng {{count}} lớp",
       "updated": "Đã cập nhật",
-      "assigned_one": "Assigned to {{count}} class",
+      "assigned_one": "Đã giao cho {{count}} lớp",
       "assigned_other": "Đã giao cho {{count}} lớp",
-      "bankImported_one": "Added {{count}} question from the bank",
-      "bankImported_other": "Added {{count}} questions from the bank",
-      "scheduled_one": "Scheduled for {{count}} class",
-      "scheduled_other": "Scheduled for {{count}} classes"
+      "bankImported_one": "Đã nhập {{count}} câu từ ngân hàng",
+      "bankImported_other": "Đã nhập {{count}} câu từ ngân hàng",
+      "scheduled_one": "Đã lên lịch cho {{count}} lớp",
+      "scheduled_other": "Đã lên lịch cho {{count}} lớp"
     },
     "wholeClass": "Cả lớp",
-    "publishFor_one": "Publish to {{count}} class",
-    "publishFor_other": "Publish to {{count}} classes",
-    "quizQuestions_one": "{{count}} quiz question, {{total}} pts total",
-    "quizQuestions_other": "{{count}} quiz questions, {{total}} pts total",
-    "scheduleFor_one": "Schedule ({{count}} class)",
-    "scheduleFor_other": "Schedule ({{count}} classes)",
-    "selectedCount_one": "{{count}} student selected",
-    "selectedCount_other": "{{count}} students selected"
+    "publishFor_one": "Giao cho {{count}} lớp",
+    "publishFor_other": "Giao cho {{count}} lớp",
+    "quizQuestions_one": "{{count}} câu trắc nghiệm, tổng {{total}} điểm",
+    "quizQuestions_other": "{{count}} câu trắc nghiệm, tổng {{total}} điểm",
+    "scheduleFor_one": "Lên lịch ({{count}} lớp)",
+    "scheduleFor_other": "Lên lịch ({{count}} lớp)",
+    "selectedCount_one": "Đã chọn {{count}} học viên",
+    "selectedCount_other": "Đã chọn {{count}} học viên"
   },
   "grade": {
     "empty": "Chưa có học viên",
@@ -279,7 +279,7 @@
     "submittedAt": "Nộp lúc {{time}}",
     "title": "Bài nộp - {{title}}",
     "viewLarge": "Xem ảnh lớn",
-    "count_one": "{{count}} submission",
+    "count_one": "{{count}} bài nộp",
     "count_other": "{{count}} bài nộp"
   },
   "table": {
