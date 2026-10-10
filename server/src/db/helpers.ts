@@ -137,12 +137,16 @@ export async function generateSessionsForClass(classId: number): Promise<void> {
   const end = cls.end_date ? parseISODate(cls.end_date) : addDays(new Date(), 60);
   if (start > end) return;
   await db.transaction(async (tx) => {
-    const txExists = tx.prepare('SELECT 1 FROM sessions WHERE class_id = ? AND date = ?');
-    const txInsert = tx.prepare('INSERT INTO sessions (class_id, date, topic) VALUES (?, ?, ?)');
+    // INSERT ... ON CONFLICT DO NOTHING thay vì SELECT-then-INSERT:
+    // 2 request đồng thời (2 GET danh sách buổi học) không còn 409.
+    // DB cũ thiếu UNIQUE(class_id, date) thì mệnh đề này vô hiệu một cách an toàn
+    // (insert như thường, không lỗi) — xem debt migration UNIQUE cho DB cũ.
+    const txInsert = tx.prepare(
+      'INSERT INTO sessions (class_id, date, topic) VALUES (?, ?, ?) ON CONFLICT DO NOTHING'
+    );
     for (let d = new Date(start); d <= end; d = addDays(d, 1)) {
       if (!days.has(ourDayOfWeek(d))) continue;
-      const iso = toISODate(d);
-      if (!(await txExists.get(classId, iso))) await txInsert.run(classId, iso, '');
+      await txInsert.run(classId, toISODate(d), '');
     }
   });
 }
