@@ -66,7 +66,9 @@ export function System() {
                 <th scope="col">{t('system.col.plan')}</th>
                 <th scope="col">{t('system.col.planExpiry')}</th>
                 <th scope="col">{t('system.col.counts')}</th>
-                <th scope="col" className="th-right">{t('system.col.actions')}</th>
+                <th scope="col" className="th-right">
+                  {t('system.col.actions')}
+                </th>
               </tr>
             </thead>
             <tbody>

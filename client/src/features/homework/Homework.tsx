@@ -315,8 +315,12 @@ export function Homework() {
                   <th scope="col">{t('table.class')}</th>
                   <th scope="col">{t('table.status')}</th>
                   <th scope="col">{t('table.due')}</th>
-                  <th scope="col" className="th-right">{t('table.progress')}</th>
-                  <th scope="col" className="th-right">{t('table.actions')}</th>
+                  <th scope="col" className="th-right">
+                    {t('table.progress')}
+                  </th>
+                  <th scope="col" className="th-right">
+                    {t('table.actions')}
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -331,7 +335,9 @@ export function Homework() {
                       <td>
                         <div className="hw-item-title">
                           {h.kind === 'quiz' && (
-                            <span className="badge badge-plan-premium hw-quiz-badge">{t('filters.kindQuiz')}</span>
+                            <span className="badge badge-plan-premium hw-quiz-badge">
+                              {t('filters.kindQuiz')}
+                            </span>
                           )}
                           {h.title}
                         </div>

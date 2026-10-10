@@ -103,7 +103,9 @@ export function LeavesAdmin() {
                 <th scope="col">{t('leaves.col.toDate')}</th>
                 <th scope="col">{t('leaves.col.reason')}</th>
                 <th scope="col">{t('leaves.col.status')}</th>
-                <th scope="col" className="th-right">{t('leaves.col.actions')}</th>
+                <th scope="col" className="th-right">
+                  {t('leaves.col.actions')}
+                </th>
               </tr>
             </thead>
             <tbody>

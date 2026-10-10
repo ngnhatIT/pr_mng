@@ -33,9 +33,15 @@ export function AnalyticsModal({ onClose }: { onClose: () => void }) {
                 <thead>
                   <tr>
                     <th scope="col">{t('analytics.col.class')}</th>
-                    <th scope="col" className="th-center">{t('analytics.col.published')}</th>
-                    <th scope="col" className="th-center">{t('analytics.col.avgCompletion')}</th>
-                    <th scope="col" className="th-center">{t('analytics.col.avgScore')}</th>
+                    <th scope="col" className="th-center">
+                      {t('analytics.col.published')}
+                    </th>
+                    <th scope="col" className="th-center">
+                      {t('analytics.col.avgCompletion')}
+                    </th>
+                    <th scope="col" className="th-center">
+                      {t('analytics.col.avgScore')}
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
