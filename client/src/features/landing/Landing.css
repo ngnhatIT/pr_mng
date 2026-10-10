@@ -48,7 +48,7 @@
 }
 
 .course-card .btn {
-  margin-top: 14px;
+  margin-top: 16px;
 }
 
 /* Testimonial gọn sau khi bỏ dấu ngoặc kép trang trí */
@@ -81,7 +81,7 @@
   }
 
   .landing-nav-links {
-    gap: 6px;
+    gap: 8px;
   }
 
   .landing-hero {
@@ -120,8 +120,8 @@
 .teacher-row {
   display: flex;
   align-items: center;
-  gap: 14px;
-  padding: 14px 0;
+  gap: 16px;
+  padding: 16px 0;
   border-bottom: 1px solid var(--border);
 }
 .teacher-avatar {
