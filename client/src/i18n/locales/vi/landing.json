@@ -1,7 +1,7 @@
 {
   "courses": {
     "capacity": "Sĩ số",
-    "empty": "Hiện chưa có khóa học nào được mở.",
+    "empty": "Đang tải danh sách khóa học...",
     "schedule": "Lịch học",
     "students": "{{count}} học viên",
     "sub": "Chọn khóa học phù hợp với trình độ và mục tiêu của con bạn",
@@ -55,7 +55,7 @@
   },
   "sending": "Đang gửi...",
   "teachers": {
-    "empty": "Hiện chưa có thông tin giáo viên.",
+    "empty": "Đang tải thông tin giáo viên...",
     "fallback": "Giáo viên",
     "sub": "Giáo viên tận tâm, giàu kinh nghiệm đồng hành cùng học viên",
     "title": "Đội ngũ giáo viên"

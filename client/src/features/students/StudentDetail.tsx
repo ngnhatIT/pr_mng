@@ -7,7 +7,7 @@ import { classesApi, type ClassItem } from '../classes/classes.api';
 import { useToast } from '../../shared/ui/toast';
 import { Student, InvoiceItem, Grade, formatVND, formatDate } from '../../shared/types';
 import { Modal, ConfirmDialog } from '../../shared/components/Modal';
-import { Field } from '../../shared/components/Form';
+import { Field, useFieldErrors } from '../../shared/components/Form';
 import { EmptyState } from '../../shared/components/EmptyState';
 import { Skeleton, TableSkeleton } from '../../shared/components/Skeleton';
 import { Icon } from '../../shared/components/icons';
@@ -329,6 +329,8 @@ function StudentGradeFormModal({
   const [comment, setComment] = useState('');
   const [busy, setBusy] = useState(false);
   const toast = useToast();
+  // Lỗi inline dưới field + focus field lỗi đầu tiên (skill 8.2)
+  const { errors, refFor, show, clear } = useFieldErrors<'score'>();
 
   useEffect(() => {
     // HIGH-2: GET /classes trả envelope {data, pagination}, phải lấy .data trước khi filter
@@ -341,6 +343,12 @@ function StudentGradeFormModal({
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (busy) return;
+    // Điểm không được vượt quá thang điểm: lỗi inline dưới ô điểm, giữ lại dữ liệu đã nhập
+    const max = Number(maxScore) || 10;
+    const errs: Record<string, string> = {};
+    if (score.trim() !== '' && Number.isFinite(Number(score)) && Number(score) > max)
+      errs.score = t('detail.grades.scoreTooHigh', { max });
+    if (!show(errs)) return;
     setBusy(true);
     try {
       await http.post('/grades', {
@@ -377,14 +385,18 @@ function StudentGradeFormModal({
           <Field label={t('detail.grades.form.examName')}>
             <input className="text-input" value={title} onChange={(e) => setTitle(e.target.value)} required />
           </Field>
-          <Field label={t('detail.grades.form.score')}>
+          <Field label={t('detail.grades.form.score')} error={errors.score}>
             <input
+              ref={refFor('score')}
               className="text-input"
               type="number"
               step="0.25"
               min={0}
               value={score}
-              onChange={(e) => setScore(e.target.value)}
+              onChange={(e) => {
+                setScore(e.target.value);
+                clear('score');
+              }}
               required
             />
           </Field>

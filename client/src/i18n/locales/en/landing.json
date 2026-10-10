@@ -1,7 +1,7 @@
 {
   "courses": {
     "capacity": "Class size",
-    "empty": "No courses are open at the moment.",
+    "empty": "Loading courses...",
     "schedule": "Schedule",
     "students": "{{count}} students",
     "sub": "Find the right course for your child's level and goals",
@@ -55,7 +55,7 @@
   },
   "sending": "Sending...",
   "teachers": {
-    "empty": "No teacher information yet.",
+    "empty": "Loading teachers...",
     "fallback": "Teacher",
     "sub": "Dedicated, experienced teachers",
     "title": "Our teachers"
