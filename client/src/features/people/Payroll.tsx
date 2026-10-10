@@ -77,7 +77,9 @@ export function Payroll() {
                 <th scope="col">{t('payroll.table.sessions')}</th>
                 <th scope="col">{t('payroll.table.perSession')}</th>
                 <th scope="col">{t('payroll.table.total')}</th>
-                <th scope="col" className="th-right">{t('payroll.table.actions')}</th>
+                <th scope="col" className="th-right">
+                  {t('payroll.table.actions')}
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -161,6 +163,7 @@ function RateModal({ row, onClose, onDone }: { row: PayrollRow; onClose: () => v
             {t('actions.cancel', { ns: 'common' })}
           </button>
           <button type="submit" className="btn btn-primary" disabled={busy}>
+            {busy && <span className="spinner" aria-hidden="true" />}
             {busy ? t('actions.saving', { ns: 'common' }) : t('actions.save', { ns: 'common' })}
           </button>
         </div>

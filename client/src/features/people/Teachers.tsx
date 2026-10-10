@@ -101,7 +101,9 @@ export function Teachers() {
                 <th scope="col">{t('table.phone')}</th>
                 <th scope="col">{t('table.email')}</th>
                 <th scope="col">{t('table.classes')}</th>
-                <th scope="col" className="th-right">{t('table.actions')}</th>
+                <th scope="col" className="th-right">
+                  {t('table.actions')}
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -218,6 +220,7 @@ function AccountModal({ teacher, onClose }: { teacher: Teacher; onClose: () => v
             {t('actions.cancel', { ns: 'common' })}
           </button>
           <button type="submit" className="btn btn-primary" disabled={busy}>
+            {busy && <span className="spinner" aria-hidden="true" />}
             {busy ? t('account.creating') : t('account.create')}
           </button>
         </div>
@@ -279,6 +282,7 @@ function TeacherFormModal({
             {t('actions.cancel', { ns: 'common' })}
           </button>
           <button type="submit" className="btn btn-primary" disabled={busy}>
+            {busy && <span className="spinner" aria-hidden="true" />}
             {busy ? t('actions.saving', { ns: 'common' }) : t('actions.save', { ns: 'common' })}
           </button>
         </div>
