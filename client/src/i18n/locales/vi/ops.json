@@ -83,15 +83,15 @@
     },
     "title": "Tuyển sinh (Lead)",
     "toast": {
-      "convertFail": "Chuyển đổi thất bại",
+      "convertFail": "Không chuyển đổi được lead, vui lòng thử lại",
       "converted": "Đã tạo học viên mới (ID {{id}})",
-      "deleteFail": "Xóa thất bại",
+      "deleteFail": "Không xóa được lead, vui lòng thử lại",
       "deleted": "Đã xóa lead",
-      "loadFail": "Không tải được leads",
+      "loadFail": "Không tải được danh sách lead, vui lòng thử lại",
       "moved": "Đã chuyển \"{{name}}\" sang {{label}}",
-      "saveFail": "Lưu thất bại",
+      "saveFail": "Không lưu được lead, vui lòng thử lại",
       "saved": "Đã lưu lead",
-      "updateFail": "Cập nhật thất bại"
+      "updateFail": "Không cập nhật được lead, vui lòng thử lại"
     },
     "countTitle_one": "{{count}} lead",
     "countTitle_other": "{{count}} lead"
@@ -286,11 +286,11 @@
     },
     "title": "Học thử",
     "toast": {
-      "convertFail": "Chuyển đổi thất bại",
+      "convertFail": "Không chuyển đổi được đăng ký học thử, vui lòng thử lại",
       "converted": "Đã tạo học viên mới (ID {{id}})",
-      "loadFail": "Không tải được danh sách học thử",
+      "loadFail": "Không tải được danh sách học thử, vui lòng thử lại",
       "statusUpdated": "Đã cập nhật trạng thái",
-      "updateFail": "Cập nhật thất bại"
+      "updateFail": "Không cập nhật được trạng thái, vui lòng thử lại"
     },
     "totalCount": "Tổng {{total}} đăng ký",
     "emptyFiltered": {

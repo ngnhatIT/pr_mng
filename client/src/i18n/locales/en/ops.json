@@ -84,15 +84,15 @@
     },
     "title": "Admissions (Leads)",
     "toast": {
-      "convertFail": "Conversion failed",
+      "convertFail": "Could not convert the lead, please try again",
       "converted": "New student created (ID {{id}})",
-      "deleteFail": "Delete failed",
+      "deleteFail": "Could not delete the lead, please try again",
       "deleted": "Lead deleted",
-      "loadFail": "Could not load leads",
+      "loadFail": "Could not load the lead list, please try again",
       "moved": "Moved \"{{name}}\" to {{label}}",
-      "saveFail": "Save failed",
+      "saveFail": "Could not save the lead, please try again",
       "saved": "Lead saved",
-      "updateFail": "Update failed"
+      "updateFail": "Could not update the lead, please try again"
     },
     "countTitle": "{{count}} leads"
   },
@@ -286,11 +286,11 @@
     },
     "title": "Trial lessons",
     "toast": {
-      "convertFail": "Conversion failed",
+      "convertFail": "Could not convert the trial registration, please try again",
       "converted": "New student created (ID {{id}})",
-      "loadFail": "Could not load trial list",
+      "loadFail": "Could not load the trial list, please try again",
       "statusUpdated": "Status updated",
-      "updateFail": "Update failed"
+      "updateFail": "Could not update the status, please try again"
     },
     "totalCount": "{{total}} registrations total",
     "emptyFiltered": {
