@@ -56,6 +56,11 @@
       "desc": "Lead từ form đăng ký trên landing page sẽ tự động chảy vào đây.",
       "title": "Chưa có lead nào"
     },
+    "emptyFiltered": {
+      "desc": "Thử từ khóa khác hoặc xóa bộ lọc để xem toàn bộ.",
+      "title": "Không tìm thấy lead nào",
+      "clear": "Xóa bộ lọc"
+    },
     "emptyCol": "Chưa có lead",
     "form": {
       "name": "Họ tên *",
@@ -72,6 +77,8 @@
     "moveNext": "Chuyển sang {{label}}",
     "moveNextAria": "Chuyển {{name}} sang {{label}}",
     "pipelineLabel": "Pipeline tuyển sinh",
+    "searchPlaceholder": "Tìm theo tên, số điện thoại...",
+    "clearSearch": "Xóa từ khóa tìm kiếm",
     "reopen": "Mở lại lead",
     "reopenAria": "Mở lại lead {{name}}",
     "status": {

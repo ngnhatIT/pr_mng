@@ -8,6 +8,7 @@ import { PageHeader } from '../../shared/components/PageHeader';
 import { EmptyState } from '../../shared/components/EmptyState';
 import { Skeleton } from '../../shared/components/Skeleton';
 import { Pagination, type PaginationMeta } from '../../shared/components/Pagination';
+import { useDebounce } from '../../shared/hooks/useDebounce';
 import { LeadItem, formatDate } from '../../shared/types';
 import { Icon } from '../../shared/components/icons';
 import { ConvertModal } from './Trials';
@@ -30,14 +31,17 @@ export function Leads() {
   const [converting, setConverting] = useState<LeadItem | null>(null);
   const [page, setPage] = useState(1);
   const [pagination, setPagination] = useState<PaginationMeta | null>(null);
+  const [search, setSearch] = useState('');
   const toast = useToast();
 
   const statusLabel = (s: string) => t(`leads.status.${s}`);
+  const debouncedSearch = useDebounce(search);
+  const filtering = search.trim() !== '';
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await leadsApi.list({ page });
+      const res = await leadsApi.list({ page }, debouncedSearch);
       setLeads(res.data);
       setPagination(res.pagination);
     } catch (err) {
@@ -45,7 +49,7 @@ export function Leads() {
     } finally {
       setLoading(false);
     }
-  }, [page, toast, t]);
+  }, [page, debouncedSearch, toast, t]);
 
   useEffect(() => {
     void load();
@@ -98,6 +102,42 @@ export function Leads() {
         }
       />
 
+      <div className="toolbar leads-toolbar">
+        <span className={`search-wrap${search ? ' has-clear' : ''}`}>
+          <span className="search-icon">
+            <Icon name="search" size={15} />
+          </span>
+          <input
+            className="text-input search-input"
+            aria-label={t('leads.searchPlaceholder')}
+            placeholder={t('leads.searchPlaceholder')}
+            value={search}
+            onChange={(e) => {
+              setSearch(e.target.value);
+              setPage(1);
+            }}
+          />
+          {search !== '' &&
+            (loading || search !== debouncedSearch ? (
+              <span className="search-clear" aria-hidden="true">
+                <span className="spinner spinner-dark" />
+              </span>
+            ) : (
+              <button
+                type="button"
+                className="search-clear"
+                onClick={() => {
+                  setSearch('');
+                  setPage(1);
+                }}
+                aria-label={t('leads.clearSearch')}
+              >
+                <Icon name="x" size={14} />
+              </button>
+            ))}
+        </span>
+      </div>
+
       {loading && leads.length === 0 ? (
         <div className="pipeline" aria-hidden="true">
           {COLUMNS.map((col) => (
@@ -115,13 +155,26 @@ export function Leads() {
       ) : leads.length === 0 ? (
         <EmptyState
           icon="inbox"
-          title={t('leads.empty.title')}
-          desc={t('leads.empty.desc')}
+          title={t(filtering ? 'leads.emptyFiltered.title' : 'leads.empty.title')}
+          desc={t(filtering ? 'leads.emptyFiltered.desc' : 'leads.empty.desc')}
           action={
-            <button className="btn btn-primary" onClick={() => setEditing('new')}>
-              <Icon name="plus" size={15} />
-              {t('leads.add')}
-            </button>
+            filtering ? (
+              <button
+                className="btn btn-secondary btn-inline"
+                onClick={() => {
+                  setSearch('');
+                  setPage(1);
+                }}
+              >
+                <Icon name="x" size={14} />
+                {t('leads.emptyFiltered.clear')}
+              </button>
+            ) : (
+              <button className="btn btn-primary" onClick={() => setEditing('new')}>
+                <Icon name="plus" size={15} />
+                {t('leads.add')}
+              </button>
+            )
           }
         />
       ) : (

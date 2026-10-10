@@ -57,6 +57,11 @@
       "desc": "Leads from the landing page signup form will flow in here automatically.",
       "title": "No leads yet"
     },
+    "emptyFiltered": {
+      "desc": "Try a different keyword or clear the filter to see all.",
+      "title": "No leads match",
+      "clear": "Clear filter"
+    },
     "emptyCol": "No leads",
     "form": {
       "name": "Full name *",
@@ -73,6 +78,8 @@
     "moveNext": "Move to {{label}}",
     "moveNextAria": "Move {{name}} to {{label}}",
     "pipelineLabel": "Admissions pipeline",
+    "searchPlaceholder": "Search by name, phone...",
+    "clearSearch": "Clear search",
     "reopen": "Reopen lead",
     "reopenAria": "Reopen lead {{name}}",
     "status": {

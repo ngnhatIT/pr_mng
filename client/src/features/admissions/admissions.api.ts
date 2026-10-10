@@ -12,10 +12,11 @@ export interface LeadForm {
 }
 
 export const leadsApi = {
-  list: (page?: PageParams) => {
+  list: (page?: PageParams, search?: string) => {
     const q = new URLSearchParams();
     if (page?.page) q.set('page', String(page.page));
     if (page?.limit) q.set('limit', String(page.limit));
+    if (search?.trim()) q.set('search', search.trim());
     const qs = q.toString();
     return http.get<Paginated<LeadItem>>(qs ? `/leads?${qs}` : '/leads');
   },
