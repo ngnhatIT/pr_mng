@@ -68,3 +68,26 @@ describe('isQuizQuestionInvalid', () => {
     expect(isQuizQuestionInvalid({ ...base, qtype: 'essay', options: [] })).toBe(false);
   });
 });
+
+describe('isQuizQuestionInvalid - điểm số', () => {
+  const base: QuizQuestionForm = {
+    question: '2 + 2 = ?',
+    points: 1,
+    qtype: 'single',
+    options: [
+      { text: '3', is_correct: false },
+      { text: '4', is_correct: true },
+    ],
+  };
+  it('điểm 0 hoặc âm là không hợp lệ (không ép im lặng thành 1)', () => {
+    expect(isQuizQuestionInvalid({ ...base, points: 0 })).toBe(true);
+    expect(isQuizQuestionInvalid({ ...base, points: -2 })).toBe(true);
+  });
+  it('điểm quá 1000 là không hợp lệ (giới hạn server)', () => {
+    expect(isQuizQuestionInvalid({ ...base, points: 1001 })).toBe(true);
+    expect(isQuizQuestionInvalid({ ...base, points: 1000 })).toBe(false);
+  });
+  it('điểm lẻ 0.5 hợp lệ', () => {
+    expect(isQuizQuestionInvalid({ ...base, points: 0.5 })).toBe(false);
+  });
+});

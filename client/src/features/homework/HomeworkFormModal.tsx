@@ -23,10 +23,11 @@ export function isValidHttpUrl(s: string): boolean {
   }
 }
 
-/** Câu hỏi quiz chưa hợp lệ: thiếu nội dung / đáp án / đáp án đúng. Hàm thuần để test được. */
+/** Câu hỏi quiz chưa hợp lệ: thiếu nội dung / đáp án / đáp án đúng / điểm (server: điểm > 0 và ≤ 1000). Hàm thuần để test được. */
 export function isQuizQuestionInvalid(q: QuizQuestionForm): boolean {
   const qtype = q.qtype ?? 'single';
   if (!q.question.trim()) return true;
+  if (!(q.points > 0) || q.points > 1000) return true;
   if (qtype === 'essay') return false;
   const filled = q.options.filter((o) => o.text.trim());
   if (qtype === 'truefalse')
@@ -971,11 +972,18 @@ export function HomeworkFormModal({
                     step="0.5"
                     value={q.points}
                     disabled={quizLocked}
-                    onChange={(e) => updateQuestion(qi, { points: Number(e.target.value) || 1 })}
+                    // P1-8: không ép 0/NaN thành 1 im lặng — để validate inline báo lỗi (server: điểm > 0, ≤ 1000)
+                    onChange={(e) => updateQuestion(qi, { points: Number(e.target.value) })}
                     title={t('form.points')}
                     aria-label={t('form.points')}
+                    aria-invalid={!(q.points > 0) || q.points > 1000 ? true : undefined}
                   />
                 </div>
+                {(!(q.points > 0) || q.points > 1000) && (
+                  <div className="field-error hw-mb-8" role="alert">
+                    {t('form.errors.pointsInvalid')}
+                  </div>
+                )}
                 {qtype === 'essay' ? (
                   <p className="muted-sm hw-mb-8">{t('bank.essayHint')}</p>
                 ) : (

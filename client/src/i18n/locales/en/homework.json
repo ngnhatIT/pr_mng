@@ -292,9 +292,10 @@
       "duePast": "Due date cannot be in the past",
       "publishAtRequired": "Please choose a publish time",
       "studentsRequired": "Please select at least 1 student",
-      "quizInvalid": "{{count}} question(s) are missing options or a correct answer",
+      "quizInvalid": "{{count}} question(s) are invalid (missing content, options, correct answer or points)",
       "rubricNameRequired": "Enter a rubric name",
-      "rubricCriteriaRequired": "Need at least 1 criterion with a name and score > 0"
+      "rubricCriteriaRequired": "Need at least 1 criterion with a name and score > 0",
+      "pointsInvalid": "Each question must be worth more than 0 and at most 1000 points"
     }
   },
   "grade": {
