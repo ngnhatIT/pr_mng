@@ -5,7 +5,7 @@
     "message": "Bạn có chắc muốn xóa học viên \"{{name}}\"? Toàn bộ dữ liệu liên quan (ghi danh, điểm danh, hóa đơn) cũng sẽ bị xóa.",
     "title": "Xóa học viên"
   },
-  "desc": "Bấm vào tên học viên để xem hồ sơ chi tiết, điểm danh và học phí.",
+  "desc": "Bấm vào tên học viên để xem hồ sơ chi tiết và học phí.",
   "detail": {
     "address": "Địa chỉ",
     "back": "Danh sách học viên",

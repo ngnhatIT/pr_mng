@@ -5,7 +5,7 @@
     "message": "Are you sure you want to delete student \"{{name}}\"? All related data (enrollments, attendance, invoices) will also be deleted.",
     "title": "Delete student"
   },
-  "desc": "Click a student's name for their full profile, attendance and tuition.",
+  "desc": "Click a student's name for their full profile and tuition.",
   "detail": {
     "address": "Address",
     "back": "Student list",
