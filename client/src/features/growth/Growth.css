@@ -70,7 +70,7 @@
 
 /* Tab có đếm số lượng */
 .tab .tab-count {
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 700;
   background: var(--bg-muted);
   border: 1px solid var(--border);
