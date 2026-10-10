@@ -1,6 +1,12 @@
 {
-  "badge": { "custom": "Custom", "system": "System" },
-  "card": { "permCount": "{{count}} permissions", "userCount": "{{count}} users" },
+  "badge": {
+    "custom": "Custom",
+    "system": "System"
+  },
+  "card": {
+    "permCount": "{{count}} permissions",
+    "userCount": "{{count}} users"
+  },
   "confirmDelete": {
     "message": "Role \"{{name}}\" will be deleted. Users with this role will lose its permissions. This cannot be undone.",
     "title": "Delete role?"
@@ -10,7 +16,10 @@
   "desc": "Who can do what, on which data, in which scope",
   "disableScope": "Turn off this permission",
   "edit": "Edit",
-  "emptySearch": { "desc": "Try a different keyword.", "title": "No roles found" },
+  "emptySearch": {
+    "desc": "Try a different keyword.",
+    "title": "No roles found"
+  },
   "forbidden": {
     "desc": "Your account cannot view the roles page. Contact an administrator if needed.",
     "title": "No access"
@@ -26,9 +35,12 @@
     "needCode": "Please enter a role code",
     "needName": "Please enter a role name",
     "save": "Save changes",
-    "saveFail": "Save failed"
+    "saveFail": "Couldn't save the role, please try again"
   },
-  "modal": { "createTitle": "Create new role", "editTitle": "Edit role" },
+  "modal": {
+    "createTitle": "Create new role",
+    "editTitle": "Edit role"
+  },
   "module": {
     "attendance": "Attendance",
     "classes": "Classes",
@@ -58,9 +70,18 @@
   "savePerms": "Save permissions",
   "savebar": "{{count}} unsaved changes",
   "saving": "Saving...",
-  "scope": { "all": "All", "center": "Center", "own": "Own" },
+  "scope": {
+    "all": "All",
+    "center": "Center",
+    "own": "Own"
+  },
   "scopeAria": "Scope for {{name}}",
-  "scopeShort": { "all": "All", "center": "Center", "off": "Off", "own": "Own" },
+  "scopeShort": {
+    "all": "All",
+    "center": "Center",
+    "off": "Off",
+    "own": "Own"
+  },
   "searchPh": "Search roles...",
   "selectRole": {
     "desc": "Select a role from the list on the left to view and edit its permissions.",
@@ -70,11 +91,11 @@
   "title": "Roles",
   "toast": {
     "created": "Role created",
-    "deleteFail": "Failed to delete role",
+    "deleteFail": "Couldn't delete the role, please try again",
     "deleted": "Role deleted",
     "loadDetailFail": "Failed to load role details",
     "loadRolesFail": "Failed to load role list",
-    "savePermsFail": "Failed to save permissions",
+    "savePermsFail": "Couldn't save the permissions, please try again",
     "savedPerms": "Saved {{count}} permissions for the role",
     "updated": "Role updated"
   },

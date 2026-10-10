@@ -1,6 +1,12 @@
 {
-  "badge": { "custom": "Tùy chỉnh", "system": "Hệ thống" },
-  "card": { "permCount": "{{count}} quyền", "userCount": "{{count}} người dùng" },
+  "badge": {
+    "custom": "Tùy chỉnh",
+    "system": "Hệ thống"
+  },
+  "card": {
+    "permCount": "{{count}} quyền",
+    "userCount": "{{count}} người dùng"
+  },
   "confirmDelete": {
     "message": "Vai trò \"{{name}}\" sẽ bị xóa. Người dùng đang mang vai trò này sẽ mất các quyền đi kèm. Hành động này không thể hoàn tác.",
     "title": "Xóa vai trò?"
@@ -10,7 +16,10 @@
   "desc": "Ai được làm gì, trên dữ liệu nào, trong phạm vi nào",
   "disableScope": "Tắt quyền này",
   "edit": "Sửa",
-  "emptySearch": { "desc": "Thử từ khóa khác.", "title": "Không tìm thấy" },
+  "emptySearch": {
+    "desc": "Thử từ khóa khác.",
+    "title": "Không tìm thấy"
+  },
   "forbidden": {
     "desc": "Tài khoản của bạn không được xem trang phân quyền. Liên hệ quản trị viên nếu cần.",
     "title": "Không có quyền truy cập"
@@ -26,9 +35,12 @@
     "needCode": "Vui lòng nhập mã vai trò",
     "needName": "Vui lòng nhập tên vai trò",
     "save": "Lưu thay đổi",
-    "saveFail": "Không lưu được"
+    "saveFail": "Không lưu được vai trò, vui lòng thử lại"
   },
-  "modal": { "createTitle": "Tạo vai trò mới", "editTitle": "Sửa vai trò" },
+  "modal": {
+    "createTitle": "Tạo vai trò mới",
+    "editTitle": "Sửa vai trò"
+  },
   "module": {
     "attendance": "Điểm danh",
     "classes": "Lớp học",
@@ -58,9 +70,18 @@
   "savePerms": "Lưu quyền",
   "savebar": "{{count}} thay đổi chưa lưu",
   "saving": "Đang lưu...",
-  "scope": { "all": "Tất cả", "center": "Trung tâm", "own": "Của mình" },
+  "scope": {
+    "all": "Tất cả",
+    "center": "Trung tâm",
+    "own": "Của mình"
+  },
   "scopeAria": "Phạm vi quyền {{name}}",
-  "scopeShort": { "all": "Tất cả", "center": "Trung tâm", "off": "Tắt", "own": "Của mình" },
+  "scopeShort": {
+    "all": "Tất cả",
+    "center": "Trung tâm",
+    "off": "Tắt",
+    "own": "Của mình"
+  },
   "searchPh": "Tìm vai trò...",
   "selectRole": {
     "desc": "Chọn vai trò ở danh sách bên trái để xem và chỉnh sửa quyền.",
@@ -70,11 +91,11 @@
   "title": "Phân quyền",
   "toast": {
     "created": "Đã tạo vai trò mới",
-    "deleteFail": "Không xóa được vai trò",
+    "deleteFail": "Không xóa được vai trò, vui lòng thử lại",
     "deleted": "Đã xóa vai trò",
     "loadDetailFail": "Không tải được chi tiết vai trò",
     "loadRolesFail": "Không tải được danh sách vai trò",
-    "savePermsFail": "Không lưu được quyền",
+    "savePermsFail": "Không lưu được quyền, vui lòng thử lại",
     "savedPerms": "Đã lưu {{count}} quyền cho vai trò",
     "updated": "Đã cập nhật vai trò"
   },

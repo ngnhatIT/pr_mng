@@ -30,7 +30,7 @@
       },
       "formTitle": "Nhập điểm",
       "loadError": "Không tải được điểm số",
-      "saveError": "Nhập điểm thất bại",
+      "saveError": "Không nhập được điểm, vui lòng thử lại",
       "saved": "Đã nhập điểm",
       "table": {
         "actions": "Thao tác",

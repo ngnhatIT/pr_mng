@@ -30,7 +30,7 @@
       },
       "formTitle": "Add grade",
       "loadError": "Could not load grades",
-      "saveError": "Could not save grade",
+      "saveError": "Couldn't save the grade, please try again",
       "saved": "Grade saved",
       "table": {
         "actions": "Actions",

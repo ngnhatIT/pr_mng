@@ -1,7 +1,7 @@
 {
   "account": {
     "create": "Tạo tài khoản",
-    "createError": "Tạo tài khoản thất bại",
+    "createError": "Không tạo được tài khoản giáo viên, vui lòng thử lại",
     "created": "Đã tạo tài khoản \"{{username}}\" cho giáo viên {{name}}",
     "creating": "Đang tạo...",
     "desc": "Giáo viên sẽ dùng tài khoản này để đăng nhập vào cổng giáo viên (xem buổi dạy, điểm danh, chấm công...).",
@@ -53,7 +53,7 @@
   "rate": {
     "title": "Đơn giá dạy - {{name}}",
     "unit": "Đơn giá mỗi buổi (đ)",
-    "updateError": "Cập nhật thất bại",
+    "updateError": "Không cập nhật được mức lương, vui lòng thử lại",
     "updated": "Đã cập nhật đơn giá cho {{name}}",
     "errors": {
       "amountInvalid": "Đơn giá phải là số không âm"
