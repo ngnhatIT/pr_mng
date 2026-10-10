@@ -636,14 +636,6 @@ textarea.text-input {
 .table tbody tr {
   transition: background-color 0.12s ease;
 }
-/* Chỉ hàng thật sự bấm được mới đổi nền khi hover (chống false affordance):
-   gắn class="row-clickable" cho tr có onClick/onNavigate. */
-.table tbody tr.row-clickable {
-  cursor: pointer;
-}
-.table tbody tr.row-clickable:hover {
-  background: var(--primary-soft);
-}
 .table tbody tr:last-child td {
   border-bottom: none;
 }
