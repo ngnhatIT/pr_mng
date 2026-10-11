@@ -45,5 +45,10 @@
     "topic": "Chủ đề: {{topic}}",
     "unassigned": "Chưa phân công"
   },
-  "viewAll": "Xem tất cả"
+  "viewAll": "Xem tất cả",
+  "revenue": {
+    "title": "Doanh thu 6 tháng gần nhất",
+    "total": "Tổng {{value}}",
+    "monthAria": "Tháng {{month}}: {{value}}"
+  }
 }

@@ -31,6 +31,7 @@
   "scripts": {
     "build": "tsc && mkdir -p dist/docs && cp src/docs/openapi.yaml dist/docs/openapi.yaml",
     "dev": "tsx watch src/index.ts",
+    "seed:showcase": "tsx scripts/seed-showcase.ts",
     "start": "node dist/index.js",
     "test": "OUT=\"${TEST_OUT:-test-dist}\" && rm -rf \"$OUT\" && npx tsc --project tsconfig.test.json --outDir \"./$OUT\" && TESTDB=\"${TEST_DATABASE_URL:-postgres://educenter:educenter123@localhost:5432/educenter_test}\" && DATABASE_URL=\"$TESTDB\" TEST_DATABASE_URL=\"$TESTDB\" NODE_ENV=test node --test --test-concurrency=1 ${TEST_FLAGS:-} $(find \"$OUT\" -name '*.test.js' | sort)"
   },

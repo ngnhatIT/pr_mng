@@ -8,7 +8,6 @@ import { TableSkeleton, StatGridSkeleton } from '../../shared/components/Skeleto
 import { Pagination, clampPage } from '../../shared/components/Pagination';
 import { useLoad } from '../../shared/hooks/useLoad';
 import { useUrlState } from '../../shared/hooks/useUrlState';
-import { StatCard } from '../../shared/components/StatCard';
 import { formatDate, formatVND } from '../../shared/types';
 import { EmptyCell } from '../../shared/components/EmptyCell';
 import './Growth.css';
@@ -51,20 +50,20 @@ export function ReferralsAdmin() {
       ) : (
         <>
           {stats && (
-            <div className="stat-grid stat-grid-3">
-              <StatCard icon="users" tone="blue" value={stats.total} label={t('referrals.stats.total')} />
-              <StatCard
-                icon="clock"
-                tone="amber"
-                value={stats.pending}
-                label={t('referrals.stats.pending')}
-              />
-              <StatCard
-                icon="gift"
-                tone="green"
-                value={stats.rewarded}
-                label={t('referrals.stats.rewarded')}
-              />
+            <div className="stat-strip referral-stats">
+              {(
+                [
+                  ['total', String(stats.total)],
+                  ['pending', String(stats.pending)],
+                  ['rewarded', String(stats.rewarded)],
+                  ['totalReward', formatVND(stats.total_reward ?? 0)],
+                ] as const
+              ).map(([k, v]) => (
+                <div key={k} className="stat-strip-item">
+                  <span className="stat-strip-label">{t(`referrals.stats.${k}`)}</span>
+                  <span className="stat-strip-value">{v}</span>
+                </div>
+              ))}
             </div>
           )}
 
@@ -100,13 +99,13 @@ export function ReferralsAdmin() {
                     <tr key={r.id}>
                       <td>
                         {r.referrer_name || <span className="muted">{t('referrals.noName')}</span>}
-                        <div className="muted mono">{r.referrer_phone}</div>
+                        <div className="cell-sub tabular">{r.referrer_phone}</div>
                       </td>
                       <td data-label={t('referrals.col.referred')}>
                         {r.referred_student_name || r.referred_name || (
                           <span className="muted">{t('referrals.noName')}</span>
                         )}
-                        <div className="muted mono">{r.referred_phone}</div>
+                        <div className="cell-sub tabular">{r.referred_phone}</div>
                       </td>
                       <td data-label={t('referrals.col.status')}>
                         <span className={`badge badge-${r.status === 'rewarded' ? 'rewarded' : 'pending'}`}>

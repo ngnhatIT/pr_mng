@@ -163,7 +163,7 @@ export function Trials() {
                                 </option>
                               ))}
                             </select>
-                            <button className="btn btn-sm btn-primary" onClick={() => setConverting(tr)}>
+                            <button className="btn btn-sm" onClick={() => setConverting(tr)}>
                               {t('trials.convert')}
                             </button>
                           </>

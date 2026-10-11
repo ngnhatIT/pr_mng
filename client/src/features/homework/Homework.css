@@ -1,9 +1,8 @@
 /* Homework feature - styles rieng theo taste-ui.
    Design read: cum bai tap cho giao vien/admin, calm, cham bai va xem bai nop phai nhanh. */
 
-/* ---------- Stat cards: tone đỏ cho quá hạn ---------- */
-.tone-red .stat-icon {
-  background: var(--danger-soft);
+/* Số bài quá hạn > 0 thì đỏ, còn lại giữ màu chữ thường */
+.hw-stats .is-overdue {
   color: var(--danger);
 }
 
@@ -39,7 +38,7 @@
   justify-content: flex-end;
 }
 .hw-progress .num {
-  font-weight: 700;
+  font-weight: 600;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
@@ -108,7 +107,7 @@
   white-space: nowrap;
 }
 .grade-row .num {
-  font-weight: 700;
+  font-weight: 600;
   font-variant-numeric: tabular-nums;
   font-size: var(--font-size-sm);
 }
@@ -132,7 +131,7 @@
 }
 .grade-panel-head .grade-name {
   font-size: var(--font-size-md);
-  font-weight: 700;
+  font-weight: 600;
   flex: 1;
 }
 .grade-score-row {
@@ -143,7 +142,7 @@
 .grade-score-input {
   width: 110px;
   font-size: 20px;
-  font-weight: 800;
+  font-weight: 600;
   text-align: center;
   font-variant-numeric: tabular-nums;
 }
@@ -298,8 +297,8 @@ a:hover .submission-thumb {
 }
 
 /* ---------- Homework page: thay inline styles ---------- */
-.hw-stat-grid {
-  grid-template-columns: repeat(4, 1fr);
+.hw-stats {
+  margin-bottom: var(--sp-5);
 }
 .hw-tabs {
   margin-bottom: 16px;
@@ -315,13 +314,6 @@ a:hover .submission-thumb {
 }
 .hw-quiz-badge {
   margin-right: 6px;
-}
-/* Tablet: 4 cột xuống 2 cột. Ngưỡng 1100px thay vì 900px vì sidebar 248px vẫn hiện
-   ở 901-1100px, content thực chỉ ~700px, 4 cột mỗi card ~162px quá chật. */
-@media (max-width: 1100px) {
-  .hw-stat-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
 }
 
 @media (max-width: 480px) {
@@ -357,11 +349,26 @@ a:hover .submission-thumb {
   min-width: 0;
 }
 .bank-item-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
   font-size: 13px;
-  margin-top: 4px;
+  margin-top: 6px;
 }
-.bank-tag-badge {
-  margin-right: 6px;
+/* Hàng 1: ô tìm kiếm giãn hết chỗ + nút thêm; hàng 2: các bộ lọc chia đều */
+.bank-toolbar {
+  margin-bottom: var(--sp-2);
+}
+.bank-toolbar .search-wrap {
+  flex: 1;
+}
+.bank-toolbar .search-wrap .text-input {
+  width: 100%;
+}
+.bank-filters > select {
+  flex: 1 1 140px;
+  min-width: 0;
 }
 .bank-correct {
   color: var(--success);
@@ -432,10 +439,10 @@ a:hover .submission-thumb {
   font-weight: 600;
 }
 .attempts-score {
-  font-weight: 700;
+  font-weight: 600;
 }
 
-/* ---------- HomeworkFormModal: thay inline styles ---------- */
+/* ---------- HomeworkEditor: thay inline styles ---------- */
 .hw-mb-8 {
   margin-bottom: 8px;
 }
@@ -585,4 +592,209 @@ a:hover .submission-thumb {
   .essay-q {
     transition: none;
   }
+}
+
+/* ---------- Trang soạn bài: cột chính (nội dung, đề) + cột phụ (lớp, hạn, đăng), thanh lưu dính đáy ---------- */
+.hw-editor {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 360px;
+  /* hàng 2 nhận phần cao dư của cột chính -> 2 thẻ cột phụ luôn sát nhau */
+  grid-template-rows: auto 1fr auto;
+  grid-template-areas:
+    'main target'
+    'main side'
+    'bar bar';
+  gap: var(--sp-4);
+  align-items: start;
+}
+.hw-editor.is-edit {
+  grid-template-rows: auto auto;
+  grid-template-areas:
+    'main side'
+    'bar bar';
+}
+.hw-editor .card {
+  margin: 0;
+  padding: var(--sp-5);
+}
+.hw-editor-main {
+  grid-area: main;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+  min-width: 0;
+}
+.hw-editor-target {
+  grid-area: target;
+}
+.hw-editor-side {
+  grid-area: side;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+  min-width: 0;
+}
+.hw-editor-heading {
+  margin: 0 0 var(--sp-3);
+  font-size: var(--font-size-md);
+  font-weight: 600;
+  color: var(--text-strong);
+}
+.hw-editor-side .form-grid,
+.hw-editor-target .form-grid {
+  grid-template-columns: 1fr;
+}
+.hw-editor-side .publish-options {
+  flex-direction: column;
+}
+.hw-editor-side .publish-btn {
+  flex: none;
+}
+.hw-editor .preview-box .preview-label {
+  margin-bottom: var(--sp-3);
+}
+.hw-editor-bar {
+  grid-area: bar;
+  position: sticky;
+  bottom: var(--sp-3);
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-3) var(--sp-4);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+}
+@media (max-width: 1080px) {
+  .hw-editor,
+  .hw-editor.is-edit {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: none;
+    grid-template-areas:
+      'target'
+      'main'
+      'side'
+      'bar';
+  }
+  .hw-editor.is-edit {
+    grid-template-areas:
+      'main'
+      'side'
+      'bar';
+  }
+}
+@media (max-width: 640px) {
+  .hw-editor .card {
+    padding: var(--sp-4);
+  }
+  .hw-editor-bar {
+    flex-wrap: wrap;
+    bottom: 0;
+    padding: var(--sp-3);
+  }
+  .hw-editor-bar .spacer {
+    display: none;
+  }
+  .hw-editor-bar .btn {
+    flex: 1 1 0;
+  }
+  /* Nút chính chiếm trọn hàng cuối, dễ bấm bằng ngón cái */
+  .hw-editor-bar .btn-primary {
+    flex-basis: 100%;
+    order: 1;
+  }
+}
+
+/* ---------- Trang ngân hàng câu hỏi: danh sách + form thêm/sửa dính ở cột phải ---------- */
+.bank-controls {
+  margin-bottom: var(--sp-4);
+}
+.bank-page .bank-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+}
+.bank-page .bank-controls > .toolbar {
+  margin: 0;
+}
+/* Ô tìm kiếm giãn hết chỗ, 3 bộ lọc giữ cỡ cố định bên phải */
+.bank-page .bank-toolbar {
+  flex: 1 1 280px;
+}
+.bank-page .bank-toolbar .search-input {
+  max-width: none;
+}
+.bank-page .bank-filters {
+  flex: none;
+  flex-wrap: nowrap;
+}
+.bank-page .bank-filters > select {
+  flex: none;
+  width: 176px;
+}
+@media (max-width: 860px) {
+  .bank-page .bank-filters {
+    flex: 1 1 100%;
+  }
+  .bank-page .bank-filters > select {
+    flex: 1 1 0;
+    width: auto;
+  }
+}
+.bank-page .bank-list {
+  max-height: none;
+  overflow: visible;
+}
+.bank-count {
+  margin: 0 0 var(--sp-2);
+  font-size: var(--font-size-sm);
+}
+.bank-page .bank-layout.has-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 420px;
+  gap: var(--sp-4);
+  align-items: start;
+}
+.bank-page .bank-list-pane {
+  grid-column: 1;
+  grid-row: 1;
+  min-width: 0;
+}
+.bank-page .bank-form-pane {
+  grid-column: 2;
+  grid-row: 1;
+  position: sticky;
+  top: var(--sp-4);
+  max-height: calc(100dvh - 2 * var(--sp-4));
+  overflow-y: auto;
+  padding: var(--sp-5);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+}
+.bank-page .bank-form-pane .bank-form {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+}
+.bank-page .bank-form-pane .form-grid {
+  grid-template-columns: 1fr;
+}
+@media (max-width: 1080px) {
+  .bank-page .bank-layout.has-form {
+    display: block;
+  }
+  .bank-page .bank-form-pane {
+    position: static;
+    max-height: none;
+    margin-bottom: var(--sp-4);
+  }
+}
+.bank-item.is-editing {
+  border-color: var(--text-strong);
+  box-shadow: inset 0 0 0 1px var(--text-strong);
 }

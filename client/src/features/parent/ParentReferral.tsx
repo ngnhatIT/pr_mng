@@ -5,7 +5,7 @@ import { toastApiError, useToast } from '../../shared/ui/toast';
 import { useLoad } from '../../shared/hooks/useLoad';
 import { EmptyState, LoadError } from '../../shared/components/EmptyState';
 import { Skeleton } from '../../shared/components/Skeleton';
-import { formatDate } from '../../shared/types';
+import { formatDate, formatVND } from '../../shared/types';
 import './parent.css';
 
 export function ParentReferral() {
@@ -39,9 +39,9 @@ export function ParentReferral() {
             <Skeleton height={44} radius={8} />
           </div>
         </section>
-        <div className="stat-grid stat-grid-3" aria-hidden="true">
+        <div className="stat-strip stat-strip-compact" aria-hidden="true">
           {[0, 1, 2].map((i) => (
-            <div key={i} className="stat-card">
+            <div key={i} className="stat-strip-item">
               <Skeleton width="40%" height={26} />
               <div style={{ marginTop: 8 }}>
                 <Skeleton width="70%" height={13} />
@@ -81,35 +81,35 @@ export function ParentReferral() {
         </div>
       </section>
 
-      <div className="stat-grid stat-grid-3">
-        <div className="stat-card">
-          <div className="stat-value">{data.stats.total}</div>
-          <div className="stat-label">{t('referral.statTotal')}</div>
+      <div className="stat-strip stat-strip-compact">
+        <div className="stat-strip-item">
+          <span className="stat-strip-label">{t('referral.statTotal')}</span>
+          <span className="stat-strip-value">{data.stats.total}</span>
         </div>
-        <div className="stat-card">
-          <div className="stat-value">{data.stats.pending}</div>
-          <div className="stat-label">{t('referral.statPending')}</div>
+        <div className="stat-strip-item">
+          <span className="stat-strip-label">{t('referral.statPending')}</span>
+          <span className="stat-strip-value">{data.stats.pending}</span>
         </div>
-        <div className="stat-card">
-          <div className="stat-value">{data.stats.rewarded}</div>
-          <div className="stat-label">{t('referral.statRewarded')}</div>
+        <div className="stat-strip-item">
+          <span className="stat-strip-label">{t('referral.statRewarded')}</span>
+          <span className="stat-strip-value">{data.stats.rewarded}</span>
         </div>
       </div>
 
       <section className="card">
         <h3 className="card-title">{t('referral.creditsTitle')}</h3>
-        <div className="stat-grid stat-grid-3">
-          <div className="stat-card">
-            <div className="stat-value">{data.credits.total}</div>
-            <div className="stat-label">{t('referral.creditsTotal')}</div>
+        <div className="stat-strip stat-strip-compact">
+          <div className="stat-strip-item">
+            <span className="stat-strip-label">{t('referral.creditsTotal')}</span>
+            <span className="stat-strip-value">{formatVND(data.credits.total)}</span>
           </div>
-          <div className="stat-card">
-            <div className="stat-value">{data.credits.used}</div>
-            <div className="stat-label">{t('referral.creditsUsed')}</div>
+          <div className="stat-strip-item">
+            <span className="stat-strip-label">{t('referral.creditsUsed')}</span>
+            <span className="stat-strip-value">{formatVND(data.credits.used)}</span>
           </div>
-          <div className="stat-card stat-card-highlight">
-            <div className="stat-value">{data.credits.available}</div>
-            <div className="stat-label">{t('referral.creditsAvailable')}</div>
+          <div className="stat-strip-item">
+            <span className="stat-strip-label">{t('referral.creditsAvailable')}</span>
+            <span className="stat-strip-value is-strong">{formatVND(data.credits.available)}</span>
           </div>
         </div>
         <p className="muted">{t('referral.creditsNote')}</p>

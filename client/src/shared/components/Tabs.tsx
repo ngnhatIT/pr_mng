@@ -1,4 +1,4 @@
-import type { KeyboardEvent, ReactNode } from 'react';
+import { useEffect, useRef, type KeyboardEvent, type ReactNode } from 'react';
 
 /** B6-4: key '' (tab "Tất cả") -> 'all' để id không kết thúc bằng '-tab-'. */
 const tabId = (id: string, key: string) => `${id}-tab-${key || 'all'}`;
@@ -24,6 +24,18 @@ export function Tabs<K extends string>({
   label: string;
   className?: string;
 }) {
+  const listRef = useRef<HTMLDivElement>(null);
+  // Hàng tab cuộn ngang (mobile): giữ tab đang chọn trong khung nhìn, chỉ cuộn ngang trong tablist (không kéo trang)
+  useEffect(() => {
+    const list = listRef.current;
+    const el = list?.querySelector<HTMLElement>('[aria-selected="true"]');
+    if (!list || !el || list.scrollWidth <= list.clientWidth) return;
+    const lr = list.getBoundingClientRect();
+    const er = el.getBoundingClientRect();
+    if (er.left < lr.left) list.scrollLeft -= lr.left - er.left + 16;
+    else if (er.right > lr.right) list.scrollLeft += er.right - lr.right + 16;
+  }, [value]);
+
   const onKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
     const i = tabs.findIndex((tb) => tb.key === value);
     const last = tabs.length - 1;
@@ -43,7 +55,13 @@ export function Tabs<K extends string>({
     document.getElementById(tabId(id, tabs[next].key))?.focus();
   };
   return (
-    <div className={`tabs ${className}`} role="tablist" aria-label={label} onKeyDown={onKeyDown}>
+    <div
+      ref={listRef}
+      className={`tabs ${className}`}
+      role="tablist"
+      aria-label={label}
+      onKeyDown={onKeyDown}
+    >
       {tabs.map((tb) => (
         <button
           key={tb.key}

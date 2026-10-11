@@ -36,11 +36,23 @@ function setup(role = 'admin') {
     'GET /homework/rubrics/list': [],
   });
 }
-const render = () => renderRoutes([{ path: '/app/homework', element: <Homework /> }], '/app/homework');
+const render = () =>
+  renderRoutes(
+    [
+      { path: '/app/homework', element: <Homework /> },
+      { path: '/app/homework/*', element: <p>page</p> },
+    ],
+    '/app/homework'
+  );
 const lists = (calls: Call[]) => calls.filter((c) => c.method === 'GET' && c.path === '/homework');
 const row = (title: string) => $$('tbody tr').find((r) => r.textContent!.includes(title))!;
 const inRow = (title: string, text: string) =>
-  [...row(title).querySelectorAll('button')].find((b) => b.textContent!.includes(text))!;
+  [...row(title).querySelectorAll('button')].find((b) => b.textContent!.includes(text));
+/** Bấm thao tác trên dòng: nút chính bấm thẳng, thao tác khác mở menu "..." trước. */
+const rowAction = async (title: string, text: string) => {
+  if (!inRow(title, text)) await click(row(title).querySelector('[aria-haspopup="menu"]')!);
+  await click(inRow(title, text)!);
+};
 
 afterEach(cleanup);
 
@@ -60,8 +72,8 @@ describe('Homework (danh sách)', () => {
   it('đăng bài nháp; gỡ đăng phải xác nhận; mỗi lần đổi đều tải lại list + thống kê', async () => {
     const calls = setup();
     await render();
-    await click(inRow('Bài 1', t('actions.publish')));
-    await click(inRow('Bài 2', t('actions.unpublish')));
+    await rowAction('Bài 1', t('actions.publish'));
+    await rowAction('Bài 2', t('actions.unpublish'));
     expect(calls.filter((c) => c.method === 'POST').map((c) => c.path)).toEqual(['/homework/1/publish']);
     await click($$('[role="dialog"] .modal-actions .btn').at(-1)!);
     expect(calls.filter((c) => c.method === 'POST').map((c) => c.path)).toEqual([
@@ -72,13 +84,27 @@ describe('Homework (danh sách)', () => {
     expect(calls.filter((c) => c.path === '/homework/stats')).toHaveLength(3);
   });
 
-  it('dùng lại bài -> tạo bản sao rồi mở ngay form sửa bản sao', async () => {
+  it('dùng lại bài -> tạo bản sao rồi mở ngay trang sửa bản sao', async () => {
     const calls = setup();
-    await render();
-    await click(inRow('Bài 1', t('actions.reuse')));
+    const router = await render();
+    await rowAction('Bài 1', t('actions.reuse'));
     expect(calls.some((c) => c.method === 'POST' && c.path === '/homework/1/reuse')).toBe(true);
-    expect($('[role="dialog"]')!.textContent).toContain(t('form.titleEdit'));
-    expect($<HTMLInputElement>('[role="dialog"] input[maxlength="200"]')!.value).toBe('Bài 1 (bản sao)');
+    expect(router.state.location.pathname).toBe('/app/homework/9/edit');
+  });
+
+  it('giao bài mới, ngân hàng câu hỏi, sửa bài -> mở trang riêng', async () => {
+    const cases: [() => Promise<void>, string][] = [
+      [() => click(byText(t('actions.questionBank'))), '/app/homework/question-bank'],
+      [() => click(byText(t('actions.create'))), '/app/homework/new'],
+      [() => rowAction('Bài 2', t('actions.edit', { ns: 'common' })), '/app/homework/2/edit'],
+    ];
+    for (const [act, path] of cases) {
+      setup();
+      const router = await render();
+      await act();
+      expect(router.state.location.pathname).toBe(path);
+      cleanup();
+    }
   });
 
   it('portal giáo viên: ẩn thống kê/ngân hàng câu hỏi, vẫn giao bài được', async () => {

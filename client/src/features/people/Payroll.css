@@ -21,7 +21,8 @@
 }
 .payroll-total strong {
   font-size: var(--font-size-lg);
-  font-weight: 700;
+  font-weight: 600;
+  color: var(--text-strong);
   font-variant-numeric: tabular-nums;
 }
 

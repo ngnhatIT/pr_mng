@@ -45,5 +45,10 @@
     "topic": "Topic: {{topic}}",
     "unassigned": "Unassigned"
   },
-  "viewAll": "View all"
+  "viewAll": "View all",
+  "revenue": {
+    "title": "Revenue, last 6 months",
+    "total": "Total {{value}}",
+    "monthAria": "{{month}}: {{value}}"
+  }
 }

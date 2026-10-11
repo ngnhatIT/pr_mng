@@ -12,6 +12,7 @@ export interface ReferralRow {
   referred_student_name?: string | null;
   status?: string;
   created_at?: string;
+  reward_amount?: number | null;
   [key: string]: unknown;
 }
 
@@ -54,7 +55,11 @@ export async function listReferrals(
     .prepare(
       `SELECT rf.id, p.name as referrer_name, p.phone as referrer_phone,
          rf.referred_phone, s.name as referred_student_name,
-         rf.status, rf.created_at
+         rf.status, rf.created_at,
+         -- Thưởng đã trao cho người giới thiệu: credits sinh từ hóa đơn của học viên được giới thiệu (rewards.service)
+         (SELECT SUM(c.amount) FROM credits c JOIN invoices i ON i.id = c.source_invoice_id
+          WHERE c.parent_id = rf.referrer_parent_id AND i.student_id = rf.referred_student_id
+            AND c.reason LIKE 'Thưởng giới thiệu%' AND c.voided_at IS NULL) AS reward_amount
        ${from} ${where}
        ORDER BY rf.id DESC LIMIT ? OFFSET ?`
     )

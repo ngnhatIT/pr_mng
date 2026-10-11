@@ -155,7 +155,8 @@
     "payTuition": "Pay tuition",
     "subtitle": "Follow your child's learning progress here.",
     "dobField": "Student's date of birth",
-    "dobRequired": "Please enter the student's date of birth"
+    "dobRequired": "Please enter the student's date of birth",
+    "linkMore": "Link another child"
   },
   "leaves": {
     "allClasses": "- All classes -",

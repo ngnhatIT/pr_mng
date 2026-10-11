@@ -270,7 +270,7 @@ export async function listClasses(
        FROM classes c LEFT JOIN teachers t ON t.id = c.teacher_id
        LEFT JOIN rooms r ON r.id = c.room_id
        WHERE 1=1${scope.clause}${searchClause}${teacherClause}
-       ORDER BY c.id DESC LIMIT ? OFFSET ?`
+       ORDER BY (c.status = 'active') DESC, c.id DESC LIMIT ? OFFSET ?`
     )
     .all(...params, limit, offset)) as unknown[];
   return paginate(rows, total, page, limit);

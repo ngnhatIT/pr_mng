@@ -14,8 +14,10 @@ import { useUrlSearch, useUrlState } from '../../shared/hooks/useUrlState';
 import { Pagination, clampPage } from '../../shared/components/Pagination';
 import { useMyPermissions } from '../system/roles.api';
 import { Icon } from '../../shared/components/icons';
+import { Menu } from '../../shared/components/Menu';
 import './Students.css';
 import { EmptyCell } from '../../shared/components/EmptyCell';
+import { initials } from '../../shared/types';
 
 const emptyForm = {
   code: '',
@@ -117,7 +119,7 @@ export function Students() {
           {search !== '' &&
             (loading || search !== debouncedSearch ? (
               <span className="search-clear" aria-hidden="true">
-                <span className="spinner spinner-dark" />
+                <span className="spinner" />
               </span>
             ) : (
               <button
@@ -181,6 +183,7 @@ export function Students() {
               <tr>
                 <th scope="col">{t('table.code')}</th>
                 <th scope="col">{t('table.name')}</th>
+                <th scope="col">{t('table.classes')}</th>
                 <th scope="col">{t('table.phone')}</th>
                 <th scope="col">{t('table.status')}</th>
                 <th scope="col" className="th-right">
@@ -194,17 +197,22 @@ export function Students() {
                   <td data-label={t('table.code')} className="mono">
                     {s.code}
                   </td>
-                  <td>
+                  <td className="td-primary">
                     <span className="name-cell">
                       <span className="avatar avatar-sm" aria-hidden="true">
-                        <Icon name="user" size={15} />
+                        {initials(s.name)}
                       </span>
                       <Link className="link" to={`/app/students/${s.id}`}>
                         {s.name}
                       </Link>
                     </span>
                   </td>
-                  <td data-label={t('table.phone')}>{s.phone || <EmptyCell />}</td>
+                  <td data-label={t('table.classes')}>
+                    {s.class_names ? <span className="td-classes">{s.class_names}</span> : <EmptyCell />}
+                  </td>
+                  <td data-label={t('table.phone')} className="num">
+                    {s.phone || <EmptyCell />}
+                  </td>
                   <td data-label={t('table.status')}>
                     <span className={`badge badge-${s.status}`}>{t(`status.${s.status}`)}</span>
                   </td>
@@ -217,14 +225,17 @@ export function Students() {
                         </button>
                       )}
                       {perms.has('students.delete') && (
-                        <button
-                          type="button"
-                          className="btn btn-sm btn-danger-ghost"
-                          onClick={() => setDeleting(s)}
-                        >
-                          <Icon name="trash" size={15} />
-                          {t('actions.delete', { ns: 'common' })}
-                        </button>
+                        <Menu
+                          label={t('actions.more', { ns: 'common' })}
+                          items={[
+                            {
+                              label: t('actions.delete', { ns: 'common' }),
+                              icon: 'trash',
+                              danger: true,
+                              onSelect: () => setDeleting(s),
+                            },
+                          ]}
+                        />
                       )}
                     </span>
                   </td>

@@ -10,7 +10,7 @@ import { PageHeader } from '../../shared/components/PageHeader';
 import { EmptyState, LoadError } from '../../shared/components/EmptyState';
 import { TableSkeleton } from '../../shared/components/Skeleton';
 import { Icon } from '../../shared/components/icons';
-import { PayrollRow, formatVND, todayVN } from '../../shared/types';
+import { PayrollRow, formatVND, initials, todayVN } from '../../shared/types';
 import { useMyPermissions } from '../system/roles.api';
 import './Payroll.css';
 
@@ -42,7 +42,7 @@ export function Payroll() {
             <span className="payroll-total">
               <Icon name="banknote" size={16} />
               {t('payroll.totalSpent')}
-              <strong className="debt-amount">{formatVND(total)}</strong>
+              <strong>{formatVND(total)}</strong>
             </span>
           )
         }
@@ -95,7 +95,7 @@ export function Payroll() {
                   <td>
                     <span className="name-cell">
                       <span className="avatar avatar-sm" aria-hidden="true">
-                        <Icon name="user" size={15} />
+                        {initials(r.teacher_name)}
                       </span>
                       {r.teacher_name}
                     </span>

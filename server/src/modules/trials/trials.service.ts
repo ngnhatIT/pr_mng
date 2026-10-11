@@ -49,7 +49,9 @@ export async function listTrials(
   const total = ((await db.prepare(`SELECT COUNT(*) as c ${from} ${where}`).get(...params)) as { c: number })
     .c;
   const rows = (await db
-    .prepare(`SELECT tr.*, c.name as class_name ${from} ${where} ORDER BY tr.id DESC LIMIT ? OFFSET ?`)
+    .prepare(
+      `SELECT tr.*, c.name as class_name ${from} ${where} ORDER BY (tr.status = 'converted') ASC, tr.id DESC LIMIT ? OFFSET ?`
+    )
     .all(...params, limit, offset)) as TrialRow[];
   return paginate(rows, total, page, limit);
 }

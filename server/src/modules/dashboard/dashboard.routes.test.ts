@@ -6,7 +6,7 @@ process.env.DATABASE_URL || (process.env.DATABASE_URL = 'postgres://u:p@localhos
 
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { monthRange } from './dashboard.service';
+import { monthRange, monthsBack } from './dashboard.service';
 
 describe('monthRange', () => {
   it('tháng thường: đầu tháng này -> đầu tháng sau', () => {
@@ -30,5 +30,13 @@ describe('monthRange', () => {
     for (const p of ['2026-09-30 23:59:59', '2026-11-01 00:00:00']) {
       assert.ok(!inRange(p), `${p} không được nằm trong tháng`);
     }
+  });
+});
+
+describe('monthsBack', () => {
+  it('lùi n tháng, qua được ranh giới năm (biểu đồ doanh thu 6 tháng)', () => {
+    assert.equal(monthsBack('2026-10-01', 0), '2026-10-01');
+    assert.equal(monthsBack('2026-10-01', 5), '2026-05-01');
+    assert.equal(monthsBack('2026-02-01', 3), '2025-11-01');
   });
 });

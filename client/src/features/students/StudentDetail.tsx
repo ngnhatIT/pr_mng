@@ -7,7 +7,7 @@ import { useMyPermissions } from '../system/roles.api';
 import { fetchAllPages } from '../../shared/components/Pagination';
 import { useToast, toastApiError } from '../../shared/ui/toast';
 import { useLoad } from '../../shared/hooks/useLoad';
-import { Grade, formatVND, formatDate } from '../../shared/types';
+import { Grade, formatVND, formatDate, initials, remainingOf } from '../../shared/types';
 import { Modal, ConfirmDialog } from '../../shared/components/Modal';
 import { Field, useFieldErrors } from '../../shared/components/Form';
 import { EmptyState, LoadError } from '../../shared/components/EmptyState';
@@ -80,6 +80,8 @@ export function StudentDetail() {
     );
   const { student } = data;
 
+  const debt = data.invoices.reduce((a, inv) => a + remainingOf(inv), 0);
+
   return (
     <div className="page">
       <Link className="link back-link" to="/app/students">
@@ -88,13 +90,12 @@ export function StudentDetail() {
       </Link>
       <div className="profile-head">
         <div className="profile-avatar" aria-hidden="true">
-          <Icon name="user" size={28} />
+          {initials(student.name)}
         </div>
         <div className="profile-meta">
-          <h1 className="page-title">
-            {student.name} <span className="muted mono">({student.code})</span>
-          </h1>
+          <h1 className="page-title">{student.name}</h1>
           <div className="profile-badges">
+            <span className="profile-code mono">{student.code}</span>
             <span className={`badge badge-${student.status}`}>{t(`status.${student.status}`)}</span>
           </div>
         </div>
@@ -152,6 +153,9 @@ export function StudentDetail() {
       <section className="card">
         <div className="section-head">
           <h3>{t('detail.invoices')}</h3>
+          {debt > 0 && (
+            <span className="text-danger num">{t('detail.debtTotal', { amount: formatVND(debt) })}</span>
+          )}
         </div>
         {data.invoices.length === 0 ? (
           <EmptyState
@@ -172,6 +176,7 @@ export function StudentDetail() {
                   <th scope="col">{t('detail.invoiceTable.class')}</th>
                   <th scope="col">{t('detail.invoiceTable.amount')}</th>
                   <th scope="col">{t('detail.invoiceTable.paid')}</th>
+                  <th scope="col">{t('detail.invoiceTable.remaining')}</th>
                   <th scope="col">{t('detail.invoiceTable.dueDate')}</th>
                   <th scope="col">{t('detail.invoiceTable.status')}</th>
                 </tr>
@@ -179,9 +184,16 @@ export function StudentDetail() {
               <tbody>
                 {data.invoices.map((inv) => (
                   <tr key={inv.id}>
-                    <td>{inv.class_name || <EmptyCell />}</td>
+                    <td>
+                      <Link className="link" to={`/app/tuition/invoices/${inv.id}`}>
+                        {inv.class_name || `HD${inv.id}`}
+                      </Link>
+                    </td>
                     <td className="num">{formatVND(inv.amount)}</td>
                     <td className="num">{formatVND(inv.paid || 0)}</td>
+                    <td className={`num${remainingOf(inv) > 0 ? ' text-danger' : ''}`}>
+                      {remainingOf(inv) > 0 ? formatVND(remainingOf(inv)) : <EmptyCell />}
+                    </td>
                     <td>{formatDate(inv.due_date)}</td>
                     <td>
                       <span className={`badge badge-${inv.status}`}>{t(`invoiceStatus.${inv.status}`)}</span>

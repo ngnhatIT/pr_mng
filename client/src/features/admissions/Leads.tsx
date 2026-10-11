@@ -13,6 +13,7 @@ import { useLoad } from '../../shared/hooks/useLoad';
 import { useUrlSearch, useUrlState } from '../../shared/hooks/useUrlState';
 import { LeadItem, formatDate } from '../../shared/types';
 import { Icon } from '../../shared/components/icons';
+import { Menu } from '../../shared/components/Menu';
 import { ConvertModal } from './Trials';
 import './Admissions.css';
 
@@ -134,7 +135,7 @@ export function Leads() {
           {search !== '' &&
             (loading || search !== debouncedSearch ? (
               <span className="search-clear" aria-hidden="true">
-                <span className="spinner spinner-dark" />
+                <span className="spinner" />
               </span>
             ) : (
               <button
@@ -216,8 +217,21 @@ export function Leads() {
                       <div className="muted">{formatDate(l.created_at)}</div>
                       {canManage && (
                         <div className="pipeline-actions">
-                          {/* HIGH-3: ẩn nút convert khi lead đã thành học viên để tránh tạo trùng */}
-                          {l.status !== 'enrolled' ? (
+                          {/* Một bước kế tiếp hiển thị sẵn, các thao tác còn lại vào menu "..." */}
+                          {col === 'enrolled' ? (
+                            <span className="badge badge-enrolled">{t('leads.status.enrolled')}</span>
+                          ) : col === 'lost' ? (
+                            <button
+                              className="btn btn-sm"
+                              onClick={() => void moveStatus(l, 'new')}
+                              disabled={movingId === l.id}
+                              aria-label={t('leads.reopenAria', { name: l.name })}
+                            >
+                              <Icon name="rotate" size={14} />
+                              {t('leads.reopen')}
+                            </button>
+                          ) : col === 'trial' ? (
+                            // HIGH-3: chỉ lead chưa thành học viên mới có nút convert, tránh tạo trùng
                             <button
                               className="btn btn-sm btn-primary"
                               onClick={() => setConverting(l)}
@@ -226,41 +240,9 @@ export function Leads() {
                               {t('leads.convert')}
                             </button>
                           ) : (
-                            <span className="badge badge-enrolled">{t('leads.status.enrolled')}</span>
-                          )}
-                          <button
-                            className="btn btn-sm btn-ghost"
-                            onClick={() => setEditing(l)}
-                            title={t('leads.editTitle')}
-                          >
-                            <Icon name="pencil" size={14} />
-                            {t('actions.edit', { ns: 'common' })}
-                          </button>
-                          <button
-                            className="btn btn-sm btn-danger-ghost"
-                            onClick={() => setDeleting(l)}
-                            title={t('leads.deleteTitle')}
-                          >
-                            <Icon name="trash" size={14} />
-                            {t('actions.delete', { ns: 'common' })}
-                          </button>
-                          {col !== 'lost' && col !== 'enrolled' && (
                             <button
-                              className="btn btn-sm btn-icon"
-                              onClick={() => void moveStatus(l, 'lost')}
-                              disabled={movingId === l.id}
-                              title={t('leads.markLost')}
-                              aria-label={t('leads.markLostAria', { name: l.name })}
-                            >
-                              <Icon name="x" size={15} />
-                            </button>
-                          )}
-                          {NEXT_STATUS[col] && (
-                            <button
-                              className="btn btn-sm btn-icon"
-                              onClick={() =>
-                                col === 'trial' ? setConverting(l) : void moveStatus(l, NEXT_STATUS[col])
-                              }
+                              className="btn btn-sm"
+                              onClick={() => void moveStatus(l, NEXT_STATUS[col])}
                               disabled={movingId === l.id}
                               title={t('leads.moveNext', { label: statusLabel(NEXT_STATUS[col]) })}
                               aria-label={t('leads.moveNextAria', {
@@ -268,20 +250,34 @@ export function Leads() {
                                 label: statusLabel(NEXT_STATUS[col]),
                               })}
                             >
-                              <Icon name="arrow-right" size={15} />
+                              {statusLabel(NEXT_STATUS[col])}
+                              <Icon name="arrow-right" size={14} />
                             </button>
                           )}
-                          {col === 'lost' && (
-                            <button
-                              className="btn btn-sm btn-icon"
-                              onClick={() => void moveStatus(l, 'new')}
-                              disabled={movingId === l.id}
-                              title={t('leads.reopen')}
-                              aria-label={t('leads.reopenAria', { name: l.name })}
-                            >
-                              <Icon name="rotate" size={15} />
-                            </button>
-                          )}
+                          <Menu
+                            label={t('actions.more', { ns: 'common' })}
+                            items={[
+                              (col === 'new' || col === 'contacted') && {
+                                label: t('leads.convertTitle'),
+                                icon: 'user',
+                                onSelect: () => setConverting(l),
+                              },
+                              { label: t('leads.editTitle'), icon: 'pencil', onSelect: () => setEditing(l) },
+                              col !== 'lost' &&
+                                col !== 'enrolled' && {
+                                  label: t('leads.markLost'),
+                                  icon: 'x',
+                                  disabled: movingId === l.id,
+                                  onSelect: () => void moveStatus(l, 'lost'),
+                                },
+                              {
+                                label: t('leads.deleteTitle'),
+                                icon: 'trash',
+                                danger: true,
+                                onSelect: () => setDeleting(l),
+                              },
+                            ]}
+                          />
                         </div>
                       )}
                     </div>

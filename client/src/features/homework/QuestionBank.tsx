@@ -7,7 +7,12 @@ import { Field, useFieldErrors } from '../../shared/components/Form';
 import { EmptyState } from '../../shared/components/EmptyState';
 import { Pagination, type PaginationMeta } from '../../shared/components/Pagination';
 import { Icon } from '../../shared/components/icons';
+import { Menu } from '../../shared/components/Menu';
 import { useDebounce } from '../../shared/hooks/useDebounce';
+import { useGoBack } from '../../shared/hooks/useGoBack';
+import { useUnsavedGuard } from '../../shared/hooks/useUnsavedGuard';
+import { PageHeader } from '../../shared/components/PageHeader';
+import './Homework.css';
 
 type Difficulty = 'easy' | 'medium' | 'hard';
 
@@ -34,13 +39,21 @@ function DifficultyBadge({ difficulty }: { difficulty: Difficulty }) {
   return <span className={`badge ${cls}`}>{labels[difficulty] ?? difficulty}</span>;
 }
 
-/** Ngân hàng câu hỏi: quản lý + chọn import vào quiz. */
+/** Trang quản lý ngân hàng câu hỏi (/app/homework/question-bank). */
+export function QuestionBankPage() {
+  return <QuestionBank />;
+}
+
+/**
+ * Ngân hàng câu hỏi. Mặc định là trang quản lý (danh sách + form thêm/sửa ở cột phải);
+ * selectMode = hộp chọn câu để import vào quiz đang soạn (modal, không rời trang soạn bài).
+ */
 export function QuestionBank({
-  onClose,
+  onClose = () => {},
   onImport,
   selectMode,
 }: {
-  onClose: () => void;
+  onClose?: () => void;
   onImport?: (questions: BankQuestion[]) => void;
   selectMode?: boolean;
 }) {
@@ -149,200 +162,214 @@ export function QuestionBank({
 
   const pageIds = questions.map((q) => q.id);
   const pageAllSelected = pageIds.length > 0 && pageIds.every((id) => selected.includes(id));
+  const formOpen = showForm || editing !== null;
+  const goBack = useGoBack('/app/homework');
+  const openNew = () => {
+    setEditing(null);
+    setShowForm(true);
+  };
+  const addButton = (
+    <button className="btn btn-primary hw-action-icon" onClick={openNew}>
+      <Icon name="plus" size={15} /> {t('bank.add')}
+    </button>
+  );
 
-  return (
-    <Modal
-      title={t('bank.title')}
-      onClose={onClose}
-      wide
-      // đang mở form câu hỏi hoặc đã chọn câu để import: hỏi trước khi đóng
-      dirty={showForm || editing !== null || selected.length > 0}
-    >
-      <div className="toolbar">
-        <div className={`search-wrap${search ? ' has-clear' : ''}`}>
-          <span className="search-icon">
-            <Icon name="search" size={15} />
-          </span>
-          <input
-            className="text-input search-input"
-            aria-label={t('bank.searchPh')}
-            placeholder={t('bank.searchPh')}
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-          {search && (
-            <button
-              type="button"
-              className="search-clear"
-              onClick={() => setSearch('')}
-              aria-label={t('bank.clearSearch')}
-            >
-              <Icon name="x" size={14} />
-            </button>
-          )}
-        </div>
-        <select
-          aria-label={t('bank.tagFilterLabel')}
-          className="text-input"
-          value={tag}
-          onChange={(e) => setTag(e.target.value)}
-        >
-          <option value="">{t('bank.allTags')}</option>
-          {tags.map((tg) => (
-            <option key={tg} value={tg}>
-              {tg}
-            </option>
-          ))}
-        </select>
-        <select
-          aria-label={t('bank.subjectFilterLabel')}
-          className="text-input"
-          value={subject}
-          onChange={(e) => setSubject(e.target.value)}
-        >
-          <option value="">{t('bank.allSubjects')}</option>
-          {subjects.map((s) => (
-            <option key={s} value={s}>
-              {s}
-            </option>
-          ))}
-        </select>
-        <select
-          aria-label={t('bank.difficultyFilterLabel')}
-          className="text-input"
-          value={difficulty}
-          onChange={(e) => setDifficulty(e.target.value)}
-        >
-          <option value="">{t('bank.allDifficulties')}</option>
-          <option value="easy">{t('bank.difficultyEasy')}</option>
-          <option value="medium">{t('bank.difficultyMedium')}</option>
-          <option value="hard">{t('bank.difficultyHard')}</option>
-        </select>
-        <button
-          className="btn btn-primary hw-action-icon"
-          onClick={() => {
-            setEditing(null);
-            setShowForm(true);
-          }}
-        >
-          <Icon name="plus" size={15} /> {t('bank.add')}
-        </button>
-      </div>
-
-      {(showForm || editing) && (
-        <BankQuestionForm
-          // key: form seed state 1 lần từ initial → đổi câu đang sửa phải remount, tránh lưu nội dung câu cũ vào câu khác
-          key={editing ? `edit-${editing.id}` : 'new'}
-          tags={tags}
-          initial={editing}
-          onClose={() => {
-            setShowForm(false);
-            setEditing(null);
-          }}
-          onSaved={() => {
-            setShowForm(false);
-            setEditing(null);
-            void load();
-          }}
-        />
-      )}
-
-      {loading ? (
-        <p className="muted">{t('actions.loading', { ns: 'common' })}</p>
-      ) : loadError ? (
-        <EmptyState
-          icon="alert"
-          title={t('bank.loadErrorTitle')}
-          desc={loadError}
-          action={
-            <button className="btn btn-inline" onClick={() => void load()}>
-              <Icon name="rotate" size={16} />
-              {t('actions.retry', { ns: 'common' })}
-            </button>
-          }
-        />
-      ) : questions.length === 0 ? (
-        <EmptyState
-          icon="file"
-          title={t(filteringBank ? 'bank.emptyFiltered.title' : 'bank.empty')}
-          desc={t(filteringBank ? 'bank.emptyFiltered.desc' : 'bank.emptyDesc')}
-          action={
-            filteringBank ? (
+  const body = (
+    <>
+      <div className="bank-controls">
+        <div className="toolbar bank-toolbar">
+          <div className={`search-wrap${search ? ' has-clear' : ''}`}>
+            <span className="search-icon">
+              <Icon name="search" size={15} />
+            </span>
+            <input
+              className="text-input search-input"
+              aria-label={t('bank.searchPh')}
+              placeholder={t('bank.searchPh')}
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+            {search && (
               <button
-                className="btn btn-secondary btn-inline"
-                onClick={() => {
-                  setSearch('');
-                  setTag('');
-                  setSubject('');
-                  setDifficulty('');
-                }}
+                type="button"
+                className="search-clear"
+                onClick={() => setSearch('')}
+                aria-label={t('bank.clearSearch')}
               >
                 <Icon name="x" size={14} />
-                {t('bank.emptyFiltered.clear')}
               </button>
-            ) : (
-              <button
-                className="btn btn-primary btn-inline"
-                onClick={() => {
-                  setEditing(null);
-                  setShowForm(true);
-                }}
-              >
-                <Icon name="plus" size={14} />
-                {t('bank.add')}
-              </button>
-            )
-          }
-        />
-      ) : (
-        <div className="bank-list">
-          {questions.map((q) => (
-            <div key={q.id} className="bank-item">
-              {selectMode && (
-                <input
-                  type="checkbox"
-                  className="bank-check"
-                  aria-label={q.question}
-                  checked={selected.includes(q.id)}
-                  onChange={() => toggle(q.id)}
-                />
-              )}
-              <div className="bank-item-body">
-                <div className="bank-q">{q.question}</div>
-                <div className="muted bank-item-meta">
-                  <QTypeBadge qtype={q.qtype} />
-                  {q.subject && <span className="badge badge-general">{q.subject}</span>}
-                  <DifficultyBadge difficulty={q.difficulty} />
-                  {q.tag && <span className="badge badge-general bank-tag-badge">{q.tag}</span>}
-                  {t('bank.meta', { points: q.points, count: q.options.length })}
-                </div>
-                <BankOptionsPreview q={q} />
-              </div>
-              {!selectMode && (
-                <span className="bank-item-actions">
-                  <button
-                    type="button"
-                    className="btn btn-sm btn-ghost"
-                    onClick={() => {
-                      setEditing(q);
-                      setShowForm(false);
-                    }}
-                    title={t('bank.edit')}
-                  >
-                    <Icon name="pencil" size={14} />
-                    {t('actions.edit', { ns: 'common' })}
-                  </button>
-                  <button className="btn btn-sm btn-danger-ghost" onClick={() => void doDelete(q.id)}>
-                    {t('actions.delete', { ns: 'common' })}
-                  </button>
-                </span>
-              )}
-            </div>
-          ))}
+            )}
+          </div>
+          {selectMode && addButton}
         </div>
-      )}
+        <div className="toolbar bank-filters">
+          <select
+            aria-label={t('bank.tagFilterLabel')}
+            className="text-input"
+            value={tag}
+            onChange={(e) => setTag(e.target.value)}
+          >
+            <option value="">{t('bank.allTags')}</option>
+            {tags.map((tg) => (
+              <option key={tg} value={tg}>
+                {tg}
+              </option>
+            ))}
+          </select>
+          <select
+            aria-label={t('bank.subjectFilterLabel')}
+            className="text-input"
+            value={subject}
+            onChange={(e) => setSubject(e.target.value)}
+          >
+            <option value="">{t('bank.allSubjects')}</option>
+            {subjects.map((s) => (
+              <option key={s} value={s}>
+                {s}
+              </option>
+            ))}
+          </select>
+          <select
+            aria-label={t('bank.difficultyFilterLabel')}
+            className="text-input"
+            value={difficulty}
+            onChange={(e) => setDifficulty(e.target.value)}
+          >
+            <option value="">{t('bank.allDifficulties')}</option>
+            <option value="easy">{t('bank.difficultyEasy')}</option>
+            <option value="medium">{t('bank.difficultyMedium')}</option>
+            <option value="hard">{t('bank.difficultyHard')}</option>
+          </select>
+        </div>
+      </div>
+      <div className={`bank-layout${formOpen ? ' has-form' : ''}`}>
+        {formOpen && (
+          <div className="bank-form-pane">
+            {!selectMode && <h2 className="hw-editor-heading">{editing ? t('bank.edit') : t('bank.add')}</h2>}
+            <BankQuestionForm
+              // key: form seed state 1 lần từ initial → đổi câu đang sửa phải remount, tránh lưu nội dung câu cũ vào câu khác
+              key={editing ? `edit-${editing.id}` : 'new'}
+              tags={tags}
+              initial={editing}
+              onClose={() => {
+                setShowForm(false);
+                setEditing(null);
+              }}
+              onSaved={() => {
+                setShowForm(false);
+                setEditing(null);
+                void load();
+              }}
+            />
+          </div>
+        )}
+        <div className="bank-list-pane">
+          {!selectMode && pagination && pagination.total > 0 && (
+            <p className="muted bank-count">{t('bank.count', { count: pagination.total })}</p>
+          )}
 
-      {pagination && <Pagination pagination={pagination} onChange={(p) => setPage(p)} loading={loading} />}
+          {loading ? (
+            <p className="muted">{t('actions.loading', { ns: 'common' })}</p>
+          ) : loadError ? (
+            <EmptyState
+              icon="alert"
+              title={t('bank.loadErrorTitle')}
+              desc={loadError}
+              action={
+                <button className="btn btn-inline" onClick={() => void load()}>
+                  <Icon name="rotate" size={16} />
+                  {t('actions.retry', { ns: 'common' })}
+                </button>
+              }
+            />
+          ) : questions.length === 0 ? (
+            <EmptyState
+              icon="file"
+              title={t(filteringBank ? 'bank.emptyFiltered.title' : 'bank.empty')}
+              desc={t(filteringBank ? 'bank.emptyFiltered.desc' : 'bank.emptyDesc')}
+              action={
+                filteringBank ? (
+                  <button
+                    className="btn btn-secondary btn-inline"
+                    onClick={() => {
+                      setSearch('');
+                      setTag('');
+                      setSubject('');
+                      setDifficulty('');
+                    }}
+                  >
+                    <Icon name="x" size={14} />
+                    {t('bank.emptyFiltered.clear')}
+                  </button>
+                ) : (
+                  <button className="btn btn-primary btn-inline" onClick={openNew}>
+                    <Icon name="plus" size={14} />
+                    {t('bank.add')}
+                  </button>
+                )
+              }
+            />
+          ) : (
+            <div className="bank-list">
+              {questions.map((q) => (
+                <div key={q.id} className={`bank-item${editing?.id === q.id ? ' is-editing' : ''}`}>
+                  {selectMode && (
+                    <input
+                      type="checkbox"
+                      className="bank-check"
+                      aria-label={q.question}
+                      checked={selected.includes(q.id)}
+                      onChange={() => toggle(q.id)}
+                    />
+                  )}
+                  <div className="bank-item-body">
+                    <div className="bank-q">{q.question}</div>
+                    <div className="muted bank-item-meta">
+                      <QTypeBadge qtype={q.qtype} />
+                      {q.subject && <span className="badge badge-general">{q.subject}</span>}
+                      <DifficultyBadge difficulty={q.difficulty} />
+                      {q.tag && <span className="badge badge-general">{q.tag}</span>}
+                      {t('bank.meta', { points: q.points, count: q.options.length })}
+                    </div>
+                    <BankOptionsPreview q={q} />
+                  </div>
+                  {!selectMode && (
+                    <span className="bank-item-actions">
+                      <button
+                        type="button"
+                        className="btn btn-sm btn-ghost"
+                        onClick={() => {
+                          setEditing(q);
+                          setShowForm(false);
+                        }}
+                        title={t('bank.edit')}
+                      >
+                        <Icon name="pencil" size={14} />
+                        {t('actions.edit', { ns: 'common' })}
+                      </button>
+                      <Menu
+                        label={t('actions.more', { ns: 'common' })}
+                        items={[
+                          {
+                            label: t('actions.delete', { ns: 'common' }),
+                            icon: 'trash',
+                            danger: true,
+                            onSelect: () => doDelete(q.id),
+                          },
+                        ]}
+                      />
+                    </span>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+
+          {pagination && (
+            <Pagination pagination={pagination} onChange={(p) => setPage(p)} loading={loading} />
+          )}
+        </div>
+      </div>
 
       {selectMode && (
         <div className="modal-actions bank-select-footer">
@@ -414,7 +441,31 @@ export function QuestionBank({
           danger
         />
       )}
-    </Modal>
+    </>
+  );
+
+  if (selectMode) {
+    return (
+      <Modal
+        title={t('bank.title')}
+        onClose={onClose}
+        wide
+        // đang mở form câu hỏi hoặc đã chọn câu để import: hỏi trước khi đóng
+        dirty={formOpen || selected.length > 0}
+      >
+        {body}
+      </Modal>
+    );
+  }
+  return (
+    <div className="page bank-page">
+      <button type="button" className="link back-link" onClick={goBack}>
+        <Icon name="arrow-left" size={14} />
+        {t('page.title')}
+      </button>
+      <PageHeader title={t('bank.title')} desc={t('bank.pageDesc')} actions={addButton} />
+      {body}
+    </div>
   );
 }
 
@@ -469,6 +520,15 @@ function BankQuestionForm({
   const [busy, setBusy] = useState(false);
   // Lỗi inline dưới field (skill 8.2), focus vào field lỗi đầu tiên
   const { errors, refFor, show, clear } = useFieldErrors<'question' | 'points' | 'answers'>();
+  // Đã gõ gì khác lúc mở form -> rời trang phải xác nhận (trang quản lý không có Modal dirty che chắn)
+  const snapshot = JSON.stringify({ qtype, question, tag, newTag, subject, difficulty, points, options });
+  const [initialSnapshot] = useState(snapshot);
+  useUnsavedGuard(snapshot !== initialSnapshot);
+  // Mở form (thêm/sửa câu ở cuối danh sách): đưa con trỏ vào ô câu hỏi, trình duyệt tự cuộn tới
+  const rootRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    rootRef.current?.querySelector<HTMLInputElement>('input')?.focus();
+  }, []);
 
   const changeQtype = (next: QType) => {
     setQtype(next);
@@ -546,7 +606,7 @@ function BankQuestionForm({
   };
 
   return (
-    <div className="bank-form">
+    <div className="bank-form" ref={rootRef}>
       <Field label={t('bank.form.question')} error={errors.question}>
         <input
           ref={refFor('question')}
@@ -648,12 +708,12 @@ function BankQuestionForm({
               <div key={i} className="quiz-opt bank-opt">
                 <button
                   type="button"
-                  className={`quiz-correct ${o.is_correct ? 'active' : ''}`}
+                  className={`quiz-correct${qtype === 'multiple' ? ' is-multi' : ''}${o.is_correct ? ' active' : ''}`}
                   onClick={() => toggleCorrect(i)}
-                  aria-label={t('bank.form.answers')}
+                  aria-label={`${t('form.correctAnswer')} ${String.fromCharCode(65 + i)}`}
                   aria-pressed={o.is_correct}
                 >
-                  {qtype === 'multiple' ? (o.is_correct ? '☑' : '☐') : o.is_correct ? '●' : '○'}
+                  {o.is_correct && <Icon name="check" size={14} />}
                 </button>
                 <input
                   className="text-input input-sm bank-opt-input"
@@ -668,11 +728,12 @@ function BankQuestionForm({
                 {qtype !== 'truefalse' && options.length > 2 && (
                   <button
                     type="button"
-                    className="btn btn-sm btn-danger-ghost"
+                    className="btn btn-sm btn-icon btn-danger-ghost"
                     onClick={() => setOptions((x) => x.filter((_, j) => j !== i))}
-                    aria-label={t('actions.delete', { ns: 'common' })}
+                    aria-label={t('form.removeOption', { letter: String.fromCharCode(65 + i) })}
+                    title={t('form.removeOption', { letter: String.fromCharCode(65 + i) })}
                   >
-                    ×
+                    <Icon name="x" size={14} />
                   </button>
                 )}
               </div>

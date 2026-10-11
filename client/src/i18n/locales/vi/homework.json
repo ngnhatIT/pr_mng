@@ -119,7 +119,11 @@
     "trueLabel": "Đúng",
     "falseLabel": "Sai",
     "loadErrorTitle": "Không tải được ngân hàng",
-    "loadErrorDesc": "Kiểm tra mạng rồi thử lại."
+    "loadErrorDesc": "Kiểm tra mạng rồi thử lại.",
+    "pageDesc": "Soạn sẵn câu hỏi theo môn, chủ đề và mức độ để lấy nhanh vào quiz",
+    "count": "{{count}} câu hỏi",
+    "count_one": "{{count}} câu hỏi",
+    "count_other": "{{count}} câu hỏi"
   },
   "delete": {
     "message": "Xóa bài tập \"{{title}}\"?",
@@ -183,8 +187,6 @@
     "criterion": "Tiêu chí",
     "criterionScore": "{{score}}đ",
     "defaultCriteria": ["Phát âm", "Từ vựng"],
-    "discardMessage": "Bạn đã nhập dữ liệu nhưng chưa lưu. Đóng và bỏ các thay đổi này?",
-    "discardTitle": "Bỏ các thay đổi chưa lưu?",
     "deselectAll": "Bỏ chọn",
     "dueDate": "Hạn nộp",
     "dueNextWeek": "Tuần sau",
@@ -314,7 +316,9 @@
     "removeCriterion": "Xóa tiêu chí {{n}}",
     "maxAttempts": "Số lượt làm tối đa",
     "maxAttemptsHint": "Mỗi lượt học viên thấy tổng điểm; để trống = không giới hạn (dễ dò ra đáp án)",
-    "maxAttemptsPh": "Không giới hạn"
+    "maxAttemptsPh": "Không giới hạn",
+    "sectionTarget": "Lớp và học viên",
+    "sectionGrading": "Hạn nộp và chấm điểm"
   },
   "grade": {
     "empty": "Chưa có học viên để chấm",

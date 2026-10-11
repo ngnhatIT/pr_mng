@@ -77,7 +77,7 @@ export function PaymentResult() {
           <p className="muted" role="status">
             {polling ? (
               <>
-                <span className="spinner spinner-dark" aria-hidden="true" /> {t('payment.pendingChecking')}
+                <span className="spinner" aria-hidden="true" /> {t('payment.pendingChecking')}
               </>
             ) : (
               t('payment.pendingTimeout')

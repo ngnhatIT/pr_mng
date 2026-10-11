@@ -26,6 +26,7 @@ import {
 } from '../../shared/components/Pagination';
 import { useLoad } from '../../shared/hooks/useLoad';
 import { useUrlSearch, useUrlState } from '../../shared/hooks/useUrlState';
+import { Menu } from '../../shared/components/Menu';
 import { Icon } from '../../shared/components/icons';
 import { formatVND, formatDate, remainingOf, todayVN } from '../../shared/types';
 import './Tuition.css';
@@ -168,7 +169,7 @@ function PendingPayments({ onViewInvoices }: { onViewInvoices: () => void }) {
                           onClick={() => void moderate(p, 'reject')}
                           disabled={busyId === p.id}
                         >
-                          {busyId === p.id && <span className="spinner spinner-dark" aria-hidden="true" />}
+                          {busyId === p.id && <span className="spinner" aria-hidden="true" />}
                           {t('pending.reject')}
                         </button>
                       </span>
@@ -231,6 +232,7 @@ function InvoiceList() {
     reload,
   } = useLoad(() => invoicesApi.list(debouncedSearch, status, { page }), [debouncedSearch, status, page]);
   const invoices = res?.data ?? [];
+  const today = todayVN();
   useLoadErrorToast(error, t('invoices.loadError'));
   useClampPage(res, page, setQ);
 
@@ -263,7 +265,7 @@ function InvoiceList() {
           {search !== '' &&
             (loading || search !== debouncedSearch ? (
               <span className="search-clear" aria-hidden="true">
-                <span className="spinner spinner-dark" />
+                <span className="spinner" />
               </span>
             ) : (
               <button
@@ -370,9 +372,11 @@ function InvoiceList() {
                   <tr key={inv.id}>
                     <td>
                       <Link className="link" to={`/app/tuition/invoices/${inv.id}`}>
-                        #{inv.id}
-                      </Link>{' '}
-                      {inv.student_name} <span className="muted mono">({inv.student_code})</span>
+                        {inv.student_name}
+                      </Link>
+                      <div className="cell-sub mono">
+                        HD{inv.id} · {inv.student_code}
+                      </div>
                     </td>
                     <td data-label={t('invoice.table.class')}>{inv.class_name || <EmptyCell />}</td>
                     <td data-label={t('invoice.table.amount')} className="num">
@@ -382,63 +386,81 @@ function InvoiceList() {
                       {formatVND(paid)}
                     </td>
                     <td data-label={t('invoice.table.debt')} className="num debt-amount">
-                      {formatVND(remainingOf(inv))}
+                      {remainingOf(inv) > 0 ? formatVND(remainingOf(inv)) : <EmptyCell />}
                     </td>
-                    <td data-label={t('invoice.table.dueDate')}>{formatDate(inv.due_date)}</td>
+                    <td
+                      data-label={t('invoice.table.dueDate')}
+                      className={
+                        inv.status !== 'paid' && inv.due_date && inv.due_date < today
+                          ? 'text-danger'
+                          : undefined
+                      }
+                    >
+                      {formatDate(inv.due_date)}
+                    </td>
                     <td data-label={t('invoice.table.status')}>
                       <span className={`badge badge-${inv.status}`}>{t(`invoiceStatus.${inv.status}`)}</span>
                     </td>
                     <td className="td-right nowrap">
                       <span className="tuition-actions">
-                        {inv.status !== 'paid' && (
-                          <>
-                            {perms.has('notifications.send') && (
-                              <button
-                                className="btn btn-sm"
-                                onClick={() => void remindInvoice(inv)}
-                                disabled={remindingId === inv.id}
-                                title={t('invoice.remindTitle')}
-                              >
-                                {remindingId === inv.id && (
-                                  <span className="spinner spinner-dark" aria-hidden="true" />
-                                )}
-                                {remindingId === inv.id ? t('invoice.sending') : t('invoice.remindZalo')}
-                              </button>
-                            )}
-                            {perms.has('payments.collect') && (
-                              <>
-                                <button
-                                  className="btn btn-sm"
-                                  onClick={() => setCrediting(inv)}
-                                  title={t('credit.applyTitle')}
-                                >
-                                  {t('credit.applyRow')}
-                                </button>
-                                <button className="btn btn-sm btn-primary" onClick={() => setPaying(inv)}>
-                                  {t('pay.collect')}
-                                </button>
-                              </>
-                            )}
-                          </>
-                        )}
-                        {paid > 0 && perms.has('payments.refund') && (
+                        {inv.status !== 'paid' && perms.has('payments.collect') ? (
+                          <button className="btn btn-sm btn-primary" onClick={() => setPaying(inv)}>
+                            {t('pay.collect')}
+                          </button>
+                        ) : (
                           <button
-                            className="btn btn-sm btn-danger-ghost"
-                            onClick={() => setRefunding(inv)}
-                            title={t('refund.title')}
+                            className="btn btn-sm btn-icon"
+                            onClick={() => setReceipt(inv)}
+                            aria-label={t('receipt.print')}
+                            title={t('receipt.print')}
                           >
-                            <Icon name="rotate" size={14} />
-                            {t('refund.action')}
+                            <Icon name="printer" size={15} />
                           </button>
                         )}
-                        <button
-                          className="btn btn-sm btn-ghost"
-                          onClick={() => setReceipt(inv)}
-                          title={t('receipt.title')}
-                        >
-                          <Icon name="printer" size={14} />
-                          {t('receipt.print')}
-                        </button>
+                        <Menu
+                          label={t('actions.more', { ns: 'common' })}
+                          items={[
+                            ...(inv.status !== 'paid' && perms.has('notifications.send')
+                              ? [
+                                  {
+                                    label:
+                                      remindingId === inv.id ? t('invoice.sending') : t('invoice.remindZalo'),
+                                    icon: 'send' as const,
+                                    disabled: remindingId === inv.id,
+                                    onSelect: () => void remindInvoice(inv),
+                                  },
+                                ]
+                              : []),
+                            ...(inv.status !== 'paid' && perms.has('payments.collect')
+                              ? [
+                                  {
+                                    label: t('credit.applyRow'),
+                                    icon: 'wallet' as const,
+                                    onSelect: () => setCrediting(inv),
+                                  },
+                                ]
+                              : []),
+                            ...(inv.status !== 'paid' && perms.has('payments.collect')
+                              ? [
+                                  {
+                                    label: t('receipt.print'),
+                                    icon: 'printer' as const,
+                                    onSelect: () => setReceipt(inv),
+                                  },
+                                ]
+                              : []),
+                            ...(paid > 0 && perms.has('payments.refund')
+                              ? [
+                                  {
+                                    label: t('refund.action'),
+                                    icon: 'rotate' as const,
+                                    danger: true,
+                                    onSelect: () => setRefunding(inv),
+                                  },
+                                ]
+                              : []),
+                          ]}
+                        />
                       </span>
                     </td>
                   </tr>
@@ -1060,7 +1082,10 @@ function DebtList() {
               {debts.map((d) => (
                 <tr key={d.id}>
                   <td>
-                    {d.name} <span className="muted mono">({d.code})</span>
+                    <Link className="link" to={`/app/students/${d.id}`}>
+                      {d.name}
+                    </Link>
+                    <div className="cell-sub mono">{d.code}</div>
                   </td>
                   <td data-label={t('debt.table.phone')}>{d.phone || <EmptyCell />}</td>
                   <td data-label={t('debt.table.total')} className="num">

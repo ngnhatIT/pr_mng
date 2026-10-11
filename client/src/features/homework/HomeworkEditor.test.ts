@@ -6,7 +6,7 @@ import {
   validateLocalUpload,
   pruneSelected,
   editAttachmentsPayload,
-} from './HomeworkFormModal';
+} from './HomeworkEditor';
 import type { QuizQuestionForm } from './homework.api';
 import { todayVN } from '../../shared/types';
 

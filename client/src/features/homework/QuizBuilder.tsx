@@ -13,7 +13,7 @@ import { Field } from '../../shared/components/Form';
 import { Icon } from '../../shared/components/icons';
 import { isQuizQuestionInvalid, type HwFieldErrors } from './homeworkForm';
 
-/** State + thao tác của bộ soạn đề quiz (tách khỏi HomeworkFormModal, state vẫn do form cha giữ qua hook). */
+/** State + thao tác của bộ soạn đề quiz (tách khỏi HomeworkEditor, state vẫn do form cha giữ qua hook). */
 export function useQuizBuilder(initial: HomeworkItem | null, clear: HwFieldErrors['clear']) {
   const { t } = useTranslation(['homework', 'common']);
   const toast = useToast();
@@ -259,12 +259,13 @@ export function QuizBuilder({ quiz, error }: { quiz: QuizBuilderState; error?: s
               {questions.length > 1 && (
                 <button
                   type="button"
-                  className="btn btn-sm btn-danger-ghost"
+                  className="btn btn-sm btn-icon btn-danger-ghost"
                   disabled={builderLocked}
                   onClick={() => editQuestions((x) => x.filter((_, j) => j !== qi))}
                   aria-label={t('form.removeQuestion', { n: qi + 1 })}
+                  title={t('form.removeQuestion', { n: qi + 1 })}
                 >
-                  ×
+                  <Icon name="x" size={15} />
                 </button>
               )}
             </div>
@@ -281,19 +282,22 @@ export function QuizBuilder({ quiz, error }: { quiz: QuizBuilderState; error?: s
                 <option value="truefalse">{t('bank.qtypeTruefalse')}</option>
                 <option value="essay">{t('bank.qtypeEssay')}</option>
               </select>
-              <input
-                className="text-input hw-w-80"
-                type="number"
-                min="0.5"
-                step="0.5"
-                value={q.points}
-                disabled={builderLocked}
-                // P1-8: không ép 0/NaN thành 1 im lặng — để validate inline báo lỗi (server: điểm > 0, ≤ 1000)
-                onChange={(e) => updateQuestion(qi, { points: Number(e.target.value) })}
-                title={t('form.points')}
-                aria-label={t('form.points')}
-                aria-invalid={!(q.points > 0) || q.points > 1000 ? true : undefined}
-              />
+              <label className="quiz-points">
+                <input
+                  className="text-input hw-w-80"
+                  type="number"
+                  min="0.5"
+                  step="0.5"
+                  value={q.points}
+                  disabled={builderLocked}
+                  // P1-8: không ép 0/NaN thành 1 im lặng — để validate inline báo lỗi (server: điểm > 0, ≤ 1000)
+                  onChange={(e) => updateQuestion(qi, { points: Number(e.target.value) })}
+                  title={t('form.points')}
+                  aria-label={t('form.points')}
+                  aria-invalid={!(q.points > 0) || q.points > 1000 ? true : undefined}
+                />
+                <span aria-hidden="true">{t('form.points')}</span>
+              </label>
             </div>
             {(!(q.points > 0) || q.points > 1000) && (
               <div className="field-error hw-mb-8" role="alert">
@@ -309,7 +313,7 @@ export function QuizBuilder({ quiz, error }: { quiz: QuizBuilderState; error?: s
                   <div key={oi} className="quiz-opt">
                     <button
                       type="button"
-                      className={`quiz-correct ${o.is_correct ? 'active' : ''}`}
+                      className={`quiz-correct${qtype === 'multiple' ? ' is-multi' : ''}${o.is_correct ? ' active' : ''}`}
                       disabled={builderLocked}
                       onClick={() =>
                         updateOption(qi, oi, {
@@ -319,7 +323,7 @@ export function QuizBuilder({ quiz, error }: { quiz: QuizBuilderState; error?: s
                       title={t('form.correctAnswer')}
                       aria-pressed={o.is_correct}
                     >
-                      {qtype === 'multiple' ? (o.is_correct ? '☑' : '☐') : o.is_correct ? '●' : '○'}
+                      {o.is_correct && <Icon name="check" size={14} />}
                     </button>
                     <input
                       className="text-input input-sm hw-flex-1"
@@ -331,12 +335,13 @@ export function QuizBuilder({ quiz, error }: { quiz: QuizBuilderState; error?: s
                     {qtype !== 'truefalse' && q.options.length > 2 && (
                       <button
                         type="button"
-                        className="btn btn-sm btn-danger-ghost"
+                        className="btn btn-sm btn-icon btn-danger-ghost"
                         disabled={builderLocked}
                         onClick={() => removeOption(qi, oi)}
                         aria-label={t('form.removeOption', { letter: String.fromCharCode(65 + oi) })}
+                        title={t('form.removeOption', { letter: String.fromCharCode(65 + oi) })}
                       >
-                        ×
+                        <Icon name="x" size={14} />
                       </button>
                     )}
                   </div>

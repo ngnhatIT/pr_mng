@@ -116,6 +116,9 @@ export interface TodaySession {
   class_id: number;
   class_name: string;
   teacher_name: string | null;
+  room_name?: string | null;
+  /** JSON lịch tuần của lớp: dùng lấy giờ học của riêng hôm nay. */
+  schedule?: string;
   scheduleText: string;
 }
 
@@ -127,6 +130,8 @@ export interface DashboardData {
   revenueThisMonth: number;
   unpaidTotal: number;
   todaySessions: TodaySession[];
+  /** 6 tháng liên tiếp, cũ -> mới; rỗng khi tài khoản không xem tài chính. */
+  revenueByMonth?: { month: string; total: number }[];
 }
 
 export interface ZaloConfig {
@@ -178,6 +183,12 @@ export function getDayNames(locale?: string): Record<number, string> {
  * - en: "1,000,000 VND" (toLocaleString en-US)
  * Có thể truyền locale tường minh để override (hữu ích cho test).
  */
+/** "Nguyễn Văn An" -> "NA": chữ đầu của họ + tên gọi, cho avatar chữ cái. */
+export function initials(name?: string | null) {
+  const w = (name || '').trim().split(/\s+/).filter(Boolean);
+  return ((w[0]?.[0] ?? '') + (w.length > 1 ? w[w.length - 1][0] : '')).toUpperCase();
+}
+
 export function formatVND(n: number, locale?: string): string {
   const lang = locale ?? i18n.language;
   if (lang === 'en') {
@@ -219,11 +230,39 @@ export function formatDateTime(iso: string | null): string {
   return `${formatDate(iso)}${time ? ` ${time}` : ''}`;
 }
 
-export function formatScheduleText(scheduleJson: string): string {
+/** Khung giờ của lớp vào đúng ngày `date` (YYYY-MM-DD) theo lịch tuần JSON; null nếu hôm đó không có. */
+export function slotOn(scheduleJson: string | null | undefined, date: string): ScheduleEntry | null {
   try {
-    const names = getDayNames();
+    const js = new Date(`${date}T00:00:00`).getDay();
+    const dow = js === 0 ? 8 : js + 1; // quy ước app: 2 = T2 ... 8 = CN
+    return (JSON.parse(scheduleJson || '[]') as ScheduleEntry[]).find((x) => x.day === dow) ?? null;
+  } catch {
+    return null;
+  }
+}
+
+/** Tên thứ ngắn: vi "T2".."T7", "CN"; en theo Intl ("Mon"). */
+export function shortDayName(day: number, locale?: string): string {
+  const lang = locale ?? i18n.language;
+  if (lang !== 'en') return day === 8 ? 'CN' : `T${day}`;
+  return new Intl.DateTimeFormat('en-US', { weekday: 'short' }).format(new Date(2026, 9, 10 + day));
+}
+
+/**
+ * Lịch tuần gọn: gộp các ngày cùng khung giờ -> "T2, T4, T6 19:30-21:00" thay vì lặp giờ cho từng ngày
+ * (lặp làm thẻ lớp xuống 3 dòng và lệch chiều cao). Khung giờ khác nhau ngăn bằng " · ".
+ */
+export function formatScheduleText(scheduleJson: string, locale?: string): string {
+  try {
     const s: ScheduleEntry[] = JSON.parse(scheduleJson || '[]');
-    return s.map((e) => `${names[e.day] || ''} ${e.start}-${e.end}`).join(', ');
+    const groups = new Map<string, number[]>();
+    for (const e of s) {
+      const key = `${e.start}-${e.end}`;
+      groups.set(key, [...(groups.get(key) ?? []), e.day]);
+    }
+    return [...groups.entries()]
+      .map(([time, days]) => `${days.map((d) => shortDayName(d, locale)).join(', ')} ${time}`)
+      .join(' · ');
   } catch {
     return '';
   }
@@ -463,6 +502,8 @@ export interface TeacherTodayItem {
   class_id: number;
   class_name: string;
   topic: string | null;
+  schedule?: string;
+  room_name?: string | null;
   attendance_count: number;
   checked_in: boolean;
 }

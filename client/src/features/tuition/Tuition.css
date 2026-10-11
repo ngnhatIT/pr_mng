@@ -4,11 +4,11 @@
  */
 
 /* Hàng nút thao tác trong bảng: gọn, thẳng hàng, không dùng inline style */
+/* 1 thao tác chính + menu "⋯": luôn 1 hàng, không xuống dòng làm cao dòng bảng */
 .tuition-actions {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  flex-wrap: wrap;
+  gap: 4px;
   justify-content: flex-end;
 }
 

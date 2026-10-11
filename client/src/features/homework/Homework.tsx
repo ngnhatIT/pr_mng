@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
 import { homeworkApi, type HomeworkStats, type HomeworkFilters } from './homework.api';
@@ -11,15 +12,14 @@ import { EmptyState, LoadError } from '../../shared/components/EmptyState';
 import { TableSkeleton } from '../../shared/components/Skeleton';
 import { Pagination } from '../../shared/components/Pagination';
 import { Icon } from '../../shared/components/icons';
+import { Menu } from '../../shared/components/Menu';
 import { Tabs, tabPanelProps } from '../../shared/components/Tabs';
 import { HomeworkItem, formatDate, todayVN } from '../../shared/types';
 import { useLoad } from '../../shared/hooks/useLoad';
 import { useUrlSearch, useUrlState } from '../../shared/hooks/useUrlState';
 import './Homework.css';
-import { HomeworkFormModal } from './HomeworkFormModal';
 import { GradeModal } from './GradeModal';
 import { QuizAttemptsModal } from './QuizAttemptsModal';
-import { QuestionBank } from './QuestionBank';
 import { SubmissionsModal } from './SubmissionsModal';
 import { AnalyticsModal } from './AnalyticsModal';
 
@@ -30,7 +30,7 @@ function dueStatus(due: string | null, t: TFunction): { label: string; badge: st
   if (diff < 0) return { label: t('due.overdueDays', { count: -diff }), badge: 'badge-overdue' };
   if (diff === 0) return { label: t('due.today'), badge: 'badge-overdue' };
   if (diff <= 3) return { label: t('due.daysLeft', { count: diff }), badge: 'badge-late' };
-  return { label: formatDate(due), badge: 'badge-upcoming' };
+  return { label: formatDate(due), badge: 'badge-neutral' };
 }
 
 type StatusTab = '' | 'published' | 'draft' | 'scheduled';
@@ -46,15 +46,16 @@ export function Homework() {
   const debouncedSearch = q.search;
   const statusTab = q.status as StatusTab;
   const page = Number(q.page) || 1;
-  const [editing, setEditing] = useState<HomeworkItem | null | 'new'>(null);
   const [deleting, setDeleting] = useState<HomeworkItem | null>(null);
   const [unpublishing, setUnpublishing] = useState<HomeworkItem | null>(null);
   const [grading, setGrading] = useState<HomeworkItem | null>(null);
   const [attempts, setAttempts] = useState<HomeworkItem | null>(null);
-  const [showBank, setShowBank] = useState(false);
   const [showAnalytics, setShowAnalytics] = useState(false);
   const [viewSubs, setViewSubs] = useState<HomeworkItem | null>(null);
   const toast = useToast();
+  // Soạn/sửa bài và ngân hàng câu hỏi là trang riêng (đường dẫn tương đối với trang danh sách)
+  const navigate = useNavigate();
+  const openEditor = (id?: number) => void navigate(id ? `${id}/edit` : 'new');
   // Chống bấm đúp nút hành động trên từng dòng (pattern busyId của Tuition)
   const [busyId, setBusyId] = useState<number | null>(null);
   // Portal giáo viên (/teacher/bai-tap): ẩn tab/nút quản trị, chỉ giữ luồng giao bài nhanh
@@ -62,8 +63,8 @@ export function Homework() {
 
   const STATUS_BADGE: Record<string, { label: string; cls: string }> = {
     draft: { label: t('status.draft'), cls: 'badge-general' },
-    scheduled: { label: t('status.scheduled'), cls: 'badge-late' },
-    published: { label: t('status.published'), cls: 'badge-paid' },
+    scheduled: { label: t('status.scheduled'), cls: 'badge-warning' },
+    published: { label: t('status.published'), cls: 'badge-success' },
   };
 
   useEffect(() => {
@@ -106,12 +107,6 @@ export function Homework() {
       .catch(() => {});
   }, []);
 
-  const onSaved = () => {
-    setEditing(null);
-    load();
-    refreshStats();
-  };
-
   const remove = async () => {
     if (!deleting) return;
     try {
@@ -131,8 +126,7 @@ export function Homework() {
     try {
       const res = await homeworkApi.reuse(h.id);
       toast(t('toast.reused'), 'success');
-      setEditing(res.created);
-      load();
+      openEditor(res.created.id);
     } catch (err) {
       toastApiError(toast, err, t('toast.reuseFail'));
     } finally {
@@ -197,12 +191,12 @@ export function Homework() {
                 <button className="btn hw-action-icon" onClick={() => setShowAnalytics(true)}>
                   <Icon name="chart" size={15} /> {t('actions.analytics')}
                 </button>
-                <button className="btn hw-action-icon" onClick={() => setShowBank(true)}>
+                <button className="btn hw-action-icon" onClick={() => void navigate('question-bank')}>
                   <Icon name="book" size={15} /> {t('actions.questionBank')}
                 </button>
               </>
             )}
-            <button className="btn btn-primary hw-action-icon" onClick={() => setEditing('new')}>
+            <button className="btn btn-primary hw-action-icon" onClick={() => openEditor()}>
               <Icon name="plus" size={15} /> {t('actions.create')}
             </button>
           </>
@@ -210,43 +204,25 @@ export function Homework() {
       />
 
       {stats && (
-        <div className="stat-grid hw-stat-grid">
-          <div className="stat-card tone-blue">
-            <div className="stat-top">
-              <div className="stat-icon">
-                <Icon name="clipboard" size={20} />
-              </div>
-            </div>
-            <div className="stat-value">{stats.total}</div>
-            <div className="stat-label">{t('stats.published')}</div>
+        <div className="stat-strip hw-stats">
+          <div className="stat-strip-item">
+            <span className="stat-strip-label">{t('stats.published')}</span>
+            <span className="stat-strip-value">{stats.total}</span>
           </div>
-          <div className="stat-card tone-amber">
-            <div className="stat-top">
-              <div className="stat-icon">
-                <Icon name="clock" size={20} />
-              </div>
-            </div>
-            <div className="stat-value">{stats.dueSoon}</div>
-            <div className="stat-label">{t('stats.dueSoon')}</div>
+          <div className="stat-strip-item">
+            <span className="stat-strip-label">{t('stats.dueSoon')}</span>
+            <span className="stat-strip-value">{stats.dueSoon}</span>
           </div>
-          <div className="stat-card tone-red">
-            <div className="stat-top">
-              <div className="stat-icon">
-                <Icon name="calendar-x" size={20} />
-              </div>
-            </div>
-            <div className="stat-value">{stats.overdue}</div>
-            <div className="stat-label">{t('stats.overdue')}</div>
+          <div className="stat-strip-item">
+            <span className="stat-strip-label">{t('stats.overdue')}</span>
+            <span className={`stat-strip-value${stats.overdue > 0 ? ' is-overdue' : ''}`}>
+              {stats.overdue}
+            </span>
           </div>
           {!isTeacher && (
-            <div className="stat-card tone-violet">
-              <div className="stat-top">
-                <div className="stat-icon">
-                  <Icon name="file" size={20} />
-                </div>
-              </div>
-              <div className="stat-value">{stats.drafts}</div>
-              <div className="stat-label">{t('stats.drafts')}</div>
+            <div className="stat-strip-item">
+              <span className="stat-strip-label">{t('stats.drafts')}</span>
+              <span className="stat-strip-value">{stats.drafts}</span>
             </div>
           )}
         </div>
@@ -277,7 +253,7 @@ export function Homework() {
             {search !== '' &&
               (loading || search !== debouncedSearch ? (
                 <span className="search-clear" aria-hidden="true">
-                  <span className="spinner spinner-dark" />
+                  <span className="spinner" />
                 </span>
               ) : (
                 <button
@@ -326,7 +302,7 @@ export function Homework() {
           </select>
         </div>
 
-        <div className="card" aria-busy={loading || undefined}>
+        <div aria-busy={loading || undefined}>
           {loading && !data ? (
             <TableSkeleton rows={6} cols={6} />
           ) : error && !data ? (
@@ -337,7 +313,7 @@ export function Homework() {
               title={t('empty.title')}
               desc={t('empty.desc')}
               action={
-                <button className="btn btn-primary hw-action-icon" onClick={() => setEditing('new')}>
+                <button className="btn btn-primary hw-action-icon" onClick={() => openEditor()}>
                   <Icon name="plus" size={15} /> {t('actions.create')}
                 </button>
               }
@@ -371,9 +347,7 @@ export function Homework() {
                         <td>
                           <div className="hw-item-title">
                             {h.kind === 'quiz' && (
-                              <span className="badge badge-plan-premium hw-quiz-badge">
-                                {t('filters.kindQuiz')}
-                              </span>
+                              <span className="badge badge-quiz hw-quiz-badge">{t('filters.kindQuiz')}</span>
                             )}
                             {h.title}
                           </div>
@@ -408,68 +382,72 @@ export function Homework() {
                           </div>
                         </td>
                         <td className="td-right nowrap">
-                          {h.status !== 'published' ? (
-                            <button
-                              className="btn btn-sm btn-primary"
-                              onClick={() => doPublish(h)}
-                              disabled={busyId === h.id}
-                              title={t('actions.publishNow')}
-                            >
-                              {busyId === h.id && <span className="spinner" aria-hidden="true" />}
-                              {t('actions.publish')}
-                            </button>
-                          ) : (
-                            <button
-                              className="btn btn-sm"
-                              onClick={() => doUnpublish(h)}
-                              disabled={busyId === h.id}
-                              title={t('actions.unpublishTitle')}
-                            >
-                              {t('actions.unpublish')}
-                            </button>
-                          )}{' '}
-                          <button
-                            className="btn btn-sm"
-                            onClick={() => doReuse(h)}
-                            disabled={busyId === h.id}
-                            title={t('actions.reuseTitle')}
-                          >
-                            {busyId === h.id && <span className="spinner" aria-hidden="true" />}
-                            {t('actions.reuse')}
-                          </button>{' '}
-                          {h.kind === 'quiz' ? (
-                            <button className="btn btn-sm" onClick={() => setAttempts(h)}>
-                              {t('actions.viewResults')}
-                            </button>
-                          ) : (
-                            <button className="btn btn-sm" onClick={() => setGrading(h)}>
-                              {t('actions.grade')}
-                            </button>
-                          )}{' '}
-                          {h.kind === 'homework' && (
-                            <>
-                              <button className="btn btn-sm" onClick={() => setViewSubs(h)}>
-                                {t('actions.viewSubmissions')}
-                              </button>{' '}
-                            </>
-                          )}
+                          {/* Một thao tác chính theo trạng thái, phần còn lại trong menu "..." */}
                           <span className="row-actions">
-                            <button
-                              type="button"
-                              className="btn btn-sm btn-ghost"
-                              onClick={() => setEditing(h)}
-                            >
-                              <Icon name="pencil" size={15} />
-                              {t('actions.edit', { ns: 'common' })}
-                            </button>
-                            <button
-                              type="button"
-                              className="btn btn-sm btn-danger-ghost"
-                              onClick={() => setDeleting(h)}
-                            >
-                              <Icon name="trash" size={15} />
-                              {t('actions.delete', { ns: 'common' })}
-                            </button>
+                            {h.status !== 'published' ? (
+                              <button
+                                className="btn btn-sm btn-primary"
+                                onClick={() => doPublish(h)}
+                                disabled={busyId === h.id}
+                                title={t('actions.publishNow')}
+                              >
+                                {busyId === h.id && <span className="spinner" aria-hidden="true" />}
+                                {t('actions.publish')}
+                              </button>
+                            ) : h.kind === 'quiz' ? (
+                              <button className="btn btn-sm" onClick={() => setAttempts(h)}>
+                                {t('actions.viewResults')}
+                              </button>
+                            ) : (
+                              <button className="btn btn-sm" onClick={() => setGrading(h)}>
+                                {t('actions.grade')}
+                              </button>
+                            )}
+                            <Menu
+                              label={t('actions.more', { ns: 'common' })}
+                              items={[
+                                h.status !== 'published' &&
+                                  (h.kind === 'quiz'
+                                    ? {
+                                        label: t('actions.viewResults'),
+                                        icon: 'chart',
+                                        onSelect: () => setAttempts(h),
+                                      }
+                                    : {
+                                        label: t('actions.grade'),
+                                        icon: 'check',
+                                        onSelect: () => setGrading(h),
+                                      }),
+                                h.kind === 'homework' && {
+                                  label: t('actions.viewSubmissions'),
+                                  icon: 'inbox',
+                                  onSelect: () => setViewSubs(h),
+                                },
+                                {
+                                  label: t('actions.edit', { ns: 'common' }),
+                                  icon: 'pencil',
+                                  onSelect: () => openEditor(h.id),
+                                },
+                                {
+                                  label: t('actions.reuse'),
+                                  icon: 'rotate',
+                                  disabled: busyId === h.id,
+                                  onSelect: () => doReuse(h),
+                                },
+                                h.status === 'published' && {
+                                  label: t('actions.unpublish'),
+                                  icon: 'eye',
+                                  disabled: busyId === h.id,
+                                  onSelect: () => doUnpublish(h),
+                                },
+                                {
+                                  label: t('actions.delete', { ns: 'common' }),
+                                  icon: 'trash',
+                                  danger: true,
+                                  onSelect: () => setDeleting(h),
+                                },
+                              ]}
+                            />
                           </span>
                         </td>
                       </tr>
@@ -486,14 +464,6 @@ export function Homework() {
         )}
       </div>
 
-      {editing && (
-        <HomeworkFormModal
-          classes={classes}
-          initial={editing === 'new' ? null : editing}
-          onClose={() => setEditing(null)}
-          onSaved={onSaved}
-        />
-      )}
       {grading && (
         <GradeModal
           homework={grading}
@@ -504,7 +474,6 @@ export function Homework() {
         />
       )}
       {attempts && <QuizAttemptsModal homework={attempts} onClose={() => setAttempts(null)} />}
-      {showBank && <QuestionBank onClose={() => setShowBank(false)} />}
       {showAnalytics && <AnalyticsModal onClose={() => setShowAnalytics(false)} />}
       {viewSubs && (
         <SubmissionsModal

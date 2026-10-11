@@ -83,7 +83,13 @@ export async function listStudents(
     (await db.prepare(`SELECT COUNT(*) as c FROM students ${where}`).get(...params)) as { c: number }
   ).c;
   const rows = (await db
-    .prepare(`SELECT * FROM students ${where} ORDER BY id DESC LIMIT ? OFFSET ?`)
+    .prepare(
+      // Lớp đang học (ghi danh active, lớp đang mở) để danh sách trả lời "em này học lớp nào" không cần mở hồ sơ
+      `SELECT students.*,
+         (SELECT string_agg(c.name, ', ' ORDER BY c.name) FROM enrollments e JOIN classes c ON c.id = e.class_id
+          WHERE e.student_id = students.id AND e.status = 'active' AND c.status = 'active') AS class_names
+       FROM students ${where} ORDER BY id DESC LIMIT ? OFFSET ?`
+    )
     .all(...params, limit, offset)) as unknown[];
   return paginate(rows, total, page, limit);
 }

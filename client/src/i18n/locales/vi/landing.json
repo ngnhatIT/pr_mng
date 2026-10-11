@@ -1,70 +1,112 @@
 {
   "courses": {
-    "capacity": "Sĩ số",
-    "empty": "Hiện chưa có khóa học nào được mở.",
+    "capacity": "Sĩ số hiện tại",
+    "count": "{{count}} khóa đang mở",
+    "empty": "Hiện chưa có khóa học nào mở đăng ký.",
     "schedule": "Lịch học",
+    "scheduleTbd": "Đang xếp lịch",
     "students": "{{count}} học viên",
-    "sub": "Chọn khóa học phù hợp với trình độ và mục tiêu của con bạn",
+    "sub": "Học phí ghi rõ cho cả khóa. Đăng ký học thử trước, quyết định sau.",
     "teacher": "Giáo viên",
-    "title": "Khóa học nổi bật",
-    "trial": "Đăng ký học thử",
+    "teacherTbd": "Đang phân công",
+    "title": "Khóa học đang tuyển sinh",
+    "trial": "Học thử lớp này",
+    "trialFor": "Đăng ký học thử lớp {{name}}",
     "tuition": "Học phí"
+  },
+  "cta": {
+    "sub": "Để lại số điện thoại, trung tâm gọi lại trong giờ hành chính để xếp lớp phù hợp với trình độ.",
+    "title": "Đặt một buổi học thử. Không mất phí."
   },
   "fields": {
     "class": "Lớp muốn học thử",
     "date": "Ngày mong muốn",
-    "name": "Họ tên *",
-    "noClass": "- Chưa chọn -",
+    "name": "Họ tên",
+    "noClass": "Chưa chọn, nhờ trung tâm tư vấn",
     "note": "Ghi chú",
-    "phone": "Số điện thoại *",
+    "phone": "Số điện thoại",
     "referral": "Mã giới thiệu",
-    "referralPh": "Nhập mã nếu được giới thiệu"
+    "referralPh": "Nếu có người giới thiệu"
   },
-  "footerLogin": "Đăng nhập",
-  "footerParent": "Cổng phụ huynh",
-  "formTitle": "Đăng ký tư vấn & học thử",
+  "footer": {
+    "label": "Liên kết cuối trang",
+    "staff": "Đăng nhập nhân viên"
+  },
+  "formTitle": "Hình thức đăng ký",
   "hero": {
-    "badge": "Đang tuyển sinh - đăng ký học thử miễn phí",
-    "ctaConsult": "Đăng ký tư vấn",
-    "ctaTrial": "Đăng ký học thử",
-    "fallbackName": "Trung tâm của bạn",
-    "sub": "Lớp sĩ số nhỏ, giáo viên theo sát từng học viên, học phí minh bạch theo từng khoản thu."
+    "ctaConsult": "Nhận tư vấn",
+    "ctaTrial": "Đặt buổi học thử",
+    "line1": "Lớp học nhỏ.",
+    "line2": "Giáo viên nhớ tên con bạn.",
+    "sub": "Học viên được xếp lớp theo trình độ, điểm danh từng buổi. Phụ huynh xem điểm, bài tập và học phí ngay trên điện thoại."
   },
   "lead": {
-    "desc": "Để lại thông tin, trung tâm sẽ gọi lại tư vấn khóa học phù hợp.",
+    "desc": "Chưa biết chọn khóa nào? Để lại thông tin, trung tâm gọi lại tư vấn.",
     "fail": "Không gửi được thông tin tư vấn, vui lòng thử lại",
-    "submit": "Gửi đăng ký tư vấn",
-    "success": "Đã gửi đăng ký tư vấn. Trung tâm sẽ gọi lại tư vấn trong thời gian sớm nhất.",
-    "title": "Đăng ký tư vấn"
+    "submit": "Gửi yêu cầu tư vấn",
+    "success": "Đã nhận yêu cầu. Trung tâm sẽ gọi lại cho bạn sớm.",
+    "title": "Tư vấn"
   },
-  "loadError": "Không tải được dữ liệu, vui lòng thử lại",
+  "loadError": "Không tải được dữ liệu. Kiểm tra kết nối rồi thử lại.",
   "nav": {
     "courses": "Khóa học",
+    "label": "Điều hướng chính",
     "login": "Đăng nhập",
+    "menu": "Mở menu",
     "parent": "Cổng phụ huynh",
     "reviews": "Đánh giá",
     "teachers": "Giáo viên"
   },
   "reviews": {
-    "count": "({{total}} đánh giá)",
-    "empty": "Chưa có đánh giá nào.",
+    "count": "{{total}} đánh giá",
     "fallbackName": "Phụ huynh",
-    "stars": "{{rating}}/5 sao",
-    "sub": "Đánh giá thật từ phụ huynh đang cho con theo học",
+    "next": "Đánh giá tiếp theo",
+    "prev": "Đánh giá trước",
+    "stars": "{{rating}} trên 5 sao",
     "title": "Phụ huynh nói gì"
+  },
+  "scrub": {
+    "label": "Cách trung tâm báo tình hình học tập",
+    "text": "Sau mỗi buổi học, phụ huynh nhận một tin nhắn ngắn: con có mặt hay vắng, hôm nay học gì, bài tập nào cần làm. Không cần gọi hỏi, không phải chờ đến buổi họp phụ huynh."
   },
   "sending": "Đang gửi...",
   "teachers": {
-    "empty": "Hiện chưa có thông tin giáo viên.",
+    "empty": "Thông tin giáo viên đang được cập nhật.",
     "fallback": "Giáo viên",
-    "sub": "Giáo viên tận tâm, giàu kinh nghiệm đồng hành cùng học viên",
-    "title": "Đội ngũ giáo viên"
+    "sub": "Mỗi lớp có một giáo viên phụ trách từ đầu đến cuối khóa.",
+    "title": "Người đứng lớp"
+  },
+  "ticket": {
+    "more": "Xem thêm {{count}} khóa",
+    "title": "Lịch khai giảng"
   },
   "trial": {
-    "desc": "Trải nghiệm một buổi học miễn phí trước khi quyết định.",
+    "desc": "Học thử một buổi với lớp thật, sĩ số thật. Trung tâm sẽ gọi xác nhận lịch.",
     "fail": "Không gửi được đăng ký học thử, vui lòng thử lại",
     "submit": "Đăng ký học thử",
-    "success": "Đã đăng ký học thử. Trung tâm sẽ liên hệ xác nhận với bạn.",
-    "title": "Đăng ký học thử"
+    "success": "Đã đăng ký học thử. Trung tâm sẽ liên hệ xác nhận lịch.",
+    "title": "Học thử"
+  },
+  "why": {
+    "fee": {
+      "body": "Mỗi khoản thu có biên lai. Thanh toán chuyển khoản hoặc VNPay, xem lại lịch sử bất cứ lúc nào.",
+      "bodyFrom": "Từ {{fee}} một khóa. Mỗi khoản thu có biên lai, thanh toán chuyển khoản hoặc VNPay.",
+      "title": "Học phí rõ ràng"
+    },
+    "portal": {
+      "body": "Điểm danh, bài tập, điểm kiểm tra, xin nghỉ và học phí của con, gom vào một chỗ.",
+      "cta": "Vào cổng phụ huynh",
+      "title": "Cổng phụ huynh"
+    },
+    "small": {
+      "body": "Lớp ít học viên để giáo viên sửa bài cho từng em trong giờ học, không để dồn về nhà.",
+      "bodyCount": "Trung bình {{count}} học viên mỗi lớp. Đủ ít để giáo viên sửa bài cho từng em ngay trong giờ học.",
+      "title": "Lớp nhỏ thật sự"
+    },
+    "title": "Những gì phụ huynh thực sự cần biết",
+    "zalo": {
+      "body": "Vắng học, nộp bài, đến hạn học phí: tin nhắn tự gửi qua Zalo, không phải cài thêm ứng dụng.",
+      "title": "Báo qua Zalo"
+    }
   }
 }

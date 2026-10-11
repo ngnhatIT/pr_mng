@@ -1,5 +1,111 @@
 # Changelog — EduCenterPro
 
+## 2026-10-11 — Soạn bài tập và ngân hàng câu hỏi thành trang riêng
+
+Không có migration.
+
+- Soạn/sửa bài tập không còn là modal: `/app/homework/new`, `/app/homework/:id/edit` (giáo viên:
+  `/teacher/bai-tap/new`, `/teacher/bai-tap/:id/edit`). Bố cục 2 cột: nội dung, đính kèm, đề quiz bên trái;
+  lớp/học viên, hạn nộp, chấm điểm, đăng bài bên phải; thanh lưu dính đáy. Màn hẹp xếp 1 cột (chọn lớp lên đầu).
+  Rời trang khi đang soạn dở dùng hộp xác nhận chung của app (Hủy, Back, menu); lưu xong quay về danh sách và giữ
+  bộ lọc. "Dùng lại" mở thẳng trang sửa bản sao. File: `features/homework/HomeworkEditor.tsx` (thay
+  `HomeworkFormModal.tsx`; đổi tên test theo).
+- Ngân hàng câu hỏi thành trang `/app/homework/question-bank`: tìm kiếm + 3 bộ lọc trên một hàng, đếm số câu, form
+  thêm/sửa dính ở cột phải (câu đang sửa được đánh dấu), rời trang khi form có thay đổi phải xác nhận. Trong trang
+  soạn quiz, "Lấy từ ngân hàng" vẫn là hộp chọn để không rời bài đang soạn.
+
+## 2026-10-11 — Dữ liệu trình diễn + rà UI/UX toàn bộ với dữ liệu thật
+
+Không có migration.
+
+- `npm run seed:showcase -w server` (`server/scripts/seed-showcase.ts`): bổ sung vào trung tâm demo 5 giáo viên,
+  7 lớp (1 lớp đã kết thúc), 60 học viên, ~1.250 lượt điểm danh, 87 phiếu thu và 81 khoản thu trải 5 tháng, bài
+  tập/quiz có bài nộp, điểm và lượt làm, điểm kiểm tra, lead, học thử, đánh giá, đơn nghỉ, giới thiệu (có thưởng),
+  ngân hàng câu hỏi, nhật ký, 8 phụ huynh. Chỉ thêm, không xóa; ghi trong 1 transaction; chạy lần hai tự dừng; tự
+  đối soát tài chính sau khi chạy. Ghi thẳng DB (không qua HTTP) vì API giới hạn 300 lần ghi / 15 phút. Trung tâm
+  demo đổi tên "Trung tâm Ngoại ngữ EduCenter".
+- Sửa lỗi lộ ra khi có dữ liệu:
+  - Mọi cột số tiền/thao tác trong bảng bị căn trái: `.table th, .table td { text-align: left }` mạnh hơn `.num` /
+    `.th-right`.
+  - Chi tiết lớp: "Buổi học gần đây" liệt kê các buổi cuối khóa (tương lai) kèm nút điểm danh mà server từ chối;
+    nay là 5 buổi đã diễn ra + buổi kế tiếp. Trang Điểm danh tách "Đã diễn ra" / "Sắp tới" (khóa buổi tương lai) và
+    tự mở buổi gần nhất khi chọn lớp.
+  - Trang Giới thiệu: cột "Thưởng" luôn "–" vì API không trả `reward_amount`; tổng tiền thưởng có trong API nhưng
+    không hiện.
+  - Dark mode: nút Có mặt/Muộn/Vắng đang chọn là chữ trắng trên nền xanh/vàng sáng (~1.6:1); khối tổng lương giáo
+    viên chữ tối trên nền navy.
+  - Bảng lương: tổng chi mượn class công nợ nên tô đỏ. Biểu đồ điểm của phụ huynh vẽ hình tam giác khi chỉ có 1 bài.
+    Credits phụ huynh hiện "200000" thiếu định dạng tiền.
+- Tổng quan: biểu đồ doanh thu 6 tháng (API `revenueByMonth`); buổi học hôm nay hiện giờ của hôm nay + phòng, sắp
+  theo giờ (trước hiện cả lịch tuần). Cổng giáo viên cũng hiện giờ dạy + phòng thay cho ngày.
+- Học viên: cột "Lớp đang học"; hồ sơ có avatar chữ cái, cột "Còn lại", tổng còn nợ, phiếu thu mở được chi tiết.
+  Học phí: dòng phiếu thu gọn (tên + "HD85 · HV058"), hạn quá hạn tô đỏ, còn nợ 0 hiện "–"; công nợ mở được hồ sơ.
+- Lịch học gọn "T2, T4, T6 19:30-21:00" (gộp ngày cùng giờ); thẻ lớp thêm phòng, lớp đang mở xếp trước lớp đã đóng.
+  Đơn nghỉ chờ duyệt và học thử chưa chuyển xếp đầu danh sách.
+- Menu "⋯" thêm ở phòng học, giáo viên (Tạo tài khoản, Xóa), học viên trong chi tiết lớp. Pipeline lead vừa 5 cột
+  ở 1440px. Tên dạng link trong bảng/danh sách giữ màu chữ, chỉ xanh khi hover.
+- Cổng phụ huynh: tab chi tiết con là một hàng cuộn ngang (tab đang chọn tự cuộn vào khung), điểm danh thành tỉ lệ
+  chuyên cần + thanh tỉ lệ, bảng điểm xếp thẻ trên điện thoại, form liên kết con thu gọn khi đã có con, avatar chữ
+  cái. Sidebar hiện tên trung tâm. Font mono dùng font hệ thống (Consolas không có trên macOS/iOS).
+
+## 2026-10-11 — Nâng cấp UI: menu thao tác, badge, bài tập/quiz, cấu hình thanh toán
+
+Không có migration. Chỉ client.
+
+- Menu "⋯" thêm ở: card lớp học (Sửa, Xóa), thẻ lead (một nút bước kế tiếp hoặc "Thành HV"/"Mở lại lead"; Chuyển
+  thành học viên, Sửa, Đánh dấu mất, Xóa vào menu; trước đó 4–6 nút trên một thẻ cột hẹp), đánh giá đã duyệt (Xóa),
+  ngân hàng câu hỏi (Xóa), bảng bài tập (trước có 5–6 nút, tràn ngang cả ở 1440px; nay 1 nút chính: Đăng / Kết quả /
+  Chấm điểm). `Menu` nhận mục `false` để viết `cond && {...}`.
+- Badge viết lại theo `--tone` + token theme: bỏ mã màu Tailwind cứng và 3 khối ghi đè dark mode; thêm chấm trạng
+  thái. Sửa nghĩa màu: lớp ngưng/học viên nghỉ/phòng trống thành trung tính (trước đỏ/viền riêng), log thao tác thường
+  thành trung tính (trước vàng "chờ"), hạn nộp còn xa thành trung tính (trước vàng). `.badge-danger` chỉ được khai báo
+  trong `Classes.css` (chunk lazy) nên trang Nhật ký mất màu nếu chưa mở trang Lớp học: nay nằm trong CSS chung.
+  Đánh giá bỏ badge trạng thái trùng với tab đang xem.
+- Bài tập: 4 thẻ thống kê to (2×2 ở tablet) thành dải số liệu dùng chung với Tổng quan (`.stat-strip`); bỏ card bọc
+  ngoài bảng (viền đôi, khung trống lồng khung).
+- Quiz: trình tạo bỏ ký tự ☑ ☐ ● ○ × làm control, thay bằng ô chọn vẽ bằng CSS + icon, số câu trung tính, ô điểm có
+  nhãn "Điểm" hiện cạnh. Màn làm bài của phụ huynh: hover/chọn không còn tô xanh, đang chọn là viền mực 2 lớp và không
+  đổi `font-weight` (chữ không nhảy dòng); thanh tiến trình màu mực; điểm và icon kết quả theo token (bỏ override dark).
+  Thẻ bài tập phụ huynh: hạn nộp chuyển xuống dưới tên lớp (trước nằm cột phải, bóp tiêu đề còn 3 dòng trên mobile).
+- Ngân hàng câu hỏi: thanh công cụ 2 hàng (tìm kiếm + Thêm câu hỏi; 3 bộ lọc chia đều), badge trong dòng meta có
+  khoảng cách đều.
+- Cấu hình thanh toán: icon tiêu đề mục màu phụ, thanh lưu dính đáy cùng nền trang + blur thay vì khối nền riêng.
+- Dọn class chết `spinner-dark` (11 chỗ).
+
+## 2026-10-11 — Nâng cấp UI toàn bộ màn hình
+
+Không có migration. Chỉ client.
+
+- Bảng màu trung tính hơi ấm (đồng bộ landing) cho cả 2 theme. Nút chính màu mực; xanh chỉ còn ở link, focus, mục
+  đang chọn. Bỏ ô icon nền màu ở thẻ thống kê, thao tác nhanh, trạng thái trống; bỏ đổ bóng màu và gradient (kể cả
+  icon PWA xanh→tím). Gộp các khối `:root` trùng làm shadow/bo góc bị ghi đè; bỏ `border-radius` gán lúc focus.
+- Shell admin: sidebar cùng nền trang thay cho khối navy. Chân sidebar thành menu tài khoản (Đổi mật khẩu,
+  Đăng xuất có xác nhận); topbar bỏ avatar/nút đổi mật khẩu/đăng xuất trùng lặp (trước đó đăng xuất trên topbar
+  không hỏi xác nhận còn ở sidebar thì có). Tiêu đề topbar chỉ hiện trên mobile.
+- Cổng phụ huynh và giáo viên: topbar sáng, bottom nav mờ nền; khối chấm công và thẻ lương không còn nền xanh.
+- `Menu` dùng chung (WAI-ARIA, có test). Bảng học phí: cột thao tác tràn khỏi bảng (4–5 nút xếp chồng) nay chỉ còn
+  1 nút chính + menu "⋯". Bảng học viên: "Xóa" chuyển vào menu. Nút xóa ghost ở các trang khác để màu phụ, đỏ khi
+  hover. Avatar chữ cái trung tính ở học viên, giáo viên, lương.
+- Sửa: link dạng nút bị gạch chân; giá trị số trong khối thông tin chi tiết bị căn phải; tên lớp ở trang phụ huynh
+  dùng badge xanh "thành công"; `Roles.css` khai báo lại `.btn-danger-ghost` toàn cục; nút trên thanh lưu phân quyền
+  chìm trong theme sáng; `font-weight: 800` bị làm đậm giả (Geist chỉ tải tới 700). Form đăng nhập trên điện thoại
+  trải phẳng, không bọc card.
+
+## 2026-10-11 — Nâng cấp UI landing + typography
+
+Không có migration. Chỉ client.
+
+- Landing viết lại: nav dạng viên nổi (menu mobile đóng khi bấm ngoài/Esc), hero lệch trái kèm "vé lịch khai giảng"
+  lấy từ dữ liệu khóa học thật, marquee môn học, bento 4 ô (sĩ số trung bình và học phí thấp nhất tính từ API),
+  đoạn chữ sáng dần theo cuộn, danh sách khóa học với cột tiêu đề dính, accordion giáo viên, carousel đánh giá
+  (ẩn cả mục khi chưa có đánh giá), một khối đăng ký gộp 2 tab Học thử / Tư vấn (đổi tab không mất dữ liệu đang nhập).
+  Palette giấy/mực riêng, có dark mode. Không dùng ảnh ngoài (CSP `img-src 'self'`).
+- Chuyển động bằng GSAP + ScrollTrigger, tắt hết khi `prefers-reduced-motion`. GSAP không vào chunk `vendor`
+  chung (vite `manualChunks`), chỉ tải ở trang landing.
+- Font toàn app đổi từ Be Vietnam Pro sang Geist (có subset tiếng Việt); số trong bảng dùng `tabular-nums`.
+- Trang đăng nhập (nhân viên, phụ huynh) gộp về một bộ style: nền phẳng theo theme, bỏ gradient/glow.
+  Logo chữ "E" thành hình tròn, không phát sáng. `button.link` không còn viền nút mặc định của trình duyệt.
+
 ## 2026-10-11 — Review fixes, vòng 7
 
 Không có migration mới (vẫn v25). Re-review sau vòng 7: 96,5 (production) và 95,5 (kỹ thuật/UX).

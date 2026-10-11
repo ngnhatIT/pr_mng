@@ -116,7 +116,7 @@
     "searchStudentPlaceholder": "Gõ tên hoặc mã học viên"
   },
   "detail": {
-    "title": "Hóa đơn #{{id}}",
+    "title": "Hóa đơn HD{{id}}",
     "breadcrumbLabel": "Điều hướng trang hóa đơn",
     "breadcrumbTuition": "Học phí",
     "breadcrumbInvoice": "Hóa đơn #{{id}}",

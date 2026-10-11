@@ -1,70 +1,112 @@
 {
   "courses": {
-    "capacity": "Class size",
-    "empty": "No courses are open at the moment.",
+    "capacity": "Enrolled",
+    "count": "{{count}} open courses",
+    "empty": "No courses are open for enrolment right now.",
     "schedule": "Schedule",
+    "scheduleTbd": "Being scheduled",
     "students": "{{count}} students",
-    "sub": "Find the right course for your child's level and goals",
+    "sub": "Full-course fees, stated up front. Try a class first, decide later.",
     "teacher": "Teacher",
-    "title": "Featured courses",
-    "trial": "Book trial",
+    "teacherTbd": "To be assigned",
+    "title": "Open for enrolment",
+    "trial": "Try this class",
+    "trialFor": "Book a trial for {{name}}",
     "tuition": "Tuition"
   },
-  "fields": {
-    "class": "Preferred class",
-    "date": "Preferred date",
-    "name": "Full name *",
-    "noClass": "- Not selected -",
-    "note": "Notes",
-    "phone": "Phone *",
-    "referral": "Referral code",
-    "referralPh": "Enter code if referred"
+  "cta": {
+    "sub": "Leave your number and we will call back during office hours to place your child at the right level.",
+    "title": "Book a trial class. It's free."
   },
-  "footerLogin": "Sign in",
-  "footerParent": "Parent portal",
-  "formTitle": "Book a consultation or trial",
+  "fields": {
+    "class": "Class to try",
+    "date": "Preferred date",
+    "name": "Full name",
+    "noClass": "Not sure yet, please advise",
+    "note": "Note",
+    "phone": "Phone number",
+    "referral": "Referral code",
+    "referralPh": "If someone referred you"
+  },
+  "footer": {
+    "label": "Footer links",
+    "staff": "Staff sign-in"
+  },
+  "formTitle": "Request type",
   "hero": {
-    "badge": "Enrolling now - free trial class",
-    "ctaConsult": "Book a consultation",
+    "ctaConsult": "Talk to us",
     "ctaTrial": "Book a trial class",
-    "fallbackName": "Your center",
-    "sub": "Small classes, teachers who follow each student closely, and tuition broken down to every charge."
+    "line1": "Small classes.",
+    "line2": "Teachers who know your child by name.",
+    "sub": "Students are placed by level and marked present every session. Parents see grades, homework and fees on their phone."
   },
   "lead": {
-    "desc": "Leave your details and we'll call back with course advice.",
-    "fail": "Couldn't send your info, please try again",
-    "submit": "Send request",
-    "success": "Consultation request sent. We'll contact you soon!",
-    "title": "Book a consultation"
+    "desc": "Not sure which course fits? Leave your details and we will call you back.",
+    "fail": "Could not send your request, please try again",
+    "submit": "Request a call back",
+    "success": "Request received. We will call you back shortly.",
+    "title": "Advice"
   },
-  "loadError": "Couldn't load the data, please try again",
+  "loadError": "Could not load this section. Check your connection and try again.",
   "nav": {
     "courses": "Courses",
+    "label": "Main navigation",
     "login": "Sign in",
+    "menu": "Open menu",
     "parent": "Parent portal",
     "reviews": "Reviews",
     "teachers": "Teachers"
   },
   "reviews": {
-    "count": "({{total}} reviews)",
-    "empty": "No reviews yet.",
+    "count": "{{total}} reviews",
     "fallbackName": "Parent",
+    "next": "Next review",
+    "prev": "Previous review",
     "stars": "{{rating}} out of 5 stars",
-    "sub": "Real reviews from our parents",
     "title": "What parents say"
+  },
+  "scrub": {
+    "label": "How we report progress",
+    "text": "After every class, parents get one short message: present or absent, what was covered, which homework is due. No phone calls, no waiting for the next parents' evening."
   },
   "sending": "Sending...",
   "teachers": {
-    "empty": "No teacher information yet.",
+    "empty": "Teacher profiles are being updated.",
     "fallback": "Teacher",
-    "sub": "Dedicated, experienced teachers",
-    "title": "Our teachers"
+    "sub": "Each class keeps one teacher from the first lesson to the last.",
+    "title": "Who teaches"
+  },
+  "ticket": {
+    "more": "{{count}} more courses",
+    "title": "Starting soon"
   },
   "trial": {
-    "desc": "Try one class free before deciding.",
-    "fail": "Couldn't send the trial request, please try again",
+    "desc": "Sit in on a real class with real classmates. We will call to confirm the date.",
+    "fail": "Could not book the trial, please try again",
     "submit": "Book trial class",
-    "success": "Trial class booked. We'll contact you to confirm.",
-    "title": "Book a trial class"
+    "success": "Trial booked. We will call to confirm the date.",
+    "title": "Trial class"
+  },
+  "why": {
+    "fee": {
+      "body": "Every payment gets a receipt. Pay by bank transfer or VNPay and review your history any time.",
+      "bodyFrom": "From {{fee}} per course. Every payment gets a receipt; pay by bank transfer or VNPay.",
+      "title": "Clear fees"
+    },
+    "portal": {
+      "body": "Attendance, homework, test scores, leave requests and fees for your child, in one place.",
+      "cta": "Open parent portal",
+      "title": "Parent portal"
+    },
+    "small": {
+      "body": "Few students per class, so teachers correct each child's work during the lesson instead of sending it home.",
+      "bodyCount": "{{count}} students per class on average. Few enough for teachers to correct each child's work during the lesson.",
+      "title": "Genuinely small classes"
+    },
+    "title": "What parents actually need to know",
+    "zalo": {
+      "body": "Absences, submitted homework, fees due: messages go out on Zalo automatically. Nothing extra to install.",
+      "title": "Updates on Zalo"
+    }
   }
 }

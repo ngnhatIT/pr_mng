@@ -48,7 +48,8 @@
       "class": "Lớp",
       "dueDate": "Hạn nộp",
       "paid": "Đã thu",
-      "status": "Trạng thái"
+      "status": "Trạng thái",
+      "remaining": "Còn lại"
     },
     "invoices": "Phiếu thu học phí",
     "loadError": "Không tải được chi tiết",
@@ -62,7 +63,8 @@
     "notFoundTitle": "Không tìm thấy học viên",
     "note": "Ghi chú",
     "personalInfo": "Thông tin cá nhân",
-    "phone": "Điện thoại"
+    "phone": "Điện thoại",
+    "debtTotal": "Còn nợ {{amount}}"
   },
   "empty": {
     "desc": "Thêm học viên đầu tiên để bắt đầu quản lý danh sách.",
@@ -103,7 +105,8 @@
     "code": "Mã",
     "name": "Họ tên",
     "phone": "Điện thoại",
-    "status": "Trạng thái"
+    "status": "Trạng thái",
+    "classes": "Lớp đang học"
   },
   "title": "Học viên",
   "toast": {

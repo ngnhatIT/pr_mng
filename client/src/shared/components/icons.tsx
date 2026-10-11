@@ -113,6 +113,14 @@ const PATHS: Record<string, ReactNode> = {
     </>
   ),
   menu: <path d="M4 6h16M4 12h16M4 18h16" />,
+  more: (
+    <>
+      <circle cx="5" cy="12" r="1.25" />
+      <circle cx="12" cy="12" r="1.25" />
+      <circle cx="19" cy="12" r="1.25" />
+    </>
+  ),
+  chevronUpDown: <path d="m7 15 5 5 5-5M7 9l5-5 5 5" />,
   x: <path d="M18 6 6 18M6 6l12 12" />,
   search: (
     <>

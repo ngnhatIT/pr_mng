@@ -10,6 +10,7 @@ import { Pagination, clampPage } from '../../shared/components/Pagination';
 import { useLoad } from '../../shared/hooks/useLoad';
 import { useUrlState } from '../../shared/hooks/useUrlState';
 import { Icon } from '../../shared/components/icons';
+import { Menu } from '../../shared/components/Menu';
 import { ReviewItem, formatDate } from '../../shared/types';
 import './Growth.css';
 import { EmptyCell } from '../../shared/components/EmptyCell';
@@ -49,11 +50,11 @@ export function ReviewsAdmin() {
   }, [error, toast, t]);
 
   // Id review đang duyệt/từ chối: chống bấm 2 lần (pattern như Tuition moderate)
-  const [busyId, setBusyId] = useState<number | null>(null);
+  const [busy, setBusy] = useState<{ id: number; action: 'approve' | 'reject' } | null>(null);
 
   const moderate = async (r: ReviewItem, action: 'approve' | 'reject') => {
-    if (busyId !== null) return;
-    setBusyId(r.id);
+    if (busy) return;
+    setBusy({ id: r.id, action });
     try {
       if (action === 'approve') await reviewsApi.approve(r.id);
       else await reviewsApi.reject(r.id);
@@ -62,7 +63,7 @@ export function ReviewsAdmin() {
     } catch (err) {
       toastApiError(toast, err, t('reviews.toast.moderateFail'));
     } finally {
-      setBusyId(null);
+      setBusy(null);
     }
   };
 
@@ -117,7 +118,6 @@ export function ReviewsAdmin() {
               <div key={r.id} className="card review-card">
                 <div className="review-head">
                   <Stars rating={r.rating} />
-                  <span className={`badge badge-${r.status}`}>{t(`reviews.status.${r.status}`)}</span>
                 </div>
                 <p className="review-comment">{r.comment || <EmptyCell />}</p>
                 <div className="review-meta">
@@ -132,9 +132,9 @@ export function ReviewsAdmin() {
                       <button
                         className="btn btn-sm btn-primary"
                         onClick={() => void moderate(r, 'approve')}
-                        disabled={busyId === r.id}
+                        disabled={busy?.id === r.id}
                       >
-                        {busyId === r.id ? (
+                        {busy?.id === r.id && busy.action === 'approve' ? (
                           <span className="spinner" aria-hidden="true" />
                         ) : (
                           <Icon name="check" size={14} />
@@ -142,12 +142,12 @@ export function ReviewsAdmin() {
                         {t('reviews.approve')}
                       </button>
                       <button
-                        className="btn btn-sm btn-danger-ghost"
+                        className="btn btn-sm"
                         onClick={() => void moderate(r, 'reject')}
-                        disabled={busyId === r.id}
+                        disabled={busy?.id === r.id}
                       >
-                        {busyId === r.id ? (
-                          <span className="spinner spinner-dark" aria-hidden="true" />
+                        {busy?.id === r.id && busy.action === 'reject' ? (
+                          <span className="spinner" aria-hidden="true" />
                         ) : (
                           <Icon name="x" size={14} />
                         )}
@@ -155,10 +155,17 @@ export function ReviewsAdmin() {
                       </button>
                     </>
                   ) : (
-                    <button className="btn btn-sm btn-danger-ghost" onClick={() => setDeleting(r)}>
-                      <Icon name="trash" size={14} />
-                      {t('actions.delete', { ns: 'common' })}
-                    </button>
+                    <Menu
+                      label={t('actions.more', { ns: 'common' })}
+                      items={[
+                        {
+                          label: t('actions.delete', { ns: 'common' }),
+                          icon: 'trash',
+                          danger: true,
+                          onSelect: () => setDeleting(r),
+                        },
+                      ]}
+                    />
                   )}
                 </div>
               </div>

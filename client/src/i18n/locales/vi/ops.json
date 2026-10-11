@@ -166,7 +166,8 @@
     "stats": {
       "pending": "Đang chờ thưởng",
       "rewarded": "Đã thưởng",
-      "total": "Tổng lượt giới thiệu"
+      "total": "Tổng lượt giới thiệu",
+      "totalReward": "Tổng tiền thưởng"
     },
     "status": {
       "pending": "Đang chờ",

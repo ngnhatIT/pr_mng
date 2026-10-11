@@ -1,14 +1,19 @@
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { flushSync } from 'react-dom';
+import { useParams, useResolvedPath } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { homeworkApi } from './homework.api';
 import { ClassItem } from '../classes/classes.api';
 import { HomeworkItem, formatDate, todayVN, nowVN } from '../../shared/types';
 import { toastApiError, useToast } from '../../shared/ui/toast';
-import { Modal, ConfirmDialog } from '../../shared/components/Modal';
 import { Field, useFieldErrors } from '../../shared/components/Form';
 import { Icon } from '../../shared/components/icons';
 import { RichTextarea } from '../../shared/components/RichTextarea';
+import { LoadError } from '../../shared/components/EmptyState';
 import { useUnsavedGuard } from '../../shared/hooks/useUnsavedGuard';
+import { useGoBack } from '../../shared/hooks/useGoBack';
+import { useLoad } from '../../shared/hooks/useLoad';
+import './Homework.css';
 import { QuestionBank } from './QuestionBank';
 import { DEFAULT_MAX_ATTEMPTS, type HwErrKey } from './homeworkForm';
 import { DeadlineFields } from './DeadlineFields';
@@ -28,18 +33,64 @@ export {
 } from './homeworkForm';
 
 /**
+ * Trang soạn bài: /app/homework/new, /app/homework/:id/edit (giáo viên: /teacher/bai-tap/...).
+ * Tạo mới cần danh sách lớp; sửa cần tải bài theo id. Hủy/lưu xong quay về danh sách (giữ bộ lọc nhờ history).
+ */
+export function HomeworkEditor() {
+  const { t } = useTranslation(['homework', 'common']);
+  const { id } = useParams();
+  const listPath = useResolvedPath(id ? '../..' : '..', { relative: 'path' }).pathname;
+  const goBack = useGoBack(listPath);
+  const { data, error, reload } = useLoad(
+    async () =>
+      id
+        ? { classes: [] as ClassItem[], initial: await homeworkApi.get(Number(id)) }
+        : {
+            classes: (await homeworkApi.listClasses()).filter((c) => c.status === 'active'),
+            initial: null,
+          },
+    [id]
+  );
+
+  return (
+    <div className="page hw-editor-page">
+      <button type="button" className="link back-link" onClick={goBack}>
+        <Icon name="arrow-left" size={14} />
+        {t('page.title')}
+      </button>
+      <div className="page-head">
+        <div>
+          <h1 className="page-title">{id ? t('form.titleEdit') : t('form.titleNew')}</h1>
+          {data?.initial && <p className="page-sub">{data.initial.class_name}</p>}
+        </div>
+      </div>
+      {error && !data ? (
+        <LoadError onRetry={reload} />
+      ) : !data ? (
+        <div className="route-loader" role="status" aria-live="polite">
+          <div className="spinner" aria-hidden="true" />
+        </div>
+      ) : (
+        <HomeworkForm classes={data.classes} initial={data.initial} onCancel={goBack} onSaved={goBack} />
+      )}
+    </div>
+  );
+}
+
+/**
  * Form tạo/sửa bài tập + quiz. Các phần lớn tách file riêng (state vẫn ở đây qua hook, truyền props xuống):
  * ClassTargeting (lớp + đối tượng), AttachmentsField, RubricField, QuizBuilder.
+ * Bố cục trang: cột chính (nội dung, đề quiz) + cột phụ (lớp, hạn nộp, đăng bài), thanh lưu dính đáy.
  */
-export function HomeworkFormModal({
+export function HomeworkForm({
   classes,
   initial,
-  onClose,
+  onCancel,
   onSaved,
 }: {
   classes: ClassItem[];
   initial: HomeworkItem | null;
-  onClose: () => void;
+  onCancel: () => void;
   onSaved: () => void;
 }) {
   const { t } = useTranslation(['homework', 'common']);
@@ -65,7 +116,7 @@ export function HomeworkFormModal({
   const ct = useClassTargeting(initial, clear);
   const { selectedClasses, selectedStudents, targetMode, studentsLoading, pickedStudents } = ct;
   const { questions, quizEdited, builderLocked, quizTotal, quizInvalidCount, cleanedQuestions } = quiz;
-  const { attachments, attLoad, attDirty, attName, attUrl, cleanupOrphans } = att;
+  const { attachments, attLoad, attDirty, attName, attUrl } = att;
   const { rubricId, newRubricName } = rubric;
   const templates = t('form.templates', { returnObjects: true }) as {
     name: string;
@@ -169,8 +220,9 @@ export function HomeworkFormModal({
           'success'
         );
       }
-      // Lưu thành công → file đã gắn vào bài, không còn mồ côi
+      // Lưu thành công → file đã gắn vào bài, không còn mồ côi; tắt guard trước khi rời trang
       att.markSaved();
+      flushSync(() => setSaved(true));
       onSaved();
     } catch (err) {
       toastApiError(toast, err, t('form.toast.saveFail'));
@@ -241,187 +293,117 @@ export function HomeworkFormModal({
     quizEdited,
     attDirty,
   ]);
-  const [confirmClose, setConfirmClose] = useState(false);
-  // tryClose phải ổn định identity: Modal re-run effect (focus lại control đầu) mỗi khi onClose đổi,
-  // nên đọc isDirty qua ref để không giật focus khi user đang gõ ký tự đầu tiên.
-  const isDirtyRef = useRef(isDirty);
-  isDirtyRef.current = isDirty;
-  useUnsavedGuard(isDirty); // reload/đóng tab khi đang soạn dở
-  /** Đóng modal: dọn file mồ côi đã upload trong phiên này rồi mới đóng. */
-  const finalizeClose = useCallback(() => {
-    setConfirmClose(false);
-    cleanupOrphans();
-    onClose();
-  }, [cleanupOrphans, onClose]);
-  const tryClose = useCallback(() => {
-    if (isDirtyRef.current) setConfirmClose(true);
-    else finalizeClose();
-  }, [finalizeClose]);
+  const [saved, setSaved] = useState(false);
+  // Rời trang khi đang soạn dở: blocker chung của app hỏi xác nhận (Hủy, Back, bấm menu); reload/đóng tab: beforeunload
+  useUnsavedGuard(isDirty && !saved);
+  // Rời trang (đã xác nhận bỏ) -> xóa file đã upload mà chưa gắn vào bài; lưu xong thì markSaved đã dọn danh sách
+  const { cleanupOrphans } = att;
+  useEffect(() => cleanupOrphans, [cleanupOrphans]);
+
+  const submitLabel = busy
+    ? t('form.submitting')
+    : publishMode === 'schedule'
+      ? selectedClasses.length === 0
+        ? t('form.selectClassToSchedule')
+        : t('form.scheduleFor', { count: selectedClasses.length })
+      : selectedClasses.length === 0
+        ? t('form.selectClassToPublish')
+        : t('form.publishFor', { count: selectedClasses.length });
 
   return (
-    <Modal title={initial ? t('form.titleEdit') : t('form.titleNew')} onClose={tryClose} wide>
-      {/* Loại bài tập */}
-      {!initial && (
-        <div className="kind-switcher">
-          <button
-            type="button"
-            className={`kind-btn ${kind === 'homework' ? 'kind-active' : ''}`}
-            onClick={() => setKind('homework')}
-          >
-            <Icon name="clipboard" size={17} /> {t('form.kindHomework')}
-          </button>
-          <button
-            type="button"
-            className={`kind-btn ${kind === 'quiz' ? 'kind-active' : ''}`}
-            onClick={() => setKind('quiz')}
-          >
-            <Icon name="check-circle" size={17} /> {t('form.kindQuiz')}
-          </button>
-        </div>
-      )}
-
+    <>
       <form
+        className={`hw-editor${initial ? ' is-edit' : ''}`}
         onSubmit={(e) => {
           e.preventDefault();
           void submit();
         }}
       >
-        {/* Chọn lớp + đối tượng */}
-        {!initial && <ClassTargeting ct={ct} classes={classes} fe={fe} />}
-
-        {/* Mẫu nhanh */}
-        {!initial && kind === 'homework' && (
-          <Field label={t('form.quickTemplates')} group>
-            <div className="hw-flex-wrap">
-              {templates.map((tpl) => (
+        <div className="hw-editor-main">
+          <section className="card">
+            {/* Loại bài tập */}
+            {!initial && (
+              <div className="kind-switcher">
                 <button
-                  key={tpl.name}
                   type="button"
-                  className="btn btn-sm"
-                  onClick={() => {
-                    setTitle(tpl.title);
-                    setContent(tpl.content);
-                  }}
+                  className={`kind-btn ${kind === 'homework' ? 'kind-active' : ''}`}
+                  aria-pressed={kind === 'homework'}
+                  onClick={() => setKind('homework')}
                 >
-                  {tpl.name}
+                  <Icon name="clipboard" size={17} /> {t('form.kindHomework')}
                 </button>
-              ))}
-            </div>
-          </Field>
-        )}
-
-        <Field label={t('form.title')} error={errors.title}>
-          <input
-            ref={refFor('title')}
-            className="text-input"
-            value={title}
-            onChange={(e) => {
-              setTitle(e.target.value);
-              clear('title');
-            }}
-            placeholder={kind === 'quiz' ? t('form.titlePhQuiz') : t('form.titlePhHw')}
-            maxLength={200}
-          />
-        </Field>
-
-        {kind === 'homework' && (
-          <Field label={t('form.content', { count: content.length })}>
-            <RichTextarea
-              value={content}
-              rows={5}
-              onChange={(v) => setContent(v.slice(0, 5000))}
-              placeholder={t('form.contentPh')}
-            />
-          </Field>
-        )}
-
-        <DeadlineFields
-          isQuiz={kind === 'quiz'}
-          isEdit={!!initial}
-          quizTotal={quizTotal}
-          maxScore={maxScore}
-          setMaxScore={setMaxScore}
-          dueDate={dueDate}
-          setDueDate={setDueDate}
-          closeDate={closeDate}
-          setCloseDate={setCloseDate}
-          fe={fe}
-        />
-        {kind === 'quiz' && (
-          <Field label={t('form.maxAttempts')} hint={t('form.maxAttemptsHint')} error={errors.maxAttempts}>
-            <input
-              ref={refFor('maxAttempts')}
-              className="text-input"
-              type="number"
-              inputMode="numeric"
-              min="1"
-              max="100"
-              step="1"
-              value={maxAttempts}
-              onChange={(e) => {
-                setMaxAttempts(e.target.value);
-                clear('maxAttempts');
-              }}
-              placeholder={t('form.maxAttemptsPh')}
-            />
-          </Field>
-        )}
-
-        {/* Đính kèm: cả bài thường lẫn quiz, cả chế độ tạo và sửa (updateHomework đã đồng bộ). */}
-        <AttachmentsField att={att} error={errors.attachment} busy={busy} />
-
-        {/* Rubric — bài thường chấm tay; quiz dùng để chấm các câu tự luận (YC2) */}
-        <RubricField r={rubric} fe={fe} isQuiz={kind === 'quiz'} />
-
-        {/* Quiz builder */}
-        {kind === 'quiz' && (
-          <div ref={refFor('quiz')} tabIndex={-1}>
-            <QuizBuilder quiz={quiz} error={errors.quiz} />
-          </div>
-        )}
-
-        {/* Xuất bản */}
-        {!initial && (
-          <Field label={t('form.publishSection')} error={errors.publishAt} group>
-            <div className="publish-options">
-              {(
-                [
-                  ['now', t('form.publishNowOpt')],
-                  ['schedule', t('form.publishScheduleOpt')],
-                  ['draft', t('form.publishDraftOpt')],
-                ] as const
-              ).map(([m, label]) => (
                 <button
-                  key={m}
                   type="button"
-                  className={`publish-btn ${publishMode === m ? 'active' : ''}`}
-                  onClick={() => setPublishMode(m)}
+                  className={`kind-btn ${kind === 'quiz' ? 'kind-active' : ''}`}
+                  aria-pressed={kind === 'quiz'}
+                  onClick={() => setKind('quiz')}
                 >
-                  {label}
+                  <Icon name="check-circle" size={17} /> {t('form.kindQuiz')}
                 </button>
-              ))}
-            </div>
-            {publishMode === 'schedule' && (
-              <input
-                ref={refFor('publishAt')}
-                className="text-input hw-mt-8"
-                type="datetime-local"
-                value={publishAt}
-                min={nowVN()}
-                onChange={(e) => {
-                  setPublishAt(e.target.value);
-                  clear('publishAt');
-                }}
-              />
+              </div>
             )}
-          </Field>
-        )}
 
-        {/* Preview */}
-        {showPreview && (
-          <div className="preview-box">
-            <div className="preview-label">{t('form.preview')}</div>
-            <div className="card hw-flat-card">
+            {/* Mẫu nhanh */}
+            {!initial && kind === 'homework' && (
+              <Field label={t('form.quickTemplates')} group>
+                <div className="hw-flex-wrap">
+                  {templates.map((tpl) => (
+                    <button
+                      key={tpl.name}
+                      type="button"
+                      className="btn btn-sm"
+                      onClick={() => {
+                        setTitle(tpl.title);
+                        setContent(tpl.content);
+                      }}
+                    >
+                      {tpl.name}
+                    </button>
+                  ))}
+                </div>
+              </Field>
+            )}
+
+            <Field label={t('form.title')} error={errors.title}>
+              <input
+                ref={refFor('title')}
+                className="text-input"
+                value={title}
+                onChange={(e) => {
+                  setTitle(e.target.value);
+                  clear('title');
+                }}
+                placeholder={kind === 'quiz' ? t('form.titlePhQuiz') : t('form.titlePhHw')}
+                maxLength={200}
+              />
+            </Field>
+
+            {kind === 'homework' && (
+              <Field label={t('form.content', { count: content.length })}>
+                <RichTextarea
+                  value={content}
+                  rows={10}
+                  onChange={(v) => setContent(v.slice(0, 5000))}
+                  placeholder={t('form.contentPh')}
+                />
+              </Field>
+            )}
+
+            {/* Đính kèm: cả bài thường lẫn quiz, cả chế độ tạo và sửa (updateHomework đã đồng bộ). */}
+            <AttachmentsField att={att} error={errors.attachment} busy={busy} />
+          </section>
+
+          {/* Quiz builder */}
+          {kind === 'quiz' && (
+            <section className="card" ref={refFor('quiz')} tabIndex={-1}>
+              <QuizBuilder quiz={quiz} error={errors.quiz} />
+            </section>
+          )}
+
+          {/* Preview */}
+          {showPreview && (
+            <section className="card preview-box">
+              <div className="preview-label">{t('form.preview')}</div>
               <div className="card-head">
                 <h2>{title || t('form.noTitle')}</h2>
                 {dueDate && (
@@ -432,16 +414,108 @@ export function HomeworkFormModal({
               </div>
               {content && <p className="homework-content">{content}</p>}
               {maxScore && <p className="muted">{t('table.maxScore', { max: maxScore })}</p>}
-            </div>
-          </div>
+            </section>
+          )}
+        </div>
+
+        {/* Chọn lớp + đối tượng */}
+        {!initial && (
+          <section className="card hw-editor-target">
+            <h2 className="hw-editor-heading">{t('form.sectionTarget')}</h2>
+            <ClassTargeting ct={ct} classes={classes} fe={fe} />
+          </section>
         )}
 
-        <div className="modal-actions">
+        <div className="hw-editor-side">
+          <section className="card">
+            <h2 className="hw-editor-heading">{t('form.sectionGrading')}</h2>
+            <DeadlineFields
+              isQuiz={kind === 'quiz'}
+              isEdit={!!initial}
+              quizTotal={quizTotal}
+              maxScore={maxScore}
+              setMaxScore={setMaxScore}
+              dueDate={dueDate}
+              setDueDate={setDueDate}
+              closeDate={closeDate}
+              setCloseDate={setCloseDate}
+              fe={fe}
+            />
+            {kind === 'quiz' && (
+              <Field
+                label={t('form.maxAttempts')}
+                hint={t('form.maxAttemptsHint')}
+                error={errors.maxAttempts}
+              >
+                <input
+                  ref={refFor('maxAttempts')}
+                  className="text-input"
+                  type="number"
+                  inputMode="numeric"
+                  min="1"
+                  max="100"
+                  step="1"
+                  value={maxAttempts}
+                  onChange={(e) => {
+                    setMaxAttempts(e.target.value);
+                    clear('maxAttempts');
+                  }}
+                  placeholder={t('form.maxAttemptsPh')}
+                />
+              </Field>
+            )}
+            {/* Rubric — bài thường chấm tay; quiz dùng để chấm các câu tự luận (YC2) */}
+            <RubricField r={rubric} fe={fe} isQuiz={kind === 'quiz'} />
+          </section>
+
+          {/* Xuất bản */}
+          {!initial && (
+            <section className="card">
+              <Field label={t('form.publishSection')} error={errors.publishAt} group>
+                <div className="publish-options">
+                  {(
+                    [
+                      ['now', t('form.publishNowOpt')],
+                      ['schedule', t('form.publishScheduleOpt')],
+                      ['draft', t('form.publishDraftOpt')],
+                    ] as const
+                  ).map(([m, label]) => (
+                    <button
+                      key={m}
+                      type="button"
+                      className={`publish-btn ${publishMode === m ? 'active' : ''}`}
+                      aria-pressed={publishMode === m}
+                      onClick={() => setPublishMode(m)}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+                {publishMode === 'schedule' && (
+                  <input
+                    ref={refFor('publishAt')}
+                    className="text-input hw-mt-8"
+                    type="datetime-local"
+                    aria-label={t('form.publishScheduleOpt')}
+                    value={publishAt}
+                    min={nowVN()}
+                    onChange={(e) => {
+                      setPublishAt(e.target.value);
+                      clear('publishAt');
+                    }}
+                  />
+                )}
+              </Field>
+            </section>
+          )}
+        </div>
+
+        <div className="hw-editor-bar">
           <button type="button" className="btn" onClick={() => setShowPreview((s) => !s)}>
             {showPreview ? t('form.hidePreview') : t('form.preview')}
           </button>
           <span className="spacer" />
-          <button type="button" className="btn" onClick={tryClose} disabled={busy}>
+          <button type="button" className="btn" onClick={onCancel} disabled={busy}>
             {t('actions.cancel', { ns: 'common' })}
           </button>
           {initial ? (
@@ -452,25 +526,17 @@ export function HomeworkFormModal({
           ) : (
             <>
               <button type="button" className="btn" disabled={busy} onClick={() => void submit('draft')}>
-                {busy && <span className="spinner spinner-dark" aria-hidden="true" />}
                 {t('form.saveDraft')}
               </button>
               <button type="submit" className="btn btn-primary" disabled={busy}>
                 {busy && <span className="spinner" aria-hidden="true" />}
-                {busy
-                  ? t('form.submitting')
-                  : publishMode === 'schedule'
-                    ? selectedClasses.length === 0
-                      ? t('form.selectClassToSchedule')
-                      : t('form.scheduleFor', { count: selectedClasses.length })
-                    : selectedClasses.length === 0
-                      ? t('form.selectClassToPublish')
-                      : t('form.publishFor', { count: selectedClasses.length })}
+                {submitLabel}
               </button>
             </>
           )}
         </div>
       </form>
+      {/* Ngoài <form>: nút trong picker không được submit form bài tập */}
       {quiz.showBankPicker && (
         <QuestionBank
           onClose={() => quiz.setShowBankPicker(false)}
@@ -478,14 +544,6 @@ export function HomeworkFormModal({
           onImport={quiz.importBankQuestions}
         />
       )}
-      {confirmClose && (
-        <ConfirmDialog
-          title={t('form.discardTitle')}
-          message={t('form.discardMessage')}
-          onClose={() => setConfirmClose(false)}
-          onConfirm={finalizeClose}
-        />
-      )}
-    </Modal>
+    </>
   );
 }

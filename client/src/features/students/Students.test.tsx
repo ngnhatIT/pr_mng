@@ -90,6 +90,7 @@ describe('Students', () => {
       'DELETE /students/5': json(409, { error: 'Học viên còn hóa đơn', code: 'CONFLICT' }),
     });
     await render();
+    await click($('[aria-haspopup="menu"]')!);
     await click(byText(String(i18n.t('actions.delete', { ns: 'common' }))));
     expect($('[role="dialog"]')!.textContent).toContain(t('delete.message', { name: 'An p1' }));
     await click($$('[role="dialog"] .modal-actions .btn').at(-1)!);

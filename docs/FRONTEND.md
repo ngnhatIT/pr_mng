@@ -117,6 +117,49 @@ Nhóm nút chọn 1 giá trị (trạng thái điểm danh, phạm vi quyền, �
 trên từng nút (mỗi nút 1 Tab stop), không dùng `role=radio` khi không có điều hướng phím mũi tên. Tab nên nằm
 trên URL (`?tab=` / `useUrlState`) để refresh/Back giữ tab (Tuition, ReviewsAdmin, Homework, ChildDetail).
 
+## Menu thả xuống (`shared/components/Menu.tsx`)
+
+```tsx
+<Menu
+  label={t('actions.more', { ns: 'common' })}
+  items={[
+    perms.has('x.update') && { label, icon: 'pencil', onSelect },
+    { label, icon: 'trash', danger: true, onSelect },
+  ]}
+/>
+```
+
+Mục `false`/`null` bị bỏ qua, nên mục theo quyền/trạng thái viết `cond && {...}`. Không còn mục nào thì không vẽ nút.
+
+- Theo mẫu WAI-ARIA menu button: mở thì focus mục đầu, ↑/↓/Home/End di chuyển (bỏ qua mục disabled), Esc đóng và
+  trả focus về nút, Tab hoặc bấm ra ngoài thì đóng. Chọn một mục thì focus về nút trước rồi mới gọi `onSelect`, nên
+  modal mở từ menu sẽ trả focus đúng chỗ khi đóng.
+- Popup dùng `position: fixed`, không bị `.table-wrap` cắt. Cuộn hoặc resize thì menu đóng.
+- `children` thay nội dung nút (mặc định icon ba chấm), `className` thay class nút (menu tài khoản dùng `account-btn`).
+- Cột thao tác của bảng và chân card: **một** thao tác chính hiện sẵn (theo trạng thái: Đăng / Kết quả / Thu tiền /
+  bước kế tiếp của lead), phần còn lại (nhất là xóa) cho vào `Menu`; trong `.card-foot` nút menu tự dạt phải. Ngoại
+  lệ: cặp quyết định ngang hàng (Duyệt / Từ chối đánh giá) để cả hai hiện sẵn. Nút xóa ghost
+  (`.btn-danger-ghost`) để màu chữ phụ và chỉ đỏ khi hover/focus.
+
+## Giao diện (`styles.css`)
+
+- Nút chính `.btn-primary` màu mực (`--ink` / `--on-ink`, đảo ở dark mode). Xanh `--primary` chỉ dùng cho link, focus
+  và trạng thái đang chọn.
+- Không dùng ô icon nền màu, gradient hay đổ bóng màu. Card và bảng là nền `--surface` + viền `--border`.
+- Font Geist chỉ tải 400–700: dùng 400/500/600, không dùng 800.
+- Badge chỉ khai báo `--tone` (`--success` / `--warning` / `--danger` / `--info`, mặc định `--text-muted`); nền và chữ
+  pha từ token nên không cần luật dark mode riêng. Badge trạng thái có chấm màu đầu nhãn; nhãn phân loại (`.badge-neutral`,
+  `-general`, `-quiz`, `-plan-*`...) tắt chấm. Trạng thái mới: thêm class vào đúng nhóm tông trong `styles.css`, hoặc
+  dùng thẳng `.badge-success|warning|danger|info|neutral`. Trạng thái "đã kết thúc" (lớp ngưng, học viên nghỉ) là
+  trung tính, không phải đỏ; hạn nộp còn xa là trung tính, chỉ ≤ 3 ngày mới vàng.
+- Nhãn không mang trạng thái (tên lớp, môn) dùng `.badge-neutral`, không mượn màu xanh lá của `badge-active`.
+- Số liệu phụ đặt trong `.stat-strip` (cột chia bằng divider, xếp dọc ở ≤480px; thêm `.stat-strip-compact` để giữ
+  hàng ngang trên điện thoại) thay vì lưới card có icon.
+- Ô bảng: số tiền `className="num"` (căn phải), dòng phụ dưới tên `.cell-sub` (vd mã HV/HD), ngày giờ `.tabular`
+  (không dùng `.mono` cho ngày giờ). Ô tên trong bảng xếp thẻ thêm `td-primary` để lên đầu thẻ trên điện thoại.
+- Lịch tuần hiển thị bằng `formatScheduleText` (gộp ngày cùng giờ); giờ của riêng một ngày dùng `slotOn(schedule, date)`.
+- Avatar chữ cái: `initials(name)` từ `shared/types.ts`.
+
 ## Bảng trên điện thoại (`.table-stack`, `styles.css`)
 
 Bảng danh sách thêm class `table-stack` và `data-label={cùng t(...) với <th>}` trên từng `<td>`. Ở ≤600px mỗi dòng

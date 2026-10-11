@@ -1,27 +1,24 @@
 /* Lương giáo viên: tổng nổi bật, số tabular. */
 
 .salary-hero {
-  background: var(--primary);
-  color: #fff;
+  background: var(--ink);
+  color: var(--on-ink);
   border-radius: var(--radius-lg);
   padding: 24px;
   margin-bottom: 16px;
-  box-shadow: var(--shadow);
 }
 
 .salary-month {
   font-size: 13px;
-  font-weight: 600;
-  color: rgba(255, 255, 255, 0.85);
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
+  font-weight: 500;
+  color: color-mix(in srgb, var(--on-ink) 72%, transparent);
   margin-bottom: 6px;
 }
 
 .salary-total {
   font-size: 40px;
-  font-weight: 800;
-  letter-spacing: -0.02em;
+  font-weight: 600;
+  letter-spacing: -0.04em;
   line-height: 1.1;
   font-variant-numeric: tabular-nums;
 }
@@ -29,7 +26,7 @@
 .salary-sub {
   margin-top: 8px;
   font-size: 14px;
-  color: rgba(255, 255, 255, 0.9);
+  color: color-mix(in srgb, var(--on-ink) 80%, transparent);
   font-variant-numeric: tabular-nums;
 }
 
@@ -61,9 +58,11 @@
   white-space: nowrap;
 }
 
-/* Dark mode: hero dùng nền tint thay vì primary đặc để chữ trắng không bị chói */
+/* Dark mode: khối mực đảo sang nền giấy sẽ quá chói; dùng nền surface + viền, chữ theo theme */
 [data-theme='dark'] .salary-hero {
-  background: var(--primary-soft);
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  color: var(--text-strong);
 }
 
 [data-theme='dark'] .salary-month,

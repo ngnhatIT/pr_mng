@@ -43,3 +43,14 @@
     flex: 1 1 100%;
   }
 }
+
+/* Lớp đang học: chữ phụ, tối đa 2 dòng để hàng không cao bất thường khi học nhiều lớp */
+.td-classes {
+  max-width: 260px;
+  color: var(--text-muted);
+  font-size: var(--font-size-sm);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}

@@ -8,7 +8,7 @@ import { Field, useFieldErrors } from '../../shared/components/Form';
 import { EmptyState, LoadError } from '../../shared/components/EmptyState';
 import { Skeleton } from '../../shared/components/Skeleton';
 import { Icon } from '../../shared/components/icons';
-import { ParentChild, formatVND } from '../../shared/types';
+import { ParentChild, formatVND, initials } from '../../shared/types';
 import './parent.css';
 
 export function ParentHome() {
@@ -21,6 +21,8 @@ export function ParentHome() {
   const [code, setCode] = useState('');
   const [dob, setDob] = useState('');
   const [linking, setLinking] = useState(false);
+  // Đã có con: form liên kết thu gọn sau một nút (phần lớn phụ huynh chỉ liên kết một lần)
+  const [showLink, setShowLink] = useState(false);
   const { errors, refFor, show, clear } = useFieldErrors<'code' | 'dob'>();
   const linkCardRef = useRef<HTMLElement | null>(null);
   const codeInputRef = useRef<HTMLInputElement | null>(null);
@@ -165,7 +167,7 @@ export function ParentHome() {
             <Link key={c.id} className="child-card" to={`/parent/children/${c.id}`}>
               <div className="child-card-head">
                 <div className="child-avatar" aria-hidden="true">
-                  <Icon name="user" size={20} />
+                  {initials(c.name)}
                 </div>
                 <div className="child-head-main">
                   <div className="child-name">{c.name}</div>
@@ -178,7 +180,7 @@ export function ParentHome() {
               {c.classes.length > 0 ? (
                 <div className="child-classes">
                   {c.classes.map((cl) => (
-                    <span key={cl.id} className="badge badge-active">
+                    <span key={cl.id} className="badge badge-neutral">
                       {cl.name}
                     </span>
                   ))}
@@ -191,42 +193,56 @@ export function ParentHome() {
         </div>
       )}
 
-      <section className="card parent-link-card" ref={linkCardRef}>
-        <h3 className="card-title">{t('home.linkTitle')}</h3>
-        <p className="card-desc">{t('home.linkDesc')}</p>
-        <form onSubmit={linkChild}>
-          <Field label={t('home.codeField')} error={errors.code} required>
-            <input
-              className="text-input"
-              value={code}
-              onChange={(e) => {
-                setCode(e.target.value);
-                clear('code');
-              }}
-              placeholder={t('home.codePlaceholder')}
-              ref={(el) => {
-                codeInputRef.current = el;
-                refFor('code')(el);
-              }}
-            />
-          </Field>
-          <Field label={t('home.dobField')} error={errors.dob} required>
-            <input
-              className="text-input"
-              type="date"
-              value={dob}
-              onChange={(e) => {
-                setDob(e.target.value);
-                clear('dob');
-              }}
-              ref={refFor('dob')}
-            />
-          </Field>
-          <button className="btn btn-primary btn-block" type="submit" disabled={linking}>
-            {linking ? t('home.linking') : t('home.linkAction')}
-          </button>
-        </form>
-      </section>
+      {children.length > 0 && !showLink ? (
+        <button
+          type="button"
+          className="btn btn-block parent-link-more"
+          onClick={() => {
+            setShowLink(true);
+            requestAnimationFrame(() => codeInputRef.current?.focus());
+          }}
+        >
+          <Icon name="plus" size={16} />
+          {t('home.linkMore')}
+        </button>
+      ) : (
+        <section className="card parent-link-card" ref={linkCardRef}>
+          <h3 className="card-title">{t('home.linkTitle')}</h3>
+          <p className="card-desc">{t('home.linkDesc')}</p>
+          <form onSubmit={linkChild}>
+            <Field label={t('home.codeField')} error={errors.code} required>
+              <input
+                className="text-input"
+                value={code}
+                onChange={(e) => {
+                  setCode(e.target.value);
+                  clear('code');
+                }}
+                placeholder={t('home.codePlaceholder')}
+                ref={(el) => {
+                  codeInputRef.current = el;
+                  refFor('code')(el);
+                }}
+              />
+            </Field>
+            <Field label={t('home.dobField')} error={errors.dob} required>
+              <input
+                className="text-input"
+                type="date"
+                value={dob}
+                onChange={(e) => {
+                  setDob(e.target.value);
+                  clear('dob');
+                }}
+                ref={refFor('dob')}
+              />
+            </Field>
+            <button className="btn btn-primary btn-block" type="submit" disabled={linking}>
+              {linking ? t('home.linking') : t('home.linkAction')}
+            </button>
+          </form>
+        </section>
+      )}
     </div>
   );
 }

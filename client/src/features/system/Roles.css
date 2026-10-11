@@ -88,16 +88,6 @@
   margin-right: 2px;
 }
 
-.badge-system {
-  background: var(--bg-muted);
-  color: var(--text-muted);
-}
-
-.badge-custom {
-  background: var(--primary-soft);
-  color: var(--primary-dark);
-}
-
 /* ---------- Cột phải: chi tiết ---------- */
 .roles-detail-col {
   min-width: 0;
@@ -158,15 +148,6 @@
   flex: none;
 }
 
-.btn-danger-ghost {
-  color: var(--danger);
-}
-
-.btn-danger-ghost:hover {
-  background: var(--danger-soft);
-  color: var(--danger);
-}
-
 /* ---------- Nhóm quyền theo module ---------- */
 .perm-groups {
   display: flex;
@@ -191,10 +172,8 @@
 }
 
 .perm-group-name {
-  font-weight: 700;
+  font-weight: 600;
   font-size: var(--font-size-sm);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
   color: var(--text-muted);
 }
 
@@ -327,7 +306,7 @@
 .scope-tag {
   flex: none;
   font-size: var(--font-size-xs);
-  font-weight: 700;
+  font-weight: 600;
   padding: 4px 10px;
   border-radius: 999px;
 }
@@ -355,7 +334,7 @@
   align-items: center;
   justify-content: space-between;
   gap: var(--sp-4);
-  background: #1e293b;
+  background: #1f1e1b; /* thanh tối cố định ở cả 2 theme */
   color: #fff;
   border-radius: var(--radius-lg);
   padding: var(--sp-3) var(--sp-4);
@@ -390,6 +369,14 @@
 .roles-savebar .btn-ghost-dark {
   color: #fff;
   border-color: rgba(255, 255, 255, 0.25);
+}
+
+/* Nút chính trên thanh tối: đảo sang nền giấy để luôn nổi (nút mực sẽ chìm ở theme sáng) */
+.roles-savebar .btn-primary,
+.roles-savebar .btn-primary:hover:not(:disabled) {
+  background: #f6f4ee;
+  border-color: #f6f4ee;
+  color: #121110;
 }
 
 .roles-savebar .btn-ghost-dark:hover {

@@ -27,6 +27,7 @@ import {
   formatDateTime,
   isPastCloseDate,
   todayVN,
+  initials,
 } from '../../shared/types';
 
 type Tab = 'schedule' | 'attendance' | 'tuition' | 'grades' | 'homework';
@@ -123,7 +124,7 @@ export function ChildDetail() {
       </Link>
       <div className="parent-child-head">
         <div className="child-avatar child-avatar-lg" aria-hidden="true">
-          <Icon name="user" size={26} />
+          {initials(data.student.name)}
         </div>
         <div className="child-head-main">
           <h1 className="parent-title">{data.student.name}</h1>
@@ -212,29 +213,37 @@ function ScheduleTab({ data }: { data: ChildOverview }) {
 function AttendanceTab({ data }: { data: ChildOverview }) {
   const { t } = useTranslation(['parent', 'common']);
   const a = data.attendance;
-  const stats: { label: string; value: number; badge: string }[] = [
-    { label: t('child.attendance.present'), value: a.present, badge: 'badge-present' },
-    { label: t('child.attendance.late'), value: a.late, badge: 'badge-late' },
-    { label: t('child.attendance.absent'), value: a.absent, badge: 'badge-absent' },
+  const stats: { key: 'present' | 'late' | 'absent'; label: string; value: number }[] = [
+    { key: 'present', label: t('child.attendance.present'), value: a.present },
+    { key: 'late', label: t('child.attendance.late'), value: a.late },
+    { key: 'absent', label: t('child.attendance.absent'), value: a.absent },
   ];
   return (
     <section className="card">
       <h3 className="card-title">{t('child.attendance.title')}</h3>
-      <div className="stat-grid stat-grid-2">
-        {stats.map((s) => (
-          <div key={s.label} className="stat-card">
-            <div className="stat-value">{s.value}</div>
-            <div className="stat-label">
-              <span className={`badge ${s.badge}`}>{s.label}</span>
-            </div>
-          </div>
-        ))}
-        <div className="stat-card stat-card-highlight">
-          {/* Server trả sẵn phần trăm (vd 85.7), không nhân 100 */}
-          <div className="stat-value">{a.rate.toFixed(0)}%</div>
-          <div className="stat-label">{t('child.attendance.rate')}</div>
-        </div>
+      {/* Server trả sẵn phần trăm (vd 85.7), không nhân 100 */}
+      <div className="att-rate">
+        <span className="att-rate-value">{a.rate.toFixed(0)}%</span>
+        <span className="muted">{t('child.attendance.rate')}</span>
       </div>
+      {a.total > 0 && (
+        <div className="att-bar" aria-hidden="true">
+          {stats.map((s) =>
+            s.value > 0 ? <span key={s.key} className={`is-${s.key}`} style={{ flex: s.value }} /> : null
+          )}
+        </div>
+      )}
+      <ul className="att-legend">
+        {stats.map((s) => (
+          <li key={s.key}>
+            <span>
+              <span className={`dot att-bar-dot is-${s.key}`} aria-hidden="true" />
+              {s.label}
+            </span>
+            <strong>{s.value}</strong>
+          </li>
+        ))}
+      </ul>
       <p className="muted">{t('child.attendance.total', { count: a.total })}</p>
     </section>
   );
@@ -439,11 +448,14 @@ function GradesTab({ data }: { data: ChildOverview }) {
         <EmptyState icon="cap" title={t('child.grades.empty')} desc={t('child.grades.emptyDesc')} />
       ) : (
         <>
-          <div className="progress-line">
-            <ProgressChart grades={grades} />
-          </div>
+          {/* Cần ít nhất 2 bài mới có "xu hướng"; 1 điểm vẽ thành tam giác dễ hiểu nhầm */}
+          {grades.length >= 2 && (
+            <div className="progress-line">
+              <ProgressChart grades={grades} />
+            </div>
+          )}
           <div className="table-wrap sticky">
-            <table className="table">
+            <table className="table table-stack">
               <thead>
                 <tr>
                   <th scope="col">{t('child.grades.test')}</th>
@@ -456,13 +468,13 @@ function GradesTab({ data }: { data: ChildOverview }) {
                 {grades.map((g) => (
                   <tr key={g.id}>
                     <td>{g.title}</td>
-                    <td>{g.class_name || <EmptyCell />}</td>
-                    <td className="num">
+                    <td data-label={t('child.grades.class')}>{g.class_name || <EmptyCell />}</td>
+                    <td data-label={t('child.grades.score')} className="num">
                       <strong>
                         {g.score}/{g.max_score}
                       </strong>
                     </td>
-                    <td>{g.comment || <EmptyCell />}</td>
+                    <td data-label={t('child.grades.comment')}>{g.comment || <EmptyCell />}</td>
                   </tr>
                 ))}
               </tbody>
@@ -592,6 +604,27 @@ function HomeworkTab({ data, onChanged }: { data: ChildOverview; onChanged: () =
             {renderScore(h)}
           </div>
           <div className="muted-sm">{h.class_name || ''}</div>
+          <div className="hw-due">
+            {isClosed ? (
+              <span className="badge badge-overdue">{t('quiz.expiredTitle')}</span>
+            ) : (
+              h.due_date &&
+              (isOverdue ? (
+                <span className="badge badge-overdue">
+                  {t('child.homework.overdueLabel', { date: formatDateTime(h.due_date) })}
+                </span>
+              ) : (
+                <span className="badge badge-neutral">
+                  {t('child.homework.dueLabel', { date: formatDateTime(h.due_date) })}
+                </span>
+              ))
+            )}
+            {h.close_date && h.close_date !== h.due_date && (
+              <div className="muted-sm" style={{ marginTop: 4 }}>
+                {t('child.homework.closeLabel', { date: formatDateTime(h.close_date) })}
+              </div>
+            )}
+          </div>
           {h.content && (
             <div
               className="homework-content"
@@ -644,27 +677,6 @@ function HomeworkTab({ data, onChanged }: { data: ChildOverview; onChanged: () =
               </button>
             )}
           </div>
-        </div>
-        <div>
-          {isClosed ? (
-            <span className="badge badge-overdue">{t('quiz.expiredTitle')}</span>
-          ) : (
-            h.due_date &&
-            (isOverdue ? (
-              <span className="badge badge-overdue">
-                {t('child.homework.overdueLabel', { date: formatDateTime(h.due_date) })}
-              </span>
-            ) : (
-              <span className="badge badge-upcoming">
-                {t('child.homework.dueLabel', { date: formatDateTime(h.due_date) })}
-              </span>
-            ))
-          )}
-          {h.close_date && h.close_date !== h.due_date && (
-            <div className="muted-sm" style={{ marginTop: 4 }}>
-              {t('child.homework.closeLabel', { date: formatDateTime(h.close_date) })}
-            </div>
-          )}
         </div>
       </div>
     );

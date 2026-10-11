@@ -32,9 +32,9 @@ function actionBadge(action: string): string {
     case 'payment':
     case 'approve':
     case 'apply_credit':
-      return 'badge-present';
+      return 'badge-success';
     default:
-      return 'badge-pending';
+      return 'badge-neutral';
   }
 }
 
@@ -117,12 +117,12 @@ export function AuditLogs() {
             <tbody>
               {logs.map((l) => (
                 <tr key={l.id}>
-                  <td data-label={t('audit.col.time')} className="mono nowrap">
+                  <td data-label={t('audit.col.time')} className="tabular nowrap">
                     {formatDateTime(l.created_at)}
                   </td>
                   <td>
                     <span className="audit-actor">{l.actor_name || <EmptyCell />}</span>
-                    {l.actor_role && <span className="muted"> ({l.actor_role})</span>}
+                    {l.actor_role && <div className="cell-sub">{l.actor_role}</div>}
                   </td>
                   <td data-label={t('audit.col.action')}>
                     <span className={`badge ${actionBadge(l.action)}`}>

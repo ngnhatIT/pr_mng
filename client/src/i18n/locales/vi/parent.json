@@ -155,7 +155,8 @@
     "payTuition": "Đóng học phí",
     "subtitle": "Theo dõi tiến độ học tập của con bạn tại đây.",
     "dobField": "Ngày sinh của học viên",
-    "dobRequired": "Vui lòng nhập ngày sinh của học viên"
+    "dobRequired": "Vui lòng nhập ngày sinh của học viên",
+    "linkMore": "Liên kết thêm con"
   },
   "leaves": {
     "allClasses": "- Tất cả các lớp -",

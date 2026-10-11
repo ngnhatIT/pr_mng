@@ -48,7 +48,8 @@
       "class": "Class",
       "dueDate": "Due date",
       "paid": "Paid",
-      "status": "Status"
+      "status": "Status",
+      "remaining": "Remaining"
     },
     "invoices": "Tuition invoices",
     "loadError": "Could not load details",
@@ -62,7 +63,8 @@
     "notFoundTitle": "Student not found",
     "note": "Note",
     "personalInfo": "Personal information",
-    "phone": "Phone"
+    "phone": "Phone",
+    "debtTotal": "Owes {{amount}}"
   },
   "empty": {
     "desc": "Add your first student to start managing the list.",
@@ -103,7 +105,8 @@
     "code": "Code",
     "name": "Full name",
     "phone": "Phone",
-    "status": "Status"
+    "status": "Status",
+    "classes": "Current classes"
   },
   "title": "Students",
   "toast": {

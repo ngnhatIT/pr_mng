@@ -10,8 +10,9 @@ import { Modal, ConfirmDialog } from '../../shared/components/Modal';
 import { Field } from '../../shared/components/Form';
 import { EmptyState } from '../../shared/components/EmptyState';
 import { Skeleton } from '../../shared/components/Skeleton';
-import { formatVND, formatDate, formatScheduleText } from '../../shared/types';
+import { formatVND, formatDate, formatScheduleText, todayVN } from '../../shared/types';
 import { Icon } from '../../shared/components/icons';
+import { Menu } from '../../shared/components/Menu';
 import './ClassDetail.css';
 import { EmptyCell } from '../../shared/components/EmptyCell';
 
@@ -120,6 +121,12 @@ export function ClassDetail() {
       </div>
     );
   const { class: cls } = data;
+  const today = todayVN();
+  const pastSessions = sessions
+    .filter((x) => x.date <= today)
+    .slice(-5)
+    .reverse();
+  const nextSession = sessions.find((x) => x.date > today);
 
   return (
     <div className="page">
@@ -197,15 +204,24 @@ export function ClassDetail() {
                   <div>
                     <Link className="link" to={`/app/students/${s.id}`}>
                       {s.name}
-                    </Link>{' '}
-                    <span className="muted mono">({s.code})</span>
-                    <div className="list-sub">{s.phone || ''}</div>
+                    </Link>
+                    <div className="list-sub">
+                      <span className="mono">{s.code}</span>
+                      {s.phone && ` · ${s.phone}`}
+                    </div>
                   </div>
                   {canEnroll && (
-                    <button className="btn btn-sm btn-danger-ghost" onClick={() => setKicking(s)}>
-                      <Icon name="trash" size={14} />
-                      {t('detail.kick.removeFromClass')}
-                    </button>
+                    <Menu
+                      label={t('actions.more', { ns: 'common' })}
+                      items={[
+                        {
+                          label: t('detail.kick.removeFromClass'),
+                          icon: 'trash',
+                          danger: true,
+                          onSelect: () => setKicking(s),
+                        },
+                      ]}
+                    />
                   )}
                 </li>
               ))}
@@ -215,7 +231,7 @@ export function ClassDetail() {
 
         <section className="card">
           <div className="card-head">
-            <h2>{t('detail.recentSessions')}</h2>
+            <h2>{t('detail.sessionsTitle')}</h2>
             <Link className="link link-arrow" to={`/app/attendance?class=${cls.id}`}>
               {t('attendance.title')}
               <Icon name="arrow-right" size={14} />
@@ -235,32 +251,45 @@ export function ClassDetail() {
             />
           ) : (
             <ul className="list">
-              {sessions
-                .slice(-6)
-                .reverse()
-                .map((s) => (
+              {/* 5 buổi đã diễn ra gần nhất + buổi kế tiếp; buổi tương lai không có nút điểm danh (server chặn ngày tương lai) */}
+              {[...(nextSession ? [nextSession] : []), ...pastSessions].map((s) => {
+                const upcoming = s.date > today;
+                const href = `/app/attendance?class=${cls.id}&session=${s.id}`;
+                return (
                   <li key={s.id} className="list-item">
                     <div>
-                      <Link className="link" to={`/app/attendance?class=${cls.id}&session=${s.id}`}>
+                      <div className="list-title">
                         {formatDate(s.date)}
-                      </Link>
+                        {upcoming && (
+                          <span className="badge badge-neutral session-next">{t('detail.upcoming')}</span>
+                        )}
+                      </div>
                       <div className="list-sub">
                         {s.topic || t('detail.noTopic')}
-                        <span className="muted">
-                          {' '}
-                          {t('detail.attendanceCount', { count: s.attendance_count || 0 })}
-                        </span>
+                        {!upcoming && (
+                          <span className="muted">
+                            {' · '}
+                            {s.attendance_count
+                              ? t('detail.attended', { count: s.attendance_count })
+                              : t('detail.notTaken')}
+                          </span>
+                        )}
                       </div>
                     </div>
-                    <Link
-                      className="btn btn-sm btn-inline"
-                      to={`/app/attendance?class=${cls.id}&session=${s.id}`}
-                    >
-                      <Icon name="clipboard" size={14} />
-                      {t('detail.takeAttendance')}
-                    </Link>
+                    {!upcoming &&
+                      (s.attendance_count ? (
+                        <Link className="btn btn-sm btn-ghost btn-inline" to={href}>
+                          {t('detail.viewAttendance')}
+                        </Link>
+                      ) : (
+                        <Link className="btn btn-sm btn-inline" to={href}>
+                          <Icon name="clipboard" size={14} />
+                          {t('detail.takeAttendance')}
+                        </Link>
+                      ))}
                   </li>
-                ))}
+                );
+              })}
             </ul>
           )}
         </section>

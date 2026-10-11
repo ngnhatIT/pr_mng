@@ -26,6 +26,11 @@ Phần mềm quản lý trung tâm ngoại ngữ / lớp học / gym — bản f
 
 Dữ liệu lưu trong PostgreSQL (tự tạo schema + seed khi chạy lần đầu).
 
+**Dữ liệu trình diễn đầy đủ** (tùy chọn, chạy sau seed demo): `npm run seed:showcase -w server` thêm 5 giáo viên,
+7 lớp (1 lớp đã kết thúc), 60 học viên, ~1.200 lượt điểm danh, học phí 5 tháng, bài tập/quiz có bài nộp và điểm, lead,
+học thử, đánh giá, đơn nghỉ, ngân hàng câu hỏi. Chỉ thêm, không xóa; chạy lần hai tự dừng. 8 phụ huynh mới
+`0901234501`–`0901234508` cùng mật khẩu `123456`.
+
 ## Database: PostgreSQL
 
 ```bash

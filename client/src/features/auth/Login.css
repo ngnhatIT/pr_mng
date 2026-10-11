@@ -1,7 +1,6 @@
-/* Trang đăng nhập: nền đặc tối, card gọn, lỗi hiển thị rõ trong card. */
+/* Trang đăng nhập nhân viên: style chung ở styles.css (.login-*); đây chỉ có phần riêng. */
 
 .login-page {
-  background: #101a30;
   position: relative;
 }
 
@@ -12,45 +11,6 @@
   z-index: var(--z-float);
 }
 
-/* Switch ngôn ngữ/theme trên nền navy: dùng tông sáng mờ để nhìn rõ ở cả 2 mode */
-.login-topbar .lang-seg {
-  background: rgba(255, 255, 255, 0.08);
-  border-color: rgba(255, 255, 255, 0.22);
-}
-.login-topbar .lang-seg-btn {
-  color: rgba(255, 255, 255, 0.72);
-}
-.login-topbar .lang-seg-btn.active {
-  background: var(--primary);
-  color: #fff;
-}
-.login-topbar .btn-ghost {
-  color: rgba(255, 255, 255, 0.8);
-}
-.login-topbar .btn-ghost:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.12);
-  border-color: transparent;
-  color: #fff;
-  box-shadow: none;
-}
-
-.login-card {
-  width: 380px;
-  padding: 32px 28px;
-  border-radius: 16px;
-  box-shadow: 0 16px 44px rgba(2, 6, 23, 0.45);
-}
-
-.login-title {
-  font-size: 22px;
-  font-weight: 800;
-  letter-spacing: -0.01em;
-}
-
 .login-card .text-input {
   min-height: 46px;
-}
-
-.login-hint {
-  margin-top: 14px;
 }

@@ -16,6 +16,7 @@ import { Pagination, clampPage, fetchAllPages } from '../../shared/components/Pa
 import { Teacher, ScheduleEntry, getDayNames, formatVND, formatScheduleText } from '../../shared/types';
 import { useMyPermissions } from '../system/roles.api';
 import { Icon } from '../../shared/components/icons';
+import { Menu } from '../../shared/components/Menu';
 import './Classes.css';
 import { EmptyCell } from '../../shared/components/EmptyCell';
 
@@ -135,7 +136,7 @@ export function Classes() {
           {search !== '' &&
             (loading || search !== debouncedSearch ? (
               <span className="search-clear" aria-hidden="true">
-                <span className="spinner spinner-dark" />
+                <span className="spinner" />
               </span>
             ) : (
               <button
@@ -196,6 +197,8 @@ export function Classes() {
                   <dd>{c.teacher_name || t('form.teacherUnassigned')}</dd>
                   <dt>{t('table.schedule')}</dt>
                   <dd>{formatScheduleText(c.schedule || '') || <EmptyCell />}</dd>
+                  <dt>{t('table.room')}</dt>
+                  <dd>{c.room_name || <EmptyCell />}</dd>
                   <dt>{t('table.fee')}</dt>
                   <dd className="num">{formatVND(c.tuition_fee)}</dd>
                   <dt>{t('table.size')}</dt>
@@ -222,16 +225,22 @@ export function Classes() {
                   <Link className="btn btn-sm" to={`/app/classes/${c.id}`}>
                     {t('actions.detail', { ns: 'common' })}
                   </Link>
-                  {perms.has('classes.update') && (
-                    <button className="btn btn-sm" onClick={() => setEditing(c)}>
-                      {t('actions.edit', { ns: 'common' })}
-                    </button>
-                  )}
-                  {perms.has('classes.delete') && (
-                    <button className="btn btn-sm btn-danger-ghost" onClick={() => setDeleting(c)}>
-                      {t('actions.delete', { ns: 'common' })}
-                    </button>
-                  )}
+                  <Menu
+                    label={t('actions.more', { ns: 'common' })}
+                    items={[
+                      perms.has('classes.update') && {
+                        label: t('actions.edit', { ns: 'common' }),
+                        icon: 'pencil',
+                        onSelect: () => setEditing(c),
+                      },
+                      perms.has('classes.delete') && {
+                        label: t('actions.delete', { ns: 'common' }),
+                        icon: 'trash',
+                        danger: true,
+                        onSelect: () => setDeleting(c),
+                      },
+                    ]}
+                  />
                 </div>
               </div>
             );

@@ -6,9 +6,12 @@
   position: sticky;
   bottom: 0;
   z-index: var(--z-sticky);
-  background: var(--surface);
+  /* Cùng màu nền trang + blur: dính đáy mà không thành một khối riêng */
+  background: color-mix(in srgb, var(--bg) 85%, transparent);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   border-top: 1px solid var(--border);
-  padding: 12px 4px;
+  padding: 12px 0;
   margin-top: 8px;
 }
 
@@ -17,7 +20,7 @@
   display: inline-flex;
   vertical-align: -3px;
   margin-right: 8px;
-  color: var(--primary);
+  color: var(--text-muted);
 }
 
 /* Số tài khoản / mã bí mật: tabular cho dễ đối chiếu từng ký tự */

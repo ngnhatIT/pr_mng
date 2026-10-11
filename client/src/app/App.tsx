@@ -75,6 +75,8 @@ const Payroll = lazyPage(() => import('../features/people/Payroll'), 'Payroll');
 const LeavesAdmin = lazyPage(() => import('../features/leaves/LeavesAdmin'), 'LeavesAdmin');
 const Trials = lazyPage(() => import('../features/admissions/Trials'), 'Trials');
 const Homework = lazyPage(() => import('../features/homework/Homework'), 'Homework');
+const HomeworkEditor = lazyPage(() => import('../features/homework/HomeworkEditor'), 'HomeworkEditor');
+const QuestionBankPage = lazyPage(() => import('../features/homework/QuestionBank'), 'QuestionBankPage');
 const Leads = lazyPage(() => import('../features/admissions/Leads'), 'Leads');
 const ReviewsAdmin = lazyPage(() => import('../features/growth/ReviewsAdmin'), 'ReviewsAdmin');
 const ReferralsAdmin = lazyPage(() => import('../features/growth/ReferralsAdmin'), 'ReferralsAdmin');
@@ -244,7 +246,11 @@ export const routes = createRoutesFromElements(
       <Route element={<PageOutlet />}>
         <Route index element={<TeacherToday />} />
         <Route path="diem-danh" element={<Attendance />} />
-        <Route path="bai-tap" element={<Homework />} />
+        <Route path="bai-tap">
+          <Route index element={<Homework />} />
+          <Route path="new" element={<HomeworkEditor />} />
+          <Route path=":id/edit" element={<HomeworkEditor />} />
+        </Route>
         <Route path="diem-so" element={<TeacherGrades />} />
         <Route path="luong" element={<TeacherSalary />} />
         <Route path="*" element={<NotFound />} />
@@ -275,7 +281,12 @@ export const routes = createRoutesFromElements(
         <Route path="payroll" element={<Payroll />} />
         <Route path="leaves" element={<LeavesAdmin />} />
         <Route path="trials" element={<Trials />} />
-        <Route path="homework" element={<Homework />} />
+        <Route path="homework">
+          <Route index element={<Homework />} />
+          <Route path="new" element={<HomeworkEditor />} />
+          <Route path=":id/edit" element={<HomeworkEditor />} />
+          <Route path="question-bank" element={<QuestionBankPage />} />
+        </Route>
         <Route path="leads" element={<Leads />} />
         <Route path="danh-gia" element={<ReviewsAdmin />} />
         <Route path="gioi-thieu" element={<ReferralsAdmin />} />

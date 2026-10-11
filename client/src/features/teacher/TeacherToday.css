@@ -4,10 +4,10 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  font-weight: 700;
+  font-weight: 600;
   font-size: 15px;
-  color: var(--primary-700);
-  background: var(--primary-soft);
+  color: var(--text-strong);
+  background: var(--bg-muted);
   border-radius: 8px;
   padding: 4px 12px;
   font-variant-numeric: tabular-nums;
@@ -41,37 +41,23 @@
   margin-top: 12px;
   min-height: 44px;
   font-size: 15px;
-  font-weight: 700;
+  font-weight: 600;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
 }
 
-/* Nút chấm công trắng trên nền primary */
-.checkin-submit {
-  background: var(--primary-soft);
-  color: var(--primary);
-  border: 1px solid transparent;
-  font-weight: 700;
-  min-height: 48px;
-}
-
 /* Ô nhập mã 6 số: căn giữa, chữ to, dễ nhập trên điện thoại */
 .checkin-hero .text-input.mono {
   text-align: center;
   font-size: 24px;
-  font-weight: 700;
+  font-weight: 600;
   letter-spacing: 8px;
   padding: 12px 16px;
 }
 
-.checkin-submit:hover:not(:disabled) {
-  background: var(--bg-hover);
-  border-color: transparent;
-  color: var(--primary);
-}
-
-[data-theme='dark'] .today-time-chip {
-  color: var(--primary);
+.today-room {
+  font-weight: 500;
+  color: var(--text-muted);
 }

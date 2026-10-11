@@ -14,7 +14,8 @@ import { TableSkeleton } from '../../shared/components/Skeleton';
 import { Pagination, clampPage } from '../../shared/components/Pagination';
 import { useMyPermissions } from '../system/roles.api';
 import { Icon } from '../../shared/components/icons';
-import { Teacher } from '../../shared/types';
+import { Menu } from '../../shared/components/Menu';
+import { Teacher, initials } from '../../shared/types';
 import './Teachers.css';
 import { EmptyCell } from '../../shared/components/EmptyCell';
 import { ResetRequestsSection } from './ResetRequests';
@@ -119,7 +120,7 @@ export function Teachers() {
                   <td>
                     <span className="name-cell">
                       <span className="avatar avatar-sm" aria-hidden="true">
-                        <Icon name="user" size={15} />
+                        {initials(tch.name)}
                       </span>
                       <Link className="link" to={`/app/teachers/${tch.id}`}>
                         {tch.name}
@@ -144,27 +145,22 @@ export function Teachers() {
                           {t('actions.edit', { ns: 'common' })}
                         </button>
                       )}
-                      {perms.has('users.create') && (
-                        <button
-                          type="button"
-                          className="icon-btn"
-                          title={t('teachers.createAccount')}
-                          aria-label={t('teachers.createAccount')}
-                          onClick={() => setAccounting(tch)}
-                        >
-                          <Icon name="key" size={15} />
-                        </button>
-                      )}
-                      {perms.has('teachers.delete') && (
-                        <button
-                          type="button"
-                          className="btn btn-sm btn-danger-ghost"
-                          onClick={() => setDeleting(tch)}
-                        >
-                          <Icon name="trash" size={15} />
-                          {t('actions.delete', { ns: 'common' })}
-                        </button>
-                      )}
+                      <Menu
+                        label={t('actions.more', { ns: 'common' })}
+                        items={[
+                          perms.has('users.create') && {
+                            label: t('teachers.createAccount'),
+                            icon: 'key',
+                            onSelect: () => setAccounting(tch),
+                          },
+                          perms.has('teachers.delete') && {
+                            label: t('actions.delete', { ns: 'common' }),
+                            icon: 'trash',
+                            danger: true,
+                            onSelect: () => setDeleting(tch),
+                          },
+                        ]}
+                      />
                     </span>
                   </td>
                 </tr>

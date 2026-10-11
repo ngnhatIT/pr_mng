@@ -70,7 +70,9 @@
     "discard": {
       "title": "Bỏ điểm danh chưa lưu?",
       "message": "Bạn đã điểm danh/ghi chú nhưng chưa lưu. Chuyển sang lớp/buổi khác sẽ mất các thay đổi này."
-    }
+    },
+    "groupPast": "Đã diễn ra",
+    "groupUpcoming": "Sắp tới (chưa điểm danh được)"
   },
   "classStatus": {
     "active": "Đang mở",
@@ -134,7 +136,12 @@
     "noTopic": "Chưa có chủ đề",
     "takeAttendance": "Điểm danh buổi này",
     "attendanceCount": "{{count}} lượt điểm danh",
-    "sizeBadge": "{{count}}/{{max}} học viên"
+    "sizeBadge": "{{count}}/{{max}} học viên",
+    "upcoming": "Buổi tới",
+    "viewAttendance": "Xem",
+    "attended": "Đã điểm danh {{count}} em",
+    "notTaken": "Chưa điểm danh",
+    "sessionsTitle": "Buổi học"
   },
   "empty": {
     "desc": "Tạo lớp học đầu tiên với lịch học, giáo viên và học phí.",
@@ -221,7 +228,8 @@
     "fee": "Học phí",
     "schedule": "Lịch học",
     "size": "Sĩ số",
-    "teacher": "Giáo viên"
+    "teacher": "Giáo viên",
+    "room": "Phòng"
   },
   "title": "Lớp học",
   "toast": {

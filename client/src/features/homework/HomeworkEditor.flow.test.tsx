@@ -1,8 +1,20 @@
 // @vitest-environment happy-dom
 import { describe, it, expect, afterEach, beforeEach } from 'vitest';
 import i18n from '../../i18n';
-import { $, $$, byText, cleanup, click, mockFetch, renderPage, type, type Call } from '../../test-utils';
-import { HomeworkFormModal } from './HomeworkFormModal';
+import {
+  $,
+  $$,
+  byText,
+  cleanup,
+  click,
+  mockFetch,
+  renderPage,
+  renderRoutes,
+  type,
+  type Call,
+} from '../../test-utils';
+import { hasUnsavedChanges } from '../../shared/hooks/useUnsavedGuard';
+import { HomeworkEditor, HomeworkForm } from './HomeworkEditor';
 import type { HomeworkItem } from '../../shared/types';
 import type { ClassItem } from '../classes/classes.api';
 
@@ -16,8 +28,10 @@ const file = { id: 7, name: 'de.pdf', url: '/uploads/hw_1.pdf', kind: 'file' };
 
 let calls: Call[];
 let saved = 0;
+let cancelled = 0;
 beforeEach(() => {
   saved = 0;
+  cancelled = 0;
   calls = mockFetch({
     'GET /homework/rubrics/list': [],
     'POST /homework': { count: 1 },
@@ -29,7 +43,7 @@ afterEach(cleanup);
 
 const open = (initial: HomeworkItem | null = null) =>
   renderPage(
-    <HomeworkFormModal classes={classes} initial={initial} onClose={() => {}} onSaved={() => saved++} />
+    <HomeworkForm classes={classes} initial={initial} onCancel={() => cancelled++} onSaved={() => saved++} />
   );
 const sent = (method: string, path: string) => calls.find((c) => c.method === method && c.path === path);
 
@@ -38,7 +52,7 @@ async function fillBasics() {
   await type(ph('form.titlePhHw'), 'Ôn tập Unit 5');
 }
 
-describe('HomeworkFormModal: link gõ dở khi lưu (B4-1)', () => {
+describe('HomeworkForm: link gõ dở khi lưu (B4-1)', () => {
   it('URL hợp lệ chưa bấm "+ Thêm" -> tự thêm khi giao bài (tên trống lấy URL)', async () => {
     await open();
     await fillBasics();
@@ -89,16 +103,19 @@ describe('HomeworkFormModal: link gõ dở khi lưu (B4-1)', () => {
     expect(ph('form.attUrlPh')!.value).toBe('');
   });
 
-  it('sửa bài: giữ file cũ + thêm link gõ dở; đóng khi còn link gõ dở thì hỏi xác nhận', async () => {
+  it('sửa bài: giữ file cũ + thêm link gõ dở; gõ dở thì bật guard rời trang, lưu xong tắt guard', async () => {
     const initial = { id: 5, title: 'Bài cũ', kind: 'homework', status: 'published' } as HomeworkItem;
     await open(initial);
     expect($$('.att-row')).toHaveLength(1);
+    expect(hasUnsavedChanges()).toBe(false);
     await type(ph('form.attNamePh'), 'Video');
     await type(ph('form.attUrlPh'), 'https://youtu.be/x');
+    expect(hasUnsavedChanges()).toBe(true);
     await click(byText(t('actions.cancel', { ns: 'common' })));
-    expect(document.body.textContent).toContain(t('form.discardTitle'));
-    await click($$('[role="dialog"]').at(-1)!.querySelector('.modal-actions .btn'));
+    expect(cancelled).toBe(1);
     await click(byText(t('form.saveChanges')));
+    expect(saved).toBe(1);
+    expect(hasUnsavedChanges()).toBe(false);
     expect(sent('PUT', '/homework/5')!.body).toMatchObject({
       title: 'Bài cũ',
       status: 'published',
@@ -110,7 +127,7 @@ describe('HomeworkFormModal: link gõ dở khi lưu (B4-1)', () => {
   });
 });
 
-describe('HomeworkFormModal: validate + quiz', () => {
+describe('HomeworkForm: validate + quiz', () => {
   it('thiếu lớp + tiêu đề -> lỗi inline, không gọi API', async () => {
     await open();
     await click($('button[type="submit"]'));
@@ -149,5 +166,23 @@ describe('HomeworkFormModal: validate + quiz', () => {
         ],
       }),
     ]);
+  });
+});
+
+describe('HomeworkEditor (trang soạn bài)', () => {
+  it('/:id/edit tải bài theo id, lưu xong về trang danh sách', async () => {
+    const router = await renderRoutes(
+      [
+        { path: '/app/homework', element: <p>list</p> },
+        { path: '/app/homework/:id/edit', element: <HomeworkEditor /> },
+      ],
+      '/app/homework/5/edit'
+    );
+    expect($('h1')!.textContent).toBe(t('form.titleEdit'));
+    expect($$('.att-row')).toHaveLength(1);
+    await type($('input[maxlength="200"]'), 'Bài mới');
+    await click(byText(t('form.saveChanges')));
+    expect(sent('PUT', '/homework/5')!.body).toMatchObject({ title: 'Bài mới' });
+    expect(router.state.location.pathname).toBe('/app/homework');
   });
 });

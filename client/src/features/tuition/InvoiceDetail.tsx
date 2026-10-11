@@ -125,15 +125,6 @@ export function InvoiceDetail() {
         <Icon name="arrow-left" size={14} />
         {t('detail.back')}
       </button>
-      <nav className="invoice-breadcrumb" aria-label={t('detail.breadcrumbLabel')}>
-        <Link className="link" to="/app/tuition">
-          {t('detail.breadcrumbTuition')}
-        </Link>
-        <span className="invoice-breadcrumb-sep" aria-hidden="true">
-          /
-        </span>
-        <span aria-current="page">{t('detail.breadcrumbInvoice', { id: invoice.id })}</span>
-      </nav>
 
       <div className="page-head">
         <div>

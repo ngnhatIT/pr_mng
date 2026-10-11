@@ -59,19 +59,17 @@
   display: flex;
   gap: 8px;
   padding-top: 10px;
-  border-top: 1px dashed var(--border);
+  border-top: 1px solid var(--border);
 }
 
-.review-foot .btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
+.review-foot [aria-haspopup='menu'] {
+  margin-left: auto;
 }
 
 /* Tab có đếm số lượng */
 .tab .tab-count {
   font-size: 12px;
-  font-weight: 700;
+  font-weight: 600;
   background: var(--bg-muted);
   border: 1px solid var(--border);
   color: var(--text-muted);
@@ -97,4 +95,8 @@
 /* ---------- ReferralsAdmin: thay inline styles ---------- */
 .referral-skel-spacer {
   height: 16px;
+}
+
+.referral-stats {
+  margin-bottom: var(--sp-5);
 }

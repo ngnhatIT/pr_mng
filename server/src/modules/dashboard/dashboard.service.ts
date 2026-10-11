@@ -14,6 +14,14 @@ export function monthRange(today: string): [string, string] {
   return [monthStart, next];
 }
 
+/** Ngày đầu tháng lùi `n` tháng từ `monthStart` ('YYYY-MM-01'). */
+export function monthsBack(monthStart: string, n: number): string {
+  const y = Number(monthStart.slice(0, 4));
+  const m = Number(monthStart.slice(5, 7)) - 1 - n;
+  const d = new Date(Date.UTC(y, m, 1));
+  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-01`;
+}
+
 /**
  * Số liệu dashboard. cid null = superadmin (toàn hệ thống). tid != null = scope 'own'
  * (chỉ lớp mình dạy; tid 0 = chưa gắn giáo viên -> không thấy gì, fail-closed).
@@ -50,6 +58,7 @@ export async function getDashboard(cid: number | null, tid: number | null, own: 
     revenueThisMonth,
     unpaidTotal,
     todaySessions,
+    revenueRows,
   ] = await Promise.all([
     db
       .prepare(`SELECT COUNT(*) as c FROM students ${where(stuWhere)}`)
@@ -93,9 +102,11 @@ export async function getDashboard(cid: number | null, tid: number | null, own: 
           .then((r) => (r as { s: number }).s),
     db
       .prepare(
-        `SELECT s.id, s.date, s.topic, c.id as class_id, c.name as class_name, c.schedule, t.name as teacher_name
+        `SELECT s.id, s.date, s.topic, c.id as class_id, c.name as class_name, c.schedule, t.name as teacher_name,
+            r.name as room_name
      FROM sessions s JOIN classes c ON c.id = s.class_id
      LEFT JOIN teachers t ON t.id = COALESCE(s.teacher_id, c.teacher_id)
+     LEFT JOIN rooms r ON r.id = c.room_id
      WHERE s.date = ? AND s.status <> 'cancelled' ${cid !== null ? 'AND c.center_id = ?' : ''}
        ${tid !== null ? 'AND COALESCE(s.teacher_id, c.teacher_id) = ?' : ''} ORDER BY c.name`
       )
@@ -108,8 +119,23 @@ export async function getDashboard(cid: number | null, tid: number | null, own: 
         class_name: string;
         schedule: string;
         teacher_name: string | null;
+        room_name: string | null;
       }[]
     >,
+    // Doanh thu 6 tháng gần nhất (kể cả tháng này) cho biểu đồ xu hướng
+    own
+      ? Promise.resolve([] as { month: string; total: number }[])
+      : (db
+          .prepare(
+            `SELECT substr(p.paid_at, 1, 7) as month, SUM(p.amount) as total FROM payments p
+       JOIN invoices i ON i.id = p.invoice_id
+       JOIN students s ON s.id = i.student_id
+       WHERE p.paid_at >= ? AND p.paid_at < ? AND p.status = 'confirmed' ${cid !== null ? 'AND s.center_id = ?' : ''}
+       GROUP BY 1`
+          )
+          .all(monthsBack(monthStart, 5), nextMonthStart, ...p(cid)) as Promise<
+          { month: string; total: number }[]
+        >),
   ]);
 
   return {
@@ -121,5 +147,12 @@ export async function getDashboard(cid: number | null, tid: number | null, own: 
     revenueThisMonth,
     unpaidTotal,
     todaySessions: todaySessions.map((s) => ({ ...s, scheduleText: formatSchedule(s.schedule) })),
+    // Đủ 6 tháng liên tiếp, tháng không có thu = 0 (biểu đồ không bị hụt cột)
+    revenueByMonth: own
+      ? []
+      : Array.from({ length: 6 }, (_, i) => {
+          const month = monthsBack(monthStart, 5 - i).slice(0, 7);
+          return { month, total: Number(revenueRows.find((r) => r.month === month)?.total ?? 0) };
+        }),
   };
 }

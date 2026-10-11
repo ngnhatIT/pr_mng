@@ -6,12 +6,6 @@
   font-variant-numeric: tabular-nums;
 }
 
-/* Badge cảnh báo lớp đã đầy */
-.badge-danger {
-  background: var(--danger-soft);
-  color: var(--danger);
-}
-
 /* Thanh sĩ số: mỏng, calm; đầy thì chuyển đỏ cảnh báo */
 .capacity-meter {
   margin-top: 6px;
@@ -25,7 +19,7 @@
   display: block;
   height: 100%;
   border-radius: 999px;
-  background: var(--primary);
+  background: var(--text-muted);
   transition: width 0.25s ease-out;
 }
 

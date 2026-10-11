@@ -56,6 +56,15 @@ describe('formatScheduleText', () => {
     const text = formatScheduleText(json);
     expect(text).toContain('08:00-09:30');
   });
+  it('gộp các ngày cùng khung giờ, khung giờ khác ngăn bằng " · "', () => {
+    const json = JSON.stringify([
+      { day: 2, start: '19:30', end: '21:00' },
+      { day: 4, start: '19:30', end: '21:00' },
+      { day: 8, start: '09:00', end: '10:30' },
+    ]);
+    expect(formatScheduleText(json, 'vi')).toBe('T2, T4 19:30-21:00 · CN 09:00-10:30');
+    expect(formatScheduleText(json, 'en')).toBe('Mon, Wed 19:30-21:00 · Sun 09:00-10:30');
+  });
   it('JSON hỏng trả về chuỗi rỗng', () => {
     expect(formatScheduleText('not-json')).toBe('');
   });

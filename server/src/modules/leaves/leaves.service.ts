@@ -58,7 +58,7 @@ export async function listLeaves(
   const rows = (await db
     .prepare(
       `SELECT lr.*, s.name as student_name, s.code as student_code, c.name as class_name
-       ${from} ${where} ORDER BY lr.id DESC LIMIT ? OFFSET ?`
+       ${from} ${where} ORDER BY (lr.status = 'pending') DESC, lr.id DESC LIMIT ? OFFSET ?`
     )
     .all(...params, limit, offset)) as LeaveRow[];
   return paginate(rows, total, page, limit);

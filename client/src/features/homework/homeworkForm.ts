@@ -1,4 +1,4 @@
-// Hàm thuần + kiểu dùng chung cho form bài tập (HomeworkFormModal và các phần tách ra: QuizBuilder,
+// Hàm thuần + kiểu dùng chung cho form bài tập (HomeworkEditor và các phần tách ra: QuizBuilder,
 // AttachmentsField, RubricField, ClassTargeting).
 import { UPLOAD_ACCEPT, MAX_UPLOAD_BYTES, type QuizQuestionForm } from './homework.api';
 import { todayVN } from '../../shared/types';

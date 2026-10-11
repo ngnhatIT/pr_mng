@@ -14,8 +14,9 @@
 }
 
 .lead-pipeline .pipeline {
-  min-width: 1080px;
-  grid-template-columns: repeat(5, minmax(220px, 1fr));
+  /* 5 cột vừa khung nội dung ở 1440px (sidebar 248px): 5 × 196 + 4 × 12 = 1028px; hẹp hơn thì cuộn ngang */
+  min-width: 1028px;
+  grid-template-columns: repeat(5, minmax(196px, 1fr));
 }
 
 .lead-pipeline .pipeline-col {
@@ -70,10 +71,10 @@
   align-items: center;
   margin-top: 10px;
   padding-top: 10px;
-  border-top: 1px dashed var(--border);
+  border-top: 1px solid var(--border);
 }
 
-.pipeline-actions .btn-icon {
+.pipeline-actions [aria-haspopup='menu'] {
   margin-left: auto;
 }
 

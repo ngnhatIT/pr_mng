@@ -8,6 +8,7 @@ export interface ReferralStats {
   total: number;
   pending: number;
   rewarded: number;
+  total_reward?: number;
 }
 
 export const referralsApi = {

@@ -52,11 +52,9 @@
   display: block;
 }
 .hw-group-title {
-  font-weight: 700;
+  font-weight: 600;
   font-size: 13px;
   color: var(--text-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
   margin: 16px 0 8px;
 }
 .hw-group-title:first-of-type {
@@ -77,11 +75,6 @@
 .hw-feedback svg {
   flex-shrink: 0;
   margin-top: 1px;
-}
-.badge-quiz {
-  background: var(--primary-soft);
-  color: var(--primary);
-  font-weight: 700;
 }
 .hw-actions {
   display: flex;
@@ -106,19 +99,19 @@
   margin-bottom: 8px;
 }
 .quiz-progress-label {
-  font-weight: 700;
+  font-weight: 600;
   font-size: 15px;
 }
 .quiz-progress-bar {
   height: 8px;
   border-radius: 999px;
-  background: var(--bg-muted, #eef1f6);
+  background: var(--bg-muted);
   overflow: hidden;
 }
 .quiz-progress-fill {
   height: 100%;
   border-radius: 999px;
-  background: var(--primary);
+  background: var(--ink);
   transition: width 0.25s ease-out;
 }
 .quiz-take-q {
@@ -146,7 +139,7 @@ button.quiz-take-opt {
   width: 22px;
   height: 22px;
   border-radius: 50%;
-  border: 2px solid var(--border-strong, #c3cddc);
+  border: 2px solid var(--border-strong);
   flex-shrink: 0;
   display: inline-flex;
   align-items: center;
@@ -162,17 +155,17 @@ button.quiz-take-opt {
   transition: background 0.15s ease;
 }
 .quiz-take-opt.selected .quiz-radio {
-  border-color: var(--primary);
+  border-color: var(--ink);
 }
 .quiz-take-opt.selected .quiz-radio::after {
-  background: var(--primary);
+  background: var(--ink);
 }
 /* Checkbox cho câu multiple (ô vuông thay vì tròn) */
 .quiz-take-opt .quiz-checkbox {
   width: 22px;
   height: 22px;
   border-radius: 6px;
-  border: 2px solid var(--border-strong, #c3cddc);
+  border: 2px solid var(--border-strong);
   flex-shrink: 0;
   display: inline-flex;
   align-items: center;
@@ -188,10 +181,10 @@ button.quiz-take-opt {
   transition: background 0.15s ease;
 }
 .quiz-take-opt.selected .quiz-checkbox {
-  border-color: var(--primary);
+  border-color: var(--ink);
 }
 .quiz-take-opt.selected .quiz-checkbox::after {
-  background: var(--primary);
+  background: var(--ink);
 }
 .quiz-essay-input {
   width: 100%;
@@ -225,20 +218,20 @@ button.quiz-take-opt {
   margin-top: 2px;
 }
 .quiz-review-qhead .icon-ok {
-  color: var(--success, #16a34a);
+  color: var(--success);
 }
 .quiz-review-qhead .icon-bad {
-  color: var(--danger, #dc2626);
+  color: var(--danger);
 }
 .quiz-review-qhead .icon-warn {
-  color: #d97706;
+  color: var(--warning);
 }
 .quiz-essay-answer {
   margin-top: 4px;
   padding: 10px 12px;
-  border: 1px solid var(--border, #e2e8f0);
+  border: 1px solid var(--border);
   border-radius: 10px;
-  background: var(--bg-soft, #f8fafc);
+  background: var(--bg-soft);
 }
 .quiz-essay-answer p {
   margin: 4px 0 0;
@@ -257,7 +250,7 @@ button.quiz-take-opt {
   width: 16px;
   height: 16px;
   border-radius: 50%;
-  border: 2px solid var(--border-strong, #c3cddc);
+  border: 2px solid var(--border-strong);
   flex-shrink: 0;
   margin-top: 2px;
 }
@@ -271,16 +264,19 @@ button.quiz-take-opt {
   align-items: center;
   justify-content: center;
   margin: 0 auto 12px;
-  color: #fff;
 }
+/* Nền nhạt + icon màu theo token: tự đúng ở cả theme sáng và tối */
 .quiz-result-ic.good {
-  background: var(--success, #16a34a);
+  background: var(--success-soft);
+  color: var(--success);
 }
 .quiz-result-ic.mid {
-  background: #d97706;
+  background: var(--warning-soft);
+  color: var(--warning);
 }
 .quiz-result-ic.bad {
-  background: var(--danger, #dc2626);
+  background: var(--danger-soft);
+  color: var(--danger);
 }
 
 /* ---------- Submit: chọn file ---------- */
@@ -291,9 +287,9 @@ button.quiz-take-opt {
   gap: 12px;
   min-height: 72px;
   padding: 16px;
-  border: 2px dashed var(--border-strong, #c3cddc);
+  border: 2px dashed var(--border-strong);
   border-radius: var(--radius-md);
-  background: var(--bg-soft, #fff);
+  background: var(--bg-soft);
   cursor: pointer;
   font-size: 15px;
   transition:
@@ -303,7 +299,7 @@ button.quiz-take-opt {
 .file-drop:hover,
 .file-drop:focus-within {
   border-color: var(--primary);
-  background: var(--primary-soft, #eef3ff);
+  background: var(--primary-soft);
 }
 .file-drop input[type='file'] {
   position: absolute;
@@ -316,7 +312,7 @@ button.quiz-take-opt {
   width: 40px;
   height: 40px;
   border-radius: 10px;
-  background: var(--primary-soft, #eef3ff);
+  background: var(--primary-soft);
   color: var(--primary);
   display: flex;
   align-items: center;
@@ -330,7 +326,7 @@ button.quiz-take-opt {
   margin-top: 8px;
   font-size: 13px;
   color: var(--text);
-  background: var(--bg-muted, #eef1f6);
+  background: var(--bg-muted);
   border-radius: 8px;
   padding: 6px 10px;
   max-width: 100%;
@@ -402,16 +398,22 @@ button.quiz-take-opt {
   font-weight: 600;
 }
 
-/* ---------- 560px: 5 tab pill wrap, không cuộn ngang ---------- */
+/* ---------- Mobile: 5 tab là một hàng cuộn ngang (xếp 2x2+1 làm tab to như nút hành động) ---------- */
 @media (max-width: 560px) {
-  /* 5 tab pill chi tiết con xếp 2 hàng gọn, không tràn ở 401-560px */
   .parent-tabs {
-    overflow-x: visible;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+    margin-inline: -16px;
+    padding-inline: 16px;
+  }
+  .parent-tabs::-webkit-scrollbar {
+    display: none;
   }
   .parent-tabs .tab {
-    flex: 1 1 calc(50% - 4px);
-    justify-content: center;
+    flex: none;
+    padding: 8px 14px;
+    font-size: 14px;
   }
 }
 
@@ -440,28 +442,19 @@ button.quiz-take-opt {
   stroke: var(--border-strong);
 }
 .progress-svg .chart-area {
-  fill: var(--primary-soft);
+  fill: color-mix(in srgb, var(--ink) 7%, transparent);
 }
 .progress-svg .chart-line {
-  stroke: var(--primary);
+  stroke: var(--ink);
 }
 .progress-svg .chart-dot {
-  fill: var(--primary);
+  fill: var(--ink);
 }
 .progress-svg .chart-label {
   fill: var(--text-muted);
 }
 
 /* ---------- Dark mode: các điểm màu đặc biệt ---------- */
-[data-theme='dark'] .quiz-result-ic.good {
-  background: #15803d;
-}
-[data-theme='dark'] .quiz-result-ic.mid {
-  background: #b45309;
-}
-[data-theme='dark'] .quiz-result-ic.bad {
-  background: #b91c1c;
-}
 [data-theme='dark'] .result-success {
   background: #15803d;
 }
@@ -534,4 +527,83 @@ button.quiz-take-opt {
   display: flex;
   flex-wrap: wrap;
   gap: 6px 14px;
+}
+
+/* Hạn nộp dưới tên lớp (không đặt cột phải: tiêu đề bị bóp hẹp trên mobile) */
+.hw-due {
+  margin-top: 6px;
+}
+.hw-due:empty {
+  display: none;
+}
+
+.parent-link-more {
+  margin-top: 16px;
+}
+
+/* ---------- Thống kê điểm danh: tỉ lệ + thanh tỉ lệ + chú thích ---------- */
+.att-rate {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin: 4px 0 12px;
+}
+.att-rate-value {
+  font-size: 36px;
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-strong);
+}
+.att-bar {
+  display: flex;
+  height: 8px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: var(--bg-muted);
+  gap: 2px;
+}
+.att-bar > span {
+  display: block;
+  height: 100%;
+}
+.att-bar .is-present,
+.att-legend .is-present {
+  background: var(--success);
+}
+.att-bar .is-late,
+.att-legend .is-late {
+  background: var(--warning);
+}
+.att-bar .is-absent,
+.att-legend .is-absent {
+  background: var(--danger);
+}
+.att-legend {
+  list-style: none;
+  margin: 14px 0 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+.att-legend li {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+.att-legend strong {
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--text-strong);
+  font-variant-numeric: tabular-nums;
+}
+.att-legend .dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-right: 6px;
 }

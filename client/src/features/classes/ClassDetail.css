@@ -39,3 +39,9 @@
 .enroll-search .text-input {
   width: 100%;
 }
+
+/* Nhãn "Buổi tới" cạnh ngày */
+.session-next {
+  margin-left: 8px;
+  vertical-align: 1px;
+}

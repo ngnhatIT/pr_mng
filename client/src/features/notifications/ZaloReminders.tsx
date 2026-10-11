@@ -341,7 +341,7 @@ export function ZaloReminders() {
                   {saving ? t('actions.saving', { ns: 'common' }) : t('zalo.saveSchedule')}
                 </button>
                 <button type="button" className="btn" onClick={runOnce} disabled={running}>
-                  {running && <span className="spinner spinner-dark" aria-hidden="true" />}
+                  {running && <span className="spinner" aria-hidden="true" />}
                   <Icon name="play" size={15} />
                   {running ? t('zalo.running') : t('zalo.runNow')}
                 </button>
@@ -417,14 +417,14 @@ export function ZaloReminders() {
                     .slice((historyPage - 1) * HISTORY_LIMIT, historyPage * HISTORY_LIMIT)
                     .map((r) => (
                       <tr key={r.id}>
-                        <td data-label={t('zalo.col.time')} className="mono">
+                        <td data-label={t('zalo.col.time')} className="tabular">
                           {formatDateTime(r.created_at)}
                         </td>
                         <td>
                           {r.student_name || <EmptyCell />}
-                          {r.student_code && <span className="muted mono"> ({r.student_code})</span>}
+                          {r.student_code && <div className="cell-sub mono">{r.student_code}</div>}
                         </td>
-                        <td data-label={t('zalo.col.phone')} className="mono">
+                        <td data-label={t('zalo.col.phone')} className="tabular">
                           {r.phone || <EmptyCell />}
                         </td>
                         <td data-label={t('zalo.col.amount')} className="num">

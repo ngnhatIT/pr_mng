@@ -119,7 +119,11 @@
     "trueLabel": "True",
     "falseLabel": "False",
     "loadErrorTitle": "Could not load the bank",
-    "loadErrorDesc": "Check your connection and try again."
+    "loadErrorDesc": "Check your connection and try again.",
+    "pageDesc": "Prepare questions by subject, topic and difficulty to reuse in quizzes",
+    "count_one": "{{count}} question",
+    "count_other": "{{count}} questions",
+    "count": "{{count}} questions"
   },
   "delete": {
     "message": "Delete \"{{title}}\"?",
@@ -183,8 +187,6 @@
     "criterion": "Criterion",
     "criterionScore": "{{score}} pts",
     "defaultCriteria": ["Pronunciation", "Vocabulary"],
-    "discardMessage": "You have entered data that is not saved yet. Close and discard these changes?",
-    "discardTitle": "Discard unsaved changes?",
     "deselectAll": "Deselect",
     "dueDate": "Due date",
     "dueNextWeek": "Next week",
@@ -314,7 +316,9 @@
     "removeCriterion": "Remove criterion {{n}}",
     "maxAttempts": "Max attempts",
     "maxAttemptsHint": "Students see the total score after each attempt; leave empty for unlimited (makes guessing the answer key easy)",
-    "maxAttemptsPh": "Unlimited"
+    "maxAttemptsPh": "Unlimited",
+    "sectionTarget": "Classes and students",
+    "sectionGrading": "Deadline and grading"
   },
   "grade": {
     "empty": "No students to grade",

@@ -3,10 +3,10 @@ import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { getUser, logout as doLogout, getActingCenter, setActingCenter } from '../../shared/api/client';
 import { systemApi } from '../../features/system/system.api';
-import type { CenterItem } from '../types';
+import { initials, type CenterItem } from '../types';
 import { Icon, IconName } from './icons';
 import { ThemeLangSwitch } from '../ui/ThemeLangSwitch';
-import { useTheme } from '../ui/theme';
+import { Menu } from './Menu';
 import { ChangePasswordModal } from './ChangePasswordModal';
 import { ConfirmDialog } from './Modal';
 import { lockScroll, unlockScroll } from '../scrollLock';
@@ -104,7 +104,6 @@ export function Layout() {
   const navigate = useNavigate();
   const location = useLocation();
   const user = getUser();
-  const { theme, toggle: toggleTheme } = useTheme();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [showChangePw, setShowChangePw] = useState(false);
   // Xác nhận đăng xuất ở chân sidebar (dùng ConfirmDialog có sẵn, không dùng confirm() native).
@@ -285,7 +284,10 @@ export function Layout() {
           <div className="brand-logo">E</div>
           <div>
             <div className="brand-name">EduCenter Pro</div>
-            <div className="brand-sub">{t('nav.tagline')}</div>
+            {/* Tên trung tâm đang quản lý (đa trung tâm); superadmin không thuộc trung tâm nào -> câu mô tả chung */}
+            <div className="brand-sub" title={user?.center_name || undefined}>
+              {user?.center_name || t('nav.tagline')}
+            </div>
           </div>
         </div>
         <nav className="nav">
@@ -332,35 +334,24 @@ export function Layout() {
           )}
         </nav>
         <div className="sidebar-foot">
-          <div className="user-chip">
-            <div className="user-avatar" aria-hidden="true">
-              <Icon name="user" size={18} />
-            </div>
-            <div className="user-meta">
-              <div className="user-name">{user?.name}</div>
-              <div className="user-role">{t('roles.' + (user?.role || ''))}</div>
-            </div>
-          </div>
-          <div className="sidebar-foot-actions">
-            <button
-              type="button"
-              className="btn btn-icon btn-ghost-dark"
-              onClick={toggleTheme}
-              aria-label={t('theme.toggle')}
-              title={t('theme.toggle')}
-            >
-              <Icon name={theme === 'light' ? 'moon' : 'sun'} size={18} />
-            </button>
-            <button
-              type="button"
-              className="btn btn-icon btn-ghost-dark"
-              onClick={() => setShowLogoutConfirm(true)}
-              aria-label={t('nav.logout')}
-              title={t('nav.logout')}
-            >
-              <Icon name="logout" size={18} />
-            </button>
-          </div>
+          <Menu
+            label={t('nav.account')}
+            className="account-btn"
+            align="start"
+            items={[
+              { label: t('nav.changePassword'), icon: 'key', onSelect: () => setShowChangePw(true) },
+              { label: t('nav.logout'), icon: 'logout', onSelect: () => setShowLogoutConfirm(true) },
+            ]}
+          >
+            <span className="user-avatar" aria-hidden="true">
+              {initials(user?.name)}
+            </span>
+            <span className="user-meta">
+              <span className="user-name">{user?.name}</span>
+              <span className="user-role">{t('roles.' + (user?.role || ''))}</span>
+            </span>
+            <Icon name="chevronUpDown" size={16} />
+          </Menu>
         </div>
       </aside>
 
@@ -393,28 +384,6 @@ export function Layout() {
             </select>
           )}
           <ThemeLangSwitch />
-          <div className="topbar-user">
-            <div className="topbar-avatar" aria-hidden="true">
-              <Icon name="user" size={17} />
-            </div>
-            <span>{user?.name}</span>
-          </div>
-          <button
-            className="btn btn-icon btn-ghost"
-            onClick={() => setShowChangePw(true)}
-            aria-label={t('nav.changePassword', 'Đổi mật khẩu')}
-            title={t('nav.changePassword', 'Đổi mật khẩu')}
-          >
-            <Icon name="key" size={18} />
-          </button>
-          <button
-            className="btn btn-icon btn-ghost topbar-logout"
-            onClick={logout}
-            aria-label={t('nav.logout')}
-            title={t('nav.logout')}
-          >
-            <Icon name="logout" size={18} />
-          </button>
         </header>
         <main className="page-scroll" id="main-content" tabIndex={-1}>
           <Outlet />

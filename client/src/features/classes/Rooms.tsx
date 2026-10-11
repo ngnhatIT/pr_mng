@@ -12,6 +12,7 @@ import { CardGridSkeleton } from '../../shared/components/Skeleton';
 import { Pagination, clampPage } from '../../shared/components/Pagination';
 import { useMyPermissions } from '../system/roles.api';
 import { Icon } from '../../shared/components/icons';
+import { Menu } from '../../shared/components/Menu';
 import './Rooms.css';
 
 export function Rooms() {
@@ -129,14 +130,17 @@ export function Rooms() {
                     <Icon name="pencil" size={15} />
                     {t('actions.edit', { ns: 'common' })}
                   </button>
-                  <button
-                    type="button"
-                    className="btn btn-sm btn-danger-ghost"
-                    onClick={() => setDeleting(r)}
-                  >
-                    <Icon name="trash" size={15} />
-                    {t('actions.delete', { ns: 'common' })}
-                  </button>
+                  <Menu
+                    label={t('actions.more', { ns: 'common' })}
+                    items={[
+                      {
+                        label: t('actions.delete', { ns: 'common' }),
+                        icon: 'trash',
+                        danger: true,
+                        onSelect: () => setDeleting(r),
+                      },
+                    ]}
+                  />
                 </div>
               )}
             </article>

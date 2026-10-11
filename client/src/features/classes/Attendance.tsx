@@ -120,6 +120,23 @@ export function Attendance() {
     else fn();
   };
 
+  const today = todayVN();
+  const pastSessions = useMemo(() => sessions.filter((x) => x.date <= today).reverse(), [sessions, today]);
+  const upcomingSessions = useMemo(() => sessions.filter((x) => x.date > today), [sessions, today]);
+  const sessionLabel = (s: SessionItem) =>
+    t('attendance.sessionOption', {
+      date: formatDate(s.date),
+      topic: s.topic ? ` - ${s.topic}` : '',
+      count: s.attendance_count || 0,
+    });
+
+  // Chọn lớp mà chưa chọn buổi: tự mở buổi gần nhất đã diễn ra (thường là hôm nay) thay vì bắt tìm trong ~60 buổi
+  useEffect(() => {
+    if (!classId || sessionId) return;
+    const latest = pastSessions.find((x) => String(x.class_id) === classId);
+    if (latest) pickSession(String(latest.id));
+  }, [pastSessions]);
+
   const pickClass = (cid: string) => {
     sessionRef.current = '';
     setDirty(false);
@@ -256,15 +273,23 @@ export function Attendance() {
           aria-label={t('attendance.selectSession')}
         >
           <option value="">{t('attendance.selectSession')}</option>
-          {sessions.map((s) => (
-            <option key={s.id} value={s.id}>
-              {t('attendance.sessionOption', {
-                date: formatDate(s.date),
-                topic: s.topic ? ` - ${s.topic}` : '',
-                count: s.attendance_count || 0,
-              })}
-            </option>
-          ))}
+          {/* Buổi đã diễn ra (mới nhất lên đầu) tách khỏi buổi tương lai: server chặn điểm danh ngày tương lai */}
+          <optgroup label={t('attendance.groupPast')}>
+            {pastSessions.map((s) => (
+              <option key={s.id} value={s.id}>
+                {sessionLabel(s)}
+              </option>
+            ))}
+          </optgroup>
+          {upcomingSessions.length > 0 && (
+            <optgroup label={t('attendance.groupUpcoming')}>
+              {upcomingSessions.map((s) => (
+                <option key={s.id} value={s.id} disabled>
+                  {sessionLabel(s)}
+                </option>
+              ))}
+            </optgroup>
+          )}
         </select>
         {classId && canManageSessions && (
           <button className="btn btn-inline" onClick={() => setShowNewSession(true)}>
@@ -322,7 +347,7 @@ export function Attendance() {
               </button>
               {canManageSessions && (
                 <button className="btn btn-sm" onClick={() => void makeCheckinCode()} disabled={makingCode}>
-                  {makingCode && <span className="spinner spinner-dark" aria-hidden="true" />}
+                  {makingCode && <span className="spinner" aria-hidden="true" />}
                   {makingCode ? t('attendance.toolbar.creatingCode') : t('attendance.toolbar.createCode')}
                 </button>
               )}

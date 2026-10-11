@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import { dashboardApi } from './dashboard.api';
 import { DebtRow } from '../tuition/tuition.api';
 import { useToast, toastApiError } from '../../shared/ui/toast';
-import { DashboardData, formatVND } from '../../shared/types';
+import { DashboardData, formatVND, slotOn } from '../../shared/types';
 import { getUser } from '../../shared/api/client';
 import { PageHeader } from '../../shared/components/PageHeader';
 import { Skeleton } from '../../shared/components/Skeleton';
@@ -18,6 +19,57 @@ function greeting(t: (k: string) => string): string {
   if (h < 13) return t('greeting.midday');
   if (h < 18) return t('greeting.afternoon');
   return t('greeting.evening');
+}
+
+/** Cột doanh thu theo tháng: CSS thuần, tháng hiện tại tô đậm; mỗi cột có nhãn đọc cho screen reader. */
+function RevenueChart({
+  rows,
+  lang,
+  t,
+}: {
+  rows: { month: string; total: number }[];
+  lang: string;
+  t: TFunction;
+}) {
+  const max = Math.max(1, ...rows.map((r) => r.total));
+  const total = rows.reduce((a, r) => a + r.total, 0);
+  const compact = new Intl.NumberFormat(lang === 'en' ? 'en' : 'vi', {
+    notation: 'compact',
+    maximumFractionDigits: 1,
+  });
+  const label = (m: string) =>
+    lang === 'en'
+      ? new Date(`${m}-01T00:00:00`).toLocaleDateString('en', { month: 'short' })
+      : `T${Number(m.slice(5, 7))}`;
+  return (
+    <section className="card dash-revenue">
+      <div className="card-head">
+        <h2>{t('revenue.title')}</h2>
+        <span className="muted num">{t('revenue.total', { value: formatVND(total) })}</span>
+      </div>
+      <ol className="rev-bars">
+        {rows.map((r, i) => (
+          <li
+            key={r.month}
+            className={i === rows.length - 1 ? 'is-current' : undefined}
+            aria-label={t('revenue.monthAria', {
+              month: `${Number(r.month.slice(5, 7))}/${r.month.slice(0, 4)}`,
+              value: formatVND(r.total),
+            })}
+          >
+            <span className="rev-track" aria-hidden="true">
+              <span className="rev-value num">{r.total > 0 ? compact.format(r.total) : '0'}</span>
+              {/* 85%: chừa chỗ cho nhãn số phía trên cột cao nhất */}
+              <span className="rev-bar" style={{ height: `${Math.max(2, (r.total / max) * 85)}%` }} />
+            </span>
+            <span className="rev-month" aria-hidden="true">
+              {label(r.month)}
+            </span>
+          </li>
+        ))}
+      </ol>
+    </section>
+  );
 }
 
 function todayLine(lang: string): string {
@@ -105,9 +157,9 @@ export function Dashboard() {
         {/* Skeleton đúng từng khối: hero + strip 3 số, không phải 4 card đều nhau */}
         <div aria-hidden="true" style={{ marginTop: 20 }}>
           <Skeleton width="100%" height={124} radius={16} />
-          <div className="dash-strip" style={{ marginTop: 16 }}>
+          <div className="stat-strip" style={{ marginTop: 16 }}>
             {[0, 1, 2].map((i) => (
-              <div key={i} className="dash-stat">
+              <div key={i} className="stat-strip-item">
                 <Skeleton width="55%" height={13} radius={6} />
                 <div style={{ marginTop: 8 }}>
                   <Skeleton width="80%" height={26} radius={8} />
@@ -222,15 +274,19 @@ export function Dashboard() {
       )}
 
       {/* 3 số còn lại: strip chia cột, không phải 4 card giống nhau */}
-      <div className="dash-strip">
+      <div className="stat-strip">
         {stripStats.map((s) => (
-          <div key={s.label} className="dash-stat">
-            <span className="dash-stat-label">{s.label}</span>
-            <span className="dash-stat-value">{s.value}</span>
-            <span className="dash-stat-sub">{s.sub}</span>
+          <div key={s.label} className="stat-strip-item">
+            <span className="stat-strip-label">{s.label}</span>
+            <span className="stat-strip-value">{s.value}</span>
+            <span className="stat-strip-sub">{s.sub}</span>
           </div>
         ))}
       </div>
+
+      {!financeDenied && data.revenueByMonth && data.revenueByMonth.length > 0 && (
+        <RevenueChart rows={data.revenueByMonth} lang={i18n.language} t={t} />
+      )}
 
       <div className="dash-section-label">{t('quick.actionsTitle')}</div>
       <div className="quick-actions dash-quick">
@@ -260,20 +316,32 @@ export function Dashboard() {
             <p className="muted">{t('today.empty')}</p>
           ) : (
             <ul className="list">
-              {data.todaySessions.map((s) => (
-                <li key={s.id} className="list-item">
-                  <div>
-                    <div className="list-title">{s.class_name}</div>
-                    <div className="list-sub">
-                      {s.teacher_name || t('today.unassigned')} · {s.scheduleText}
+              {[...data.todaySessions]
+                .map((s) => ({ ...s, slot: slotOn(s.schedule, s.date) }))
+                .sort((a, b) => (a.slot?.start ?? '99').localeCompare(b.slot?.start ?? '99'))
+                .map((s) => (
+                  <li key={s.id} className="list-item">
+                    <div className="today-row">
+                      <span className="today-time num">{s.slot ? `${s.slot.start}–${s.slot.end}` : '—'}</span>
+                      <div>
+                        <div className="list-title">{s.class_name}</div>
+                        <div className="list-sub">
+                          {[
+                            s.teacher_name || t('today.unassigned'),
+                            s.room_name,
+                            s.slot ? null : s.scheduleText,
+                          ]
+                            .filter(Boolean)
+                            .join(' · ')}
+                        </div>
+                        {s.topic && <div className="list-sub">{t('today.topic', { topic: s.topic })}</div>}
+                      </div>
                     </div>
-                    {s.topic && <div className="list-sub">{t('today.topic', { topic: s.topic })}</div>}
-                  </div>
-                  <Link className="btn btn-sm" to={`/app/attendance?class=${s.class_id}&session=${s.id}`}>
-                    {t('today.attendance')}
-                  </Link>
-                </li>
-              ))}
+                    <Link className="btn btn-sm" to={`/app/attendance?class=${s.class_id}&session=${s.id}`}>
+                      {t('today.attendance')}
+                    </Link>
+                  </li>
+                ))}
             </ul>
           )}
         </section>

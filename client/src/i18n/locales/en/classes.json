@@ -70,7 +70,9 @@
     "discard": {
       "title": "Discard unsaved attendance?",
       "message": "You have unsaved attendance marks or notes. Switching class/session will discard them."
-    }
+    },
+    "groupPast": "Past",
+    "groupUpcoming": "Upcoming (not open yet)"
   },
   "classStatus": {
     "active": "Open",
@@ -134,7 +136,12 @@
     "noTopic": "No topic yet",
     "takeAttendance": "Take attendance",
     "attendanceCount": "{{count}} check-ins",
-    "sizeBadge": "{{count}}/{{max}} students"
+    "sizeBadge": "{{count}}/{{max}} students",
+    "upcoming": "Next",
+    "viewAttendance": "View",
+    "attended": "{{count}} marked",
+    "notTaken": "Not taken yet",
+    "sessionsTitle": "Sessions"
   },
   "empty": {
     "desc": "Create your first class with a schedule, teacher and tuition.",
@@ -221,7 +228,8 @@
     "fee": "Tuition",
     "schedule": "Schedule",
     "size": "Size",
-    "teacher": "Teacher"
+    "teacher": "Teacher",
+    "room": "Room"
   },
   "title": "Classes",
   "toast": {

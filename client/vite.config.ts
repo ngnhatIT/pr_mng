@@ -34,7 +34,8 @@ export default defineConfig({
         // các dep dùng chung (i18n, api client, toast...) vào chunk đó và entry phải import tĩnh nó
         // => trang nào cũng tải code landing/admin. Để Rollup tự tách theo từng route lazy.
         manualChunks(id: string) {
-          if (id.includes('node_modules')) return 'vendor';
+          // gsap chỉ landing dùng: để Rollup tách theo route lazy, không kéo vào vendor của mọi trang.
+          if (id.includes('node_modules') && !/[\\/](gsap|@gsap)[\\/]/.test(id)) return 'vendor';
           return undefined;
         },
       },

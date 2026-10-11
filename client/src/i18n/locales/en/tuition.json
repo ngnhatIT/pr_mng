@@ -116,7 +116,7 @@
     "searchStudentPlaceholder": "Type student name or code"
   },
   "detail": {
-    "title": "Invoice #{{id}}",
+    "title": "Invoice HD{{id}}",
     "breadcrumbLabel": "Invoice page navigation",
     "breadcrumbTuition": "Tuition",
     "breadcrumbInvoice": "Invoice #{{id}}",

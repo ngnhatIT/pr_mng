@@ -33,8 +33,11 @@ describe('Layout drawer + Modal', () => {
 
     click('.menu-btn');
     expect(document.body.style.overflow).toBe('hidden');
-    // Nút Đăng xuất ở chân sidebar -> ConfirmDialog
-    click('.sidebar-foot-actions button:last-child');
+    // Menu tài khoản ở chân sidebar -> mục Đăng xuất -> ConfirmDialog
+    click('.account-btn');
+    expect(document.querySelector('.account-btn')!.getAttribute('aria-expanded')).toBe('true');
+    click('[role="menu"] [role="menuitem"]:last-child');
+    expect(document.querySelector('[role="menu"]')).toBeNull();
     expect(document.querySelectorAll('[role="dialog"]')).toHaveLength(1);
     click('[role="dialog"] .modal-actions .btn:first-child'); // Hủy
     expect(document.querySelectorAll('[role="dialog"]')).toHaveLength(0);

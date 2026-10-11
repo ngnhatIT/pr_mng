@@ -166,7 +166,8 @@
     "stats": {
       "pending": "Pending rewards",
       "rewarded": "Rewarded",
-      "total": "Total referrals"
+      "total": "Total referrals",
+      "totalReward": "Total rewards"
     },
     "status": {
       "pending": "Pending",

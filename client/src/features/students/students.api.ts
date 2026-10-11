@@ -20,6 +20,8 @@ export interface Student {
   status: 'studying' | 'paused' | 'quit';
   note: string | null;
   center_id: number | null;
+  /** Chỉ có ở danh sách: tên các lớp đang học, ngăn bằng dấu phẩy. */
+  class_names?: string | null;
 }
 
 export interface StudentDetail {

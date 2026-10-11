@@ -32,7 +32,9 @@ function promptHidden(question: string): Promise<string> {
 async function main(): Promise<void> {
   const [username, extra] = process.argv.slice(2);
   if (!username || extra) {
-    console.error('Dùng: npx tsx scripts/create-superadmin.ts <username>   (mật khẩu: nhập khi được hỏi hoặc SUPERADMIN_PASSWORD)');
+    console.error(
+      'Dùng: npx tsx scripts/create-superadmin.ts <username>   (mật khẩu: nhập khi được hỏi hoặc SUPERADMIN_PASSWORD)'
+    );
     process.exitCode = 1;
     return;
   }
@@ -65,7 +67,9 @@ async function main(): Promise<void> {
   }
   const hash = bcrypt.hashSync(password, 10);
   await db
-    .prepare(`INSERT INTO users (username, password_hash, role, name, center_id) VALUES (?, ?, 'superadmin', ?, NULL)`)
+    .prepare(
+      `INSERT INTO users (username, password_hash, role, name, center_id) VALUES (?, ?, 'superadmin', ?, NULL)`
+    )
     .run(username, hash, username);
   console.log(`Đã tạo superadmin "${username}"`);
 }

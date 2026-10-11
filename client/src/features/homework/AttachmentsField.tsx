@@ -239,7 +239,7 @@ export function AttachmentsField({
           onClick={() => fileInputRef.current?.click()}
           disabled={uploading || busy || attLoad !== 'ok'}
         >
-          {uploading && <span className="spinner spinner-dark" aria-hidden="true" />}
+          {uploading && <span className="spinner" aria-hidden="true" />}
           <Icon name="upload" size={16} />
           {uploading && uploadPct !== null
             ? t('form.uploadingPct', { pct: uploadPct })
