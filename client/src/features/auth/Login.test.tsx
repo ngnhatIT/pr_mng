@@ -41,11 +41,11 @@ describe('Login: điều hướng sau đăng nhập (B4-2)', () => {
     cleanup();
     expect((await staffLogin('teacher', '/app/students')).path).toBe('/teacher');
     cleanup();
-    expect((await staffLogin('admin', '/teacher/luong')).path).toBe('/app');
+    expect((await staffLogin('admin', '/teacher/salary')).path).toBe('/app');
   });
 
   it('deep-link cùng portal được giữ', async () => {
-    expect((await staffLogin('teacher', '/teacher/diem-so')).path).toBe('/teacher/diem-so');
+    expect((await staffLogin('teacher', '/teacher/grades')).path).toBe('/teacher/grades');
     cleanup();
     expect((await staffLogin('admin', '/app/tuition?tab=debt')).path).toBe('/app/tuition?tab=debt');
   });

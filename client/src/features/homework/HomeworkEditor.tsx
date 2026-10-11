@@ -33,7 +33,7 @@ export {
 } from './homeworkForm';
 
 /**
- * Trang soạn bài: /app/homework/new, /app/homework/:id/edit (giáo viên: /teacher/bai-tap/...).
+ * Trang soạn bài: /app/homework/new, /app/homework/:id/edit (giáo viên: /teacher/homework/...).
  * Tạo mới cần danh sách lớp; sửa cần tải bài theo id. Hủy/lưu xong quay về danh sách (giữ bộ lọc nhờ history).
  */
 export function HomeworkEditor() {

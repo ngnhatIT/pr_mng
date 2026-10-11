@@ -48,8 +48,8 @@ function setup(perms: string[], extra: Record<string, unknown> = {}) {
 }
 const render = () =>
   renderRoutes(
-    [{ path: '/teacher/diem-danh', element: <Attendance /> }],
-    '/teacher/diem-danh?class=1&session=10'
+    [{ path: '/teacher/attendance', element: <Attendance /> }],
+    '/teacher/attendance?class=1&session=10'
   );
 const radio = (name: string, status: string) =>
   $(`[aria-label="${t('attendance.row.statusAria', { name })}"] .seg-${status}`);
@@ -139,8 +139,8 @@ describe('Attendance', () => {
       </main>
     );
     await renderRoutes(
-      [{ path: '/teacher/diem-danh', element: page }],
-      '/teacher/diem-danh?class=1&session=10'
+      [{ path: '/teacher/attendance', element: page }],
+      '/teacher/attendance?class=1&session=10'
     );
     expect($('[role="alert"]')).not.toBeNull();
     const retry = byText(String(i18n.t('actions.retry', { ns: 'common' })));

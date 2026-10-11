@@ -15,7 +15,7 @@ const log = logger.scope('payments');
 
 /* ---------------------------------- Types ---------------------------------- */
 
-export const RESULT_PAGE = '/parent/thanh-toan-ket-qua';
+export const RESULT_PAGE = '/parent/payment-result'; // URL cũ /parent/thanh-toan-ket-qua vẫn chuyển hướng (client)
 
 const CONFIG_KEYS = [
   'pay_bank_code',

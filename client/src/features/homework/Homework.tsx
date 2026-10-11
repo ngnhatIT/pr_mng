@@ -58,7 +58,7 @@ export function Homework() {
   const openEditor = (id?: number) => void navigate(id ? `${id}/edit` : 'new');
   // Chống bấm đúp nút hành động trên từng dòng (pattern busyId của Tuition)
   const [busyId, setBusyId] = useState<number | null>(null);
-  // Portal giáo viên (/teacher/bai-tap): ẩn tab/nút quản trị, chỉ giữ luồng giao bài nhanh
+  // Portal giáo viên (/teacher/homework): ẩn tab/nút quản trị, chỉ giữ luồng giao bài nhanh
   const isTeacher = getUser()?.role === 'teacher';
 
   const STATUS_BADGE: Record<string, { label: string; cls: string }> = {

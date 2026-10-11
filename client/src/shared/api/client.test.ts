@@ -169,8 +169,8 @@ describe('api() 403 PASSWORD_CHANGE_REQUIRED', () => {
 
 describe('B4-2: takePostLoginRedirect chỉ nhận deep-link cùng portal', () => {
   it('cùng portal -> trả về và xóa; portal khác / prefix giả -> null', () => {
-    sessionStorage.setItem('edu_next', '/teacher/luong?x=1');
-    expect(client.takePostLoginRedirect('/teacher')).toBe('/teacher/luong?x=1');
+    sessionStorage.setItem('edu_next', '/teacher/salary?x=1');
+    expect(client.takePostLoginRedirect('/teacher')).toBe('/teacher/salary?x=1');
     expect(sessionStorage.getItem('edu_next')).toBeNull();
     sessionStorage.setItem('edu_next', '/teacher');
     expect(client.takePostLoginRedirect('/teacher')).toBe('/teacher');

@@ -66,8 +66,8 @@ const SECTIONS: { labelKey: string; items: NavItem[] }[] = [
     labelKey: 'nav.sections.growth',
     items: [
       { to: '/app/leads', labelKey: 'nav.leads', icon: 'filter', perm: 'leads.view' },
-      { to: '/app/danh-gia', labelKey: 'nav.reviews', icon: 'star', perm: 'reviews.view' },
-      { to: '/app/gioi-thieu', labelKey: 'nav.referrals', icon: 'gift', perm: 'referrals.view' },
+      { to: '/app/reviews', labelKey: 'nav.reviews', icon: 'star', perm: 'reviews.view' },
+      { to: '/app/referrals', labelKey: 'nav.referrals', icon: 'gift', perm: 'referrals.view' },
       { to: '/app/announcements', labelKey: 'nav.announcements', icon: 'send', perm: 'notifications.view' },
       { to: '/app/zalo-reminders', labelKey: 'nav.zalo', icon: 'bell', perm: 'notifications.view' },
     ],
@@ -76,13 +76,13 @@ const SECTIONS: { labelKey: string; items: NavItem[] }[] = [
     labelKey: 'nav.sections.system',
     items: [
       {
-        to: '/app/cau-hinh-thanh-toan',
+        to: '/app/payment-settings',
         labelKey: 'nav.paymentConfig',
         icon: 'settings',
         perm: 'payment_config.manage',
       },
-      { to: '/app/nhat-ky', labelKey: 'nav.audit', icon: 'shield', perm: 'audit.view' },
-      { to: '/app/phan-quyen', labelKey: 'nav.roles', icon: 'key', perm: 'roles.view' },
+      { to: '/app/audit-logs', labelKey: 'nav.audit', icon: 'shield', perm: 'audit.view' },
+      { to: '/app/roles', labelKey: 'nav.roles', icon: 'key', perm: 'roles.view' },
     ],
   },
 ];

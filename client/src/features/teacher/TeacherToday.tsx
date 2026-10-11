@@ -121,7 +121,7 @@ export function TeacherToday() {
                 <div>
                   <Link
                     className="btn btn-primary btn-block today-attend-btn"
-                    to={`/teacher/diem-danh?class=${s.class_id}&session=${s.session_id}`}
+                    to={`/teacher/attendance?class=${s.class_id}&session=${s.session_id}`}
                   >
                     <Icon name="clipboard" size={18} />
                     {t('today.takeAttendance')}

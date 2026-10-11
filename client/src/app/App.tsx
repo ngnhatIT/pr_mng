@@ -169,11 +169,13 @@ function PageOutlet() {
 /** Redirect các đường dẫn cũ (không còn tồn tại) sang đường dẫn mới, giữ nguyên param */
 function OldRedirect({ to }: { to: string }) {
   const params = useParams();
+  const { search, hash } = useLocation();
   let path = to;
   Object.entries(params).forEach(([k, v]) => {
     path = path.replace(`:${k}`, v || '');
   });
-  return <Navigate to={path} replace />;
+  // Giữ query/hash (vd tham số VNPay trả về trang kết quả thanh toán)
+  return <Navigate to={path + search + hash} replace />;
 }
 
 /**
@@ -240,8 +242,11 @@ export const routes = createRoutesFromElements(
         <Route path="leaves" element={<ParentLeaves />} />
         <Route path="notifications" element={<InboxPage />} />
         <Route path="referral" element={<ParentReferral />} />
-        <Route path="toi" element={<ParentProfile />} />
-        <Route path="thanh-toan-ket-qua" element={<PaymentResult />} />
+        <Route path="profile" element={<ParentProfile />} />
+        <Route path="payment-result" element={<PaymentResult />} />
+        {/* URL cũ (bookmark, VNPay đang chuyển về) -> giữ query */}
+        <Route path="toi" element={<OldRedirect to="/parent/profile" />} />
+        <Route path="thanh-toan-ket-qua" element={<OldRedirect to="/parent/payment-result" />} />
         <Route path="*" element={<NotFound />} />
       </Route>
     </Route>
@@ -259,14 +264,20 @@ export const routes = createRoutesFromElements(
     >
       <Route element={<PageOutlet />}>
         <Route index element={<TeacherToday />} />
-        <Route path="diem-danh" element={<Attendance />} />
-        <Route path="bai-tap">
+        <Route path="attendance" element={<Attendance />} />
+        <Route path="homework">
           <Route index element={<Homework />} />
           <Route path="new" element={<HomeworkEditor />} />
           <Route path=":id/edit" element={<HomeworkEditor />} />
         </Route>
-        <Route path="diem-so" element={<TeacherGrades />} />
-        <Route path="luong" element={<TeacherSalary />} />
+        <Route path="grades" element={<TeacherGrades />} />
+        <Route path="salary" element={<TeacherSalary />} />
+        <Route path="diem-danh" element={<OldRedirect to="/teacher/attendance" />} />
+        <Route path="bai-tap" element={<OldRedirect to="/teacher/homework" />} />
+        <Route path="bai-tap/new" element={<OldRedirect to="/teacher/homework/new" />} />
+        <Route path="bai-tap/:id/edit" element={<OldRedirect to="/teacher/homework/:id/edit" />} />
+        <Route path="diem-so" element={<OldRedirect to="/teacher/grades" />} />
+        <Route path="luong" element={<OldRedirect to="/teacher/salary" />} />
         <Route path="*" element={<NotFound />} />
       </Route>
     </Route>
@@ -304,12 +315,12 @@ export const routes = createRoutesFromElements(
           <Route path="question-bank" element={<QuestionBankPage />} />
         </Route>
         <Route path="leads" element={<Leads />} />
-        <Route path="danh-gia" element={<ReviewsAdmin />} />
-        <Route path="gioi-thieu" element={<ReferralsAdmin />} />
+        <Route path="reviews" element={<ReviewsAdmin />} />
+        <Route path="referrals" element={<ReferralsAdmin />} />
         <Route path="zalo-reminders" element={<ZaloReminders />} />
         <Route path="teachers" element={<Teachers />} />
         <Route path="teachers/:id" element={<TeacherDetail />} />
-        <Route path="cau-hinh-thanh-toan" element={<PaymentConfig />} />
+        <Route path="payment-settings" element={<PaymentConfig />} />
         <Route
           path="system"
           element={
@@ -318,8 +329,13 @@ export const routes = createRoutesFromElements(
             </RoleGuard>
           }
         />
-        <Route path="nhat-ky" element={<AuditLogs />} />
-        <Route path="phan-quyen" element={<Roles />} />
+        <Route path="audit-logs" element={<AuditLogs />} />
+        <Route path="roles" element={<Roles />} />
+        <Route path="danh-gia" element={<OldRedirect to="/app/reviews" />} />
+        <Route path="gioi-thieu" element={<OldRedirect to="/app/referrals" />} />
+        <Route path="cau-hinh-thanh-toan" element={<OldRedirect to="/app/payment-settings" />} />
+        <Route path="nhat-ky" element={<OldRedirect to="/app/audit-logs" />} />
+        <Route path="phan-quyen" element={<OldRedirect to="/app/roles" />} />
         <Route path="*" element={<NotFound />} />
       </Route>
     </Route>

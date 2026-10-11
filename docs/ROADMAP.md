@@ -19,7 +19,7 @@ Nguồn: 3 audit (tính năng so với Teachworks/TutorBird/Classe365, khả nă
 ## Gói 3 — Thông báo (M)
 - [x] Bảng `notifications` + chuông in-app (nhân sự, GV, phụ huynh) + trang `/parent/notifications`, thông báo chung `/app/announcements` (migration v27)
 - [ ] Kênh email (SMTP, tùy chọn) + tự đặt lại mật khẩu qua email; chuyển `notifyParents` sang listener sự kiện
-- [ ] Refresh token: khoảng ân hạn tái dùng (~30s) — request refresh bị hủy giữa chừng (đóng tab/reload) hiện làm đăng xuất
+- [x] ~~Refresh token ân hạn~~: đã có ân hạn 30s cho 2 tab cùng refresh (B4). Còn lại: response refresh bị hủy rồi dùng lại cookie cũ sau >30s bị coi là trộm token -> đăng xuất. Chấp nhận (đánh đổi bảo mật); gặp chủ yếu khi dev reload HMR.
 
 ## Gói 4 — Tài chính (M)
 - [ ] Dòng hóa đơn + giảm giá (anh chị em/khuyến mãi)
@@ -29,7 +29,8 @@ Nguồn: 3 audit (tính năng so với Teachworks/TutorBird/Classe365, khả nă
 ## Gói 5 — Nhập liệu & điều hướng (S–M)
 - [x] Nhập học viên từ CSV (kiểm tra trước, lỗi theo dòng có mã dịch được, nhận file Xuất CSV của app)
 - [x] Tìm nhanh Ctrl/Cmd+K (trang theo quyền, học viên, lớp; combobox ARIA)
-- [ ] Breadcrumb chung + tiêu đề topbar đúng ở trang chi tiết, menu tài khoản trên topbar, URL tiếng Anh + redirect
+- [x] URL tiếng Anh cho mọi trang + chuyển hướng URL cũ giữ query (VNPay trả về /parent/payment-result)
+- [ ] Breadcrumb chung + tiêu đề topbar ở trang chi tiết, menu tài khoản trên topbar
 - [x] Tìm kiếm không dấu phía server (hàm f_unaccent, migration v29) cho học viên, hóa đơn, lead, lớp, bài tập, ngân hàng câu hỏi
 - [ ] Sắp xếp cột bảng (`sort` allowlist server + `aria-sort`)
 

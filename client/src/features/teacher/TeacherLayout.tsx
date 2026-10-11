@@ -9,10 +9,10 @@ import { NotificationBell } from '../notifications/NotificationBell';
 
 const TABS: { to: string; labelKey: string; end?: boolean; icon: IconName }[] = [
   { to: '/teacher', labelKey: 'bottomNav.today', end: true, icon: 'home' },
-  { to: '/teacher/diem-danh', labelKey: 'bottomNav.attendance', icon: 'clipboard' },
-  { to: '/teacher/bai-tap', labelKey: 'bottomNav.homework', icon: 'book' },
-  { to: '/teacher/diem-so', labelKey: 'bottomNav.grades', icon: 'cap' },
-  { to: '/teacher/luong', labelKey: 'bottomNav.salary', icon: 'banknote' },
+  { to: '/teacher/attendance', labelKey: 'bottomNav.attendance', icon: 'clipboard' },
+  { to: '/teacher/homework', labelKey: 'bottomNav.homework', icon: 'book' },
+  { to: '/teacher/grades', labelKey: 'bottomNav.grades', icon: 'cap' },
+  { to: '/teacher/salary', labelKey: 'bottomNav.salary', icon: 'banknote' },
 ];
 
 export function TeacherLayout() {

@@ -11,7 +11,7 @@ const TABS: { to: string; labelKey: string; end?: boolean; icon: IconName }[] = 
   { to: '/parent', labelKey: 'bottomNav.home', end: true, icon: 'home' },
   { to: '/parent/leaves', labelKey: 'bottomNav.leaves', icon: 'calendar-x' },
   { to: '/parent/referral', labelKey: 'bottomNav.referral', icon: 'gift' },
-  { to: '/parent/toi', labelKey: 'bottomNav.profile', icon: 'user' },
+  { to: '/parent/profile', labelKey: 'bottomNav.profile', icon: 'user' },
 ];
 
 export function ParentLayout() {
@@ -74,7 +74,7 @@ export function ParentLayout() {
               const extraActive =
                 tab.to === '/parent' &&
                 (location.pathname.startsWith('/parent/children/') ||
-                  location.pathname.startsWith('/parent/thanh-toan'));
+                  location.pathname.startsWith('/parent/payment-result'));
               return `pnav-link${isActive || extraActive ? ' active' : ''}`;
             }}
           >
