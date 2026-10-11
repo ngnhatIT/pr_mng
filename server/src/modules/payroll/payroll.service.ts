@@ -23,8 +23,13 @@ export interface PayrollResult {
   total: number;
   /** N5-3: đơn giá bình quân thực trả = round(total / sessions) (0 nếu không có buổi). */
   avg_rate: number;
-  /** N5-3: total ≠ sessions × per_session — có buổi tính theo đơn giá khác đơn giá hiện hành (lịch sử). */
+  /** B6-2: các buổi trong tháng tính theo >1 đơn giá khác nhau (bản chốt cũ: total ≠ sessions × per_session). */
   mixed_rates: boolean;
+  /**
+   * B6-2: đơn giá của chính tháng đó (hiển thị) = đơn giá buổi cuối tháng; tháng không có buổi = đơn giá hiệu lực
+   * ngày cuối tháng (hoặc hôm nay nếu tháng chưa hết). per_session vẫn là đơn giá HIỆN HÀNH (tương thích cũ).
+   */
+  month_rate: number;
 }
 
 /** Tháng hiện tại (YYYY-MM) */
@@ -47,7 +52,8 @@ const PAYABLE_SESSION = `s.status <> 'cancelled' AND substr(s.date, 1, 7) = ? AN
  * O-1: mỗi buổi tính theo đơn giá hiệu lực TẠI NGÀY CỦA BUỔI (salary_rate_history) — đổi đơn giá
  * không viết lại lương tháng cũ. N-1: setSalaryRule luôn ghi mốc '1970-01-01' (đơn giá trước đó, chưa có = 0)
  * nên đơn giá ĐẦU TIÊN không áp ngược. GV không có lịch sử nào (đơn giá ghi ngoài API) -> salary_rules.
- * per_session = đơn giá hiện hành (hiển thị).
+ * per_session = đơn giá hiện hành; month_rate/rate_count: xem PayrollResult (B6-2).
+ * Tham số: month, today, asOf (= min(ngày cuối tháng, hôm nay) — xem payrollArgs).
  */
 const PAYROLL_FROM = `FROM teachers t
   LEFT JOIN sessions s ON s.teacher_id = t.id AND ${PAYABLE_SESSION}
@@ -56,10 +62,23 @@ const PAYROLL_FROM = `FROM teachers t
       (SELECT h.per_session_amount FROM salary_rate_history h
        WHERE h.teacher_id = t.id AND h.effective_from <= s.date
        ORDER BY h.effective_from DESC LIMIT 1),
-      sr.per_session_amount, 0) AS rate) r ON s.id IS NOT NULL`;
+      sr.per_session_amount, 0) AS rate) r ON s.id IS NOT NULL
+  LEFT JOIN LATERAL (SELECT h.per_session_amount AS rate FROM salary_rate_history h
+       WHERE h.teacher_id = t.id AND h.effective_from <= ?
+       ORDER BY h.effective_from DESC LIMIT 1) mr ON true`;
+
+/** Tham số theo thứ tự của PAYROLL_FROM. 'YYYY-MM-31' so chuỗi vẫn đúng mọi tháng (≥ ngày cuối, < tháng sau). */
+function payrollArgs(month: string): string[] {
+  const today = toISODate(new Date());
+  const monthEnd = `${month}-31`;
+  return [month, today, monthEnd < today ? monthEnd : today];
+}
 
 const PAYROLL_SELECT = `SELECT t.id as teacher_id, t.name as teacher_name, t.center_id, COUNT(s.id) as sessions,
-  COALESCE(sr.per_session_amount, 0) as per_session, COALESCE(SUM(r.rate), 0) as total
+  COALESCE(sr.per_session_amount, 0) as per_session, COALESCE(SUM(r.rate), 0) as total,
+  COUNT(DISTINCT r.rate) as rate_count,
+  COALESCE((array_agg(r.rate ORDER BY s.date DESC, s.id DESC) FILTER (WHERE s.id IS NOT NULL))[1],
+    MAX(mr.rate), sr.per_session_amount, 0) as month_rate
   ${PAYROLL_FROM}`;
 
 export interface PayrollRow extends PayrollResult {
@@ -67,8 +86,15 @@ export interface PayrollRow extends PayrollResult {
   teacher_name: string;
 }
 
-/** Chuẩn hóa số + tính avg_rate/mixed_rates (cả với bản chốt cũ chưa có 2 trường này). */
-function toPayrollRow(r: Omit<PayrollRow, 'avg_rate' | 'mixed_rates'>): PayrollRow {
+/**
+ * Chuẩn hóa số + avg_rate/mixed_rates/month_rate. Dòng live có rate_count (đếm đơn giá khác nhau);
+ * bản chốt cũ thiếu trường mới -> giữ cách tính cũ (mixed theo per_session, month_rate = per_session).
+ * Idempotent (gọi lại trên kết quả của chính nó cho cùng kết quả).
+ */
+function toPayrollRow(
+  r: Omit<PayrollRow, 'avg_rate' | 'mixed_rates' | 'month_rate'> &
+    Partial<Pick<PayrollRow, 'mixed_rates' | 'month_rate'>> & { rate_count?: number | string }
+): PayrollRow {
   const sessions = Number(r.sessions) || 0;
   const per_session = Number(r.per_session) || 0;
   const total = Number(r.total) || 0;
@@ -79,7 +105,9 @@ function toPayrollRow(r: Omit<PayrollRow, 'avg_rate' | 'mixed_rates'>): PayrollR
     per_session,
     total,
     avg_rate: sessions ? Math.round(total / sessions) : 0,
-    mixed_rates: total !== sessions * per_session,
+    mixed_rates:
+      r.rate_count != null ? Number(r.rate_count) > 1 : (r.mixed_rates ?? total !== sessions * per_session),
+    month_rate: r.month_rate != null ? Number(r.month_rate) : per_session,
   };
 }
 
@@ -92,10 +120,10 @@ export async function calcPayroll(teacherId: number, month: string): Promise<Pay
     ? frozen.rows.find((r) => r.teacher_id === teacherId)
     : ((await db
         .prepare(`${PAYROLL_SELECT} WHERE t.id = ? GROUP BY t.id, t.name, t.center_id, sr.per_session_amount`)
-        .get(month, toISODate(new Date()), teacherId)) as PayrollRow | undefined);
-  if (!row) return { sessions: 0, per_session: 0, total: 0, avg_rate: 0, mixed_rates: false };
-  const { sessions, per_session, total, avg_rate, mixed_rates } = toPayrollRow(row);
-  return { sessions, per_session, total, avg_rate, mixed_rates };
+        .get(...payrollArgs(month), teacherId)) as PayrollRow | undefined);
+  if (!row) return { sessions: 0, per_session: 0, total: 0, avg_rate: 0, mixed_rates: false, month_rate: 0 };
+  const { sessions, per_session, total, avg_rate, mixed_rates, month_rate } = toPayrollRow(row);
+  return { sessions, per_session, total, avg_rate, mixed_rates, month_rate };
 }
 
 /**
@@ -114,7 +142,7 @@ async function livePayroll(
        GROUP BY t.id, t.name, t.center_id, sr.per_session_amount
        ORDER BY t.name`
     )
-    .all(month, toISODate(new Date()), ...(centerId !== null ? [centerId] : []))) as (PayrollRow & {
+    .all(...payrollArgs(month), ...(centerId !== null ? [centerId] : []))) as (PayrollRow & {
     center_id: number | null;
   })[];
   return rows.map((r) => ({ ...toPayrollRow(r), center_id: r.center_id }));

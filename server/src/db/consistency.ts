@@ -21,7 +21,8 @@ export interface ConsistencyIssue {
     | 'invalid_payment_amount'
     | 'invalid_invoice_amount'
     | 'user_without_center'
-    | 'credit_payment_unlinked';
+    | 'credit_payment_unlinked'
+    | 'role_cross_center';
   detail: string;
   invoice_id?: number;
   payment_id?: number;
@@ -120,6 +121,22 @@ export async function checkFinancialConsistency(db: Db): Promise<ConsistencyIssu
       detail: `Payment #${p.id} (HĐ #${p.invoice_id}) trừ bằng credit nhưng không gắn credit nào (note: ${p.note ?? ''})`,
       payment_id: p.id,
       invoice_id: p.invoice_id,
+    });
+  }
+
+  // 8. N6-1: custom role của trung tâm X gán cho user trung tâm khác (gán trước khi có chặn) -> quyền lọt sang tenant khác
+  const crossRole = (await db
+    .prepare(
+      `SELECT ur.user_id, ur.role_id, r.center_id AS role_center, u.center_id AS user_center
+       FROM user_roles ur JOIN roles r ON r.id = ur.role_id JOIN users u ON u.id = ur.user_id
+       WHERE r.center_id IS NOT NULL AND u.center_id IS DISTINCT FROM r.center_id`
+    )
+    .all()) as { user_id: number; role_id: number; role_center: number; user_center: number | null }[];
+  for (const x of crossRole) {
+    issues.push({
+      code: 'role_cross_center',
+      detail: `User #${x.user_id} (trung tâm ${x.user_center ?? '-'}) có role #${x.role_id} của trung tâm ${x.role_center} — gỡ bằng DELETE /roles/assign`,
+      user_id: x.user_id,
     });
   }
 

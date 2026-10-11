@@ -131,7 +131,8 @@
       "title": "Phiếu thu học phí",
       "tuitionFallback": "Học phí",
       "emptyDesc": "Phiếu thu học phí sẽ hiện ở đây khi trung tâm tạo."
-    }
+    },
+    "tabsLabel": "Thông tin của con"
   },
   "home": {
     "codeField": "Mã học viên",

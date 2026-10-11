@@ -104,7 +104,7 @@ export function Payroll() {
                     {r.sessions}
                   </td>
                   <td data-label={t('payroll.table.perSession')} className="num">
-                    {formatVND(r.per_session)}
+                    {formatVND(r.month_rate ?? r.per_session)}
                     {r.mixed_rates && (
                       <div className="muted-xs">
                         {t('payroll.mixedRate', { avg: formatVND(r.avg_rate ?? 0) })}

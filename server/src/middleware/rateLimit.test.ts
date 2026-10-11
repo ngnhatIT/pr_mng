@@ -3,7 +3,7 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import jwt from 'jsonwebtoken';
 import { env } from '../config/env';
-import { createRateLimit } from './rateLimit';
+import { createRateLimit, apiRateLimit, parentRateLimit, effectiveMax } from './rateLimit';
 
 const IP = '203.0.113.9';
 
@@ -127,6 +127,31 @@ describe('createRateLimit key theo tài khoản', () => {
     assert.equal(nextCalled, false);
     assert.equal((res.body as { code: string }).code, 'RATE_LIMITED');
     assert.ok(Number(res.headers['Retry-After']) >= 1);
+  });
+});
+
+describe('B6-6: GET đã đăng nhập có trần đọc riêng, rộng hơn ghi / ẩn danh', () => {
+  const limitOf = (
+    limiter: (req: never, res: never, next: never) => void,
+    method: string,
+    token?: string
+  ) => {
+    const res = mockRes();
+    limiter({ ...(mockReq(undefined, token) as object), method } as never, res as never, (() => {}) as never);
+    return res.headers['X-RateLimit-Limit'];
+  };
+  it('apiRateLimit: GET có token 1500; POST, GET ẩn danh, GET token giả 300', () => {
+    const tok = bearer({ id: 61, kind: 'staff' });
+    assert.equal(limitOf(apiRateLimit, 'GET', tok), String(effectiveMax(1500)));
+    assert.equal(limitOf(apiRateLimit, 'HEAD', tok), String(effectiveMax(1500)));
+    assert.equal(limitOf(apiRateLimit, 'POST', tok), String(effectiveMax(300)));
+    assert.equal(limitOf(apiRateLimit, 'GET'), String(effectiveMax(300)));
+    assert.equal(limitOf(apiRateLimit, 'GET', 'Bearer forged.token.x'), String(effectiveMax(300)));
+  });
+  it('parentRateLimit: GET có token 1000; POST 200', () => {
+    const tok = bearer({ id: 62, kind: 'parent' });
+    assert.equal(limitOf(parentRateLimit, 'GET', tok), String(effectiveMax(1000)));
+    assert.equal(limitOf(parentRateLimit, 'POST', tok), String(effectiveMax(200)));
   });
 });
 

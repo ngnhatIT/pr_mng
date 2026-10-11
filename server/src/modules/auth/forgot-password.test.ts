@@ -685,6 +685,18 @@ describe('quên mật khẩu qua admin', () => {
     const own = await request('DELETE', '/api/v1/roles/assign', hr, { user_id: 43, role_id: sv });
     assert.equal(own.status, 200, JSON.stringify(own.body));
     assert.ok(!(await has(sv)));
+    // N6-3: role trong quyền mình nhưng người giữ là admin (hạng cao hơn) -> không gán/gỡ được
+    assert.equal(
+      (await request('POST', '/api/v1/roles/assign', auth(adminToken), { user_id: 1, role_id: sv })).status,
+      200
+    );
+    const up = await request('DELETE', `/api/v1/roles/assign?user_id=1&role_id=${sv}`, hr);
+    assert.equal(up.status, 403, JSON.stringify(up.body));
+    assert.ok(await db.prepare('SELECT 1 FROM user_roles WHERE user_id = 1 AND role_id = ?').get(sv));
+    assert.equal(
+      (await request('POST', '/api/v1/roles/assign', hr, { user_id: 1, role_id: sv })).status,
+      403
+    );
     // Admin gỡ được role kế toán -> quyền bị thu hồi ngay
     const ok = await request('DELETE', `/api/v1/roles/assign?user_id=43&role_id=${ketoan}`, auth(adminToken));
     assert.equal(ok.status, 200, JSON.stringify(ok.body));
@@ -713,6 +725,23 @@ describe('quên mật khẩu qua admin', () => {
     );
     // Thiếu roles.manage -> 403
     assert.equal((await request('GET', '/api/v1/roles/users', auth(await login('nv46')))).status, 403);
+  });
+
+  it('N6-1: superadmin (toàn hệ thống) không gán được role trung tâm A cho nhân sự trung tâm B', async () => {
+    await db
+      .prepare(
+        "INSERT INTO users (id, username, password_hash, role, name, center_id) VALUES (47, 'root47', ?, 'superadmin', 'Root', NULL)"
+      )
+      .run(bcrypt.hashSync(ADMIN_PASS, 4));
+    const roleA = await grantRole(await login('admin'), 0, 'ra47', [
+      { code: 'students.view', scope: 'center' },
+    ]);
+    const root = auth(await login('root47'));
+    const cross = await request('POST', '/api/v1/roles/assign', root, { user_id: 3, role_id: roleA }); // adminb @ B
+    assert.equal(cross.status, 404, JSON.stringify(cross.body));
+    assert.ok(!(await db.prepare('SELECT 1 FROM user_roles WHERE user_id = 3 AND role_id = ?').get(roleA)));
+    const same = await request('POST', '/api/v1/roles/assign', root, { user_id: 2, role_id: roleA }); // nv @ A
+    assert.equal(same.status, 200, JSON.stringify(same.body));
   });
 
   it('B4-6: token có tv MỚI hơn cache (đổi ở instance khác) -> đọc lại DB, không 401; token cũ hơn -> 401', async () => {

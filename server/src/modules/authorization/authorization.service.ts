@@ -358,10 +358,16 @@ export async function createRole(
   input: { code: string; name: string; description?: string | null },
   actor: AuditActor
 ): Promise<{ id: number; code: string }> {
+  // B6-5: bỏ dấu tiếng Việt ("Kế toán B6" -> ke_toan_b6), gộp ký tự lạ/gạch dưới liên tiếp thành 1 '_'
   const code = input.code
     .trim()
     .toLowerCase()
-    .replace(/[^a-z0-9_]/g, '_');
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/đ/g, 'd')
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_|_$/g, '');
+  if (!code) throw AppError.badRequest('Mã vai trò chỉ gồm chữ, số và dấu gạch dưới');
   // Không cho trùng mã role hệ thống: users.role = 'admin' chỉ trỏ role hệ thống, custom 'admin' gây nhầm lẫn
   if (SYSTEM_ROLES.some((r) => r.code === code)) throw AppError.conflict('Mã vai trò trùng vai trò hệ thống');
   let id: number;
@@ -423,6 +429,12 @@ export async function deleteRole(
 }
 
 /**
+ * S-2: hạng vai trò — người xử lý chỉ đặt lại mật khẩu / gán-gỡ vai trò của tài khoản hạng ≤ mình
+ * (staff được ủy quyền không đụng được admin). Vai trò lạ: hạng 3 nếu là mục tiêu, 0 nếu là người xử lý (fail-closed).
+ */
+export const ROLE_RANK: Record<string, number> = { superadmin: 3, admin: 2, staff: 1, teacher: 1, parent: 0 };
+
+/**
  * Kiểm tra trước khi gán/gỡ role cho user: role hệ thống chỉ superadmin; role và user cùng trung tâm cid;
  * S-2: quyền trong role phải nằm trong quyền của caller (người được ủy quyền roles.manage không tự
  * gán role "Kế toán" mạnh hơn mình).
@@ -441,10 +453,19 @@ async function checkRoleAssignment(
     throw AppError.forbidden(`Chỉ superadmin được ${verb} role hệ thống`);
   }
   if (cid !== null && role.center_id !== cid) throw AppError.notFound('Không tìm thấy vai trò');
-  const target = (await db.prepare('SELECT id, center_id FROM users WHERE id = ?').get(userId)) as
-    { id: number; center_id: number | null } | undefined;
+  const target = (await db.prepare('SELECT id, center_id, role FROM users WHERE id = ?').get(userId)) as
+    { id: number; center_id: number | null; role: string } | undefined;
   if (!target || (cid !== null && target.center_id !== cid))
     throw AppError.notFound('Không tìm thấy người dùng');
+  // N6-3: người được ủy quyền roles.manage không gán/gỡ vai trò của tài khoản hạng cao hơn mình (đối xứng với reset)
+  if ((ROLE_RANK[target.role] ?? 3) > (ROLE_RANK[caller.role] ?? 0)) {
+    throw AppError.forbidden(`Không được ${verb} vai trò của tài khoản có vai trò cao hơn bạn`);
+  }
+  // N6-1: role riêng của trung tâm chỉ gán cho người cùng trung tâm (kể cả superadmin chế độ toàn hệ thống).
+  // Gỡ vẫn cho phép để dọn dữ liệu lệch cũ.
+  if (verb === 'gán' && role.center_id !== null && target.center_id !== role.center_id) {
+    throw AppError.notFound('Người dùng không thuộc trung tâm của vai trò này');
+  }
   await assertWithinCallerPerms(await rolePermissions(roleId), caller);
   return target;
 }

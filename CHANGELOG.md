@@ -1,5 +1,47 @@
 # Changelog — EduCenterPro
 
+## 2026-10-11 — Review fixes, vòng 7
+
+Không có migration mới (vẫn v25).
+
+### Bảo mật / tính đúng đắn
+
+- N6-1: role riêng của trung tâm chỉ gán được cho người cùng trung tâm, kể cả superadmin ở chế độ toàn hệ thống (404).
+  Ô chọn người trong UI lấy `GET /roles/users?center_id=<trung tâm của role>`. Kiểm tra nhất quán thêm
+  `role_cross_center` để báo các gán lệch có từ trước; gỡ (`DELETE /roles/assign`) vẫn cho phép để dọn.
+- N6-3: người được ủy quyền `roles.manage` không gán/gỡ vai trò của tài khoản hạng cao hơn mình (403). Đây là cùng
+  luật hạng với đặt lại mật khẩu (`ROLE_RANK` chuyển sang `authorization.service`).
+- Lương: `GET /payroll` và `/teacher/payroll` thêm `month_rate`, là đơn giá của chính tháng đó (giá buổi cuối tháng;
+  tháng không có buổi lấy giá hiệu lực ngày cuối tháng). `mixed_rates` giờ chỉ `true` khi các buổi trong tháng tính
+  theo hơn 1 đơn giá. Trước đây tháng 9 trả trọn 200.000đ vẫn hiện "250.000đ — Đơn giá đổi trong tháng" sau khi đổi giá
+  hôm nay. `per_session` vẫn là đơn giá hiện hành (tương thích ngược). Bản chốt trước vòng 7 giữ cách tính cũ.
+- Mã vai trò tự sinh bỏ dấu tiếng Việt và gộp ký tự lạ: "Kế toán B6" cho ra `ke_toan_b6` (trước là `k__to_n_b6`).
+  Mã chỉ gồm ký tự lạ thì trả 400.
+- Rate limit: GET/HEAD của tài khoản đã đăng nhập có trần riêng 1500 / 15 phút. Trước đây 300 hết sau khoảng 65 lần
+  chuyển trang. Cổng phụ huynh: GET 1000, còn lại 200. Ghi, ẩn danh, login và upload giữ nguyên trần.
+
+### UI/UX (client)
+
+- Thẻ cuối của mọi bảng `.table-stack` không còn lệch phải/giãn nút (lỗi specificity CSS của vòng 6).
+- Lương / Lương của tôi hiện `month_rate`. Gợi ý "đơn giá đổi trong tháng, bình quân X" chỉ hiện khi tháng thật sự
+  có nhiều đơn giá.
+- Focus:
+  - Gán/gỡ thành viên vai trò xong, focus chuyển về ô chọn người (hoặc tiêu đề mục).
+  - Bấm "Thử lại" thành công, focus chuyển về `#main-content` thay vì rơi về `<body>`.
+- Truy cập:
+  - Mọi `Tabs` có `aria-label` (bắt buộc). Tab "Tất cả" có id `…-tab-all`.
+  - Trạng thái điểm danh, phạm vi quyền và đáp án quiz dùng `role=group` + `aria-pressed` thay cho `role=radio`
+    (trước đây có vai trò radio nhưng không điều hướng được bằng phím mũi tên).
+  - `EmptyState icon="alert"` có `role=alert`: Tổng quan, Cấu hình thanh toán, các trang chi tiết và modal tải lỗi.
+- Tạo vai trò:
+  - Ô mã hiện trước mã sẽ sinh.
+  - Vai trò mới được chọn ngay. Nếu còn quyền chưa lưu thì hỏi trước.
+- 375px:
+  - Ô tìm bài tập chiếm cả dòng.
+  - Bảng xếp thẻ trong `.card` bỏ khung card (không còn thẻ lồng thẻ).
+- Test mới: phím Tabs (←/→/Home/End, roving tabIndex), Payroll/TeacherSalary `month_rate`, focus sau gán/gỡ và sau
+  "Thử lại", tạo vai trò tên tiếng Việt.
+
 ## 2026-10-11 — Review fixes, vòng 6
 
 Không có migration mới (vẫn v25).

@@ -89,7 +89,7 @@ export function TeacherSalary() {
             </div>
             <div className="salary-row">
               <span>{t('salary.perSession')}</span>
-              <strong>{formatVND(salary.per_session)}</strong>
+              <strong>{formatVND(salary.month_rate ?? salary.per_session)}</strong>
             </div>
             {salary.mixed_rates && (
               <p className="muted-xs">{t('salary.mixedRate', { avg: formatVND(salary.avg_rate ?? 0) })}</p>

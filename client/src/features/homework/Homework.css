@@ -254,8 +254,12 @@ a:hover .submission-thumb {
 /* ---------- Mobile ---------- */
 @media (max-width: 640px) {
   /* Toolbar bài tập: tìm kiếm full-width, 3 ô lọc chia 2 cột gọn */
-  .hw-toolbar .search-input {
+  /* B6-7: input nằm trong .search-wrap -> chính wrap phải chiếm cả dòng */
+  .hw-toolbar .search-wrap {
     flex: 1 1 100%;
+  }
+  .hw-toolbar .search-input {
+    width: 100%;
     max-width: none;
   }
   .hw-toolbar > select.text-input {

@@ -2670,8 +2670,9 @@ paths:
       summary: Bảng lương giáo viên (tự tính từ điểm danh; tháng đã chốt trả bảng chụp lúc chốt)
       description: >-
         Mỗi dòng: teacher_id, teacher_name, sessions, per_session (đơn giá HIỆN HÀNH), total (tổng theo đơn giá hiệu lực
-        tại ngày từng buổi), avg_rate (round(total / sessions), 0 nếu không có buổi), mixed_rates (true khi
-        total ≠ sessions × per_session — có buổi tính theo đơn giá khác đơn giá hiện hành).
+        tại ngày từng buổi), avg_rate (round(total / sessions), 0 nếu không có buổi), month_rate (đơn giá của chính
+        tháng đó: giá buổi cuối tháng; tháng không có buổi = giá hiệu lực ngày cuối tháng/hôm nay), mixed_rates (true
+        khi các buổi trong tháng tính theo hơn 1 đơn giá; bản chốt trước vòng 7: total ≠ sessions × per_session).
       parameters:
         - in: query
           name: month

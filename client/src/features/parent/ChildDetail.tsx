@@ -133,6 +133,7 @@ export function ChildDetail() {
 
       <Tabs
         id="child"
+        label={t('child.tabsLabel')}
         className="parent-tabs pill-tabs"
         tabs={TABS.map((tb) => ({
           key: tb.id,

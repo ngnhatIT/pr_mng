@@ -61,6 +61,17 @@ export function moduleLabelKey(module: string): string {
   return `module.${module}`;
 }
 
+/** B6-5: mã vai trò từ tên/mã gõ tay — bỏ dấu tiếng Việt, gộp ký tự lạ thành 1 '_' (giống server createRole). */
+export const toRoleCode = (s: string) =>
+  s
+    .trim()
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/đ/g, 'd')
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_|_$/g, '');
+
 export const rolesApi = {
   permissions: () => http.get<{ catalog: number; rows: Permission[] }>('/roles/permissions'),
   list: () => http.get<Role[]>('/roles'),
@@ -73,7 +84,9 @@ export const rolesApi = {
   setPermissions: (id: number, permissions: { code: string; scope: Scope }[]) =>
     http.put<{ ok: boolean; count: number }>(`/roles/${id}/permissions`, { permissions }),
   /** Tài khoản nhân sự của trung tâm có thể gán vai trò (cần roles.manage). */
-  users: () => http.get<RoleUser[]>('/roles/users'),
+  /** N6-1: role riêng của trung tâm -> chỉ nhân sự trung tâm đó (superadmin; role khác server bỏ qua center_id). */
+  users: (centerId?: number | null) =>
+    http.get<RoleUser[]>(centerId ? `/roles/users?center_id=${centerId}` : '/roles/users'),
   assign: (user_id: number, role_id: number) =>
     http.post<{ ok: boolean }>('/roles/assign', { user_id, role_id }),
   unassign: (user_id: number, role_id: number) =>

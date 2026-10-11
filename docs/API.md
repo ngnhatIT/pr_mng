@@ -106,8 +106,9 @@ Quy ước chung:
 ## Rate limiting
 
 - `/auth/login`, `/parent/login`, `/parent/register`: 10 req / 60s / IP → `429`.
-- Toàn `/api/v1`: 300 req / 15 phút / tài khoản (IP nếu chưa đăng nhập); ghi (POST/PUT/PATCH/DELETE) có trần riêng
-  theo tài khoản — giá trị hiện hành xem `server/src/middleware/rateLimit.ts`. Mọi trần tính per-worker (`RATE_LIMIT_DIVISOR`).
+- Toàn `/api/v1`, theo tài khoản (IP nếu chưa đăng nhập): GET/HEAD đã đăng nhập 1500 req / 15 phút; còn lại (ghi,
+  ẩn danh) 300 req / 15 phút. Cổng phụ huynh thêm trần riêng (GET 1000, còn lại 200). Ghi (POST/PUT/PATCH/DELETE) có trần riêng
+  theo tài khoản; 429 kèm `retry_after` (giây) + header `Retry-After` — giá trị hiện hành xem `server/src/middleware/rateLimit.ts`. Mọi trần tính per-worker (`RATE_LIMIT_DIVISOR`).
 
 ## Idempotency (chống double-submit)
 

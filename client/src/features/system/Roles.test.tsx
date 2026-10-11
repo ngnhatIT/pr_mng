@@ -80,7 +80,7 @@ describe('Roles', () => {
     const calls = setup();
     await renderPage(<Roles />);
     await click(byText('KeToan'));
-    expect(scopeBtn('Xem HĐ', 2).getAttribute('aria-checked')).toBe('true'); // center
+    expect(scopeBtn('Xem HĐ', 2).getAttribute('aria-pressed')).toBe('true'); // center
     await click(scopeBtn('Xem HV', 1)); // own
     await click($$('.link-btn').find((b) => b.textContent === t('turnOnAll'))!); // invoices: bật hết = center
     expect($('.roles-savebar.show')!.textContent).toContain(t('savebar', { count: 2 }));
@@ -147,6 +147,8 @@ describe('Roles', () => {
       body: { user_id: 6, role_id: 2 },
     });
     expect(names()).toEqual(['Lan', 'Minh']);
+    // B6-3: hết người để gán (ô chọn biến mất) -> focus về tiêu đề mục, không rơi về body
+    expect(document.activeElement).toBe($('#role-members-title'));
     expect($('.toast-success')!.textContent).toBe(t('members.assigned', { name: 'Minh' }));
     expect(calls.filter((c) => c.method === 'GET' && c.path === '/roles')).toHaveLength(2); // user_count mới
 
@@ -164,5 +166,31 @@ describe('Roles', () => {
     await click(byText(t('members.confirmLabel'), '[role="dialog"] button'));
     expect($('[role="dialog"]')).toBeNull();
     expect(names()).toEqual(['Minh']);
+    expect(document.activeElement).toBe($('.role-members select')); // B6-3: nút "Gỡ" đã mất -> không rơi về body
+  });
+
+  it('B6-5: tạo vai trò tên tiếng Việt -> mã bỏ dấu (xem trước ở placeholder), vai trò mới được chọn', async () => {
+    let list = [role(1, 'Admin', true), role(2, 'KeToan', false)];
+    const calls = setup({
+      'GET /roles': () => list,
+      'POST /roles': () => {
+        list = [...list, { ...role(3, 'Kế toán B6', false), code: 'ke_toan_b6' }];
+        return { id: 3, code: 'ke_toan_b6' };
+      },
+      'GET /roles/3': { ...role(3, 'Kế toán B6', false), code: 'ke_toan_b6', permissions: [] },
+    });
+    await renderPage(<Roles />);
+    await click(byText(t('create')));
+    const [codeInput, nameInput] = $$<HTMLInputElement>('[role="dialog"] input');
+    await type(nameInput, '  Kế toán  Đ-B6 ');
+    expect(codeInput.placeholder).toBe('ke_toan_d_b6');
+    await click(byText(t('form.create'), '[role="dialog"] button'));
+    expect(writes(calls).at(-1)).toMatchObject({
+      method: 'POST',
+      path: '/roles',
+      body: { code: 'ke_toan_d_b6' },
+    });
+    expect($('.role-card.active')!.textContent).toContain('Kế toán B6');
+    expect($('.role-head h2')!.textContent).toBe('Kế toán B6');
   });
 });

@@ -35,6 +35,8 @@ const { data, loading, error, reload, setData } = useLoad(
 );
 ```
 
+- Bấm "Thử lại" mà `LoadError` biến mất (tải lại thành công), focus chuyển về `#main-content` thay vì rơi về `<body>`.
+  `EmptyState icon="alert"` (kể cả `LoadError`) có `role=alert`.
 - `deps` hoạt động như của useEffect. Fetcher được đọc qua ref nên viết arrow inline cũng được. Mỗi khi deps đổi hoặc gọi `reload()`, request trước bị abort và kết quả của nó bị bỏ qua, nên response cũ về muộn không đè lên kết quả mới.
 - `data` giữ giá trị thành công gần nhất trong lúc tải lại và cả khi lỗi. `setData(prev => next)` dùng để cập nhật lạc quan.
 - Thứ tự render:
@@ -108,15 +110,20 @@ hệ thống chỉ superadmin gán/gỡ được. Lỗi 403 của server (vd vai
 
 ## Tab (`shared/components/Tabs.tsx`)
 
-`<Tabs id tabs={[{key,label}]} value onChange />` render đúng mẫu WAI-ARIA: `role=tablist/tab`, `aria-selected`,
-`aria-controls`, roving `tabIndex`, phím ←/→/Home/End. Nội dung bọc `<div {...tabPanelProps(id, value)}>`. Tab nên nằm
+`<Tabs id label tabs={[{key,label}]} value onChange />` render đúng mẫu WAI-ARIA: `role=tablist/tab`, `aria-selected`,
+`aria-controls`, roving `tabIndex`, phím ←/→/Home/End. `label` (bắt buộc) là tên tablist cho screen reader; key `''` có
+id `<id>-tab-all`. Nội dung bọc `<div {...tabPanelProps(id, value)}>`.
+Nhóm nút chọn 1 giá trị (trạng thái điểm danh, phạm vi quyền, đáp án quiz) dùng `role="group"` + `aria-pressed`
+trên từng nút (mỗi nút 1 Tab stop), không dùng `role=radio` khi không có điều hướng phím mũi tên. Tab nên nằm
 trên URL (`?tab=` / `useUrlState`) để refresh/Back giữ tab (Tuition, ReviewsAdmin, Homework, ChildDetail).
 
 ## Bảng trên điện thoại (`.table-stack`, `styles.css`)
 
 Bảng danh sách thêm class `table-stack` và `data-label={cùng t(...) với <th>}` trên từng `<td>`. Ở ≤600px mỗi dòng
 thành một thẻ: nhãn bên trái, giá trị bên phải; ô không có `data-label` (tên/tiêu đề làm "đầu thẻ", ô nút thao tác)
-chiếm cả dòng. Không còn cuộn ngang ~1200px để tới nút Sửa/Thu tiền.
+chiếm cả dòng. Không còn cuộn ngang ~1200px để tới nút Sửa/Thu tiền. `.card` bọc trực tiếp `.table-wrap` của bảng
+xếp thẻ mất khung ở ≤600px (không lồng thẻ trong thẻ). Không gộp selector `tr:last-child td` vào luật chung của ô — nó
+mạnh hơn `td:not([data-label])` và làm lệch thẻ cuối.
 
 ## i18n
 

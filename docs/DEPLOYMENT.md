@@ -161,6 +161,9 @@ giữ nguyên) thì md5 định nghĩa lệch -> lần boot sau tạo lại đú
 <tên>() IS NULL` (hoặc `COMMENT ON VIEW`) rồi restart. Phần còn thiếu chạy cùng
 `lock_timeout` như migration; bảng đang bị giữ lâu thì boot lỗi `[MIGRATION] DDL lúc khởi động: không lấy được lock bảng`
 (đã rollback) và PM2 thử lại.
+Lần boot đầu sau khi nâng cấp từ bản trước vòng 6 (tag cũ không có md5) tạo lại cả 5 object một lần, trong đó
+`v_invoice_balance` cần ACCESS EXCLUSIVE: báo cáo/BI đang đọc view lâu sẽ làm lần boot đó lỗi lock_timeout rồi PM2 thử
+lại — nâng cấp lúc ít tải hoặc dừng job BI đọc `v_invoice_balance` trước.
 
 **Chuyển lên v23** — KHÔNG chỉ thêm bảng/cột, v23 sửa dữ liệu tiền:
 
@@ -268,7 +271,8 @@ npx tsx scripts/migrate-down.ts --to 21 --yes    # thực hiện: chạy down c�
 - **Job nền**: sinh buổi học 00:15 hằng ngày (trước 90 ngày), dọn file upload mồ côi mỗi giờ (file > 24h không
   được tham chiếu), đối soát VNPay 15 phút, kiểm tra nhất quán tài chính mỗi giờ, backup theo `BACKUP_CRON`.
 - **Rate limiting**: login 10 req/60s/IP (+ giới hạn riêng theo tài khoản);
-  API chung 300 req/15ph/tài khoản (IP nếu chưa đăng nhập); thao tác ghi có trần riêng
+  API chung theo tài khoản (IP nếu chưa đăng nhập): GET đã đăng nhập 1500 req/15ph, còn lại 300 req/15ph;
+  cổng phụ huynh GET 1000 / còn lại 200; thao tác ghi có trần riêng
   (xem `server/src/middleware/rateLimit.ts`).
   Mọi giới hạn đều tính **per-worker**: với PM2 cluster N worker, đặt
   `RATE_LIMIT_DIVISOR=N` (ecosystem.config.js đã đặt 2) để tổng toàn cụm

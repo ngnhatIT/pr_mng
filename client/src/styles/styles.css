@@ -2079,8 +2079,8 @@ button.search-clear:active {
   .table-stack tbody tr:last-child {
     border-bottom: none;
   }
-  .table-stack td,
-  .table-stack tbody tr:last-child td {
+  /* B6-1: không gộp `tr:last-child td` vào đây — specificity cao hơn :not([data-label]) làm lệch thẻ cuối */
+  .table-stack td {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
@@ -2105,6 +2105,13 @@ button.search-clear:active {
   }
   .table-wrap.sticky:has(.table-stack) {
     max-height: none;
+  }
+  /* B6-7: .card bọc bảng xếp thẻ -> bỏ khung card (bảng đã có khung), tránh thẻ trong thẻ mất ~50px ở 375 */
+  .card:has(> .table-wrap .table-stack) {
+    padding: 0;
+    border: none;
+    background: none;
+    box-shadow: none;
   }
 }
 

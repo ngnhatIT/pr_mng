@@ -134,7 +134,7 @@ export function createApp(): Express {
 
   // C-3: callback VNPay (IPN/return) có limiter riêng, rộng — không chung trần 300/IP với API thường
   const VNPAY_CALLBACK = /^\/payments\/vnpay-(ipn|return)\/?$/;
-  // Rate limit global: 300 req / 15 phút / IP cho mọi endpoint versioned
+  // Rate limit global theo tài khoản (IP nếu ẩn danh): GET đã đăng nhập 1500 / 15 phút, còn lại 300 (xem rateLimit.ts)
   v1.use((req, res, next) =>
     VNPAY_CALLBACK.test(req.path) ? vnpayCallbackRateLimit(req, res, next) : apiRateLimit(req, res, next)
   );

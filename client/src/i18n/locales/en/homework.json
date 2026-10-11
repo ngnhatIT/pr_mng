@@ -384,7 +384,8 @@
     "all": "All",
     "draft": "Drafts",
     "published": "Published",
-    "scheduled": "Scheduled"
+    "scheduled": "Scheduled",
+    "label": "Homework status"
   },
   "toast": {
     "deleteFail": "Couldn't delete the assignment, please try again",

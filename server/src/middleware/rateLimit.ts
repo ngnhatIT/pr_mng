@@ -169,12 +169,30 @@ export function createRateLimit(opts: RateLimitOptions) {
   };
 }
 
-/** 300 requests / 15 phút / tài khoản (IP nếu chưa đăng nhập) — áp dụng global cho /api/v1. */
-export const apiRateLimit = createRateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 300,
-  message: 'Bạn gửi quá nhiều yêu cầu, vui lòng thử lại sau ít phút.',
-});
+type Limiter = ReturnType<typeof createRateLimit>;
+
+/**
+ * B6-6: GET/HEAD của tài khoản ĐÃ đăng nhập (token hợp lệ) đi limiter đọc riêng (rộng) — SPA gọi ~4-5 GET mỗi trang
+ * nên trần chung 300 hết sau ~65 lần chuyển trang. Ghi và request ẩn danh vẫn đi limiter chặt `other`.
+ */
+function readsSeparately(read: Limiter, other: Limiter): Limiter {
+  return (req, res, next) => {
+    const isRead = req.method === 'GET' || req.method === 'HEAD';
+    return (isRead && defaultRateLimitKey(req).startsWith('u:') ? read : other)(req, res, next);
+  };
+}
+
+const API_MSG = 'Bạn gửi quá nhiều yêu cầu, vui lòng thử lại sau ít phút.';
+
+/**
+ * Global cho /api/v1, theo tài khoản (IP nếu chưa đăng nhập):
+ * - GET/HEAD đã đăng nhập: 1500 / 15 phút (~330 lượt chuyển trang, đủ cho lễ tân tìm kiếm liên tục);
+ * - còn lại (ghi, ẩn danh): 300 / 15 phút như cũ (ghi còn qua writeRateLimit).
+ */
+export const apiRateLimit = readsSeparately(
+  createRateLimit({ windowMs: 15 * 60 * 1000, max: 1500, message: API_MSG }),
+  createRateLimit({ windowMs: 15 * 60 * 1000, max: 300, message: API_MSG })
+);
 
 /**
  * 600 requests / 15 phút / tài khoản (IP nếu chưa đăng nhập) — trần chung cho thao tác ghi
@@ -188,12 +206,14 @@ export const writeRateLimit = createRateLimit({
   message: 'Bạn thao tác ghi quá nhanh, vui lòng thử lại sau ít phút.',
 });
 
-/** 200 requests / 15 phút / tài khoản (IP nếu chưa đăng nhập) — cho cổng phụ huynh (mobile). */
-export const parentRateLimit = createRateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 200,
-  message: 'Bạn thao tác quá nhanh, vui lòng thử lại sau ít phút.',
-});
+/**
+ * Cổng phụ huynh (mobile), theo tài khoản (IP nếu chưa đăng nhập): GET/HEAD đã đăng nhập 1000 / 15 phút (B6-6:
+ * 2 con × 5 tab đã ~30 GET); ghi + ẩn danh (register/login/link) 200 / 15 phút như cũ.
+ */
+export const parentRateLimit = readsSeparately(
+  createRateLimit({ windowMs: 15 * 60 * 1000, max: 1000 }),
+  createRateLimit({ windowMs: 15 * 60 * 1000, max: 200 })
+);
 
 /**
  * 5 requests / 15 phút / tài khoản (IP nếu chưa đăng nhập) — cho thao tác tốn tiền thật
@@ -221,7 +241,7 @@ export const uploadRateLimit = createRateLimit({
 
 /**
  * C-3: callback VNPay (IPN/return) — VNPay gửi IPN của MỌI trung tâm từ vài IP, không được dùng chung
- * trần 300/15ph/IP của apiRateLimit (mùa đóng học phí bị 429 -> phụ huynh thấy "chờ" cả giờ).
+ * trần 300/15ph/IP (ẩn danh) của apiRateLimit (mùa đóng học phí bị 429 -> phụ huynh thấy "chờ" cả giờ).
  * Chữ ký HMAC mới là lớp bảo vệ chính; limiter này chỉ chặn spam thô.
  */
 export const vnpayCallbackRateLimit = createRateLimit({

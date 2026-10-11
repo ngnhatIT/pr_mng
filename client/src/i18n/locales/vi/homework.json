@@ -384,7 +384,8 @@
     "all": "Tất cả",
     "draft": "Nháp",
     "published": "Đã đăng",
-    "scheduled": "Hẹn giờ"
+    "scheduled": "Hẹn giờ",
+    "label": "Trạng thái bài tập"
   },
   "toast": {
     "deleteFail": "Không xóa được bài tập, vui lòng thử lại",

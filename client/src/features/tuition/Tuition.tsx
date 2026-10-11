@@ -57,6 +57,7 @@ export function Tuition() {
       <PageHeader title={t('title')} desc={t('desc')} />
       <Tabs
         id="tuition"
+        label={t('title')}
         tabs={(['invoices', 'debt', 'pending'] as const).map((k) => ({ key: k, label: t(`${k}.tab`) }))}
         value={tab}
         onChange={switchTab}

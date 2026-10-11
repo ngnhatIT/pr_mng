@@ -120,11 +120,59 @@ describe('payroll rules (PostgreSQL)', () => {
       total: 250000,
       avg_rate: 125000,
       mixed_rates: true,
+      month_rate: 150000, // B6-2: đơn giá buổi cuối tháng
     });
     assert.equal((await calcPayroll(teacher, older.slice(0, 7))).total, 80000, 'tháng cũ không đổi');
     const bulk = await calcPayrollBulk(centerA, prev.slice(0, 7));
     assert.equal(bulk.find((r) => r.teacher_id === teacher)?.total, 250000);
   });
+  it('B6-2: tháng cũ trả trọn 1 đơn giá -> month_rate = giá đó, không mixed dù hôm nay đã đổi giá', async () => {
+    const prevStart = firstDayOfPrevMonth(todayVN());
+    const prevMonth = prevStart.slice(0, 7);
+    await setSalaryRule(
+      centerA,
+      { teacher_id: teacher, per_session_amount: 200000, effective_from: prevStart },
+      actor
+    );
+    const cls = await id(
+      "INSERT INTO classes (name, center_id, teacher_id) VALUES ('L', ?, ?)",
+      centerA,
+      teacher
+    );
+    for (const day of ['01', '02']) {
+      const s = await id(
+        'INSERT INTO sessions (class_id, date, teacher_id) VALUES (?, ?, ?)',
+        cls,
+        `${prevMonth}-${day}`,
+        teacher
+      );
+      await db.prepare('INSERT INTO teacher_checkins (session_id, teacher_id) VALUES (?, ?)').run(s, teacher);
+    }
+    // Tháng không có buổi nào nhưng có giá -> month_rate = giá hiệu lực cuối tháng đó
+    const older = firstDayOfPrevMonth(prevStart).slice(0, 7);
+    await setSalaryRule(centerA, { teacher_id: teacher, per_session_amount: 250000 }, actor); // từ hôm nay
+    const p = await calcPayroll(teacher, prevMonth);
+    assert.deepEqual(
+      [p.per_session, p.total, p.avg_rate, p.mixed_rates, p.month_rate],
+      [250000, 400000, 200000, false, 200000]
+    );
+    const empty = await calcPayroll(teacher, older);
+    assert.deepEqual(
+      [empty.sessions, empty.month_rate, empty.mixed_rates],
+      [0, 0, false],
+      'trước mốc: giá 1970 = 0'
+    );
+    // Bản chốt trước vòng 7 (không month_rate) -> giữ cách tính cũ, không vỡ
+    await setPayrollClosed(centerA, prevMonth, true, actor);
+    await db
+      .prepare(
+        `UPDATE payroll_closures SET snapshot = (SELECT jsonb_agg(e - 'month_rate' - 'mixed_rates') FROM jsonb_array_elements(snapshot::jsonb) e)`
+      )
+      .run();
+    const legacy = await calcPayroll(teacher, prevMonth);
+    assert.deepEqual([legacy.month_rate, legacy.mixed_rates], [250000, true]);
+  });
+
   it('J-A8: chốt tháng -> đổi đơn giá lùi ngày / điểm danh / hủy buổi tháng đó 409; mở lại thì sửa được', async () => {
     const prevStart = firstDayOfPrevMonth(todayVN());
     const prevMonth = prevStart.slice(0, 7);
@@ -187,6 +235,7 @@ describe('payroll rules (PostgreSQL)', () => {
       total: 0,
       avg_rate: 0,
       mixed_rates: false,
+      month_rate: 0,
     });
     await setPayrollClosed(centerA, prevMonth, true, actor);
     await setSalaryRule(centerA, { teacher_id: teacher, per_session_amount: 180000 }, actor); // từ hôm nay
@@ -195,7 +244,12 @@ describe('payroll rules (PostgreSQL)', () => {
     await setPayrollClosed(centerA, prevMonth, false, actor);
     const row = (await calcPayrollBulk(centerA, prevMonth)).find((r) => r.teacher_id === teacher);
     assert.equal(row?.total, 0);
-    assert.deepEqual([row?.per_session, row?.avg_rate, row?.mixed_rates], [180000, 0, true], 'N5-3');
+    // B6-2: tháng chỉ có 1 đơn giá (0) -> không "đổi trong tháng"; month_rate là giá của tháng đó, không phải giá hôm nay
+    assert.deepEqual(
+      [row?.per_session, row?.avg_rate, row?.mixed_rates, row?.month_rate],
+      [180000, 0, false, 0],
+      'N5-3/B6-2'
+    );
   });
 
   it('N-1: tháng đã chốt trả bảng lương chụp lúc chốt — sửa dữ liệu sau đó (xóa HV/điểm danh) không đổi được', async () => {
@@ -222,7 +276,14 @@ describe('payroll rules (PostgreSQL)', () => {
       .prepare("INSERT INTO attendance (session_id, student_id, status) VALUES (?, ?, 'present')")
       .run(s, st);
     await setPayrollClosed(centerA, prevMonth, true, actor);
-    const frozen = { sessions: 1, per_session: 100000, total: 100000, avg_rate: 100000, mixed_rates: false };
+    const frozen = {
+      sessions: 1,
+      per_session: 100000,
+      total: 100000,
+      avg_rate: 100000,
+      mixed_rates: false,
+      month_rate: 100000,
+    };
     // N-6: xóa học viên xóa luôn điểm danh của tháng đã chốt (buổi không còn ai có mặt)
     await db.prepare('DELETE FROM attendance WHERE student_id = ?').run(st);
     assert.deepEqual(await calcPayroll(teacher, prevMonth), frozen);

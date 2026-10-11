@@ -254,6 +254,7 @@ export function Homework() {
 
       <Tabs
         id="hw"
+        label={t('tabs.label')}
         className="hw-tabs"
         tabs={tabs.map((tb) => ({ key: tb.id, label: tb.label }))}
         value={statusTab}

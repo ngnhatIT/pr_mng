@@ -348,9 +348,11 @@ export interface PayrollRow {
   /** Đơn giá hiện hành (buổi cũ có thể tính theo đơn giá lịch sử). */
   per_session: number;
   total: number;
-  /** N5-3: total / sessions; mixed_rates = có buổi tính theo đơn giá khác per_session. */
+  /** N5-3: total / sessions. B6-2: mixed_rates = các buổi trong tháng tính theo >1 đơn giá. */
   avg_rate?: number;
   mixed_rates?: boolean;
+  /** B6-2: đơn giá của chính tháng đó (hiển thị thay per_session; server cũ không có -> per_session). */
+  month_rate?: number;
 }
 
 export interface TrialItem {

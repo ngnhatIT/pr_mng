@@ -20,6 +20,7 @@ export interface SalaryInfo {
   total: number;
   avg_rate?: number;
   mixed_rates?: boolean;
+  month_rate?: number;
 }
 
 export interface GradeInput {

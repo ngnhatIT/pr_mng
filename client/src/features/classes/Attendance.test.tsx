@@ -111,7 +111,7 @@ describe('Attendance', () => {
     await type($(`[placeholder="${t('attendance.topic.placeholder')}"]`), 'Unit 2');
     await click(byText(t('attendance.save')));
     expect($('.att-savebar [role="alert"]')!.textContent).toBe('Buổi đã khóa');
-    expect(radio('An', 'present')!.getAttribute('aria-checked')).toBe('true');
+    expect(radio('An', 'present')!.getAttribute('aria-pressed')).toBe('true');
     expect(calls.some((c) => c.method === 'PUT')).toBe(false);
 
     fail = false;
@@ -132,12 +132,24 @@ describe('Attendance', () => {
       pagination: { page: 1, limit: 100, total: 1, totalPages: 1 },
     };
     setup([], { 'GET /classes': () => (fail ? json(500, { error: 'x' }) : classes) });
-    await render();
+    // Như Layout: vùng nội dung #main-content
+    const page = (
+      <main id="main-content" tabIndex={-1}>
+        <Attendance />
+      </main>
+    );
+    await renderRoutes(
+      [{ path: '/teacher/diem-danh', element: page }],
+      '/teacher/diem-danh?class=1&session=10'
+    );
+    expect($('[role="alert"]')).not.toBeNull();
     const retry = byText(String(i18n.t('actions.retry', { ns: 'common' })));
     expect($$('select')[0].querySelectorAll('option')).toHaveLength(1);
     fail = false;
+    retry.focus();
     await click(retry);
     expect($$('select')[0].querySelectorAll('option')).toHaveLength(2);
     expect(document.body.textContent).not.toContain(String(i18n.t('actions.retry', { ns: 'common' })));
+    expect(document.activeElement).toBe($('#main-content')); // B6-3: nút "Thử lại" mất -> focus về vùng nội dung
   });
 });

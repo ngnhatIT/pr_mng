@@ -131,7 +131,8 @@
       "title": "Tuition invoices",
       "tuitionFallback": "Tuition",
       "emptyDesc": "Tuition invoices will appear here once the center creates them."
-    }
+    },
+    "tabsLabel": "Child details"
   },
   "home": {
     "codeField": "Student code",

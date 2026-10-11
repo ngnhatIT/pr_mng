@@ -22,6 +22,7 @@ import {
   getUserPermissions,
   invalidateAllPermissions,
   setRolePermissions,
+  createRole,
 } from './authorization.service';
 import { requirePermission } from './authorization.middleware';
 import { PERMISSIONS, SYSTEM_ROLES } from './permissions';
@@ -207,6 +208,14 @@ describe('authorization (RBAC)', () => {
     const id = await createUser('admin3', 'admin');
     const perms = await getUserPermissions(id);
     assert.equal(perms.size, PERMISSIONS.length);
+  });
+
+  it('B6-5: mã vai trò từ tên tiếng Việt bỏ dấu, gộp gạch dưới; chỉ ký tự lạ -> 400', async () => {
+    const cid = await ensureCenter();
+    const actor = { id: null, name: 'Admin', role: 'admin' };
+    assert.equal((await createRole(cid, { code: '  Kế toán  B6 ', name: 'x' }, actor)).code, 'ke_toan_b6');
+    assert.equal((await createRole(cid, { code: 'Đào__tạo--Đ', name: 'x' }, actor)).code, 'dao_tao_d');
+    await assert.rejects(() => createRole(cid, { code: '!!!', name: 'x' }, actor), /Mã vai trò/);
   });
 
   it('SEC-1: setRolePermissions chặn non-superadmin cấp all / system.* / vượt scope của mình', async () => {

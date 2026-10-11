@@ -24,6 +24,7 @@ import {
   type Scope,
   type RoleUser,
   useMyPermissions,
+  toRoleCode,
 } from './roles.api';
 import { useLoad } from '../../shared/hooks/useLoad';
 import { getUser } from '../../shared/api/client';
@@ -65,15 +66,7 @@ function RoleForm({
     }
     let clean: string | undefined;
     if (!initial) {
-      clean =
-        code
-          .trim()
-          .toLowerCase()
-          .replace(/[^a-z0-9_]/g, '_') ||
-        name
-          .trim()
-          .toLowerCase()
-          .replace(/[^a-z0-9_]/g, '_');
+      clean = toRoleCode(code) || toRoleCode(name);
       if (!clean) {
         toast(t('form.needCode'), 'error');
         return;
@@ -102,7 +95,7 @@ function RoleForm({
               className="text-input"
               value={code}
               onChange={(e) => setCode(e.target.value)}
-              placeholder={t('form.codePh')}
+              placeholder={toRoleCode(name) || t('form.codePh')}
             />
           </label>
         )}
@@ -161,16 +154,29 @@ function RoleMembers({
   const [pick, setPick] = useState('');
   const [busy, setBusy] = useState(false);
   const [removing, setRemoving] = useState<RoleUser | null>(null);
+  // B6-3: gán/gỡ xong, nút vừa bấm biến mất hoặc bị disable -> focus về ô chọn người (hoặc tiêu đề mục)
+  const pickRef = useRef<HTMLSelectElement>(null);
+  const titleRef = useRef<HTMLHeadingElement>(null);
+  const refocus = useRef(false);
+  useEffect(() => {
+    if (!refocus.current) return;
+    refocus.current = false;
+    (pickRef.current ?? titleRef.current)?.focus();
+  }, [members]);
   const editable = canManage && (!role.is_system || getUser()?.role === 'superadmin');
   const {
     data: users,
     error: usersError,
     reload: reloadUsers,
-  } = useLoad(() => (editable ? rolesApi.users() : Promise.resolve([])), [editable]);
+  } = useLoad(
+    () => (editable ? rolesApi.users(role.center_id) : Promise.resolve([])),
+    [editable, role.center_id]
+  );
   const candidates = (users ?? []).filter((u) => !members.some((m) => m.id === u.id));
 
   const refresh = async () => {
     const d = await rolesApi.detail(role.id);
+    refocus.current = true;
     setMembers(d.users ?? []);
     onChanged(); // cập nhật số người dùng ở danh sách vai trò
   };
@@ -206,7 +212,7 @@ function RoleMembers({
   return (
     <section className="perm-group role-members" aria-labelledby="role-members-title">
       <div className="perm-group-head">
-        <h3 className="perm-group-name" id="role-members-title">
+        <h3 className="perm-group-name" id="role-members-title" ref={titleRef} tabIndex={-1}>
           {t('members.title')}
         </h3>
         <span className="muted">{members.length}</span>
@@ -244,6 +250,7 @@ function RoleMembers({
         ) : (
           <div className="role-members-add">
             <select
+              ref={pickRef}
               className="text-input"
               value={pick}
               onChange={(e) => setPick(e.target.value)}
@@ -666,14 +673,13 @@ export function Roles() {
                                 </div>
                                 <div
                                   className="scope-seg"
-                                  role="radiogroup"
+                                  role="group"
                                   aria-label={t('scopeAria', { name: p.name })}
                                 >
                                   {SCOPES.map((s) => (
                                     <button
                                       key={s ?? 'off'}
-                                      role="radio"
-                                      aria-checked={draft[p.code] === s}
+                                      aria-pressed={draft[p.code] === s}
                                       className={`scope-seg-btn${draft[p.code] === s ? ' active' : ''} ${s ? `scope-${s}` : 'scope-off'}`}
                                       onClick={() => setScope(p.code, s)}
                                       title={s ? t(scopeLabelKey(s)) : t('disableScope')}
@@ -733,9 +739,17 @@ export function Roles() {
           title={t('modal.createTitle')}
           onClose={() => setShowCreate(false)}
           onSubmit={async (input) => {
-            await rolesApi.create({ code: input.code!, name: input.name, description: input.description });
+            const created = await rolesApi.create({
+              code: input.code!,
+              name: input.name,
+              description: input.description,
+            });
             toast(t('toast.created'), 'success');
             await loadRoles();
+            // B6-5: chọn luôn vai trò vừa tạo (còn quyền chưa lưu ở vai trò đang mở -> hỏi trước như khi bấm thẻ)
+            setSearch('');
+            if (dirty) setPendingRoleId(created.id);
+            else setSelectedId(created.id);
           }}
         />
       )}

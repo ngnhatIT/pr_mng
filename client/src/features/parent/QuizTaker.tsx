@@ -535,19 +535,14 @@ export function QuizTaker({
                     maxLength={20000}
                   />
                 ) : (
-                  <div
-                    role={q.qtype === 'multiple' ? 'group' : 'radiogroup'}
-                    aria-label={q.question}
-                    className="quiz-take-opts"
-                  >
+                  <div role="group" aria-label={q.question} className="quiz-take-opts">
                     {q.options.map((o) => {
                       const isChosen = chosen.includes(o.id);
                       return (
                         <button
                           key={o.id}
                           type="button"
-                          role={q.qtype === 'multiple' ? 'checkbox' : 'radio'}
-                          aria-checked={isChosen}
+                          aria-pressed={isChosen}
                           className={`quiz-take-opt ${isChosen ? 'selected' : ''}`}
                           onClick={() => toggleOption(o.id)}
                         >

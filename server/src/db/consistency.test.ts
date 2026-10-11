@@ -132,4 +132,23 @@ describe('checkFinancialConsistency (PostgreSQL)', () => {
       );
     }
   });
+  it('N6-1: custom role trung tâm A gán cho user trung tâm B bị báo role_cross_center', async () => {
+    const b = (
+      (await db.prepare("INSERT INTO centers (name) VALUES ('B') RETURNING id").get()) as { id: number }
+    ).id;
+    const u = (await db
+      .prepare(
+        "INSERT INTO users (username, password_hash, role, name, center_id) VALUES ('nvb', 'x', 'staff', 'NV B', ?) RETURNING id"
+      )
+      .get(b)) as { id: number };
+    const r = (await db
+      .prepare("INSERT INTO roles (code, name, center_id) VALUES ('rA', 'rA', ?) RETURNING id")
+      .get(centerId)) as { id: number };
+    await db.prepare('INSERT INTO user_roles (user_id, role_id) VALUES (?, ?)').run(u.id, r.id);
+    const issues = await checkFinancialConsistency(db);
+    assert.deepEqual(
+      issues.filter((i) => i.code === 'role_cross_center').map((i) => i.user_id),
+      [u.id]
+    );
+  });
 });

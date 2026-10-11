@@ -84,6 +84,7 @@ export function ReviewsAdmin() {
 
       <Tabs
         id="reviews"
+        label={t('reviews.title')}
         tabs={(['pending', 'approved'] as const).map((k) => ({
           key: k,
           label: (

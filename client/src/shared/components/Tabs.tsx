@@ -1,5 +1,8 @@
 import type { KeyboardEvent, ReactNode } from 'react';
 
+/** B6-4: key '' (tab "Tất cả") -> 'all' để id không kết thúc bằng '-tab-'. */
+const tabId = (id: string, key: string) => `${id}-tab-${key || 'all'}`;
+
 /**
  * B5-3: tab theo mẫu WAI-ARIA (tablist/tab/aria-selected/aria-controls, roving tabIndex, phím ←/→/Home/End
  * chuyển + chọn tab). Nội dung tab bọc bằng {...tabPanelProps(id, value)}.
@@ -17,7 +20,8 @@ export function Tabs<K extends string>({
   tabs: { key: K; label: ReactNode }[];
   value: K;
   onChange: (key: K) => void;
-  label?: string;
+  /** B6-4: tên của tablist cho screen reader (bắt buộc). */
+  label: string;
   className?: string;
 }) {
   const onKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
@@ -36,7 +40,7 @@ export function Tabs<K extends string>({
     if (next < 0) return;
     e.preventDefault();
     onChange(tabs[next].key);
-    document.getElementById(`${id}-tab-${tabs[next].key}`)?.focus();
+    document.getElementById(tabId(id, tabs[next].key))?.focus();
   };
   return (
     <div className={`tabs ${className}`} role="tablist" aria-label={label} onKeyDown={onKeyDown}>
@@ -45,7 +49,7 @@ export function Tabs<K extends string>({
           key={tb.key}
           type="button"
           role="tab"
-          id={`${id}-tab-${tb.key}`}
+          id={tabId(id, tb.key)}
           aria-selected={tb.key === value}
           aria-controls={`${id}-panel`}
           tabIndex={tb.key === value ? 0 : -1}
@@ -62,5 +66,5 @@ export function Tabs<K extends string>({
 export const tabPanelProps = (id: string, value: string) => ({
   role: 'tabpanel' as const,
   id: `${id}-panel`,
-  'aria-labelledby': `${id}-tab-${value}`,
+  'aria-labelledby': tabId(id, value),
 });

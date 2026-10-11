@@ -370,15 +370,14 @@ export function Attendance() {
                       </div>
                       <div
                         className="seg seg-lg"
-                        role="radiogroup"
+                        role="group"
                         aria-label={t('attendance.row.statusAria', { name: r.name })}
                       >
                         {(['present', 'late', 'absent'] as Status[]).map((s) => (
                           <button
                             key={s}
                             type="button"
-                            role="radio"
-                            aria-checked={st === s}
+                            aria-pressed={st === s}
                             className={`seg-btn seg-${s}${st === s ? ' active' : ''}`}
                             onClick={() => setStatus(r.id, s)}
                           >

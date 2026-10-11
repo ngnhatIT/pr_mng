@@ -10,7 +10,7 @@ import { AppError } from '../../shared/errors';
 import { audit } from '../../shared/audit';
 import { assertStrongPassword, BCRYPT_ROUNDS } from '../../shared/password';
 import { revokeAllForOwner, revokeAllForOwnerExcept } from './refresh.service';
-import { assertCoversUserPerms } from '../authorization/authorization.service';
+import { assertCoversUserPerms, ROLE_RANK } from '../authorization/authorization.service';
 
 export interface LoginUserRow {
   id: number;
@@ -114,9 +114,6 @@ export async function listResetRequests(cid: number | null): Promise<unknown[]> 
     )
     .all(...(cid !== null ? [cid] : []));
 }
-
-/** S-2: hạng vai trò — người xử lý chỉ đặt lại mật khẩu tài khoản hạng ≤ mình (staff không chiếm được admin). */
-const ROLE_RANK: Record<string, number> = { superadmin: 3, admin: 2, staff: 1, teacher: 1, parent: 0 };
 
 /**
  * Xử lý yêu cầu: sinh mật khẩu tạm, đá mọi session cũ của tài khoản, đánh dấu đã xử lý.
