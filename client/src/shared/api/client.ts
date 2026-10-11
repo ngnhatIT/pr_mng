@@ -8,6 +8,9 @@ const UPLOAD_TIMEOUT_MS = 60_000;
 
 const NEXT_KEY = 'edu_next';
 
+/** Mã lỗi gắn vào Error khi 401 hết phiên (UI riêng: UnauthorizedListener). */
+export const SESSION_EXPIRED = 'SESSION_EXPIRED';
+
 /**
  * D4: access token giữ TRONG MEMORY (biến module), không lưu localStorage nữa
  * để XSS không đọc được. Reload trang -> token mất -> interceptor 401 tự gọi
@@ -182,12 +185,16 @@ export function tryRefresh(): Promise<boolean> {
   return refreshPromise;
 }
 
-/** Lấy deep-link đã lưu trước khi bị đá về login (đã validate), rồi xóa. */
-export function takePostLoginRedirect(): string | null {
+/**
+ * Lấy deep-link đã lưu trước khi bị đá về login (đã validate), rồi xóa.
+ * B4-2: chỉ nhận deep-link thuộc portal `home` của role vừa đăng nhập ('/app' | '/teacher' | '/parent');
+ * link của portal khác (máy dùng chung: phụ huynh hết phiên rồi giáo viên đăng nhập) bị bỏ qua.
+ */
+export function takePostLoginRedirect(home: string): string | null {
   try {
     const next = sessionStorage.getItem(NEXT_KEY);
     sessionStorage.removeItem(NEXT_KEY);
-    if (next && next.startsWith('/') && !next.startsWith('//')) return next;
+    if (next && (next === home || ['/', '?', '#'].some((c) => next.startsWith(home + c)))) return next;
   } catch {
     /* bỏ qua */
   }
@@ -279,7 +286,8 @@ export async function api<T>(path: string, options: RequestInit = {}): Promise<T
       // Không reload toàn trang: báo cho app navigate mềm qua event.
       window.dispatchEvent(new CustomEvent('edu:unauthorized', { detail: { loginPath } }));
     }
-    throw new Error(tApi('api.sessionExpired'));
+    // B4-4: gắn code để toastApiError bỏ qua (UnauthorizedListener đã toast + điều hướng)
+    throw Object.assign(new Error(tApi('api.sessionExpired')), { code: SESSION_EXPIRED });
   }
 
   let data: unknown;

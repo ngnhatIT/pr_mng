@@ -1,8 +1,8 @@
 import { useEffect } from 'react';
 
 /**
- * useDocumentTitle: đặt tiêu đề tab cho trang public (không nằm trong layout).
- * Các layout (staff/parent/teacher) đã tự đặt title theo route.
+ * useDocumentTitle: đặt tiêu đề tab cho trang public, hoặc trang trong layout không có mục menu (404, chi tiết con).
+ * Các layout đặt title theo route bằng useLayoutEffect (chạy trước effect này) nên trang con luôn thắng.
  */
 export function useDocumentTitle(title: string): void {
   useEffect(() => {

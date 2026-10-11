@@ -13,12 +13,18 @@ process.env.LOGIN_RATE_LIMIT = '1000';
 import { describe, it, before, beforeEach, after } from 'node:test';
 import assert from 'node:assert/strict';
 import http from 'node:http';
+import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 import { db } from '../../db/pg-compat';
 import { setupTestDb, resetTestDb, teardownTestDb } from '../../db/test-utils';
-import { seedAuthorization, invalidateAllPermissions } from '../authorization/authorization.service';
+import {
+  seedAuthorization,
+  invalidateAllPermissions,
+  getUserPermissions,
+} from '../authorization/authorization.service';
 import { createApp } from '../../app';
 import { env } from '../../config/env';
+import { signToken, type AuthUser } from '../../middleware/auth';
 
 let port = 0;
 let server: http.Server;
@@ -647,8 +653,63 @@ describe('quên mật khẩu qua admin', () => {
     // Role nằm trong quyền của mình -> sửa/xóa được; admin xóa được role kế toán
     const edit = await request('PUT', `/api/v1/roles/${sv}/permissions`, hr, { permissions: [] });
     assert.equal(edit.status, 200, JSON.stringify(edit.body));
+    // R4-4: không đổi tên role mình không sửa được quyền; role trong quyền mình -> được
+    const rename = await request('PUT', `/api/v1/roles/${ketoan}`, hr, { name: 'Hacked' });
+    assert.equal(rename.status, 403, JSON.stringify(rename.body));
+    const nm = (await db.prepare('SELECT name FROM roles WHERE id = ?').get(ketoan)) as { name: string };
+    assert.equal(nm.name, 'ketoan41');
+    assert.equal((await request('PUT', `/api/v1/roles/${sv}`, hr, { name: 'SV' })).status, 200);
     assert.equal((await request('DELETE', `/api/v1/roles/${sv}`, hr)).status, 200);
     assert.equal((await request('DELETE', `/api/v1/roles/${ketoan}`, auth(adminToken))).status, 200);
+  });
+
+  it('R4-1: DELETE /roles/assign gỡ được vai trò (không bị DELETE /roles/:id nuốt); người được ủy quyền không gỡ role vượt quyền', async () => {
+    await addUser(43, 'nv43', 'staff');
+    await addUser(44, 'hr44', 'staff');
+    const adminToken = await login('admin');
+    const ketoan = await grantRole(adminToken, 43, 'ketoan43', [
+      { code: 'payments.refund', scope: 'center' },
+    ]);
+    const sv = await grantRole(adminToken, 43, 'sv43', [{ code: 'students.view', scope: 'center' }]);
+    await grantRole(adminToken, 44, 'hr44role', [
+      { code: 'roles.view', scope: 'center' },
+      { code: 'roles.manage', scope: 'center' },
+    ]);
+    const has = async (roleId: number) =>
+      !!(await db.prepare('SELECT 1 FROM user_roles WHERE user_id = 43 AND role_id = ?').get(roleId));
+    const hr = auth(await login('hr44'));
+    // Delegate: role có quyền mình không có -> 403, vẫn còn; role trong quyền mình (body hoặc query) -> 200
+    const esc = await request('DELETE', `/api/v1/roles/assign?user_id=43&role_id=${ketoan}`, hr);
+    assert.equal(esc.status, 403, JSON.stringify(esc.body));
+    assert.ok(await has(ketoan));
+    const own = await request('DELETE', '/api/v1/roles/assign', hr, { user_id: 43, role_id: sv });
+    assert.equal(own.status, 200, JSON.stringify(own.body));
+    assert.ok(!(await has(sv)));
+    // Admin gỡ được role kế toán -> quyền bị thu hồi ngay
+    const ok = await request('DELETE', `/api/v1/roles/assign?user_id=43&role_id=${ketoan}`, auth(adminToken));
+    assert.equal(ok.status, 200, JSON.stringify(ok.body));
+    assert.ok(!(await has(ketoan)));
+    assert.equal((await getUserPermissions(43)).has('payments.refund'), false);
+    // Thiếu tham số -> 400 validate của /assign (không phải VALIDATION_ID của /:id)
+    const bad = await request('DELETE', '/api/v1/roles/assign', auth(adminToken));
+    assert.equal(bad.status, 400);
+    assert.notEqual((bad.body as { code: string }).code, 'VALIDATION_ID');
+  });
+
+  it('B4-6: token có tv MỚI hơn cache (đổi ở instance khác) -> đọc lại DB, không 401; token cũ hơn -> 401', async () => {
+    await addUser(45, 'nv45', 'staff');
+    const li = await request('POST', '/api/v1/auth/login', {}, { username: 'nv45', password: ADMIN_PASS });
+    const token = (li.body as { token: string }).token;
+    const { iat: _i, exp: _e, ...user } = jwt.decode(token) as AuthUser & { iat: number; exp: number };
+    const oldTok = auth(token);
+    assert.equal((await request('GET', '/api/v1/auth/me', oldTok)).status, 200); // cache tv cũ
+    // Instance khác tăng token_version (không gọi invalidateTokenCheck ở process này)
+    const row = (await db
+      .prepare('UPDATE users SET token_version = token_version + 1 WHERE id = 45 RETURNING token_version')
+      .get()) as { token_version: number };
+    const fresh = signToken({ ...user, tv: row.token_version });
+    assert.equal((await request('GET', '/api/v1/auth/me', auth(fresh))).status, 200);
+    assert.equal((await request('GET', '/api/v1/auth/me', oldTok)).status, 401, 'cache đã lên tv mới');
   });
 
   it('N-5: mật khẩu tạm (đặt lại) -> 403 PASSWORD_CHANGE_REQUIRED trừ /auth/me + đổi mật khẩu; đổi xong dùng bình thường', async () => {
@@ -691,8 +752,16 @@ describe('quên mật khẩu qua admin', () => {
       assert.equal(res.status, 403, path);
       assert.equal((res.body as { code: string }).code, 'PASSWORD_CHANGE_REQUIRED', path);
     }
-    assert.equal((await request('POST', '/api/v1/auth/logout-all', t, {})).status, 403);
-    const cp = await request('POST', '/api/v1/auth/change-password', t, {
+    // R4-6: logout-all được phép (chỉ giảm truy cập); token mới VẪN mang cờ mật khẩu tạm
+    const la = await request('POST', '/api/v1/auth/logout-all', t, {});
+    assert.equal(la.status, 200, JSON.stringify(la.body));
+    assert.equal((await request('GET', '/api/v1/students', t)).status, 401, 'token cũ bị thu hồi');
+    const t2 = auth((la.body as { token: string }).token);
+    assert.equal(
+      ((await request('GET', '/api/v1/students', t2)).body as { code: string }).code,
+      'PASSWORD_CHANGE_REQUIRED'
+    );
+    const cp = await request('POST', '/api/v1/auth/change-password', t2, {
       old_password: temp.staff,
       new_password: 'MatKhauMoi#2026',
     });

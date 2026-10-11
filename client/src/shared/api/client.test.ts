@@ -166,3 +166,27 @@ describe('api() 403 PASSWORD_CHANGE_REQUIRED', () => {
     expect(ev.type).toBe(client.PASSWORD_CHANGE_EVENT);
   });
 });
+
+describe('B4-2: takePostLoginRedirect chỉ nhận deep-link cùng portal', () => {
+  it('cùng portal -> trả về và xóa; portal khác / prefix giả -> null', () => {
+    sessionStorage.setItem('edu_next', '/teacher/luong?x=1');
+    expect(client.takePostLoginRedirect('/teacher')).toBe('/teacher/luong?x=1');
+    expect(sessionStorage.getItem('edu_next')).toBeNull();
+    sessionStorage.setItem('edu_next', '/teacher');
+    expect(client.takePostLoginRedirect('/teacher')).toBe('/teacher');
+    for (const bad of ['/parent', '/app/students', '/teachers', '//evil.com/teacher']) {
+      sessionStorage.setItem('edu_next', bad);
+      expect(client.takePostLoginRedirect('/teacher')).toBeNull();
+      expect(sessionStorage.getItem('edu_next')).toBeNull(); // link lạ cũng bị xóa
+    }
+  });
+});
+
+describe('B4-4: 401 hết phiên gắn code SESSION_EXPIRED', () => {
+  it('refresh thất bại -> lỗi có code để toastApiError bỏ qua; event chỉ phát 1 lần', async () => {
+    client.setAuth('old', staff);
+    fetchMock.mockResolvedValue(json(401, { error: 'expired' }));
+    await expect(client.api('/students')).rejects.toMatchObject({ code: client.SESSION_EXPIRED });
+    expect(window.dispatchEvent).toHaveBeenCalledTimes(1);
+  });
+});

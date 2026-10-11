@@ -40,3 +40,12 @@ describe('toastApiError (UX-2)', () => {
     expect(toast).toHaveBeenLastCalledWith('fallback', 'error');
   });
 });
+
+describe('B4-4: toastApiError bỏ qua lỗi đã có UI riêng', () => {
+  it('PASSWORD_CHANGE_REQUIRED (PasswordChangeGate) và SESSION_EXPIRED (UnauthorizedListener) -> không toast', () => {
+    const toast = vi.fn();
+    toastApiError(toast, apiErr('Bạn cần đổi mật khẩu', 'PASSWORD_CHANGE_REQUIRED'), 'f');
+    toastApiError(toast, apiErr('Phiên hết hạn', 'SESSION_EXPIRED'), 'f');
+    expect(toast).not.toHaveBeenCalled();
+  });
+});

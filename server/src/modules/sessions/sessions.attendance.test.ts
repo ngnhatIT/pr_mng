@@ -54,6 +54,7 @@ function setupState(): void {
       }),
     },
     // J-A8: tháng lương chưa chốt
+    { match: 'pg_advisory_xact_lock_shared', get: () => ({}) },
     { match: 'FROM payroll_closures', get: () => undefined },
     {
       match: "FROM enrollments WHERE class_id = ? AND status = 'active'",

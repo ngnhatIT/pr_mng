@@ -58,7 +58,7 @@ jobs:
       - run: npm test -w server
         env:
           TEST_FLAGS: --experimental-test-coverage
-      # B3-5: chạy test client kèm báo cáo coverage (text-summary, chỉ báo cáo — không gate)
+      # B3-5/B4-7: test client + coverage; dưới ngưỡng trong client/vite.config.ts (coverage.thresholds) thì fail
       - run: npm run test:coverage -w client
       - run: python3 -c "import yaml; yaml.safe_load(open('server/src/docs/openapi.yaml')); print('openapi.yaml valid')"
 

@@ -1,7 +1,8 @@
-import { createContext, useCallback, useContext, useState, ReactNode } from 'react';
+import { createContext, useCallback, useContext, useRef, useState, ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import i18n from '../../i18n';
 import { Icon } from '../../shared/components/icons';
+import { SESSION_EXPIRED } from '../api/client';
 
 type ToastType = 'success' | 'error' | 'info';
 
@@ -32,6 +33,8 @@ export function toastApiError(
   fallback: string
 ): void {
   const e = err as (Error & { requestId?: string; code?: string }) | undefined;
+  // B4-4: hai lỗi này đã có UI riêng (PasswordChangeGate / UnauthorizedListener) -> không toast chồng lên
+  if (e?.code === 'PASSWORD_CHANGE_REQUIRED' || e?.code === SESSION_EXPIRED) return;
   const codeKey = e?.code ? `api.errors.${e.code}` : '';
   const mapped =
     codeKey && i18n.exists(codeKey, { ns: 'common' }) ? String(i18n.t(codeKey, { ns: 'common' })) : '';
@@ -45,6 +48,9 @@ export function toastApiError(
 
 let nextId = 1;
 
+/** B4-4: toast giống hệt (cùng type + message) trong khoảng này chỉ hiện 1 lần (nhiều request lỗi cùng lúc). */
+const DEDUPE_MS = 2000;
+
 const TOAST_ICON = {
   success: 'check-circle',
   error: 'alert',
@@ -55,7 +61,13 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   const [toasts, setToasts] = useState<ToastItem[]>([]);
   const { t } = useTranslation('common');
 
+  const lastShown = useRef(new Map<string, number>());
+
   const push = useCallback((message: string, type: ToastType = 'info') => {
+    const key = `${type}|${message}`;
+    const now = Date.now();
+    if (now - (lastShown.current.get(key) ?? -Infinity) < DEDUPE_MS) return;
+    lastShown.current.set(key, now);
     const id = nextId++;
     setToasts((prev) => [...prev, { id, message, type }]);
     // Toast lỗi ở lại lâu hơn để user kịp đọc

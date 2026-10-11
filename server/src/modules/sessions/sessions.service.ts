@@ -145,11 +145,11 @@ export async function updateSessionTopic(ctx: ScopeCtx, id: number, topic?: stri
  */
 export async function deleteSession(ctx: ScopeCtx, id: number, actor?: AuditActor): Promise<void> {
   const sc = await getSessionOr404(ctx, id);
-  await assertPayrollMonthOpen(sc.center_id, sc.date); // J-A8
   const attendanceCount = (
     (await db.prepare('SELECT COUNT(*) as c FROM attendance WHERE session_id = ?').get(id)) as { c: number }
   ).c;
   await db.transaction(async (tx) => {
+    await assertPayrollMonthOpen(tx, sc.center_id, sc.date); // J-A8
     await tx.prepare('DELETE FROM attendance WHERE session_id = ?').run(id);
     await tx.prepare('DELETE FROM teacher_checkins WHERE session_id = ?').run(id);
     await tx
@@ -195,7 +195,6 @@ export async function saveAttendance(
   if (!Array.isArray(records)) throw AppError.badRequest('Dữ liệu điểm danh không hợp lệ');
   const sc = await getSessionOr404(ctx, id);
   assertAttendanceDate(sc.date, !!ctx.ownOnly);
-  await assertPayrollMonthOpen(sc.center_id, sc.date); // J-A8
   const valid = records.filter(
     (r) => r && r.student_id && (ATTENDANCE_STATUS as readonly string[]).includes(r.status)
   );
@@ -213,6 +212,7 @@ export async function saveAttendance(
     .all(id)) as { student_id: number; status: string }[];
   const prev = new Map(prevRows.map((r) => [r.student_id, r.status]));
   await db.transaction(async (tx) => {
+    await assertPayrollMonthOpen(tx, sc.center_id, sc.date); // J-A8
     const upsert = await tx.prepare(
       `INSERT INTO attendance (session_id, student_id, status, note) VALUES (?, ?, ?, ?)
        ON CONFLICT(session_id, student_id) DO UPDATE SET status = excluded.status, note = excluded.note`

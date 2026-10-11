@@ -1,5 +1,39 @@
 # Changelog — EduCenterPro
 
+## 2026-10-11 — Review fixes, vòng 5
+
+Không có migration mới (vẫn v25).
+
+### Tính đúng đắn / bảo mật
+
+- `DELETE /roles/assign` gỡ được vai trò khỏi người dùng. Trước đây route bị `DELETE /roles/:id` nuốt (luôn 400
+  `VALIDATION_ID`) nên nút "Gỡ vai trò" không bao giờ chạy. Test mới duyệt mọi route của app và báo route nào bị route
+  đăng ký trước nuốt mất (`app.routes.test.ts`).
+- Người được ủy quyền `roles.manage` không đổi được tên/mô tả của role chứa quyền mà mình không có (403, cùng kiểm tra
+  như sửa quyền/xóa role).
+- Chốt tháng lương và ghi dữ liệu ảnh hưởng lương (điểm danh, hủy buổi, đổi đơn giá lùi ngày) dùng chung advisory lock
+  theo trung tâm: chốt chờ lần ghi đang dở commit rồi mới chụp bảng lương; lần ghi sau thấy tháng đã chốt (409). Trước
+  đây một lần lưu điểm danh đúng lúc chốt có thể lọt khỏi bảng lương đã chụp.
+- `POST /auth/logout-all` (`/parent/logout-all`) dùng được khi đang giữ mật khẩu tạm; token mới vẫn mang cờ
+  `must_change_password`.
+- Kiểm tra thu hồi token: token có `token_version` mới hơn cache của worker (đổi/đặt lại mật khẩu ở worker/instance
+  khác) được đọc lại từ DB thay vì trả 401. Token cũ hơn cache vẫn bị từ chối ngay; độ trễ thu hồi tối đa giữa các
+  worker vẫn là 60s (DEPLOYMENT.md).
+
+### Vận hành
+
+- Boot không còn `CREATE OR REPLACE VIEW`/`FUNCTION` khi định nghĩa không đổi (hash câu lệnh lưu trong `COMMENT` của
+  object). Một transaction dài đang đọc `v_invoice_balance` không còn làm boot lỗi lock_timeout (vòng lặp restart PM2).
+- DEPLOYMENT.md "Rollback": ghi rõ dữ liệu mất khi lùi xuống dưới v25/v24/v23 (snapshot và tháng đã chốt, lịch sử đơn
+  giá — nâng cấp lại thì đơn giá áp ngược cho tháng cũ).
+
+### UI/UX (client)
+- Link đính kèm đã gõ nhưng chưa bấm "+ Thêm" được tự thêm khi lưu (URL sai → báo lỗi tại chỗ).
+- Sau đăng nhập chỉ theo deep link thuộc đúng cổng của vai trò; trang giáo viên có lề ở màn hình hẹp.
+- Không toast cho phiên hết hạn / bắt đổi mật khẩu (đã có UI riêng); gộp toast trùng trong 2 giây.
+- Tiêu đề topbar không còn bị co ở 375px; tiêu đề tab không lặp "EduCenter Pro".
+- Coverage client 13% → 37% (test trang với API giả qua `test-utils.tsx`), CI chặn khi coverage giảm.
+
 ## 2026-10-11 — Review fixes, vòng 4 (v25)
 
 Migration **v25** `must_change_password_and_payroll_snapshot`: `users/parents.must_change_password`,

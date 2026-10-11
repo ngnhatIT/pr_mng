@@ -154,7 +154,9 @@ dùng cùng thiết lập. **Chạy nâng cấp lúc ít tải** (v23 khóa `pay
 
 **DDL mỗi lần khởi động** (`createSchema`/`createIndexes`/trigger/view — chạy cả khi không có migration mới, tức mọi lần
 `pm2 start/reload` hay crash-restart): chỉ chạy `CREATE INDEX` / `ADD COLUMN IF NOT EXISTS` còn **thiếu** (tra
-`pg_indexes`/`information_schema`), nên lần boot bình thường không xin lock bảng nào. Phần còn thiếu chạy cùng
+`pg_indexes`/`information_schema`), nên lần boot bình thường không xin lock bảng nào. View/function (`CREATE OR REPLACE`)
+chỉ chạy lại khi định nghĩa đổi: hash câu lệnh lưu trong `COMMENT` của object (`boot-ddl:<hash>`) — báo cáo/BI đang
+đọc `v_invoice_balance` lâu không làm boot chờ. Đừng tự `COMMENT ON` các object đó. Phần còn thiếu chạy cùng
 `lock_timeout` như migration; bảng đang bị giữ lâu thì boot lỗi `[MIGRATION] DDL lúc khởi động: không lấy được lock bảng`
 (đã rollback) và PM2 thử lại.
 
@@ -242,6 +244,14 @@ npx tsx scripts/migrate-down.ts --to 21 --yes    # thực hiện: chạy down c�
 - Dừng app và pg_dump trước khi chạy: `down` xóa cột/bảng mới (vd v22 bỏ `uploads`, `sessions.status`, `center_id` của
   `reset_requests`/`referrals`) và có thể lỗi khi khôi phục unique toàn cục nếu hai trung tâm đã dùng trùng mã học viên/role.
 - Từ chối chạy nếu migration cần gỡ chưa có `down` (v2–v13, v15): restore từ pg_dump.
+- **Mất dữ liệu lương / bảo mật khi lùi qua v25–v23** (nâng cấp lại KHÔNG lấy lại được — muốn giữ thì restore pg_dump):
+  - xuống dưới **v25**: mất `payroll_closures.snapshot` (tháng đã chốt sẽ tính lại từ dữ liệu hiện tại, rồi chụp lại ở
+    lần đọc đầu) và cờ `must_change_password` (tài khoản đang giữ mật khẩu tạm dùng được ngay, không bị buộc đổi);
+  - xuống dưới **v24**: mất bảng `payroll_closures` (mọi tháng đã chốt thành MỞ, sửa đơn giá/điểm danh được lại) và
+    `homework.max_attempts` (quiz về không giới hạn lượt);
+  - xuống dưới **v23**: mất `salary_rate_history` — nâng cấp lại, v23 backfill mốc `1970-01-01` = đơn giá **hiện tại**,
+    nên đơn giá đầu tiên/đổi giá áp NGƯỢC cho mọi tháng cũ (lương tháng cũ thay đổi); mất cả `payments.credit_id` /
+    `credits.voided_at` (v23 gắn lại credit theo note khi nâng cấp lại, payment note tự gõ không gắn lại được).
 - Mỗi migration chạy trong 1 transaction và xóa dòng tương ứng trong `schema_migrations`; lỗi thì dừng tại đó.
 - Sau đó deploy lại code của version tương ứng.
 
@@ -269,3 +279,5 @@ npx tsx scripts/migrate-down.ts --to 21 --yes    # thực hiện: chạy down c�
 - Cache theo process (không có invalidation chéo worker): quyền/role, kiểm tra thu hồi token (`token_version`) và cấu hình
   trung tâm (gồm khóa VNPay) đều là Map 60s trong từng worker. Khóa giáo viên, đổi role hay xoay secret VNPay có thể
   mất tới 60s mới có hiệu lực trên worker còn lại. Hướng nâng cấp: pg `LISTEN/NOTIFY` để xóa cache (`pg` đã có sẵn).
+  Thu hồi token (đổi/đặt lại mật khẩu, logout-all): token cũ có thể còn dùng được **tối đa 60s** trên worker/instance
+  khác; token MỚI (tv lớn hơn cache) không bao giờ bị từ chối — worker thấy tv mới hơn thì đọc lại DB.

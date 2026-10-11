@@ -37,8 +37,7 @@ export function ParentLogin() {
         ...(data.must_change_password ? { must_change_password: true } : {}),
       });
       // Quay lại deep-link đã lưu (khi bị 401 hoặc vào trang cần login).
-      const next = takePostLoginRedirect();
-      void navigate(next && next.startsWith('/parent') ? next : '/parent', { replace: true });
+      void navigate(takePostLoginRedirect('/parent') ?? '/parent', { replace: true });
     } catch (err) {
       // Lỗi đăng nhập (sai SĐT/mật khẩu) hiện inline dưới ô mật khẩu, focus để nhập lại
       show({ password: err instanceof Error ? err.message : t('auth.loginError') });

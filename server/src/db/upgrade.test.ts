@@ -13,7 +13,7 @@ process.env.DATABASE_URL =
 
 import { describe, it, before, after } from 'node:test';
 import assert from 'node:assert/strict';
-import { db } from './pg-compat';
+import { db, type Db, type Tx } from './pg-compat';
 import { runMigrations, MIGRATIONS, bootDdlDb } from './migrations';
 import { createSchema, createTriggers, createHistoryTables, createViews } from './schema';
 import { createIndexes } from './indexes';
@@ -142,6 +142,62 @@ describe('migrations PostgreSQL', () => {
       await bootDdl();
       const idx = await db.query("SELECT 1 FROM pg_indexes WHERE indexname = 'idx_payments_paid_at'");
       assert.equal(idx.rows.length, 1, 'thả lock thì boot tạo lại index còn thiếu');
+    } finally {
+      await holder.query('ROLLBACK').catch(() => undefined);
+      if (prev === undefined) delete process.env.MIGRATION_LOCK_TIMEOUT;
+      else process.env.MIGRATION_LOCK_TIMEOUT = prev;
+      await holder.end();
+    }
+  });
+
+  it('R4-2: boot không CREATE OR REPLACE view/function đã đúng định nghĩa — transaction dài đọc view không chặn boot', async () => {
+    const ran: string[] = [];
+    const spy = {
+      ...db,
+      transaction: <T>(fn: (tx: Tx) => Promise<T>) =>
+        db.transaction((tx) =>
+          fn({
+            ...tx,
+            exec: (s: string) => {
+              ran.push(s);
+              return tx.exec(s);
+            },
+          })
+        ),
+    } as Db;
+    const bootDdl = async () => {
+      const ddl = bootDdlDb(spy);
+      await createSchema(ddl);
+      await createIndexes(ddl);
+      await createTriggers(ddl);
+      await createHistoryTables(ddl);
+      await createViews(ddl);
+    };
+    await bootDdl(); // gắn hash nếu chưa có
+    const holder = new Client({ connectionString: process.env.DATABASE_URL });
+    await holder.connect();
+    const prev = process.env.MIGRATION_LOCK_TIMEOUT;
+    process.env.MIGRATION_LOCK_TIMEOUT = '300ms';
+    try {
+      // Như kịch bản judge: báo cáo/BI giữ transaction đã đọc view
+      await holder.query('BEGIN');
+      await holder.query('SELECT * FROM v_invoice_balance LIMIT 1');
+      ran.length = 0;
+      await bootDdl();
+      const replaced = ran.filter((s) => /CREATE\s+OR\s+REPLACE/i.test(s));
+      assert.deepEqual(replaced, [], 'định nghĩa không đổi -> không chạy lại');
+      await holder.query('COMMIT');
+
+      // Định nghĩa đổi (hash trong COMMENT khác) -> chạy lại + cập nhật hash
+      await db.exec("COMMENT ON VIEW v_invoice_balance IS 'boot-ddl:old'");
+      await db.exec("COMMENT ON FUNCTION audit_payment() IS 'boot-ddl:old'");
+      ran.length = 0;
+      await bootDdl();
+      assert.ok(ran.some((s) => /CREATE OR REPLACE VIEW v_invoice_balance/.test(s)));
+      assert.ok(ran.some((s) => /CREATE OR REPLACE FUNCTION audit_payment\(\)/.test(s)));
+      assert.ok(!ran.some((s) => /CREATE OR REPLACE FUNCTION maintain_row\(\)/.test(s)), 'chỉ object đổi');
+      const c = await db.query("SELECT obj_description('v_invoice_balance'::regclass, 'pg_class') AS d");
+      assert.match((c.rows[0] as { d: string }).d, /^boot-ddl:[0-9a-f]{16}$/);
     } finally {
       await holder.query('ROLLBACK').catch(() => undefined);
       if (prev === undefined) delete process.env.MIGRATION_LOCK_TIMEOUT;

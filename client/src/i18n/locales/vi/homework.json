@@ -289,6 +289,7 @@
       "maxScoreInvalid": "Điểm tối đa phải là số không âm",
       "attRequired": "Vui lòng nhập tên và link đính kèm",
       "attUrlInvalid": "Link đính kèm phải bắt đầu bằng http:// hoặc https://",
+      "attPendingLocked": "Chưa tải được đính kèm hiện có nên không thêm được link đang nhập. Xóa ô link hoặc mở lại bài.",
       "attTooBig": "File vượt quá 10MB, vui lòng chọn file nhỏ hơn",
       "attTypeInvalid": "Định dạng file không hỗ trợ. Chỉ nhận: ảnh, PDF, Word, MP3, MP4",
       "attUploadFailed": "Tải file thất bại, vui lòng thử lại",

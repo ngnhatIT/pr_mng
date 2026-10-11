@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { parentApi, VietQRInfo } from './parent.api';
 import { toastApiError, useToast } from '../../shared/ui/toast';
 import { useLoad } from '../../shared/hooks/useLoad';
+import { useDocumentTitle } from '../../shared/hooks/useDocumentTitle';
 import { Modal } from '../../shared/components/Modal';
 import { Icon, IconName } from '../../shared/components/icons';
 import './parent.css';
@@ -57,6 +58,7 @@ export function ChildDetail() {
   } = useLoad(() => parentApi.childOverview(id || ''), [id]);
   // Dữ liệu con khác (vừa đổi id) không được hiện cho con này
   const data = loaded && String(loaded.student.id) === id ? loaded : null;
+  useDocumentTitle(data?.student.name ?? '');
   useEffect(() => {
     if (error) toastApiError(toast, error, t('child.loadError'));
   }, [error, toast, t]);

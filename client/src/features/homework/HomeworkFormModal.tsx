@@ -105,9 +105,14 @@ export function HomeworkFormModal({
       errs.quiz = t('form.errors.quizInvalid', { count: quizInvalidCount });
     if (!initial && publishMode === 'schedule' && !publishAt)
       errs.publishAt = t('form.errors.publishAtRequired');
+    // B4-1: link gõ dở mà thiếu/sai URL -> chặn lưu (hợp lệ thì submit tự thêm, không âm thầm bỏ)
+    const attErr = att.pendingError();
+    if (attErr) errs.attachment = attErr;
     const ok = show(errs);
+    const first = (Object.keys(errs) as HwErrKey[])[0];
     // P1-2: lỗi quiz là lỗi đầu tiên → cuộn + focus tới câu hỏi lỗi đầu tiên (pattern QuizTaker)
-    if (!ok && (Object.keys(errs) as HwErrKey[])[0] === 'quiz') quiz.focusFirstInvalid();
+    if (first === 'quiz') quiz.focusFirstInvalid();
+    if (first === 'attachment') att.attUrlRef.current?.focus();
     return ok;
   };
 
@@ -115,6 +120,7 @@ export function HomeworkFormModal({
     const mode = publishOverride || publishMode;
     if (busy) return;
     if (!validate()) return;
+    const attList = att.commitPending();
     setBusy(true);
     try {
       const status = mode === 'now' ? 'published' : mode === 'draft' ? 'draft' : 'scheduled';
@@ -131,7 +137,7 @@ export function HomeworkFormModal({
           status: initial.status,
           publish_at: initial.publish_at ?? null,
           // YC1: đồng bộ đính kèm khi sửa (thêm/xóa); chưa tải xong/lỗi → undefined = server giữ nguyên
-          attachments: att.editPayload(),
+          attachments: att.editPayload(attList),
         });
         // Đính kèm đã gắn vào bài → không còn mồ côi (Hủy sau lỗi lưu đề không được xóa file)
         att.markSaved();
@@ -150,7 +156,7 @@ export function HomeworkFormModal({
           kind,
           rubric_id: rubricId ? Number(rubricId) : null,
           max_attempts: kind === 'quiz' ? maxAttemptsPayload : null,
-          attachments,
+          attachments: attList,
           target_student_ids: targetMode === 'selected' ? pickedStudents : [],
           questions: kind === 'quiz' ? cleanedQuestions : [],
         });
@@ -186,6 +192,8 @@ export function HomeworkFormModal({
         maxAttempts !== initialMaxAttempts ||
         rubricId !== (initial.rubric_id?.toString() || '') ||
         attDirty ||
+        attName.trim() !== '' ||
+        attUrl.trim() !== '' ||
         quizEdited
       );
     }

@@ -1,5 +1,5 @@
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { useEffect } from 'react';
+import { useLayoutEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { getUser, logout as doLogout } from '../../shared/api/client';
 import { Icon, IconName } from '../../shared/components/icons';
@@ -19,7 +19,8 @@ export function ParentLayout() {
   const location = useLocation();
   const user = getUser();
 
-  useEffect(() => {
+  // Layout effect: chạy TRƯỚC useDocumentTitle (passive) của trang con -> trang không có tab (chi tiết con, 404) tự đặt title
+  useLayoutEffect(() => {
     const active = [...TABS]
       .sort((a, b) => b.to.length - a.to.length)
       .find((tab) => (tab.end ? location.pathname === tab.to : location.pathname.startsWith(tab.to)));

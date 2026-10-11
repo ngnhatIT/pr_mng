@@ -44,6 +44,38 @@ router.get(
   })
 );
 
+// R4-1: các route tĩnh (/assign) PHẢI đăng ký trước '/:id' — nếu không DELETE /assign rơi vào DELETE /:id (400)
+/** Gán role cho user */
+router.post(
+  '/assign',
+  requirePermission('roles.manage'),
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const { user_id, role_id } = validate(req.body, {
+      user_id: v.number({ required: true, label: 'User' }),
+      role_id: v.number({ required: true, label: 'Role' }),
+    });
+    await assignRole(reqCenterId(req), Number(user_id), Number(role_id), req.user!, actorFromReq(req));
+    res.json({ ok: true });
+  })
+);
+
+/** Gỡ role khỏi user */
+router.delete(
+  '/assign',
+  requirePermission('roles.manage'),
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const { user_id, role_id } = validate(
+      { ...req.query, ...req.body },
+      {
+        user_id: v.number({ required: true, label: 'User' }),
+        role_id: v.number({ required: true, label: 'Role' }),
+      }
+    );
+    await unassignRole(reqCenterId(req), Number(user_id), Number(role_id), req.user!, actorFromReq(req));
+    res.json({ ok: true });
+  })
+);
+
 /** Chi tiết role + permissions (role riêng của trung tâm khác -> 404) */
 router.get(
   '/:id',
@@ -89,7 +121,7 @@ router.put(
       name: v.string({ max: 100, label: 'Tên' }),
       description: v.string({ max: 500, label: 'Mô tả' }),
     });
-    await updateRole(cid, id, input);
+    await updateRole(cid, id, input, req.user!);
     res.json({ ok: true });
   })
 );
@@ -126,37 +158,6 @@ router.put(
       meta: { permissions: result.permissions },
     });
     res.json({ ok: true, count: result.count });
-  })
-);
-
-/** Gán role cho user */
-router.post(
-  '/assign',
-  requirePermission('roles.manage'),
-  asyncHandler(async (req: AuthRequest, res: Response) => {
-    const { user_id, role_id } = validate(req.body, {
-      user_id: v.number({ required: true, label: 'User' }),
-      role_id: v.number({ required: true, label: 'Role' }),
-    });
-    await assignRole(reqCenterId(req), Number(user_id), Number(role_id), req.user!, actorFromReq(req));
-    res.json({ ok: true });
-  })
-);
-
-/** Gỡ role khỏi user */
-router.delete(
-  '/assign',
-  requirePermission('roles.manage'),
-  asyncHandler(async (req: AuthRequest, res: Response) => {
-    const { user_id, role_id } = validate(
-      { ...req.query, ...req.body },
-      {
-        user_id: v.number({ required: true, label: 'User' }),
-        role_id: v.number({ required: true, label: 'Role' }),
-      }
-    );
-    await unassignRole(reqCenterId(req), Number(user_id), Number(role_id), req.user!, actorFromReq(req));
-    res.json({ ok: true });
   })
 );
 

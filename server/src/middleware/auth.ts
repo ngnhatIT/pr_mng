@@ -77,7 +77,10 @@ async function checkTokenFreshness(payload: AuthUser): Promise<TokenStatus> {
   const hit = tokenCheckCache.get(key);
   let tv: number;
   let active: boolean;
-  if (hit && Date.now() - hit.at < TOKEN_CHECK_TTL_MS) {
+  // B4-6: tv trong token MỚI hơn cache (đổi mật khẩu/reset ở instance khác) -> đọc lại DB thay vì 401.
+  // Token tv cũ hơn cache vẫn bị từ chối ngay. Multi-instance: thu hồi trễ tối đa TOKEN_CHECK_TTL_MS (60s)
+  // trên instance chưa thấy tv mới (single-process: tức thì nhờ invalidateTokenCheck).
+  if (hit && Date.now() - hit.at < TOKEN_CHECK_TTL_MS && payload.tv <= hit.tv) {
     ({ tv, active } = hit);
   } else {
     const row = (await db
@@ -92,8 +95,12 @@ async function checkTokenFreshness(payload: AuthUser): Promise<TokenStatus> {
   return tv === payload.tv ? 'ok' : 'revoked';
 }
 
-/** N-5: route vẫn dùng được khi đang giữ mật khẩu tạm (kể cả alias /api không version). */
-const MUST_CHANGE_ALLOWED = /^\/api(\/v1)?\/(auth\/(me|change-password)|parent\/change-password)\/?$/;
+/**
+ * N-5: route vẫn dùng được khi đang giữ mật khẩu tạm (kể cả alias /api không version).
+ * R4-6: logout-all chỉ giảm quyền truy cập (token mới vẫn mang cờ must_change_password).
+ */
+const MUST_CHANGE_ALLOWED =
+  /^\/api(\/v1)?\/(auth\/(me|change-password|logout-all)|parent\/(change-password|logout-all))\/?$/;
 
 /**
  * Verify xong → kiểm tra thu hồi/khóa (bất đồng bộ). Mọi lỗi bên trong đều biến

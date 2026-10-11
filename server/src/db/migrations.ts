@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import type { Db, Tx } from './pg-compat';
 import { SCHEMA_VERSION } from './schema';
 
@@ -776,11 +777,20 @@ const LOCKING_IF_NOT_EXISTS =
   /CREATE\s+(?:UNIQUE\s+)?INDEX\s+IF\s+NOT\s+EXISTS\s+(\w+)[^;]*;|ALTER\s+TABLE\s+(\w+)\s+ADD\s+COLUMN\s+IF\s+NOT\s+EXISTS\s+(\w+)[^;]*;/gi;
 
 /**
+ * R4-2: CREATE OR REPLACE VIEW (ACCESS EXCLUSIVE trên view — chờ sau mọi transaction đang đọc view) và
+ * CREATE OR REPLACE FUNCTION (không tham số). Boot ghi hash câu lệnh vào COMMENT của object; lần sau hash
+ * khớp thì bỏ qua. Đổi định nghĩa = đổi text câu lệnh -> hash khác -> chạy lại.
+ */
+const REPLACEABLE =
+  /CREATE\s+OR\s+REPLACE\s+(?:VIEW\s+(\w+)\s+AS[^;]*|FUNCTION\s+(\w+)\(\)[\s\S]*?\$\$[\s\S]*?\$\$[^;]*);/gi;
+
+/**
  * N-2: DDL chạy MỖI lần boot (createSchema/createIndexes/createTriggers/createHistoryTables/createViews).
  * - Bỏ CREATE INDEX / ADD COLUMN đã có (tra pg_indexes / information_schema) -> boot bình thường không xin
  *   lock bảng nào, transaction dài đang ghi payments không làm boot chặn ghi các bảng khác.
- * - Phần còn lại (DB mới, index mới thêm, view/function) chạy như migration: beginMigrationTx (lock_timeout)
- *   + explainMigrationError — chờ lock tối đa MIGRATION_LOCK_TIMEOUT rồi rollback, báo lỗi rõ.
+ * - Phần còn lại (DB mới, index mới thêm, view/function đổi định nghĩa — R4-2) chạy như migration:
+ *   beginMigrationTx (lock_timeout) + explainMigrationError — chờ lock tối đa MIGRATION_LOCK_TIMEOUT rồi
+ *   rollback, báo lỗi rõ.
  */
 export function bootDdlDb(db: Db): Db {
   return {
@@ -806,13 +816,31 @@ export function bootDdlDb(db: Db): Db {
                 .all()) as { n: string }[]
             ).map((r) => r.n)
           );
-          const rest = sql.replace(
-            LOCKING_IF_NOT_EXISTS,
-            (stmt, index?: string, table?: string, column?: string) =>
+          const comments = new Map(
+            (
+              (await tx
+                .prepare(
+                  `SELECT 'v:' || relname AS n, obj_description(oid, 'pg_class') AS d FROM pg_class
+                   WHERE relkind = 'v' AND relnamespace = current_schema()::regnamespace
+                   UNION ALL
+                   SELECT 'f:' || proname, obj_description(oid, 'pg_proc') FROM pg_proc
+                   WHERE pronamespace = current_schema()::regnamespace AND pronargs = 0`
+                )
+                .all()) as { n: string; d: string | null }[]
+            ).map((r) => [r.n, r.d])
+          );
+          const rest = sql
+            .replace(LOCKING_IF_NOT_EXISTS, (stmt, index?: string, table?: string, column?: string) =>
               (index ? indexes.has(index.toLowerCase()) : columns.has(`${table}.${column}`.toLowerCase()))
                 ? ''
                 : stmt
-          );
+            )
+            .replace(REPLACEABLE, (stmt, view?: string, fn?: string) => {
+              const tag = `boot-ddl:${createHash('sha256').update(stmt).digest('hex').slice(0, 16)}`;
+              const key = view ? `v:${view.toLowerCase()}` : `f:${fn!.toLowerCase()}`;
+              if (comments.get(key) === tag) return '';
+              return `${stmt}\nCOMMENT ON ${view ? `VIEW ${view}` : `FUNCTION ${fn}()`} IS '${tag}';`;
+            });
           if (rest.trim()) await tx.exec(rest);
         })
         .catch((err: unknown) => {

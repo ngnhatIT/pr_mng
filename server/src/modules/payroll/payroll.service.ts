@@ -1,4 +1,4 @@
-import { db, toISODate } from '../../db';
+import { db, toISODate, type Tx } from '../../db';
 import { AppError } from '../../shared/errors';
 import { audit, type AuditActor } from '../../shared/audit';
 import { todayVN } from '../../shared/vnTime';
@@ -166,12 +166,14 @@ export function firstDayOfPrevMonth(today: string): string {
  * J-A8: tháng lương đã chốt -> 409. Dùng cho đổi đơn giá lùi ngày, lưu điểm danh, hủy buổi.
  * date: 'YYYY-MM-DD' (hoặc 'YYYY-MM'); chặn khi tháng đó HOẶC tháng sau đã chốt (tháng sau chốt
  * nghĩa là mọi tháng trước đã trả lương). centerId null (dữ liệu cũ không gắn trung tâm) -> bỏ qua.
- * ponytail: kiểm tra ngoài transaction ghi — chốt tháng đúng lúc đang lưu điểm danh có thể lọt 1 lần;
- * cần tuyệt đối thì SELECT ... FOR SHARE trên payroll_closures trong cùng transaction.
+ * Gọi TRONG transaction ghi: giữ advisory lock SHARED của trung tâm tới commit — setPayrollClosed giữ
+ * EXCLUSIVE khi chụp snapshot, nên lần ghi đang dở hoặc đã vào snapshot, hoặc thấy tháng đã chốt (409).
  */
-export async function assertPayrollMonthOpen(centerId: number | null, date: string): Promise<void> {
+export async function assertPayrollMonthOpen(tx: Tx, centerId: number | null, date: string): Promise<void> {
   if (centerId === null) return;
-  const closed = (await db
+  // Câu riêng: snapshot của câu kiểm tra phải lấy SAU khi có lock (thấy closure vừa commit)
+  await tx.prepare(`SELECT pg_advisory_xact_lock_shared(hashtext('payroll-close'), ?)`).get(centerId);
+  const closed = (await tx
     .prepare('SELECT month FROM payroll_closures WHERE center_id = ? AND month >= ? ORDER BY month LIMIT 1')
     .get(centerId, date.slice(0, 7))) as { month: string } | undefined;
   if (closed) {
@@ -193,18 +195,18 @@ export async function setPayrollClosed(
   if (closed && month >= todayVN().slice(0, 7)) {
     throw AppError.badRequest('Chỉ chốt được tháng đã kết thúc');
   }
-  // N-1: chụp bảng lương lúc chốt — tháng đã chốt luôn trả đúng số này (xem frozenPayroll)
+  // N-1: chụp bảng lương lúc chốt — tháng đã chốt luôn trả đúng số này (xem frozenPayroll).
+  // Lock EXCLUSIVE: chờ các lần ghi lương đang dở commit rồi mới chụp; lần ghi sau thấy tháng đã chốt.
   const r = closed
-    ? await db
-        .prepare(
-          'INSERT INTO payroll_closures (center_id, month, closed_by, snapshot) VALUES (?, ?, ?, ?) ON CONFLICT DO NOTHING'
-        )
-        .run(
-          centerId,
-          month,
-          actor?.id ?? null,
-          JSON.stringify((await livePayroll(centerId, month)).map(toPayrollRow))
-        )
+    ? await db.transaction(async (tx) => {
+        await tx.prepare(`SELECT pg_advisory_xact_lock(hashtext('payroll-close'), ?)`).get(centerId);
+        const snapshot = JSON.stringify((await livePayroll(centerId, month)).map(toPayrollRow));
+        return tx
+          .prepare(
+            'INSERT INTO payroll_closures (center_id, month, closed_by, snapshot) VALUES (?, ?, ?, ?) ON CONFLICT DO NOTHING'
+          )
+          .run(centerId, month, actor?.id ?? null, snapshot);
+      })
     : await db.prepare('DELETE FROM payroll_closures WHERE center_id = ? AND month = ?').run(centerId, month);
   if (r.changes === 0) return; // idempotent
   await audit({
@@ -253,8 +255,8 @@ export async function setSalaryRule(
   if (effectiveFrom > today || effectiveFrom < firstDayOfPrevMonth(today)) {
     throw AppError.badRequest('Ngày hiệu lực chỉ được từ đầu tháng trước đến hôm nay');
   }
-  await assertPayrollMonthOpen(teacher.center_id, effectiveFrom);
   const old = await db.transaction(async (tx) => {
+    await assertPayrollMonthOpen(tx, teacher.center_id, effectiveFrom);
     const prev = (await tx
       .prepare('SELECT per_session_amount FROM salary_rules WHERE teacher_id = ? FOR UPDATE')
       .get(teacher.id)) as { per_session_amount: number } | undefined;

@@ -81,6 +81,9 @@ useLoad(() => api.list(q.search, q.status, { page: Number(q.page) }), [q.search,
 
 - Server gửi câu nghiệp vụ cụ thể bằng tiếng Việt. Khi UI là tiếng Việt, câu của server được dùng. Khi UI là tiếng Anh, hoặc mã lỗi là `INTERNAL_ERROR`, dùng text dịch theo mã (`api.errors.<code>`).
 - Không có message thì dùng `fallbackText`. `request_id` được gắn kèm để người dùng báo lỗi cho support.
+- Bỏ qua (không toast) lỗi có UI riêng: `PASSWORD_CHANGE_REQUIRED` (PasswordChangeGate mở form đổi mật khẩu) và `SESSION_EXPIRED` (`api()` gắn mã này cho lỗi 401 hết phiên; UnauthorizedListener toast + về trang login).
+- `ToastProvider` gộp toast trùng: cùng type + message trong 2 giây chỉ hiện 1 lần (nhiều request lỗi cùng lúc).
+- Deep-link sau đăng nhập (`edu_next`): `takePostLoginRedirect(home)` chỉ trả link thuộc portal của role vừa đăng nhập (`/app`, `/teacher`, `/parent`); link của portal khác bị bỏ, về home của role.
 
 ## Ô nhập tiền (`shared/components/Form.tsx`)
 
@@ -124,7 +127,15 @@ useLoad(() => api.list(q.search, q.status, { page: Number(q.page) }), [q.search,
   - `shared/hooks/hooks.test.tsx`: useLoad, useUrlState, gõ giữa chuỗi với useUrlSearch;
   - `app/UnsavedChangesPrompt.test.tsx`: blocker, Back/POP.
   - `shared/components/Layout.test.tsx`: drawer mobile + ConfirmDialog vẫn giữ khóa scroll.
-- Coverage: `npm run test:coverage -w client` (v8, in text-summary). CI chạy lệnh này trong job test, chỉ báo cáo, không đặt ngưỡng.
+  - `features/tuition/Tuition.test.tsx`, `features/classes/Attendance.test.tsx`: trang thật + API giả qua `src/test-utils.tsx`.
+- `src/test-utils.tsx` (test DOM): `mockFetch({'GET /students': data | (call) => data | Response})` giả `fetch` theo
+  method + path và trả mảng `calls` (method, path, query, body, headers) để assert request shape; request đi qua
+  api module + `client.ts` thật. `renderRoutes/renderPage` render trong `ToastProvider` + data router (cố định
+  tiếng Việt). `type()` / `click()` / `byText()` / `flush()`; `cleanup` trong `afterEach`. Quyền
+  (`/roles/me/permissions`) cache theo token, nên mỗi test dùng một token khác nếu đổi quyền.
+- Coverage: `npm run test:coverage -w client` (v8, in text-summary). CI chạy lệnh này trong job test.
+  `coverage.thresholds` trong `client/vite.config.ts` đặt sát dưới số hiện tại (lines 36%); tụt dưới ngưỡng thì fail.
+  Thêm test thì nâng ngưỡng theo.
 
 ## Ngân sách bundle
 

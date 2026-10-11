@@ -30,6 +30,13 @@
   padding: 12px 16px;
 }
 
+/* B4-3: trang giáo viên (.page) cần lề ngang, nhất là trên điện thoại */
+.teacher-content > .page {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 16px 14px;
+}
+
 @media (max-width: 380px) {
   .parent-bottomnav .pnav-link {
     font-size: 12px;

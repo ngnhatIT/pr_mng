@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { getUser, logout as doLogout, getActingCenter, setActingCenter } from '../../shared/api/client';
@@ -83,6 +83,8 @@ const SECTIONS: { labelKey: string; items: NavItem[] }[] = [
   },
 ];
 
+const APP_NAME = 'EduCenter Pro';
+
 function pageTitleFor(t: (k: string) => string, pathname: string, isSuperadmin: boolean): string {
   const all: NavItem[] = [
     ...SECTIONS.flatMap((s) => s.items),
@@ -94,7 +96,7 @@ function pageTitleFor(t: (k: string) => string, pathname: string, isSuperadmin: 
       if (!best || item.to.length > best.to.length) best = item;
     }
   }
-  return best ? t(best.labelKey) : 'EduCenter Pro';
+  return best ? t(best.labelKey) : APP_NAME;
 }
 
 export function Layout() {
@@ -256,8 +258,10 @@ export function Layout() {
 
   const title = pageTitleFor(t, location.pathname, isSuperadmin);
 
-  useEffect(() => {
-    document.title = `${title} - EduCenter Pro`;
+  // Layout effect: chạy TRƯỚC useDocumentTitle (passive) của trang con -> 404 trong layout tự đặt title được.
+  // Không khớp menu -> chỉ tên app (B4-5: tránh "EduCenter Pro - EduCenter Pro").
+  useLayoutEffect(() => {
+    document.title = title === APP_NAME ? APP_NAME : `${title} - ${APP_NAME}`;
   }, [title]);
 
   return (
@@ -404,7 +408,7 @@ export function Layout() {
             <Icon name="key" size={18} />
           </button>
           <button
-            className="btn btn-icon btn-ghost"
+            className="btn btn-icon btn-ghost topbar-logout"
             onClick={logout}
             aria-label={t('nav.logout')}
             title={t('nav.logout')}

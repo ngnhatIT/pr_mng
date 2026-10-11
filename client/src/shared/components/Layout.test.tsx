@@ -5,6 +5,8 @@ import { createRoot, type Root } from 'react-dom/client';
 import { createMemoryRouter, RouterProvider } from 'react-router-dom';
 import '../../i18n';
 import { Layout } from './Layout';
+import { NotFound } from '../../app/ErrorPages';
+import i18n from '../../i18n';
 
 vi.mock('../../features/system/roles.api', () => ({ loadMyPermissions: () => Promise.resolve(new Set()) }));
 
@@ -40,5 +42,35 @@ describe('Layout drawer + Modal', () => {
 
     click('.scrim');
     expect(document.body.style.overflow).toBe('');
+  });
+});
+
+describe('Layout: document.title (B4-5)', () => {
+  it('trang có menu -> "<menu> - EduCenter Pro"; 404 trong layout -> tiêu đề 404, không "EduCenter Pro - EduCenter Pro"', async () => {
+    const router = createMemoryRouter(
+      [
+        {
+          path: '/app',
+          element: <Layout />,
+          children: [
+            { path: 'students', element: <div /> },
+            { path: '*', element: <NotFound /> },
+          ],
+        },
+      ],
+      { initialEntries: ['/app/students'] }
+    );
+    const el = document.createElement('div');
+    document.body.appendChild(el);
+    await act(async () => {
+      root = createRoot(el);
+      root.render(<RouterProvider router={router} />);
+    });
+    expect(document.title).toBe(`${i18n.t('nav.students')} - EduCenter Pro`);
+    await act(() => router.navigate('/app/khong-co'));
+    expect(document.title).toBe(`${i18n.t('notFound.title')} - EduCenter Pro`);
+    expect(document.querySelector('.topbar-title')!.textContent).toBe('EduCenter Pro');
+    await act(() => router.navigate('/app/students'));
+    expect(document.title).toBe(`${i18n.t('nav.students')} - EduCenter Pro`);
   });
 });

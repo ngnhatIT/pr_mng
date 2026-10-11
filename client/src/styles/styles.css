@@ -2543,6 +2543,18 @@ button.search-clear:active {
   font-weight: 700;
   font-size: 14px;
 }
+/* B4-5: điện thoại hẹp -> bỏ avatar + nút đăng xuất trên topbar (đã có ở chân sidebar) để tiêu đề trang
+   còn chỗ hiện (cắt "…" khi dài) thay vì co thành 1 chấm */
+@media (max-width: 420px) {
+  .topbar {
+    gap: 8px;
+  }
+  .topbar-user,
+  .topbar-logout {
+    display: none;
+  }
+}
+
 .menu-btn {
   display: none;
 }
@@ -3526,6 +3538,14 @@ button.search-clear:active {
   border: 1px solid #e2e8f0;
   border-radius: 8px;
   margin-bottom: 12px;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+}
+/* B4-5: điện thoại -> dòng thông tin đề chiếm trọn hàng đầu, lượt làm xuống hàng dưới */
+@media (max-width: 480px) {
+  .quiz-info-bar > :first-child {
+    flex-basis: 100%;
+  }
 }
 .alert-warning {
   padding: 10px 12px;

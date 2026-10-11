@@ -92,3 +92,20 @@ export interface Attachment {
   url: string;
   kind: string;
 }
+
+/**
+ * B4-1: link gõ dở (chưa bấm "+ Thêm") lúc lưu bài. Hàm thuần để test được.
+ * null = không có gì; { error } = thiếu/sai URL (chặn lưu, báo inline);
+ * { link } = tự thêm khi lưu (chưa nhập tên -> lấy URL làm tên).
+ */
+export function pendingLink(
+  name: string,
+  url: string
+): { error: 'attRequired' | 'attUrlInvalid' } | { link: Attachment } | null {
+  const n = name.trim();
+  const u = url.trim();
+  if (!n && !u) return null;
+  if (!u) return { error: 'attRequired' };
+  if (!isValidHttpUrl(u)) return { error: 'attUrlInvalid' };
+  return { link: { name: n || u, url: u, kind: 'link' } };
+}

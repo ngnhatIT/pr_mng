@@ -122,16 +122,12 @@ export function Login() {
         data.token,
         data.must_change_password ? { ...data.user, must_change_password: true } : data.user
       );
-      // Quay lại deep-link đã lưu (khi bị 401 hoặc vào trang cần login), nếu không thì về home theo role.
-      const next = takePostLoginRedirect();
-      if (next) {
-        void navigate(next, { replace: true });
-        return;
-      }
+      // Quay lại deep-link đã lưu (khi bị 401 hoặc vào trang cần login) nếu thuộc portal của role
+      // (B4-2: bỏ link của portal khác), nếu không thì về home theo role.
       const role = data.user.role;
-      if (role === 'teacher') void navigate('/teacher');
-      else if (role === 'parent') void navigate('/parent');
-      else void navigate('/app');
+      const home = role === 'teacher' ? '/teacher' : role === 'parent' ? '/parent' : '/app';
+      const next = takePostLoginRedirect(home);
+      void navigate(next ?? home, { replace: !!next });
     } catch (err) {
       // Lỗi đăng nhập (sai tài khoản/mật khẩu) hiện inline dưới ô mật khẩu, focus để nhập lại
       show({ password: err instanceof Error ? err.message : t('fail') });

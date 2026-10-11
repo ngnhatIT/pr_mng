@@ -289,6 +289,7 @@
       "maxScoreInvalid": "Max score must be a non-negative number",
       "attRequired": "Please enter the attachment name and link",
       "attUrlInvalid": "Attachment link must start with http:// or https://",
+      "attPendingLocked": "Existing attachments have not loaded, so the link you typed cannot be added. Clear the link fields or reopen the assignment.",
       "attTooBig": "File exceeds 10MB, please choose a smaller file",
       "attTypeInvalid": "Unsupported file type. Accepts: images, PDF, Word, MP3, MP4",
       "attUploadFailed": "Upload failed, please try again",

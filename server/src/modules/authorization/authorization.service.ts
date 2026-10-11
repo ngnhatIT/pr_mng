@@ -362,9 +362,12 @@ export async function createRole(
 export async function updateRole(
   cid: number | null,
   id: number,
-  input: { name?: string | null; description?: string | null }
+  input: { name?: string | null; description?: string | null },
+  caller: AuthUser
 ): Promise<void> {
   await getEditableRole(cid, id, 'Không được sửa vai trò hệ thống');
+  // R4-4: đổi tên/mô tả role mạnh hơn mình (gây nhầm lẫn cho admin) — cùng kiểm tra như sửa quyền/xóa
+  await assertWithinCallerPerms(await rolePermissions(id), caller);
   await db
     .prepare('UPDATE roles SET name = COALESCE(?, name), description = COALESCE(?, description) WHERE id = ?')
     .run(input.name ?? null, input.description ?? null, id);

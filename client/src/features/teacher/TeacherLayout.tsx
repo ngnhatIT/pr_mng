@@ -1,5 +1,5 @@
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { useEffect } from 'react';
+import { useLayoutEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { getUser, logout as doLogout } from '../../shared/api/client';
 import { Icon, IconName } from '../../shared/components/icons';
@@ -20,7 +20,8 @@ export function TeacherLayout() {
   const location = useLocation();
   const user = getUser();
 
-  useEffect(() => {
+  // Layout effect: chạy TRƯỚC useDocumentTitle (passive) của trang con -> trang không có tab (404) tự đặt title được
+  useLayoutEffect(() => {
     const active = [...TABS]
       .sort((a, b) => b.to.length - a.to.length)
       .find((tab) => (tab.end ? location.pathname === tab.to : location.pathname.startsWith(tab.to)));
@@ -57,7 +58,7 @@ export function TeacherLayout() {
       <a href="#main-content" className="skip-link">
         {t('nav.skipToContent', { ns: 'common' })}
       </a>
-      <main className="parent-content" id="main-content" tabIndex={-1}>
+      <main className="parent-content teacher-content" id="main-content" tabIndex={-1}>
         <Outlet />
       </main>
 

@@ -17,12 +17,14 @@ export default defineConfig({
   test: {
     // Mặc định môi trường node; test cần DOM tự khai báo `// @vitest-environment happy-dom` đầu file.
     setupFiles: ['./src/test-setup.ts'],
-    // B3-5: `npm run test:coverage` (CI chỉ in báo cáo, không chặn theo ngưỡng)
+    // B3-5/B4-7: `npm run test:coverage` (CI chạy). Ngưỡng đặt sát dưới số hiện tại -> coverage không được tụt;
+    // thêm test thì nâng ngưỡng theo.
     coverage: {
       provider: 'v8',
       include: ['src/**/*.{ts,tsx}'],
-      exclude: ['src/**/*.test.{ts,tsx}', 'src/test-setup.ts'],
+      exclude: ['src/**/*.test.{ts,tsx}', 'src/test-setup.ts', 'src/test-utils.tsx'],
       reporter: ['text-summary'],
+      thresholds: { lines: 36, statements: 35, branches: 32, functions: 29 },
     },
   },
   build: {

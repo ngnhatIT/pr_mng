@@ -18,6 +18,7 @@ import {
   calcPayrollBulk,
   firstDayOfPrevMonth,
   setPayrollClosed,
+  assertPayrollMonthOpen,
 } from './payroll.service';
 import { saveAttendance, deleteSession } from '../sessions/sessions.service';
 
@@ -222,5 +223,49 @@ describe('payroll rules (PostgreSQL)', () => {
       .prepare("INSERT INTO attendance (session_id, student_id, status) VALUES (?, ?, 'present')")
       .run(s, st);
     assert.equal((await calcPayroll(teacher, prevMonth)).total, 0, 'đã chụp ở lần đọc trước');
+  });
+
+  it('judge-a4: chốt tháng chờ lần ghi lương đang dở commit — snapshot gồm bản ghi đó, không lọt', async () => {
+    const prevStart = firstDayOfPrevMonth(todayVN());
+    const prevMonth = prevStart.slice(0, 7);
+    await setSalaryRule(
+      centerA,
+      { teacher_id: teacher, per_session_amount: 100000, effective_from: prevStart },
+      actor
+    );
+    const cls = await id(
+      "INSERT INTO classes (name, center_id, teacher_id) VALUES ('L', ?, ?)",
+      centerA,
+      teacher
+    );
+    const st = await id("INSERT INTO students (code, name, center_id) VALUES ('HV1', 'HV', ?)", centerA);
+    const s = await id(
+      'INSERT INTO sessions (class_id, date, teacher_id) VALUES (?, ?, ?)',
+      cls,
+      prevStart,
+      teacher
+    );
+    let release!: () => void;
+    const gate = new Promise<void>((r) => (release = r));
+    let entered!: () => void;
+    const inTx = new Promise<void>((r) => (entered = r));
+    // Như saveAttendance: kiểm tra tháng mở trong transaction, ghi điểm danh, chưa commit
+    const writer = db.transaction(async (tx) => {
+      await assertPayrollMonthOpen(tx, centerA, prevStart);
+      entered();
+      await gate;
+      await tx
+        .prepare("INSERT INTO attendance (session_id, student_id, status) VALUES (?, ?, 'present')")
+        .run(s, st);
+    });
+    await inTx;
+    let closedDone = false;
+    const closing = setPayrollClosed(centerA, prevMonth, true, actor).then(() => (closedDone = true));
+    await new Promise((r) => setTimeout(r, 200));
+    assert.equal(closedDone, false, 'chốt phải chờ lần ghi đang dở');
+    release();
+    await writer;
+    await closing;
+    assert.equal((await calcPayroll(teacher, prevMonth)).total, 100000, 'snapshot gồm buổi vừa ghi');
   });
 });

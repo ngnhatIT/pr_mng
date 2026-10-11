@@ -7,6 +7,7 @@ import { Icon } from '../../shared/components/icons';
 import {
   editAttachmentsPayload,
   isValidHttpUrl,
+  pendingLink,
   validateLocalUpload,
   type Attachment,
   type HwFieldErrors,
@@ -125,6 +126,25 @@ export function useAttachments(initial: HomeworkItem | null, fe: HwFieldErrors) 
     }
   };
 
+  /** B4-1: lỗi của link gõ dở (dùng trong validate của form) hoặc undefined. */
+  const pending = pendingLink(attName, attUrl);
+  const pendingError = (): string | undefined => {
+    if (!pending) return undefined;
+    if ('error' in pending) return t(`form.errors.${pending.error}`);
+    // Sửa bài mà chưa tải được đính kèm hiện có: không gửi attachments -> link sẽ mất, chặn luôn
+    return attLoad === 'ok' ? undefined : t('form.errors.attPendingLocked');
+  };
+  /** B4-1: lúc lưu bài, link gõ dở hợp lệ được tự thêm. Trả danh sách đính kèm sẽ gửi đi. */
+  const commitPending = (): Attachment[] => {
+    if (!pending || 'error' in pending) return attachments;
+    const next = [...attachments, pending.link];
+    setAttachments(next);
+    setAttName('');
+    setAttUrl('');
+    if (initial) setAttDirty(true);
+    return next;
+  };
+
   /** Dọn file mồ côi đã upload trong phiên này (khi hủy modal). Best-effort, không chặn đóng. */
   const cleanupOrphans = useCallback(() => {
     for (const url of orphanUrls.current) {
@@ -154,8 +174,10 @@ export function useAttachments(initial: HomeworkItem | null, fe: HwFieldErrors) 
     handleFileSelect,
     cleanupOrphans,
     markSaved,
+    pendingError,
+    commitPending,
     /** Đính kèm gửi khi SỬA bài (undefined = server giữ nguyên). */
-    editPayload: () => editAttachmentsPayload(attLoad, attachments),
+    editPayload: (list: Attachment[]) => editAttachmentsPayload(attLoad, list),
   };
 }
 

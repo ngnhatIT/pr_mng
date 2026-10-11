@@ -27,7 +27,8 @@ Quy ước chung:
    tạo kèm mật khẩu (tài khoản giáo viên, admin trung tâm mới) có `must_change_password: true` trong `user` của
    `/auth/login`, `/auth/refresh`, `/auth/me` (phụ huynh: `parent` của `/parent/login`, `user` của `/parent/refresh`).
    Khi cờ bật, mọi API cần đăng nhập trả `403 { code: 'PASSWORD_CHANGE_REQUIRED' }`, trừ `GET /auth/me`,
-   `POST /auth/change-password`, `POST /parent/change-password` (refresh/logout không cần access token nên vẫn dùng được).
+   `POST /auth/change-password`, `POST /parent/change-password` và `POST /auth/logout-all` / `/parent/logout-all` (chỉ
+   giảm truy cập; token mới vẫn mang cờ) — refresh/logout không cần access token nên vẫn dùng được.
    Đổi mật khẩu xong cờ về `false` và access token cũ bị thu hồi (401 `TOKEN_REVOKED`) → client gọi refresh để lấy token mới.
 
 ## Phân quyền (RBAC)
