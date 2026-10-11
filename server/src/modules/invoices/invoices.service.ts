@@ -2,7 +2,13 @@ import { db } from '../../db';
 import { afterInvoicePaid, applyCreditToInvoice } from '../referrals/rewards.service';
 import { AppError } from '../../shared/errors';
 import { searchCond } from '../../shared/like';
-import { parsePagination, paginate, type PageOptions, type Paginated } from '../../shared/pagination';
+import {
+  parsePagination,
+  paginate,
+  parseSort,
+  type PageOptions,
+  type Paginated,
+} from '../../shared/pagination';
 import { audit, formatVND, type AuditActor } from '../../shared/audit';
 import { nowVNSql } from '../../shared/vnTime';
 import { logger } from '../../shared/logger';
@@ -151,11 +157,21 @@ function assertPositiveAmount(amount: unknown): number {
 export const confirmedPaidJoin = `LEFT JOIN LATERAL (SELECT SUM(amount) as paid FROM payments
   WHERE invoice_id = i.id AND status = 'confirmed') pp ON true`;
 
+/** Cột cho phép sắp xếp danh sách hóa đơn (dùng cho cả truy vấn trang con lẫn ngoài: cùng alias i, s). */
+const INVOICE_SORT = {
+  created_at: 'i.id',
+  amount: 'i.amount',
+  due_date: 'i.due_date',
+  student: 's.name',
+  status: 'i.status',
+};
+
 export async function listInvoices(
   centerId: number | null,
-  query: { status?: string; search?: string },
+  query: { status?: string; search?: string; sort?: string },
   pageOpts: PageOptions = {}
 ): Promise<Paginated<unknown>> {
+  const order = `${parseSort(query.sort, INVOICE_SORT, 'i.id DESC')}, i.id DESC`;
   const conds: string[] = [];
   const params: unknown[] = [];
   if (centerId !== null) {
@@ -180,10 +196,10 @@ export async function listInvoices(
     .prepare(
       `SELECT i.*, s.name as student_name, s.code as student_code, c.name as class_name,
          COALESCE(pp.paid, 0) as paid
-       FROM (SELECT i.id ${from} ORDER BY i.id DESC LIMIT ? OFFSET ?) page
+       FROM (SELECT i.id ${from} ORDER BY ${order} LIMIT ? OFFSET ?) page
        JOIN invoices i ON i.id = page.id JOIN students s ON s.id = i.student_id LEFT JOIN classes c ON c.id = i.class_id
        ${confirmedPaidJoin}
-       ORDER BY i.id DESC`
+       ORDER BY ${order}`
     )
     .all(...params, limit, offset)) as unknown[];
   return paginate(rows, total, page, limit);

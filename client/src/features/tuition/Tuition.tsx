@@ -18,6 +18,7 @@ import { Modal } from '../../shared/components/Modal';
 import { Field, MoneyInput, moneyDigits, useFieldErrors } from '../../shared/components/Form';
 import { PageHeader } from '../../shared/components/PageHeader';
 import { ExportButton } from '../../shared/components/ExportButton';
+import { SortHeader } from '../../shared/components/SortHeader';
 import { EmptyState, LoadError } from '../../shared/components/EmptyState';
 import { TableSkeleton } from '../../shared/components/Skeleton';
 import {
@@ -196,7 +197,8 @@ function PendingPayments({ onViewInvoices }: { onViewInvoices: () => void }) {
 
 function InvoiceList() {
   const { t } = useTranslation(['tuition', 'common']);
-  const [q, setQ] = useUrlState({ search: '', status: '', page: '1' });
+  const [q, setQ] = useUrlState({ search: '', status: '', page: '1', sort: '' });
+  const setSort = (sort: string) => setQ({ sort, page: '1' });
   const { status } = q;
   // B-2: chữ đang gõ ở state cục bộ, URL nhận giá trị đã debounce
   const [search, setSearch] = useUrlSearch(q.search, (v) => setQ({ search: v, page: '1' }));
@@ -233,7 +235,10 @@ function InvoiceList() {
     loading,
     error,
     reload,
-  } = useLoad(() => invoicesApi.list(debouncedSearch, status, { page }), [debouncedSearch, status, page]);
+  } = useLoad(
+    () => invoicesApi.list(debouncedSearch, status, { page }, q.sort),
+    [debouncedSearch, status, page, q.sort]
+  );
   const invoices = res?.data ?? [];
   const today = todayVN();
   useLoadErrorToast(error, t('invoices.loadError'));
@@ -357,19 +362,33 @@ function InvoiceList() {
           <table className="table table-stack">
             <thead>
               <tr>
-                <th scope="col">{t('invoice.table.student')}</th>
+                <SortHeader
+                  label={t('invoice.table.student')}
+                  field="student"
+                  sort={q.sort}
+                  onSort={setSort}
+                />
                 <th scope="col">{t('invoice.table.class')}</th>
-                <th scope="col" className="th-right">
-                  {t('invoice.table.amount')}
-                </th>
+                <SortHeader
+                  label={t('invoice.table.amount')}
+                  field="amount"
+                  sort={q.sort}
+                  onSort={setSort}
+                  className="th-right"
+                />
                 <th scope="col" className="th-right">
                   {t('invoice.table.paid')}
                 </th>
                 <th scope="col" className="th-right">
                   {t('invoice.table.debt')}
                 </th>
-                <th scope="col">{t('invoice.table.dueDate')}</th>
-                <th scope="col">{t('invoice.table.status')}</th>
+                <SortHeader
+                  label={t('invoice.table.dueDate')}
+                  field="due_date"
+                  sort={q.sort}
+                  onSort={setSort}
+                />
+                <SortHeader label={t('invoice.table.status')} field="status" sort={q.sort} onSort={setSort} />
                 <th scope="col" className="th-right">
                   {t('invoice.table.actions')}
                 </th>

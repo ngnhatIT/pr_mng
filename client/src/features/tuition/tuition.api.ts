@@ -72,8 +72,9 @@ export interface AvailableCredit {
 }
 
 export const invoicesApi = {
-  list: (search = '', status = '', page?: PageParams) => {
+  list: (search = '', status = '', page?: PageParams, sort = '') => {
     const q = new URLSearchParams({ search, status });
+    if (sort) q.set('sort', sort);
     if (page?.page) q.set('page', String(page.page));
     if (page?.limit) q.set('limit', String(page.limit));
     return http.get<Paginated<InvoiceItem>>(`/invoices?${q}`);

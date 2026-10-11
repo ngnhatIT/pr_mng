@@ -65,3 +65,16 @@ export function paginate<T>(rows: T[], total: number, page: number, limit: numbe
     },
   };
 }
+
+/**
+ * Sắp xếp danh sách: ?sort=name (tăng) | ?sort=-name (giảm). Chỉ nhận key trong allowlist (key -> biểu thức SQL
+ * do code viết), key lạ/thiếu -> fallback. Caller tự nối tie-breaker (vd `, s.id DESC`) để phân trang ổn định.
+ */
+export function parseSort(raw: unknown, allow: Record<string, string>, fallback: string): string {
+  const s = typeof raw === 'string' ? raw.trim() : '';
+  const desc = s.startsWith('-');
+  const col = Object.prototype.hasOwnProperty.call(allow, desc ? s.slice(1) : s)
+    ? allow[desc ? s.slice(1) : s]
+    : '';
+  return col ? `${col} ${desc ? 'DESC' : 'ASC'} NULLS LAST` : fallback;
+}

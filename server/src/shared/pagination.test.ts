@@ -1,7 +1,7 @@
 /** Unit test cho shared/pagination.ts */
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { parsePagination, paginate, DEFAULT_LIMIT, MAX_LIMIT } from './pagination';
+import { parsePagination, paginate, parseSort, DEFAULT_LIMIT, MAX_LIMIT } from './pagination';
 
 describe('parsePagination', () => {
   it('mặc định page=1, limit=20', () => {
@@ -42,5 +42,16 @@ describe('paginate', () => {
   it('total=0 vẫn có totalPages=1', () => {
     const r = paginate([], 0, 1, 20);
     assert.equal(r.pagination.totalPages, 1);
+  });
+});
+
+describe('parseSort()', () => {
+  const allow = { name: 's.name', amount: 'i.amount' };
+  it('tăng/giảm theo dấu -, key lạ hoặc rỗng -> mặc định (không lọt input vào SQL)', () => {
+    assert.equal(parseSort('name', allow, 'x'), 's.name ASC NULLS LAST');
+    assert.equal(parseSort('-amount', allow, 'x'), 'i.amount DESC NULLS LAST');
+    assert.equal(parseSort('name; DROP TABLE x', allow, 'i.id DESC'), 'i.id DESC');
+    assert.equal(parseSort('constructor', allow, 'd'), 'd');
+    assert.equal(parseSort(undefined, allow, 'd'), 'd');
   });
 });

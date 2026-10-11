@@ -64,13 +64,14 @@ router.get(
   '/',
   requirePermission('invoices.view', 'center'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
-    const { status, search, page, limit } = req.query as {
+    const { status, search, sort, page, limit } = req.query as {
       status?: string;
       search?: string;
+      sort?: string;
       page?: string;
       limit?: string;
     };
-    res.json(await invoiceService.listInvoices(reqCenterId(req), { status, search }, { page, limit }));
+    res.json(await invoiceService.listInvoices(reqCenterId(req), { status, search, sort }, { page, limit }));
   })
 );
 

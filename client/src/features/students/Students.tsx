@@ -8,6 +8,7 @@ import { Field, useFieldErrors } from '../../shared/components/Form';
 import { isValidVNPhone } from '../../shared/validation';
 import { PageHeader } from '../../shared/components/PageHeader';
 import { ExportButton } from '../../shared/components/ExportButton';
+import { SortHeader } from '../../shared/components/SortHeader';
 import { EmptyState, LoadError } from '../../shared/components/EmptyState';
 import { TableSkeleton } from '../../shared/components/Skeleton';
 import { useLoad } from '../../shared/hooks/useLoad';
@@ -35,7 +36,8 @@ const emptyForm = {
 export function Students() {
   const { t } = useTranslation(['students', 'common']);
   // UX-6: trang/tìm kiếm/lọc nằm trên URL -> Back từ trang chi tiết quay lại đúng chỗ
-  const [q, setQ] = useUrlState({ search: '', status: '', page: '1' });
+  const [q, setQ] = useUrlState({ search: '', status: '', page: '1', sort: '' });
+  const setSort = (sort: string) => setQ({ sort, page: '1' });
   const { status } = q;
   const page = Number(q.page) || 1;
   // B-2: chữ đang gõ ở state cục bộ, URL nhận giá trị đã debounce (q.search) -> fetch theo q.search
@@ -55,7 +57,10 @@ export function Students() {
     loading,
     error,
     reload,
-  } = useLoad(() => studentsApi.list(debouncedSearch, status, { page }), [debouncedSearch, status, page]);
+  } = useLoad(
+    () => studentsApi.list(debouncedSearch, status, { page }, q.sort),
+    [debouncedSearch, status, page, q.sort]
+  );
   const students: Student[] = res?.data ?? [];
   useEffect(() => {
     if (error) toastApiError(toast, error, t('toast.loadError'));
@@ -192,11 +197,11 @@ export function Students() {
           <table className="table table-stack">
             <thead>
               <tr>
-                <th scope="col">{t('table.code')}</th>
-                <th scope="col">{t('table.name')}</th>
+                <SortHeader label={t('table.code')} field="code" sort={q.sort} onSort={setSort} />
+                <SortHeader label={t('table.name')} field="name" sort={q.sort} onSort={setSort} />
                 <th scope="col">{t('table.classes')}</th>
                 <th scope="col">{t('table.phone')}</th>
-                <th scope="col">{t('table.status')}</th>
+                <SortHeader label={t('table.status')} field="status" sort={q.sort} onSort={setSort} />
                 <th scope="col" className="th-right">
                   {t('table.actions')}
                 </th>

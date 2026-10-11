@@ -217,6 +217,9 @@
     "saveError": "Không lưu được, vui lòng thử lại",
     "saveSuccess": "Đã lưu"
   },
+  "table": {
+    "sortBy": "Sắp xếp theo {{label}}"
+  },
   "theme": {
     "dark": "Tối",
     "light": "Sáng",

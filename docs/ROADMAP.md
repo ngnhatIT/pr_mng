@@ -32,7 +32,7 @@ Nguồn: 3 audit (tính năng so với Teachworks/TutorBird/Classe365, khả nă
 - [x] URL tiếng Anh cho mọi trang + chuyển hướng URL cũ giữ query (VNPay trả về /parent/payment-result)
 - [ ] Breadcrumb chung + tiêu đề topbar ở trang chi tiết, menu tài khoản trên topbar
 - [x] Tìm kiếm không dấu phía server (hàm f_unaccent, migration v29) cho học viên, hóa đơn, lead, lớp, bài tập, ngân hàng câu hỏi
-- [ ] Sắp xếp cột bảng (`sort` allowlist server + `aria-sort`)
+- [x] Sắp xếp cột bảng: parseSort allowlist (server) + SortHeader aria-sort, áp cho Học viên và Hóa đơn; sort trên URL
 
 ## Gói 6 — API & bảo mật chuẩn quốc tế (S–M)
 - [ ] Mã lỗi cụ thể + `details[]` theo field → client dịch theo code

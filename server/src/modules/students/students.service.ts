@@ -3,7 +3,13 @@ import type { Tx } from '../../db';
 import { AppError } from '../../shared/errors';
 import { searchCond } from '../../shared/like';
 import { findByIdOr404 } from '../../shared/repository';
-import { parsePagination, paginate, type PageOptions, type Paginated } from '../../shared/pagination';
+import {
+  parsePagination,
+  paginate,
+  parseSort,
+  type PageOptions,
+  type Paginated,
+} from '../../shared/pagination';
 import { audit, type AuditActor } from '../../shared/audit';
 import { deleteUploadFileByUrl } from '../../shared/upload';
 
@@ -47,9 +53,12 @@ export interface StudentReadOpts {
 const OWN_STUDENT_IDS = `SELECT e.student_id FROM enrollments e JOIN classes c ON c.id = e.class_id
   WHERE e.status = 'active' AND c.teacher_id = ?`;
 
+/** Cột cho phép sắp xếp danh sách học viên (?sort=name | -created_at ...). */
+const STUDENT_SORT = { name: 'name', code: 'code', status: 'status', created_at: 'id' };
+
 export async function listStudents(
   centerId: number | null,
-  query: { search?: string; status?: string },
+  query: { search?: string; status?: string; sort?: string },
   pageOpts: PageOptions = {},
   opts: StudentReadOpts = {}
 ): Promise<Paginated<unknown>> {
@@ -88,7 +97,7 @@ export async function listStudents(
       `SELECT students.*,
          (SELECT string_agg(c.name, ', ' ORDER BY c.name) FROM enrollments e JOIN classes c ON c.id = e.class_id
           WHERE e.student_id = students.id AND e.status = 'active' AND c.status = 'active') AS class_names
-       FROM students ${where} ORDER BY id DESC LIMIT ? OFFSET ?`
+       FROM students ${where} ORDER BY ${parseSort(query.sort, STUDENT_SORT, 'id DESC')}, id DESC LIMIT ? OFFSET ?`
     )
     .all(...params, limit, offset)) as unknown[];
   return paginate(rows, total, page, limit);

@@ -3889,3 +3889,35 @@ main[tabindex='-1']:focus {
   width: 100%;
   max-width: none;
 }
+
+/* ---------- Tiêu đề cột sắp xếp được (SortHeader) ---------- */
+.sort-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border: none;
+  background: none;
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  text-transform: inherit;
+  letter-spacing: inherit;
+  cursor: pointer;
+}
+.sort-btn svg {
+  opacity: 0.45;
+}
+.sort-btn.is-active {
+  color: var(--text);
+}
+.sort-btn.is-active svg {
+  opacity: 1;
+}
+.sort-btn:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+.th-right .sort-btn {
+  flex-direction: row-reverse;
+}

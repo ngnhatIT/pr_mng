@@ -217,6 +217,9 @@
     "saveError": "Couldn't save, please try again",
     "saveSuccess": "Saved"
   },
+  "table": {
+    "sortBy": "Sort by {{label}}"
+  },
   "theme": {
     "dark": "Dark",
     "light": "Light",

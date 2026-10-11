@@ -35,16 +35,17 @@ router.get(
   '/',
   requirePermission('students.view', 'own'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
-    const { search, status, page, limit } = req.query as {
+    const { search, status, sort, page, limit } = req.query as {
       search?: string;
       status?: string;
+      sort?: string;
       page?: string;
       limit?: string;
     };
     res.json(
       await studentService.listStudents(
         reqCenterId(req),
-        { search, status },
+        { search, status, sort },
         { page, limit },
         await readOpts(req)
       )
