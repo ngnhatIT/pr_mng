@@ -37,7 +37,7 @@ Nguồn: 3 audit (tính năng so với Teachworks/TutorBird/Classe365, khả nă
 ## Gói 6 — API & bảo mật chuẩn quốc tế (S–M)
 - [ ] Mã lỗi cụ thể + `details[]` theo field → client dịch theo code
 - [x] Test đối chiếu route Express ↔ OpenAPI (app.routes.test.ts) + bổ sung 8 operation còn thiếu
-- [ ] 2FA TOTP cho nhân sự
+- [x] 2FA TOTP cho nhân sự (RFC 6238 không thư viện, secret AES-GCM, mã khôi phục, chống dùng lại mã; migration v30)
 - [ ] Xuất/ẩn danh dữ liệu học viên (GDPR/PDPL)
 
 ## Sau đó (L — cần quyết định kinh doanh)

@@ -101,8 +101,47 @@ export function Login() {
   const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
   const [forgotOpen, setForgotOpen] = useState(false);
-  const { errors, refFor, show, clear } = useFieldErrors<'username' | 'password'>();
+  // v30: bước 2 khi tài khoản bật xác thực 2 lớp
+  const [mfaToken, setMfaToken] = useState('');
+  const [code, setCode] = useState('');
+  const { errors, refFor, show, clear } = useFieldErrors<'username' | 'password' | 'code'>();
   const navigate = useNavigate();
+
+  type LoginOk = { token: string; user: User; must_change_password?: boolean };
+  const finish = (data: LoginOk) => {
+    // Cờ bắt đổi mật khẩu có thể nằm trong user hoặc ở top-level response
+    setAuth(data.token, data.must_change_password ? { ...data.user, must_change_password: true } : data.user);
+    // Quay lại deep-link đã lưu (khi bị 401 hoặc vào trang cần login) nếu thuộc portal của role
+    // (B4-2: bỏ link của portal khác), nếu không thì về home theo role.
+    const role = data.user.role;
+    const home = role === 'teacher' ? '/teacher' : role === 'parent' ? '/parent' : '/app';
+    const next = takePostLoginRedirect(home);
+    void navigate(next ?? home, { replace: !!next });
+  };
+
+  const submitCode = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (busy) return;
+    if (!show(code.trim() ? {} : { code: t('mfa.codeRequired') })) return;
+    setBusy(true);
+    try {
+      finish(
+        await api<LoginOk>('/auth/login/2fa', {
+          method: 'POST',
+          body: JSON.stringify({ mfa_token: mfaToken, code: code.trim() }),
+        })
+      );
+    } catch (err) {
+      const c = (err as { code?: string }).code;
+      if (c === 'MFA_TOKEN_INVALID') {
+        setMfaToken('');
+        setCode('');
+        show({ password: t('mfa.expired') });
+      } else show({ code: t('mfa.invalid') });
+    } finally {
+      setBusy(false);
+    }
+  };
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -113,21 +152,16 @@ export function Login() {
     if (!show(errs)) return;
     setBusy(true);
     try {
-      const data = await api<{ token: string; user: User; must_change_password?: boolean }>('/auth/login', {
+      const data = await api<LoginOk | { mfa_required: true; mfa_token: string }>('/auth/login', {
         method: 'POST',
         body: JSON.stringify({ username, password }),
       });
-      // Cờ bắt đổi mật khẩu có thể nằm trong user hoặc ở top-level response
-      setAuth(
-        data.token,
-        data.must_change_password ? { ...data.user, must_change_password: true } : data.user
-      );
-      // Quay lại deep-link đã lưu (khi bị 401 hoặc vào trang cần login) nếu thuộc portal của role
-      // (B4-2: bỏ link của portal khác), nếu không thì về home theo role.
-      const role = data.user.role;
-      const home = role === 'teacher' ? '/teacher' : role === 'parent' ? '/parent' : '/app';
-      const next = takePostLoginRedirect(home);
-      void navigate(next ?? home, { replace: !!next });
+      if ('mfa_required' in data) {
+        setMfaToken(data.mfa_token);
+        setPassword('');
+        return;
+      }
+      finish(data);
     } catch (err) {
       // Lỗi đăng nhập (sai tài khoản/mật khẩu) hiện inline dưới ô mật khẩu, focus để nhập lại
       show({ password: err instanceof Error ? err.message : t('fail') });
@@ -141,47 +175,86 @@ export function Login() {
       <div className="login-topbar">
         <ThemeLangSwitch />
       </div>
-      <form className="login-card" onSubmit={submit}>
-        <div className="login-logo">E</div>
-        <h1 className="login-title">{t('brand')}</h1>
-        <p className="login-sub">{t('sub')}</p>
-        <Field label={t('username')} error={errors.username} required>
-          <input
-            className="text-input"
-            value={username}
-            onChange={(e) => {
-              setUsername(e.target.value);
-              clear('username');
-            }}
-            autoComplete="username"
-            autoFocus
-            ref={refFor('username')}
-          />
-        </Field>
-        <Field label={t('password')} error={errors.password} required>
-          <input
-            className="text-input"
-            type="password"
-            value={password}
-            onChange={(e) => {
-              setPassword(e.target.value);
-              clear('password');
-            }}
-            autoComplete="current-password"
-            ref={refFor('password')}
-          />
-        </Field>
-        <button className="btn btn-primary btn-block btn-lg" type="submit" disabled={busy}>
-          {busy && <span className="spinner" aria-hidden="true" />}
-          {busy ? t('submitting') : t('submit')}
-        </button>
-        <div style={{ textAlign: 'center', marginTop: 12 }}>
-          <button type="button" className="link" onClick={() => setForgotOpen(true)}>
-            {t('forgotLink')}
+      {mfaToken ? (
+        <form className="login-card" onSubmit={submitCode}>
+          <div className="login-logo">E</div>
+          <h1 className="login-title">{t('mfa.title')}</h1>
+          <p className="login-sub">{t('mfa.desc')}</p>
+          <Field label={t('mfa.code')} error={errors.code} hint={t('mfa.recoveryHint')} required>
+            <input
+              className="text-input"
+              value={code}
+              onChange={(e) => {
+                setCode(e.target.value);
+                clear('code');
+              }}
+              inputMode="numeric"
+              autoComplete="one-time-code"
+              maxLength={20}
+              autoFocus
+              ref={refFor('code')}
+            />
+          </Field>
+          <button className="btn btn-primary btn-block btn-lg" type="submit" disabled={busy}>
+            {busy && <span className="spinner" aria-hidden="true" />}
+            {t('mfa.verify')}
           </button>
-        </div>
-        <p className="login-hint">{t('demoHint')}</p>
-      </form>
+          <div style={{ textAlign: 'center', marginTop: 12 }}>
+            <button
+              type="button"
+              className="link"
+              onClick={() => {
+                setMfaToken('');
+                setCode('');
+              }}
+            >
+              {t('mfa.back')}
+            </button>
+          </div>
+        </form>
+      ) : (
+        <form className="login-card" onSubmit={submit}>
+          <div className="login-logo">E</div>
+          <h1 className="login-title">{t('brand')}</h1>
+          <p className="login-sub">{t('sub')}</p>
+          <Field label={t('username')} error={errors.username} required>
+            <input
+              className="text-input"
+              value={username}
+              onChange={(e) => {
+                setUsername(e.target.value);
+                clear('username');
+              }}
+              autoComplete="username"
+              autoFocus
+              ref={refFor('username')}
+            />
+          </Field>
+          <Field label={t('password')} error={errors.password} required>
+            <input
+              className="text-input"
+              type="password"
+              value={password}
+              onChange={(e) => {
+                setPassword(e.target.value);
+                clear('password');
+              }}
+              autoComplete="current-password"
+              ref={refFor('password')}
+            />
+          </Field>
+          <button className="btn btn-primary btn-block btn-lg" type="submit" disabled={busy}>
+            {busy && <span className="spinner" aria-hidden="true" />}
+            {busy ? t('submitting') : t('submit')}
+          </button>
+          <div style={{ textAlign: 'center', marginTop: 12 }}>
+            <button type="button" className="link" onClick={() => setForgotOpen(true)}>
+              {t('forgotLink')}
+            </button>
+          </div>
+          <p className="login-hint">{t('demoHint')}</p>
+        </form>
+      )}
       {forgotOpen && (
         <ForgotPasswordModal
           kind="staff"

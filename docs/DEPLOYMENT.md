@@ -30,6 +30,9 @@ APP_BASE_URL=https://trungtam.example.com   # BẮT BUỘC ở production (VNPay
 
 > Không đặt `JWT_SECRET` (tối thiểu 32 ký tự, bắt buộc mọi `NODE_ENV` trừ `development`/`test`) hoặc `APP_BASE_URL`
 > ở production: server từ chối khởi động.
+>
+> Nên đặt thêm `DATA_ENCRYPTION_KEY` (`openssl rand -hex 32`): khóa mã hóa secret xác thực 2 lớp lưu trong DB.
+> Bỏ trống thì khóa dẫn xuất từ `JWT_SECRET` — khi đó xoay `JWT_SECRET` làm mọi tài khoản đang bật 2FA phải bật lại.
 
 > **Upload:** file bài tập/bài nộp lưu ở `UPLOAD_DIR` (mặc định `<thư mục repo>/uploads`).
 > Nên đặt đường dẫn tuyệt đối ngoài thư mục code, vd `UPLOAD_DIR=/var/lib/educenter/uploads`.

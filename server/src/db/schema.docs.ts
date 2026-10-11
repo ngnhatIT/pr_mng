@@ -23,6 +23,10 @@ export const TABLE_DOCS: Record<string, TableDoc> = {
       is_active: 'D2: false = tài khoản bị khóa — từ chối login và mọi request đã auth.',
       must_change_password:
         'v25 (N-5): true = mật khẩu tạm (đặt lại/admin cấp) — API trả 403 PASSWORD_CHANGE_REQUIRED tới khi đổi.',
+      totp_secret: 'v30: secret TOTP mã hóa AES-256-GCM (NULL = chưa thiết lập).',
+      totp_enabled: 'v30: đã bật xác thực 2 lớp (đăng nhập cần mã 6 số).',
+      totp_last_step: 'v30: bước thời gian của mã đã dùng gần nhất (chặn dùng lại mã).',
+      totp_recovery: 'v30: hash SHA-256 các mã khôi phục còn lại (dùng 1 lần).',
       created_at: 'Thời điểm tạo (giờ VN).',
       updated_at: 'Tự động cập nhật bởi trigger.',
     },

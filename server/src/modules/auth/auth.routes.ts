@@ -17,8 +17,12 @@ import {
   revokeRefreshToken,
   logoutOtherSessions,
 } from './refresh.service';
+import { signMfaToken, verifyMfaToken } from '../../shared/totp';
+import { consumeSecondFactor, mfaDisable, mfaEnable, mfaSetup, mfaStatus } from './mfa.service';
 import {
+  type LoginUserRow,
   findLoginUser,
+  findLoginUserById,
   changePassword,
   createResetRequest,
   listResetRequests,
@@ -26,7 +30,7 @@ import {
 } from './auth.service';
 import { resolvePublicCenter, getCenter } from '../../utils/plans';
 import { normalizePhone } from '../../services/zalo';
-import { audit } from '../../shared/audit';
+import { audit, actorFromReq } from '../../shared/audit';
 import { logger } from '../../shared/logger';
 import {
   setRefreshCookie,
@@ -94,6 +98,46 @@ router.post(
       res.status(403).json({ error: 'Tài khoản chưa được gán trung tâm', code: 'NO_CENTER' });
       return;
     }
+    // v30: bật 2FA -> chưa cấp token, trả token bước 2 (5 phút, khóa ký riêng) để nhập mã 6 số
+    if (user.totp_enabled) {
+      res.json({ mfa_required: true, mfa_token: signMfaToken(user.id) });
+      return;
+    }
+    await completeStaffLogin(req, res, user);
+  })
+);
+
+/** v30: bước 2 đăng nhập — mã từ app xác thực (hoặc mã khôi phục) + token bước 2. */
+router.post(
+  '/login/2fa',
+  loginRateLimit,
+  asyncHandler(async (req: Request, res: Response) => {
+    const { mfa_token, code } = (req.body ?? {}) as { mfa_token?: unknown; code?: unknown };
+    const userId = typeof mfa_token === 'string' ? verifyMfaToken(mfa_token) : null;
+    if (!userId) {
+      res
+        .status(401)
+        .json({ error: 'Phiên xác thực đã hết hạn, vui lòng đăng nhập lại', code: 'MFA_TOKEN_INVALID' });
+      return;
+    }
+    const user = await findLoginUserById(userId);
+    if (!user || !user.is_active || typeof code !== 'string' || code.length > 20) {
+      res.status(401).json({ error: 'Mã xác thực không đúng', code: 'MFA_INVALID_CODE' });
+      return;
+    }
+    const used = await consumeSecondFactor(user.id, code);
+    if (!used) {
+      log.warn('Mã 2FA sai', { userId, ip: reqMeta(req).ip });
+      res.status(401).json({ error: 'Mã xác thực không đúng', code: 'MFA_INVALID_CODE' });
+      return;
+    }
+    await completeStaffLogin(req, res, user, used === 'recovery');
+  })
+);
+
+/** Cấp token + cookie + audit sau khi đã qua mật khẩu (và 2FA nếu bật). */
+async function completeStaffLogin(req: Request, res: Response, user: LoginUserRow, usedRecovery = false) {
+  {
     const payload: AuthUser = {
       id: user.id,
       username: user.username,
@@ -113,13 +157,64 @@ router.post(
       action: 'login',
       entity: 'users',
       entityId: user.id,
-      summary: `${user.name} đăng nhập`,
+      summary: `${user.name} đăng nhập${usedRecovery ? ' (dùng mã khôi phục 2FA)' : ''}`,
     });
     // D4: refresh token chỉ đi qua HttpOnly cookie, KHÔNG trả trong body nữa
     setRefreshCookie(res, pair.refresh_token, COOKIE_PATH);
     // S-4: thiết bị đã đăng nhập đúng -> bucket rate-limit riêng, không bị kẻ tấn công khóa theo username
-    setDeviceCookie(res, 'staff', loginAccountKey(req.body), COOKIE_PATH);
+    setDeviceCookie(res, 'staff', loginAccountKey({ username: user.username }), COOKIE_PATH);
     res.json({ token: pair.token, expires_in: pair.expires_in, user: await withCenterName(payload) });
+  }
+}
+
+/* ------------------------------ v30: xác thực 2 lớp (nhân sự) ------------------------------ */
+
+const staffOnly = (req: AuthRequest, res: Response): number | null => {
+  if (req.user?.kind === 'parent' || req.user?.role === 'parent') {
+    res.status(403).json({ error: 'Chỉ dành cho tài khoản nhân sự', code: 'FORBIDDEN' });
+    return null;
+  }
+  return req.user!.id;
+};
+
+router.get(
+  '/2fa',
+  requireAuth,
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const id = staffOnly(req, res);
+    if (id !== null) res.json(await mfaStatus(id));
+  })
+);
+
+router.post(
+  '/2fa/setup',
+  requireAuth,
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const id = staffOnly(req, res);
+    if (id !== null) res.json(await mfaSetup(id));
+  })
+);
+
+router.post(
+  '/2fa/enable',
+  requireAuth,
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const id = staffOnly(req, res);
+    if (id === null) return;
+    const { code } = (req.body ?? {}) as { code?: unknown };
+    res.json(await mfaEnable(id, String(code ?? ''), actorFromReq(req)));
+  })
+);
+
+router.post(
+  '/2fa/disable',
+  requireAuth,
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const id = staffOnly(req, res);
+    if (id === null) return;
+    const { password, code } = (req.body ?? {}) as { password?: unknown; code?: unknown };
+    await mfaDisable(id, String(password ?? ''), String(code ?? ''), actorFromReq(req));
+    res.json({ ok: true });
   })
 );
 

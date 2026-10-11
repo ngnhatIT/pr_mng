@@ -58,6 +58,11 @@ CREATE TABLE IF NOT EXISTS users (
   token_version INTEGER NOT NULL DEFAULT 1, -- D2: tăng khi đổi pass/khóa TK để thu hồi access token ngay
   is_active BOOLEAN NOT NULL DEFAULT true, -- D2: false = tài khoản bị khóa, từ chối login + mọi request
   must_change_password BOOLEAN NOT NULL DEFAULT false, -- v25 (N-5): mật khẩu tạm -> buộc đổi
+  -- v30: xác thực 2 lớp (TOTP). Secret mã hóa AES-GCM; mã khôi phục chỉ lưu hash; last_step chống dùng lại mã
+  totp_secret TEXT,
+  totp_enabled BOOLEAN NOT NULL DEFAULT false,
+  totp_last_step BIGINT,
+  totp_recovery JSONB,
   created_at TEXT NOT NULL DEFAULT (to_char(NOW(), 'YYYY-MM-DD HH24:MI:SS')),
   updated_at TEXT NOT NULL DEFAULT (to_char(NOW(), 'YYYY-MM-DD HH24:MI:SS')),
   -- v22: chỉ superadmin được không thuộc trung tâm nào (NULL = phạm vi toàn hệ thống)

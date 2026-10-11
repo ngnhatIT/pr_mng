@@ -23,11 +23,17 @@ export interface LoginUserRow {
   token_version: number;
   is_active: boolean;
   must_change_password: boolean;
+  totp_enabled: boolean;
 }
 
 export async function findLoginUser(username: string): Promise<LoginUserRow | undefined> {
   return (await db.prepare('SELECT * FROM users WHERE username = ?').get(username)) as
     LoginUserRow | undefined;
+}
+
+/** v30: bước 2 đăng nhập tra user theo id trong token bước 2. */
+export async function findLoginUserById(id: number): Promise<LoginUserRow | undefined> {
+  return (await db.prepare('SELECT * FROM users WHERE id = ?').get(id)) as LoginUserRow | undefined;
 }
 
 /**

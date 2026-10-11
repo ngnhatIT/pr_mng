@@ -8,6 +8,7 @@ import { Icon, IconName } from './icons';
 import { ThemeLangSwitch } from '../ui/ThemeLangSwitch';
 import { NotificationBell } from '../../features/notifications/NotificationBell';
 import { CommandPalette } from './CommandPalette';
+import { TwoFactorModal } from './TwoFactorModal';
 import { Menu } from './Menu';
 import { ChangePasswordModal } from './ChangePasswordModal';
 import { ConfirmDialog } from './Modal';
@@ -110,6 +111,7 @@ export function Layout() {
   const user = getUser();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [showChangePw, setShowChangePw] = useState(false);
+  const [show2fa, setShow2fa] = useState(false);
   // Xác nhận đăng xuất ở chân sidebar (dùng ConfirmDialog có sẵn, không dùng confirm() native).
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   // Nút mở drawer: trả focus về đây khi drawer đóng bằng Esc/scrim.
@@ -358,6 +360,7 @@ export function Layout() {
             align="start"
             items={[
               { label: t('nav.changePassword'), icon: 'key', onSelect: () => setShowChangePw(true) },
+              { label: t('nav.twoFactor'), icon: 'shield', onSelect: () => setShow2fa(true) },
               { label: t('nav.logout'), icon: 'logout', onSelect: () => setShowLogoutConfirm(true) },
             ]}
           >
@@ -432,6 +435,7 @@ export function Layout() {
         )}
       </div>
       {showChangePw && <ChangePasswordModal onClose={() => setShowChangePw(false)} />}
+      {show2fa && <TwoFactorModal onClose={() => setShow2fa(false)} />}
       {showLogoutConfirm && (
         <ConfirmDialog
           title={t('nav.logoutConfirmTitle')}

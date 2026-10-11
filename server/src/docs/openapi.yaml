@@ -1428,6 +1428,69 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+  /api/v1/auth/login/2fa:
+    post:
+      tags: [Auth]
+      summary: Bước 2 đăng nhập khi tài khoản bật 2FA
+      description: >-
+        /auth/login trả { mfa_required: true, mfa_token } (5 phút, không dùng được làm access token). Gửi mfa_token +
+        mã 6 số từ app xác thực hoặc 1 mã khôi phục (dùng 1 lần). Mã đã dùng không dùng lại được.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [mfa_token, code]
+              properties:
+                mfa_token: { type: string }
+                code: { type: string, example: '123456' }
+      responses:
+        '200': { description: Giống /auth/login (token + cookie refresh) }
+        '401': { description: MFA_TOKEN_INVALID / MFA_INVALID_CODE }
+  /api/v1/auth/2fa:
+    get:
+      tags: [Auth]
+      summary: Trạng thái 2FA của tài khoản nhân sự đang đăng nhập
+      responses:
+        '200': { description: '{ enabled, recovery_left }' }
+  /api/v1/auth/2fa/setup:
+    post:
+      tags: [Auth]
+      summary: Tạo secret TOTP mới (chưa bật) — trả secret + otpauth_url
+      responses:
+        '200': { description: '{ secret, otpauth_url }' }
+        '409': { description: MFA_ALREADY_ENABLED }
+  /api/v1/auth/2fa/enable:
+    post:
+      tags: [Auth]
+      summary: Xác nhận mã từ app để bật 2FA — trả 8 mã khôi phục (hiện 1 lần)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, required: [code], properties: { code: { type: string } } }
+      responses:
+        '200': { description: '{ recovery_codes: string[] }' }
+        '400': { description: MFA_INVALID_CODE / MFA_NOT_SETUP }
+  /api/v1/auth/2fa/disable:
+    post:
+      tags: [Auth]
+      summary: Tắt 2FA (cần mật khẩu + mã hiện tại hoặc mã khôi phục)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [password, code]
+              properties:
+                password: { type: string }
+                code: { type: string }
+      responses:
+        '200': { description: OK }
+        '400': { description: WRONG_PASSWORD / MFA_INVALID_CODE / MFA_NOT_ENABLED }
   /api/v1/auth/refresh:
     post:
       tags:

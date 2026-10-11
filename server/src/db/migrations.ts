@@ -856,6 +856,21 @@ export const MIGRATIONS: Migration[] = [
       await tx.exec('DROP FUNCTION IF EXISTS f_unaccent(TEXT)');
     },
   },
+  {
+    version: 30,
+    name: 'users_totp_2fa',
+    up: async (tx) => {
+      await tx.exec('ALTER TABLE users ADD COLUMN IF NOT EXISTS totp_secret TEXT');
+      await tx.exec('ALTER TABLE users ADD COLUMN IF NOT EXISTS totp_enabled BOOLEAN NOT NULL DEFAULT false');
+      await tx.exec('ALTER TABLE users ADD COLUMN IF NOT EXISTS totp_last_step BIGINT');
+      await tx.exec('ALTER TABLE users ADD COLUMN IF NOT EXISTS totp_recovery JSONB');
+    },
+    down: async (tx) => {
+      for (const c of ['totp_recovery', 'totp_last_step', 'totp_enabled', 'totp_secret']) {
+        await tx.exec(`ALTER TABLE users DROP COLUMN IF EXISTS ${c}`);
+      }
+    },
+  },
 ];
 
 /**
