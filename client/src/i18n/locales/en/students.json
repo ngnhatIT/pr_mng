@@ -1,6 +1,7 @@
 {
   "add": "Add student",
   "allStatuses": "All statuses",
+  "clearSearch": "Clear search",
   "delete": {
     "message": "Are you sure you want to delete student \"{{name}}\"? All related data (enrollments, attendance, invoices) will also be deleted.",
     "title": "Delete student"
@@ -70,6 +71,11 @@
     "desc": "Add your first student to start managing the list.",
     "title": "No students yet"
   },
+  "emptyFiltered": {
+    "title": "No students match your filters",
+    "desc": "Try a different keyword or clear the filters to see the full list.",
+    "clear": "Clear filters"
+  },
   "form": {
     "addTitle": "Add student",
     "address": "Address",
@@ -87,19 +93,60 @@
       "emailInvalid": "Invalid email address"
     }
   },
+  "import": {
+    "checkError": "Could not check the file, please try again",
+    "checking": "Checking the file...",
+    "confirm_one": "Import {{count}} student",
+    "confirm_other": "Import {{count}} students",
+    "desc": "Use the template, or a file exported from this app. Columns: code (optional, generated when empty), name (required), phone, email, dob (DD/MM/YYYY or YYYY-MM-DD), address, status (studying / paused / quit), note.",
+    "done_one": "Imported {{count}} student",
+    "done_other": "Imported {{count}} students",
+    "empty": "The file has no data rows",
+    "errors": {
+      "code_exists": "Code already used by another student",
+      "duplicate_in_file": "Code repeated in the file",
+      "invalid_date": "Invalid date",
+      "invalid_email": "Invalid email",
+      "invalid_status": "Unknown status",
+      "required": "Required",
+      "too_long": "Too long"
+    },
+    "field": "Column",
+    "fields": {
+      "address": "Address",
+      "code": "Code",
+      "dob": "Date of birth",
+      "email": "Email",
+      "name": "Name",
+      "note": "Note",
+      "phone": "Phone",
+      "status": "Status"
+    },
+    "file": "CSV file",
+    "fileTooLarge": "The file is larger than 1 MB",
+    "ignored": "Ignored columns: {{cols}}",
+    "importError": "Could not import, please try again",
+    "noNameColumn": "The file needs a name column (name or Họ tên)",
+    "open": "Import",
+    "problem": "Problem",
+    "row": "Row",
+    "summary_one": "{{count}} row: {{valid}} ready to import, {{invalid}} with errors (rows with errors are skipped).",
+    "summary_other": "{{count}} rows: {{valid}} ready to import, {{invalid}} with errors (rows with errors are skipped).",
+    "template": "Download template",
+    "title": "Import students from CSV"
+  },
   "invoiceStatus": {
     "paid": "Paid",
     "partial": "Partially paid",
     "unpaid": "Unpaid"
   },
   "searchPlaceholder": "Search by name, code, phone...",
-  "clearSearch": "Clear search",
-  "statusFilterLabel": "Filter by status",
   "status": {
     "paused": "Paused",
     "quit": "Withdrawn",
     "studying": "Studying"
   },
+  "statusFilterLabel": "Filter by status",
   "table": {
     "actions": "Actions",
     "code": "Code",
@@ -113,10 +160,5 @@
     "deleted": "Student deleted",
     "loadError": "Could not load the list, please try again",
     "saved": "Student saved"
-  },
-  "emptyFiltered": {
-    "title": "No students match your filters",
-    "desc": "Try a different keyword or clear the filters to see the full list.",
-    "clear": "Clear filters"
   }
 }

@@ -1,6 +1,7 @@
 {
   "add": "Thêm học viên",
   "allStatuses": "Tất cả trạng thái",
+  "clearSearch": "Xóa từ khóa tìm kiếm",
   "delete": {
     "message": "Bạn có chắc muốn xóa học viên \"{{name}}\"? Toàn bộ dữ liệu liên quan (ghi danh, điểm danh, hóa đơn) cũng sẽ bị xóa.",
     "title": "Xóa học viên"
@@ -70,6 +71,11 @@
     "desc": "Thêm học viên đầu tiên để bắt đầu quản lý danh sách.",
     "title": "Chưa có học viên nào"
   },
+  "emptyFiltered": {
+    "title": "Không tìm thấy học viên",
+    "desc": "Thử từ khóa khác hoặc xóa bộ lọc để xem toàn bộ danh sách.",
+    "clear": "Xóa bộ lọc"
+  },
   "form": {
     "addTitle": "Thêm học viên",
     "address": "Địa chỉ",
@@ -87,19 +93,60 @@
       "emailInvalid": "Email không đúng định dạng"
     }
   },
+  "import": {
+    "checkError": "Không kiểm tra được file, vui lòng thử lại",
+    "checking": "Đang kiểm tra file...",
+    "confirm_one": "Nhập {{count}} học viên",
+    "confirm_other": "Nhập {{count}} học viên",
+    "desc": "Dùng file mẫu, hoặc file Xuất CSV của chính phần mềm. Cột: mã (để trống sẽ tự sinh), họ tên (bắt buộc), điện thoại, email, ngày sinh (DD/MM/YYYY hoặc YYYY-MM-DD), địa chỉ, trạng thái (studying / paused / quit hoặc Đang học / Tạm nghỉ / Đã nghỉ), ghi chú.",
+    "done_one": "Đã nhập {{count}} học viên",
+    "done_other": "Đã nhập {{count}} học viên",
+    "empty": "File không có dòng dữ liệu",
+    "errors": {
+      "code_exists": "Mã đã thuộc học viên khác",
+      "duplicate_in_file": "Mã bị lặp trong file",
+      "invalid_date": "Ngày không hợp lệ",
+      "invalid_email": "Email không hợp lệ",
+      "invalid_status": "Trạng thái không hợp lệ",
+      "required": "Bắt buộc",
+      "too_long": "Quá dài"
+    },
+    "field": "Cột",
+    "fields": {
+      "address": "Địa chỉ",
+      "code": "Mã HV",
+      "dob": "Ngày sinh",
+      "email": "Email",
+      "name": "Họ tên",
+      "note": "Ghi chú",
+      "phone": "Điện thoại",
+      "status": "Trạng thái"
+    },
+    "file": "File CSV",
+    "fileTooLarge": "File lớn hơn 1 MB",
+    "ignored": "Cột bị bỏ qua: {{cols}}",
+    "importError": "Không nhập được, vui lòng thử lại",
+    "noNameColumn": "File cần có cột họ tên (Họ tên hoặc name)",
+    "open": "Nhập từ file",
+    "problem": "Lỗi",
+    "row": "Dòng",
+    "summary_one": "{{count}} dòng: {{valid}} dòng sẵn sàng, {{invalid}} dòng lỗi (dòng lỗi sẽ bị bỏ qua).",
+    "summary_other": "{{count}} dòng: {{valid}} dòng sẵn sàng, {{invalid}} dòng lỗi (dòng lỗi sẽ bị bỏ qua).",
+    "template": "Tải file mẫu",
+    "title": "Nhập học viên từ CSV"
+  },
   "invoiceStatus": {
     "paid": "Đã thanh toán",
     "partial": "Thanh toán một phần",
     "unpaid": "Chưa thanh toán"
   },
   "searchPlaceholder": "Tìm theo tên, mã, số điện thoại...",
-  "clearSearch": "Xóa từ khóa tìm kiếm",
-  "statusFilterLabel": "Lọc theo trạng thái",
   "status": {
     "paused": "Tạm nghỉ",
     "quit": "Đã nghỉ",
     "studying": "Đang học"
   },
+  "statusFilterLabel": "Lọc theo trạng thái",
   "table": {
     "actions": "Thao tác",
     "code": "Mã",
@@ -113,10 +160,5 @@
     "deleted": "Đã xóa học viên",
     "loadError": "Không tải được danh sách, vui lòng thử lại",
     "saved": "Đã lưu học viên"
-  },
-  "emptyFiltered": {
-    "title": "Không tìm thấy học viên",
-    "desc": "Thử từ khóa khác hoặc xóa bộ lọc để xem toàn bộ danh sách.",
-    "clear": "Xóa bộ lọc"
   }
 }

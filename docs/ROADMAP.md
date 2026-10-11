@@ -27,7 +27,7 @@ Nguồn: 3 audit (tính năng so với Teachworks/TutorBird/Classe365, khả nă
 - [x] Biên lai in (lưu PDF qua hộp thoại in của trình duyệt) có dòng + giảm trừ; PDF phía server khi cần gửi email
 
 ## Gói 5 — Nhập liệu & điều hướng (S–M)
-- [ ] Nhập học viên từ CSV (xem trước + báo lỗi từng dòng)
+- [x] Nhập học viên từ CSV (kiểm tra trước, lỗi theo dòng có mã dịch được, nhận file Xuất CSV của app)
 - [ ] Command palette Ctrl+K, breadcrumb chung, menu tài khoản trên topbar, URL tiếng Anh + redirect
 - [ ] Sắp xếp cột bảng (`sort` allowlist server + `aria-sort`)
 

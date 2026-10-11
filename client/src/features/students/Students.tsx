@@ -16,6 +16,7 @@ import { Pagination, clampPage } from '../../shared/components/Pagination';
 import { useMyPermissions } from '../system/roles.api';
 import { Icon } from '../../shared/components/icons';
 import { Menu } from '../../shared/components/Menu';
+import { ImportStudentsModal } from './ImportStudentsModal';
 import './Students.css';
 import { EmptyCell } from '../../shared/components/EmptyCell';
 import { initials } from '../../shared/types';
@@ -41,6 +42,7 @@ export function Students() {
   const [search, setSearchReset] = useUrlSearch(q.search, (v) => setQ({ search: v, page: '1' }));
   const setStatusReset = (v: string) => setQ({ status: v, page: '1' });
   const [editing, setEditing] = useState<Student | null | 'new'>(null);
+  const [importing, setImporting] = useState(false);
   const [deleting, setDeleting] = useState<Student | null>(null);
   const toast = useToast();
   const perms = useMyPermissions();
@@ -97,10 +99,16 @@ export function Students() {
         desc={t('desc')}
         actions={
           perms.has('students.create') && (
-            <button className="btn btn-primary btn-inline" onClick={() => setEditing('new')}>
-              <Icon name="plus" size={14} />
-              {t('add')}
-            </button>
+            <>
+              <button className="btn btn-inline" onClick={() => setImporting(true)}>
+                <Icon name="upload" size={14} />
+                {t('import.open')}
+              </button>
+              <button className="btn btn-primary btn-inline" onClick={() => setEditing('new')}>
+                <Icon name="plus" size={14} />
+                {t('add')}
+              </button>
+            </>
           )
         }
       />
@@ -257,6 +265,15 @@ export function Students() {
         />
       )}
 
+      {importing && (
+        <ImportStudentsModal
+          onClose={() => setImporting(false)}
+          onDone={() => {
+            setImporting(false);
+            reload();
+          }}
+        />
+      )}
       {editing && (
         <StudentForm
           initial={editing === 'new' ? null : editing}

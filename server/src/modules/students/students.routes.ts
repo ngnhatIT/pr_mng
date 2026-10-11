@@ -6,6 +6,7 @@ import { requirePermission } from '../authorization/authorization.middleware';
 import { asyncHandler } from '../../shared/http';
 import { validate, v, paramId } from '../../shared/validate';
 import * as studentService from './students.service';
+import { importStudents, type ImportRow } from './students.import';
 import { actorFromReq } from '../../shared/audit';
 
 const router = Router();
@@ -47,6 +48,21 @@ router.get(
         { page, limit },
         await readOpts(req)
       )
+    );
+  })
+);
+
+// Nhập học viên từ file (client đọc CSV -> rows). dry_run=true chỉ kiểm tra, trả lỗi theo dòng.
+router.post(
+  '/import',
+  requirePermission('students.create'),
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const { rows, dry_run } = (req.body ?? {}) as { rows?: unknown; dry_run?: unknown };
+    res.json(
+      await importStudents(requireCenterId(req), rows as ImportRow[], {
+        dryRun: dry_run === true,
+        actor: actorFromReq(req),
+      })
     );
   })
 );

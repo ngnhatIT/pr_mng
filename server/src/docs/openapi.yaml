@@ -2947,6 +2947,40 @@ paths:
                 dry_run: { type: boolean }
       responses:
         '200': { description: '{ period, created, skipped, total, preview[] }' }
+  /api/v1/students/import:
+    post:
+      tags: [Students]
+      summary: Nhập học viên hàng loạt (students.create)
+      description: >-
+        Client đọc CSV thành rows. dry_run=true chỉ kiểm tra; nhập thật chỉ thêm dòng hợp lệ trong 1 transaction.
+        errors[].row là số dòng trong file (dòng dữ liệu đầu = 2), code: required | too_long | invalid_email |
+        invalid_date | invalid_status | duplicate_in_file | code_exists. Tối đa 2000 dòng.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [rows]
+              properties:
+                dry_run: { type: boolean }
+                rows:
+                  type: array
+                  maxItems: 2000
+                  items:
+                    type: object
+                    properties:
+                      code: { type: string }
+                      name: { type: string }
+                      phone: { type: string }
+                      email: { type: string }
+                      dob: { type: string, format: date }
+                      address: { type: string }
+                      status: { type: string, enum: [studying, paused, quit] }
+                      note: { type: string }
+      responses:
+        '200': { description: '{ total, valid, created, errors[] }' }
+        '400': { description: IMPORT_EMPTY / IMPORT_TOO_LARGE }
   /api/v1/payroll:
     get:
       tags:

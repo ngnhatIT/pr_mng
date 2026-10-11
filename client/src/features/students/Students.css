@@ -54,3 +54,15 @@
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
+
+/* Nhập học viên từ CSV */
+.import-file {
+  margin-top: var(--sp-3);
+}
+.import-result {
+  margin-top: var(--sp-3);
+}
+.import-errors {
+  max-height: 260px;
+  overflow: auto;
+}

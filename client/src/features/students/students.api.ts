@@ -8,6 +8,7 @@ import { type Grade, type InvoiceItem } from '../../shared/types';
 import { useDebounce } from '../../shared/hooks/useDebounce';
 import { useToast, toastApiError } from '../../shared/ui/toast';
 import i18n from '../../i18n';
+import type { ImportRow } from './studentImport';
 
 export interface Student {
   id: number;
@@ -43,7 +44,16 @@ export interface StudentForm {
 
 export type { Grade };
 
+export interface ImportResult {
+  total: number;
+  valid: number;
+  created: number;
+  errors: { row: number; field: string; code: string }[];
+}
+
 export const studentsApi = {
+  importRows: (rows: ImportRow[], dryRun: boolean) =>
+    http.post<ImportResult>('/students/import', { rows, dry_run: dryRun }),
   list: (search = '', status = '', page?: PageParams) => {
     const q = new URLSearchParams({ search, status });
     if (page?.page) q.set('page', String(page.page));
