@@ -218,6 +218,11 @@ export async function saveAttendance(
     .all(id)) as { student_id: number; status: string }[];
   const prev = new Map(prevRows.map((r) => [r.student_id, r.status]));
   await db.transaction(async (tx) => {
+    // Cùng khóa dòng với rescheduleSession: buổi vừa bị dời (hủy) thì không ghi điểm danh vào nữa
+    const live = await tx
+      .prepare("SELECT 1 FROM sessions WHERE id = ? AND status <> 'cancelled' FOR UPDATE")
+      .get(id);
+    if (!live) throw AppError.notFound('Không tìm thấy buổi học');
     await assertPayrollMonthOpen(tx, sc.center_id, sc.date); // J-A8
     const upsert = await tx.prepare(
       `INSERT INTO attendance (session_id, student_id, status, note) VALUES (?, ?, ?, ?)
@@ -466,6 +471,10 @@ export async function updateSessionDetails(
   const sc = await getSessionOr404(ctx, id);
   if ('start_time' in patch || 'end_time' in patch)
     assertTimes(patch.start_time ?? null, patch.end_time ?? null);
+  // Đổi GV/phòng quyết định ai được trả lương -> chỉ scope center (scope own chỉ sửa chủ đề/giờ buổi mình)
+  if (ctx.ownOnly && ('teacher_id' in patch || 'room_id' in patch)) {
+    throw AppError.forbidden('Chỉ quản lý trung tâm được đổi giáo viên/phòng của buổi học');
+  }
   if (patch.teacher_id) await assertSameCenter('teachers', patch.teacher_id, sc.center_id);
   if (patch.room_id) await assertSameCenter('rooms', patch.room_id, sc.center_id);
   const sets: string[] = [];
@@ -490,7 +499,10 @@ export async function updateSessionDetails(
       .get(`session-day:${sc.center_id}:${sc.date}`);
     await tx.prepare(`UPDATE sessions SET ${sets.join(', ')} WHERE id = ?`).run(...params, id);
     const after = await calendarItem(id, tx);
-    await assertNoSessionConflict(tx, after, sc.center_id);
+    // Chỉ sửa chủ đề thì không kiểm trùng (dữ liệu trùng sẵn có không được chặn việc ghi chủ đề)
+    if (['teacher_id', 'room_id', 'start_time', 'end_time'].some((k) => k in patch)) {
+      await assertNoSessionConflict(tx, after, sc.center_id);
+    }
     return after;
   });
   if (before.teacher_id !== item.teacher_id) {
@@ -525,16 +537,23 @@ export async function rescheduleSession(
 ): Promise<CalendarItem> {
   const sc = await getSessionOr404(ctx, id);
   assertTimes(input.start_time ?? null, input.end_time ?? null);
+  if (ctx.ownOnly && (input.teacher_id || input.room_id)) {
+    throw AppError.forbidden('Chỉ quản lý trung tâm được đổi giáo viên/phòng của buổi học');
+  }
   if (input.teacher_id) await assertSameCenter('teachers', input.teacher_id, sc.center_id);
   if (input.room_id) await assertSameCenter('rooms', input.room_id, sc.center_id);
   if (input.date === sc.date)
     throw AppError.badRequest('Ngày mới trùng ngày cũ — sửa giờ trực tiếp thay vì dời buổi');
-  const attended = (await db
-    .prepare('SELECT 1 FROM attendance WHERE session_id = ? LIMIT 1')
-    .get(id)) as unknown;
-  if (attended) throw AppError.conflict('Buổi đã điểm danh, không thể dời', 'SESSION_HAS_ATTENDANCE');
   const old = await calendarItem(id);
   const newId = await db.transaction(async (tx) => {
+    // Khóa dòng buổi (saveAttendance khóa cùng dòng) rồi mới kiểm điểm danh: không lọt điểm danh vào buổi bị hủy
+    const locked = (await tx
+      .prepare("SELECT room_id FROM sessions WHERE id = ? AND status <> 'cancelled' FOR UPDATE")
+      .get(id)) as { room_id: number | null } | undefined;
+    if (!locked) throw AppError.notFound('Không tìm thấy buổi học');
+    if (await tx.prepare('SELECT 1 FROM attendance WHERE session_id = ? LIMIT 1').get(id)) {
+      throw AppError.conflict('Buổi đã điểm danh, không thể dời', 'SESSION_HAS_ATTENDANCE');
+    }
     await assertPayrollMonthOpen(tx, sc.center_id, sc.date);
     await assertPayrollMonthOpen(tx, sc.center_id, input.date);
     for (const d of [sc.date, input.date].sort()) {
@@ -562,7 +581,7 @@ export async function rescheduleSession(
         input.date,
         old.topic ?? '',
         input.teacher_id ?? old.teacher_id,
-        input.room_id ?? null,
+        input.room_id ?? locked.room_id, // giữ phòng riêng của buổi gốc (NULL = phòng của lớp)
         input.start_time ?? old.start,
         input.end_time ?? old.end,
         id

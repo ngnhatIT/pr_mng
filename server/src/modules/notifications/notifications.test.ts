@@ -58,7 +58,7 @@ describe('notifications', () => {
     const mine = await svc.listMine({ type: 'parent', id: p1 });
     assert.equal(mine.unread, 1);
     assert.equal(mine.data[0].kind, 'absence');
-    assert.deepEqual(mine.data[0].params, { student: 'HS', date: '2026-10-10' });
+    assert.deepEqual(mine.data[0].params, { student: 'HS', date: '2026-10-10', student_id: s });
     assert.equal(mine.data[0].link, `/parent/children/${s}`);
     assert.equal(await svc.unreadCount({ type: 'parent', id: stranger }), 0);
 

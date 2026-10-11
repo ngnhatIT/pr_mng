@@ -71,6 +71,7 @@
       "MAX_ATTEMPTS": "Đã hết số lượt làm bài",
       "MFA_ALREADY_ENABLED": "Xác thực 2 lớp đang bật",
       "MFA_INVALID_CODE": "Mã xác thực không đúng hoặc đã được dùng",
+      "MFA_LOCKED": "Nhập sai mã quá nhiều lần, vui lòng thử lại sau 15 phút",
       "MFA_NOT_ENABLED": "Xác thực 2 lớp chưa bật",
       "MFA_NOT_SETUP": "Chưa thiết lập xác thực 2 lớp, hãy bắt đầu lại",
       "MFA_TOKEN_INVALID": "Bước xác minh đã hết hạn, vui lòng đăng nhập lại",

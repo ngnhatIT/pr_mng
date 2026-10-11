@@ -132,6 +132,28 @@ describe('lịch buổi học', () => {
     );
   });
 
+  it('review: scope own không đổi GV/phòng; chỉ sửa chủ đề không bị chặn bởi trùng có sẵn; dời giữ phòng riêng', async () => {
+    const a = await makeClass('A', t1);
+    const s = await sessionOn(a, d(2));
+    await assert.rejects(sessionService.updateSessionDetails(own(t1), s.id, { teacher_id: t2 }), {
+      statusCode: 403,
+    });
+    // tạo trùng có sẵn: lớp B của t2 cùng giờ, rồi phân t2 dạy thay buổi A qua DB (dữ liệu cũ)
+    await makeClass('B', t2);
+    await db.prepare('UPDATE sessions SET teacher_id = ? WHERE id = ?').run(t2, s.id);
+    const topic = await sessionService.updateSessionDetails(ctx, s.id, { topic: 'Unit 3' });
+    assert.equal(topic.topic, 'Unit 3');
+
+    const room = Number(
+      (await db.prepare("INSERT INTO rooms (name, center_id) VALUES ('P1', ?)").run(centerId)).lastInsertRowid
+    );
+    const s3 = await sessionOn(a, d(3));
+    await db.prepare('UPDATE sessions SET room_id = ? WHERE id = ?').run(room, s3.id);
+    await db.prepare('DELETE FROM sessions WHERE class_id = ? AND date = ?').run(a, d(11));
+    const moved = await sessionService.rescheduleSession(ctx, s3.id, { date: d(11) });
+    assert.equal(moved.room_id, room);
+  });
+
   it('dời buổi: buổi gốc hủy, buổi mới giữ giờ cũ + trỏ về gốc, job sinh lịch không tạo lại ngày cũ', async () => {
     const a = await makeClass('A', t1, [{ day: 2, start: '18:00', end: '19:30' }]);
     // ngày có buổi theo lịch (thứ Hai) trong 10 ngày tới

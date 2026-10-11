@@ -53,6 +53,11 @@ function setupState(): void {
         class_name: 'Lop 1',
       }),
     },
+    // Khóa dòng buổi (chống dời buổi song song) — buổi còn hiệu lực
+    {
+      match: "FROM sessions WHERE id = ? AND status <> 'cancelled' FOR UPDATE",
+      get: () => ({ '?column?': 1 }),
+    },
     // J-A8: tháng lương chưa chốt
     { match: 'pg_advisory_xact_lock_shared', get: () => ({}) },
     { match: 'FROM payroll_closures', get: () => undefined },

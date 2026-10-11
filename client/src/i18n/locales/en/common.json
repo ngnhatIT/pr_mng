@@ -71,6 +71,7 @@
       "MAX_ATTEMPTS": "No attempts left.",
       "MFA_ALREADY_ENABLED": "Two-factor authentication is already on.",
       "MFA_INVALID_CODE": "The code is not correct or has already been used.",
+      "MFA_LOCKED": "Too many wrong codes. Please try again in 15 minutes.",
       "MFA_NOT_ENABLED": "Two-factor authentication is not on.",
       "MFA_NOT_SETUP": "Two-factor setup was not started, please start again.",
       "MFA_TOKEN_INVALID": "The sign-in step expired, please sign in again.",

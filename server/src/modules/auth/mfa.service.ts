@@ -25,6 +25,42 @@ interface MfaRow {
 
 const ISSUER = 'EduCenter Pro';
 
+/**
+ * Chống dò mã 6 số: sai MAX_FAILURES lần liên tiếp -> khóa bước 2FA của tài khoản LOCK_MS (mọi IP, mọi mfa_token).
+ * ponytail: đếm trong bộ nhớ từng process (nhiều worker PM2 = nhân số lần thử); chuyển sang bảng DB nếu cần chặt hơn.
+ */
+const MAX_FAILURES = 5;
+const LOCK_MS = 15 * 60_000;
+const failures = new Map<number, { n: number; until: number }>();
+
+function assertNotLocked(userId: number): void {
+  const f = failures.get(userId);
+  if (f && f.until > Date.now()) {
+    throw AppError.tooManyRequests('Nhập sai mã quá nhiều lần, vui lòng thử lại sau 15 phút', 'MFA_LOCKED');
+  }
+}
+
+function recordFailure(userId: number): void {
+  const f = failures.get(userId);
+  const n = (f && f.until <= Date.now() && f.n >= MAX_FAILURES ? 0 : (f?.n ?? 0)) + 1;
+  failures.set(userId, { n, until: n >= MAX_FAILURES ? Date.now() + LOCK_MS : 0 });
+}
+
+/** Secret giải mã được không (đổi DATA_ENCRYPTION_KEY/JWT_SECRET -> không) — khi đó vẫn cho dùng mã khôi phục. */
+function trySecret(stored: string | null): string | null {
+  if (!stored) return null;
+  try {
+    return decryptSecret(stored);
+  } catch {
+    return null;
+  }
+}
+
+/** Chỉ dùng trong test. */
+export function _resetMfaFailures(): void {
+  failures.clear();
+}
+
 async function row(userId: number): Promise<MfaRow> {
   const r = (await db
     .prepare(
@@ -59,8 +95,9 @@ export async function mfaEnable(
 ): Promise<{ recovery_codes: string[] }> {
   const r = await row(userId);
   if (r.totp_enabled) throw AppError.conflict('Xác thực 2 lớp đang bật', 'MFA_ALREADY_ENABLED');
-  if (!r.totp_secret) throw AppError.badRequest('Chưa thiết lập, hãy bắt đầu lại', 'MFA_NOT_SETUP');
-  const step = verifyTotp(decryptSecret(r.totp_secret), code);
+  const secret = trySecret(r.totp_secret);
+  if (!secret) throw AppError.badRequest('Chưa thiết lập, hãy bắt đầu lại', 'MFA_NOT_SETUP');
+  const step = verifyTotp(secret, code);
   if (step === null) throw AppError.badRequest('Mã xác thực không đúng', 'MFA_INVALID_CODE');
   const codes = generateRecoveryCodes();
   await db
@@ -84,10 +121,19 @@ export async function mfaEnable(
  * (xóa khỏi danh sách sau khi dùng). Trả 'totp' | 'recovery' | null.
  */
 export async function consumeSecondFactor(userId: number, code: string): Promise<'totp' | 'recovery' | null> {
+  assertNotLocked(userId);
+  const used = await checkSecondFactor(userId, code);
+  if (used) failures.delete(userId);
+  else recordFailure(userId);
+  return used;
+}
+
+async function checkSecondFactor(userId: number, code: string): Promise<'totp' | 'recovery' | null> {
   const r = await row(userId);
-  if (!r.totp_enabled || !r.totp_secret) return null;
+  if (!r.totp_enabled) return null;
   const last = r.totp_last_step === null ? null : Number(r.totp_last_step);
-  const step = verifyTotp(decryptSecret(r.totp_secret), code, last);
+  const secret = trySecret(r.totp_secret);
+  const step = secret ? verifyTotp(secret, code, last) : null;
   if (step !== null) {
     // 2 request cùng mã đồng thời: chỉ 1 cái cập nhật được (điều kiện step > last)
     const u = await db

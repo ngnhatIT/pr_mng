@@ -48,6 +48,11 @@ before(async () => {
       "INSERT INTO reminders (student_id, phone, kind, status, message) VALUES (?, '0909', 'absence', 'demo', 'Nguyễn An vắng')"
     )
     .run(studentId);
+  await db
+    .prepare(
+      "INSERT INTO notifications (center_id, recipient_type, recipient_id, kind, params, body) VALUES (?, 'parent', ?, 'absence', ?::jsonb, 'Nguyễn An vắng')"
+    )
+    .run(centerId, parent, JSON.stringify({ student: 'Nguyễn An', student_id: studentId }));
 });
 after(teardownTestDb);
 
@@ -83,6 +88,9 @@ describe('quyền dữ liệu cá nhân', () => {
       Number((await one('SELECT COUNT(*) c FROM attendance WHERE student_id = ?', studentId)).c),
       1
     );
+    const n = await one('SELECT body, params FROM notifications');
+    assert.equal(n.body, null);
+    assert.equal((n.params as { student: string }).student, `#${studentId}`);
     await assert.rejects(anonymizeStudent(centerId, studentId), { code: 'ALREADY_ANONYMIZED' });
   });
 });

@@ -123,3 +123,28 @@ describe('hóa đơn tháng hàng loạt', () => {
     await assert.rejects(svc.generateMonthlyInvoices(centerId, { period: '2026-13' }), { statusCode: 400 });
   });
 });
+
+describe('review: client cũ sửa hóa đơn', () => {
+  it('PUT chỉ amount giữ kỳ thu + giảm trừ, amount vẫn là số phải thu; tạo hàng loạt lại không nhân đôi', async () => {
+    const inv = (await svc.createInvoice(centerId, {
+      student_id: studentId,
+      class_id: classId,
+      items: [{ description: 'Học phí', quantity: 1, unit_price: 2000000 }],
+      discount_amount: 200000,
+      discount_reason: 'Anh chị em',
+      period: '2026-10',
+    })) as { id: number };
+    const up = (await svc.updateInvoice(centerId, inv.id, { amount: 1800000, note: 'sửa ghi chú' })) as {
+      amount: number;
+      period: string;
+      discount_amount: number;
+      discount_reason: string;
+    };
+    assert.deepEqual(
+      [up.amount, up.period, up.discount_amount, up.discount_reason],
+      [1800000, '2026-10', 200000, 'Anh chị em']
+    );
+    const again = await svc.generateMonthlyInvoices(centerId, { period: '2026-10' });
+    assert.equal(again.created, 0);
+  });
+});

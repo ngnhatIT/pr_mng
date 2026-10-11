@@ -356,12 +356,39 @@ export async function updateInvoice(
   actor?: AuditActor
 ): Promise<unknown> {
   await assertInvoiceScope(centerId, id);
-  const { amount: amt, items, discount, period } = computeInvoiceTotal(input);
   // INV-1: check + update trong 1 transaction, lock hóa đơn (cùng lock với recordPayment/IPN/approve)
   const current = await db.transaction(async (tx) => {
-    const cur = (await tx.prepare('SELECT amount, status FROM invoices WHERE id = ? FOR UPDATE').get(id)) as
-      { amount: number; status: string } | undefined;
+    const cur = (await tx
+      .prepare(
+        'SELECT amount, status, period, discount_amount, discount_reason FROM invoices WHERE id = ? FOR UPDATE'
+      )
+      .get(id)) as
+      | {
+          amount: number;
+          status: string;
+          period: string | null;
+          discount_amount: number;
+          discount_reason: string | null;
+        }
+      | undefined;
     if (!cur) throw AppError.notFound('Không tìm thấy phiếu thu');
+    // Trường không gửi lên giữ nguyên (client cũ chỉ gửi amount/due_date/note: không mất kỳ thu -> tạo hàng loạt
+    // không nhân đôi; amount của client cũ là số PHẢI THU như trước, nên cộng lại giảm trừ đang có làm tạm tính).
+    const legacy = input.items === undefined && input.discount_amount === undefined;
+    const curDiscount = Number(cur.discount_amount) || 0;
+    const {
+      amount: amt,
+      items,
+      discount,
+      period,
+    } = computeInvoiceTotal({
+      items: input.items,
+      amount: legacy && input.amount != null ? Number(input.amount) + curDiscount : input.amount,
+      discount_amount: input.discount_amount ?? curDiscount,
+      discount_reason: input.discount_reason !== undefined ? input.discount_reason : cur.discount_reason,
+      period: input.period !== undefined ? input.period : cur.period,
+    });
+    const discountReason = input.discount_reason !== undefined ? input.discount_reason : cur.discount_reason;
     const paid = Number(
       (
         (await tx
@@ -393,13 +420,13 @@ export async function updateInvoice(
         status,
         period,
         discount,
-        discount ? input.discount_reason || null : null,
+        discount ? discountReason || null : null,
         id
       );
     // Gửi items = thay toàn bộ; client cũ chỉ gửi amount mà số tiền đổi -> bỏ dòng cũ (amount là nguồn đúng)
     if (items !== undefined) await replaceItems(tx, id, items);
     else if (Math.round(cur.amount) !== amt) await replaceItems(tx, id, []);
-    return cur;
+    return { old: cur.amount, amt };
   });
   await audit({
     centerId,
@@ -407,8 +434,8 @@ export async function updateInvoice(
     action: 'update',
     entity: 'invoices',
     entityId: id,
-    summary: `Sửa phiếu thu HD${id}: ${formatVND(amt)}`,
-    meta: { amount: amt, old_amount: current?.amount ?? null },
+    summary: `Sửa phiếu thu HD${id}: ${formatVND(current.amt)}`,
+    meta: { amount: current.amt, old_amount: current.old },
   });
   return await db.prepare('SELECT * FROM invoices WHERE id = ?').get(id);
 }

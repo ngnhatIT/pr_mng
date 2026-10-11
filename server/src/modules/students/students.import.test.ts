@@ -63,6 +63,14 @@ describe('importStudents', () => {
     assert.equal(d.status, 'paused');
   });
 
+  it('dòng mã trống đứng trước dòng có mã tay trùng mã sẽ sinh: vẫn nhập được', async () => {
+    const r = await importStudents(centerId, [{ name: 'X' }, { code: 'HV0008', name: 'Y' }], {
+      dryRun: false,
+    });
+    assert.equal(r.created, 2);
+    assert.deepEqual(await codes(), ['HV0007', 'HV0008', 'HV0009']);
+  });
+
   it('file rỗng / quá lớn bị từ chối', async () => {
     await assert.rejects(importStudents(centerId, [], { dryRun: true }), { code: 'IMPORT_EMPTY' });
     await assert.rejects(importStudents(centerId, Array(2001).fill({ name: 'x' }), { dryRun: true }), {

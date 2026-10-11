@@ -91,6 +91,13 @@ export async function anonymizeStudent(
       .prepare('UPDATE reminders SET phone = NULL, message = NULL, response = NULL WHERE student_id = ?')
       .run(id);
     await tx.prepare("UPDATE enrollments SET status = 'inactive' WHERE student_id = ?").run(id);
+    // Chuông thông báo có tên học viên (vắng mặt, đơn nghỉ...): thay tên trong params, bỏ câu dự phòng
+    await tx
+      .prepare(
+        `UPDATE notifications SET body = NULL, params = jsonb_set(params, '{student}', to_jsonb(?::text))
+         WHERE params->>'student_id' = ? AND jsonb_exists(params, 'student')`
+      )
+      .run(`#${id}`, String(id));
   });
   await audit({
     centerId: st.center_id,

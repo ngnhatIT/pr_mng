@@ -159,6 +159,13 @@ export async function notifyParents(
     center?.center_id ?? null,
     'parent',
     contacts.map((c) => c.parent_id),
-    { kind, body: message, link: `/parent/children/${studentId}`, ...inApp }
+    // student_id trong params: ẩn danh học viên tìm được thông báo có tên để xóa (students.privacy.ts)
+    {
+      kind,
+      body: message,
+      link: `/parent/children/${studentId}`,
+      ...inApp,
+      params: { ...inApp?.params, student_id: studentId },
+    }
   );
 }

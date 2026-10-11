@@ -13,22 +13,27 @@ import { idempotency } from '../../middleware/idempotency';
 const router = Router();
 
 /** Phần tiền chung của tạo/sửa hóa đơn (items là mảng tùy chọn; service kiểm tra từng dòng). */
-function moneyOf(input: {
-  amount?: number | null;
-  items?: unknown;
-  discount_amount?: number | null;
-  discount_reason?: string | null;
-  period?: string | null;
-}) {
+function moneyOf(
+  body: Record<string, unknown>,
+  input: {
+    amount?: number | null;
+    items?: unknown;
+    discount_amount?: number | null;
+    discount_reason?: string | null;
+    period?: string | null;
+  }
+) {
   if (input.items !== undefined && input.items !== null && !Array.isArray(input.items)) {
     throw AppError.badRequest('Dòng hóa đơn phải là danh sách', 'INVALID_ITEMS');
   }
+  // Trường không gửi -> undefined (sửa hóa đơn giữ nguyên giá trị cũ); gửi rỗng/null -> xóa
+  const has = (k: string) => Object.prototype.hasOwnProperty.call(body, k);
   return {
     amount: input.amount ?? null,
     items: (input.items ?? undefined) as invoiceService.InvoiceLine[] | undefined,
-    discount_amount: input.discount_amount ?? 0,
-    discount_reason: input.discount_reason ?? null,
-    period: input.period || null,
+    discount_amount: has('discount_amount') ? (input.discount_amount ?? 0) : undefined,
+    discount_reason: has('discount_reason') ? (input.discount_reason ?? null) : undefined,
+    period: has('period') ? input.period || null : undefined,
   };
 }
 
@@ -123,7 +128,7 @@ router.post(
       {
         student_id: input.student_id,
         class_id: input.class_id ?? undefined,
-        ...moneyOf(input),
+        ...moneyOf((req.body ?? {}) as Record<string, unknown>, input),
         due_date: input.due_date ?? undefined,
         note: input.note ?? undefined,
       },
@@ -151,7 +156,7 @@ router.put(
         reqCenterId(req),
         paramId(req.params),
         {
-          ...moneyOf(input),
+          ...moneyOf((req.body ?? {}) as Record<string, unknown>, input),
           due_date: input.due_date ?? undefined,
           note: input.note ?? undefined,
         },

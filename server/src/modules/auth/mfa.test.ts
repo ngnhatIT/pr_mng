@@ -14,6 +14,8 @@ import { db } from '../../db/pg-compat';
 import { setupTestDb, resetTestDb, teardownTestDb } from '../../db/test-utils';
 import { createApp } from '../../app';
 import { totpAt } from '../../shared/totp';
+import { _resetMfaFailures } from './mfa.service';
+import { env } from '../../config/env';
 
 let server: http.Server;
 let base = '';
@@ -32,6 +34,8 @@ async function call(method: string, path: string, body?: unknown, token?: string
 const step = () => Math.floor(Date.now() / 30000);
 
 before(async () => {
+  // Test gọi /login/2fa nhiều lần từ 1 IP: nới giới hạn IP để kiểm khóa theo tài khoản (MFA_LOCKED) riêng
+  (env as { LOGIN_RATE_LIMIT: number }).LOGIN_RATE_LIMIT = 1000;
   await setupTestDb();
   await resetTestDb();
   await db.prepare("INSERT INTO centers (id, name) VALUES (1, 'TT')").run();
@@ -109,6 +113,23 @@ describe('xác thực 2 lớp (TOTP)', () => {
     assert.equal((await call('POST', '/auth/login/2fa', { mfa_token: mfa, code })).status, 200);
     assert.equal((await call('POST', '/auth/login/2fa', { mfa_token: mfa, code })).status, 401);
     assert.equal((await call('GET', '/auth/2fa', undefined, token)).body.recovery_left as number, 7);
+  });
+
+  it('sai mã 5 lần -> khóa bước 2 (429 MFA_LOCKED) kể cả với mã đúng; secret không giải mã được vẫn dùng mã khôi phục', async () => {
+    _resetMfaFailures();
+    const mfa = (await call('POST', '/auth/login', { username: 'admin', password: 'Matkhau123' })).body
+      .mfa_token;
+    for (let i = 0; i < 5; i++) await call('POST', '/auth/login/2fa', { mfa_token: mfa, code: '000000' });
+    const locked = await call('POST', '/auth/login/2fa', { mfa_token: mfa, code: recovery[2] });
+    assert.deepEqual([locked.status, locked.body.code], [429, 'MFA_LOCKED']);
+    _resetMfaFailures();
+
+    const saved = (await db.prepare('SELECT totp_secret FROM users WHERE id = 1').get()) as {
+      totp_secret: string;
+    };
+    await db.prepare("UPDATE users SET totp_secret = 'v1:AAAA:AAAA:AAAA' WHERE id = 1").run();
+    assert.equal((await call('POST', '/auth/login/2fa', { mfa_token: mfa, code: recovery[2] })).status, 200);
+    await db.prepare('UPDATE users SET totp_secret = ? WHERE id = 1').run(saved.totp_secret);
   });
 
   it('tắt cần mật khẩu đúng + mã; sau đó đăng nhập lại 1 bước', async () => {

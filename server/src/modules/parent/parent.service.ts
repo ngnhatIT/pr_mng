@@ -609,7 +609,7 @@ export async function createLeave(
       .run(student.center_id, student.id, classId, from_date, to_date, input.reason || null);
     await notifyStaff(student.center_id, 'leaves.manage', {
       kind: 'leave_request',
-      params: { student: student.name, from: from_date, to: to_date },
+      params: { student: student.name, student_id: student.id, from: from_date, to: to_date },
       body: `Đơn xin nghỉ mới của ${student.name} (${from_date} → ${to_date})`,
       link: '/app/leaves',
     });

@@ -91,7 +91,9 @@ export async function importStudents(
   if (opts.dryRun || !good.length) return result;
 
   await db.transaction(async (tx) => {
-    for (const r of good) {
+    // Dòng có mã tay trước: mã tự sinh (MAX+1) tính cả chúng, không đụng mã tay xuất hiện sau trong file
+    const ordered = [...good.filter((r) => r.code), ...good.filter((r) => !r.code)];
+    for (const r of ordered) {
       await tx
         .prepare(
           'INSERT INTO students (code, name, phone, email, dob, address, status, note, center_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
