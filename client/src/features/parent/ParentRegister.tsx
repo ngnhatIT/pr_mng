@@ -48,7 +48,7 @@ export function ParentRegister() {
       const data = await parentApi.register(phone, password, name, center.id);
       setAuth(data.token, { ...data.parent, role: 'parent', username: data.parent.phone });
       toast(t('auth.registerSuccess'), 'success');
-      navigate('/parent');
+      void navigate('/parent');
     } catch (err) {
       // Lỗi đăng ký (thường do SĐT đã dùng): hiện inline dưới ô SĐT, focus để sửa
       show({ phone: err instanceof Error ? err.message : t('auth.registerError') });

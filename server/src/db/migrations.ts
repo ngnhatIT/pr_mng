@@ -26,6 +26,26 @@ interface Migration {
   down?: (tx: Tx) => Promise<void>;
 }
 
+/** v23 (PERF-3): index thừa -> định nghĩa gốc (down tạo lại). Index giữ lại ghi bên phải. */
+const V23_REDUNDANT_INDEXES: Record<string, string> = {
+  idx_payments_invoice: 'payments(invoice_id)', // idx_payments_invoice_status
+  idx_invoices_student: 'invoices(student_id)', // idx_invoices_student_status
+  idx_students_center: 'students(center_id)', // idx_students_center_status
+  idx_homework_center: 'homework(center_id)', // idx_homework_center_status
+  idx_homework_class: 'homework(class_id)', // idx_homework_class_status
+  idx_quiz_questions_hw: 'quiz_questions(homework_id)', // idx_quiz_questions_hw_pos
+  idx_quiz_attempts_homework: 'quiz_attempts(homework_id)', // idx_quiz_attempts
+  idx_quiz_options_q: 'quiz_options(question_id)', // idx_quiz_options_question
+  idx_submissions_homework_student: 'homework_submissions(homework_id, student_id)', // uq_submissions_hw_student
+  idx_hw_submissions: 'homework_submissions(homework_id, student_id)', // uq_submissions_hw_student
+  idx_leave_requests_student: 'leave_requests(student_id)', // idx_leaves_student
+  idx_attendance_student: 'attendance(student_id)', // idx_attendance_student_status
+  idx_sessions_class: 'sessions(class_id)', // idx_sessions_class_date
+  idx_enrollments_class: 'enrollments(class_id)', // idx_enrollments_class_status
+  idx_checkins_session: 'teacher_checkins(session_id)', // idx_teacher_checkins_session
+  idx_checkins_teacher: 'teacher_checkins(teacher_id)', // idx_teacher_checkins_lookup
+};
+
 // shortcut: các migration cũ (v2-v13) chưa triển khai down (rollback cần can
 // thiệp thủ công) — chỉ migration mới nhất bắt buộc có down, xem v14.
 export const MIGRATIONS: Migration[] = [
@@ -362,7 +382,9 @@ export const MIGRATIONS: Migration[] = [
             );
           END IF;
         END $$;`);
-      await tx.exec('CREATE INDEX IF NOT EXISTS idx_reset_requests_status ON reset_requests(status, created_at DESC)');
+      await tx.exec(
+        'CREATE INDEX IF NOT EXISTS idx_reset_requests_status ON reset_requests(status, created_at DESC)'
+      );
     },
     down: async (tx) => {
       // Đảo ngược v18: gỡ bảng yêu cầu đặt lại mật khẩu (mất các yêu cầu đang chờ).
@@ -490,7 +512,314 @@ export const MIGRATIONS: Migration[] = [
       await tx.exec('DROP TABLE IF EXISTS quiz_essay_scores');
     },
   },
+  {
+    version: 22,
+    name: 'tenant_isolation_and_integrity',
+    up: async (tx) => {
+      // Review 2026-10-10. Mọi lệnh idempotent (DB mới đã có trạng thái đích từ schema.ts).
+      // 1) reset_requests / referrals gắn trung tâm (rò rỉ dữ liệu xuyên tenant).
+      await tx.exec(`ALTER TABLE reset_requests ADD COLUMN IF NOT EXISTS center_id INTEGER
+        CONSTRAINT fk_reset_requests_center REFERENCES centers(id) ON DELETE CASCADE`);
+      await tx.exec(`UPDATE reset_requests r SET center_id = u.center_id
+        FROM users u WHERE r.center_id IS NULL AND r.kind = 'staff' AND u.username = r.identifier`);
+      await tx.exec(`UPDATE reset_requests r SET center_id = p.center_id
+        FROM parents p WHERE r.center_id IS NULL AND r.kind = 'parent' AND p.phone = r.identifier
+          AND (SELECT COUNT(*) FROM parents p2 WHERE p2.phone = r.identifier) = 1`);
+      await tx.exec(
+        'CREATE INDEX IF NOT EXISTS idx_reset_requests_center ON reset_requests(center_id, status)'
+      );
+      await tx.exec(`ALTER TABLE referrals ADD COLUMN IF NOT EXISTS center_id INTEGER
+        CONSTRAINT fk_referrals_center REFERENCES centers(id) ON DELETE CASCADE`);
+      await tx.exec(`UPDATE referrals r SET center_id = p.center_id
+        FROM parents p WHERE r.center_id IS NULL AND p.id = r.referrer_parent_id`);
+      // 2) Mã nghiệp vụ duy nhất theo trung tâm thay vì toàn hệ thống.
+      await tx.exec('ALTER TABLE students DROP CONSTRAINT IF EXISTS students_code_key');
+      await tx.exec(`DO $$ BEGIN
+        IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'uq_students_center_code') THEN
+          ALTER TABLE students ADD CONSTRAINT uq_students_center_code UNIQUE (center_id, code);
+        END IF; END $$;`);
+      await tx.exec('ALTER TABLE roles DROP CONSTRAINT IF EXISTS roles_code_key');
+      await tx.exec(
+        'CREATE UNIQUE INDEX IF NOT EXISTS uq_roles_system_code ON roles(code) WHERE center_id IS NULL'
+      );
+      await tx.exec(
+        'CREATE UNIQUE INDEX IF NOT EXISTS uq_roles_center_code ON roles(center_id, code) WHERE center_id IS NOT NULL'
+      );
+      // 3) Chỉ superadmin được center_id NULL. NOT VALID: không chặn boot vì dòng cũ;
+      //    dòng mới/sửa bị kiểm. Sửa dữ liệu cũ rồi VALIDATE CONSTRAINT bằng tay.
+      await tx.exec(`DO $$ BEGIN
+        IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'chk_users_center') THEN
+          ALTER TABLE users ADD CONSTRAINT chk_users_center
+            CHECK (role = 'superadmin' OR center_id IS NOT NULL) NOT VALID;
+        END IF; END $$;`);
+      // 4) Buổi học: GV thực dạy (lương) + hủy mềm.
+      await tx.exec(`ALTER TABLE sessions ADD COLUMN IF NOT EXISTS teacher_id INTEGER
+        CONSTRAINT fk_sessions_teacher REFERENCES teachers(id) ON DELETE SET NULL`);
+      await tx.exec(`ALTER TABLE sessions ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'scheduled'
+        CONSTRAINT chk_sessions_status CHECK (status IN ('scheduled', 'cancelled'))`);
+      await tx.exec(`UPDATE sessions s SET teacher_id = COALESCE(
+          (SELECT tc.teacher_id FROM teacher_checkins tc WHERE tc.session_id = s.id ORDER BY tc.id LIMIT 1),
+          c.teacher_id)
+        FROM classes c WHERE c.id = s.class_id AND s.teacher_id IS NULL`);
+      // 5) VNPay: đối soát có đếm lần thử, lưu CreateDate thật, trạng thái cần đối soát tay.
+      await tx.exec(
+        'ALTER TABLE payment_txns ADD COLUMN IF NOT EXISTS query_attempts INTEGER NOT NULL DEFAULT 0'
+      );
+      await tx.exec('ALTER TABLE payment_txns ADD COLUMN IF NOT EXISTS vnp_create_date TEXT');
+      await tx.exec('ALTER TABLE payment_txns DROP CONSTRAINT IF EXISTS chk_txns_status');
+      await tx.exec(`ALTER TABLE payment_txns ADD CONSTRAINT chk_txns_status
+        CHECK (status IN ('pending', 'confirmed', 'failed', 'rejected', 'needs_review'))`);
+      // 6) Sổ upload + chống brute-force liên kết con.
+      await tx.exec(`CREATE TABLE IF NOT EXISTS uploads (
+        filename TEXT PRIMARY KEY,
+        center_id INTEGER CONSTRAINT fk_uploads_center REFERENCES centers(id) ON DELETE CASCADE,
+        uploaded_by INTEGER CONSTRAINT fk_uploads_user REFERENCES users(id) ON DELETE SET NULL,
+        created_at TEXT NOT NULL DEFAULT (to_char(NOW(), 'YYYY-MM-DD HH24:MI:SS'))
+      )`);
+      await tx.exec(`CREATE TABLE IF NOT EXISTS parent_link_failures (
+        id INTEGER GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
+        center_id INTEGER CONSTRAINT fk_plf_center REFERENCES centers(id) ON DELETE CASCADE,
+        parent_id INTEGER CONSTRAINT fk_plf_parent REFERENCES parents(id) ON DELETE CASCADE,
+        student_code TEXT NOT NULL,
+        created_at TEXT NOT NULL DEFAULT (to_char(NOW(), 'YYYY-MM-DD HH24:MI:SS'))
+      )`);
+      await tx.exec(
+        'CREATE INDEX IF NOT EXISTS idx_plf_parent ON parent_link_failures(parent_id, created_at)'
+      );
+      await tx.exec(
+        'CREATE INDEX IF NOT EXISTS idx_plf_code ON parent_link_failures(center_id, student_code, created_at)'
+      );
+      await tx.exec(
+        'CREATE INDEX IF NOT EXISTS idx_submissions_file_url ON homework_submissions(file_url) WHERE file_url IS NOT NULL'
+      );
+      await tx.exec('CREATE INDEX IF NOT EXISTS idx_attachments_url ON homework_attachments(url)');
+      // 7) idempotency_keys đổi PK sang (user_key, key) + giữ chỗ 'processing'. Bảng chỉ là
+      //    cache 24h -> drop; createHistoryTables (chạy sau migration) tạo lại đúng shape.
+      await tx.exec(`DO $$ BEGIN
+        IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'idempotency_keys')
+           AND NOT EXISTS (SELECT 1 FROM information_schema.columns
+                           WHERE table_name = 'idempotency_keys' AND column_name = 'user_key') THEN
+          DROP TABLE idempotency_keys;
+        END IF; END $$;`);
+    },
+    down: async (tx) => {
+      // Đảo ngược v22 (mất dữ liệu cột mới; khôi phục unique toàn cục có thể lỗi nếu đã trùng mã giữa trung tâm).
+      await tx.exec('DROP TABLE IF EXISTS parent_link_failures');
+      await tx.exec('DROP TABLE IF EXISTS uploads');
+      await tx.exec('DROP INDEX IF EXISTS idx_attachments_url');
+      await tx.exec('DROP INDEX IF EXISTS idx_submissions_file_url');
+      await tx.exec('ALTER TABLE payment_txns DROP CONSTRAINT IF EXISTS chk_txns_status');
+      await tx.exec(`ALTER TABLE payment_txns ADD CONSTRAINT chk_txns_status
+        CHECK (status IN ('pending', 'confirmed', 'failed', 'rejected')) NOT VALID`);
+      await tx.exec('ALTER TABLE payment_txns DROP COLUMN IF EXISTS vnp_create_date');
+      await tx.exec('ALTER TABLE payment_txns DROP COLUMN IF EXISTS query_attempts');
+      await tx.exec('ALTER TABLE sessions DROP COLUMN IF EXISTS status');
+      await tx.exec('ALTER TABLE sessions DROP COLUMN IF EXISTS teacher_id');
+      await tx.exec('ALTER TABLE users DROP CONSTRAINT IF EXISTS chk_users_center');
+      await tx.exec('DROP INDEX IF EXISTS uq_roles_center_code');
+      await tx.exec('DROP INDEX IF EXISTS uq_roles_system_code');
+      await tx.exec('ALTER TABLE roles ADD CONSTRAINT roles_code_key UNIQUE (code)');
+      await tx.exec('ALTER TABLE students DROP CONSTRAINT IF EXISTS uq_students_center_code');
+      await tx.exec('ALTER TABLE students ADD CONSTRAINT students_code_key UNIQUE (code)');
+      await tx.exec('ALTER TABLE referrals DROP COLUMN IF EXISTS center_id');
+      await tx.exec('DROP INDEX IF EXISTS idx_reset_requests_center');
+      await tx.exec('ALTER TABLE reset_requests DROP COLUMN IF EXISTS center_id');
+    },
+  },
+  {
+    version: 23,
+    name: 'money_linkage_and_payroll_history',
+    up: async (tx) => {
+      // Review round 2 (S-1/C-2/O-1/O-2/PERF-3). Mọi lệnh idempotent (DB mới đã có từ schema.ts).
+      // 1) O-1: đơn giá lương theo ngày hiệu lực. Quá khứ không có lịch sử thật -> giữ đơn giá hiện tại.
+      await tx.exec(`CREATE TABLE IF NOT EXISTS salary_rate_history (
+        teacher_id INTEGER NOT NULL CONSTRAINT fk_srh_teacher REFERENCES teachers(id) ON DELETE CASCADE,
+        effective_from TEXT NOT NULL,
+        per_session_amount DOUBLE PRECISION NOT NULL CONSTRAINT chk_srh_amount CHECK (per_session_amount >= 0),
+        changed_by INTEGER CONSTRAINT fk_srh_user REFERENCES users(id) ON DELETE SET NULL,
+        created_at TEXT NOT NULL DEFAULT (to_char(NOW(), 'YYYY-MM-DD HH24:MI:SS')),
+        CONSTRAINT pk_salary_rate_history PRIMARY KEY (teacher_id, effective_from)
+      )`);
+      await tx.exec(`INSERT INTO salary_rate_history (teacher_id, effective_from, per_session_amount)
+        SELECT teacher_id, '1970-01-01', per_session_amount FROM salary_rules ON CONFLICT DO NOTHING`);
+      // 2) O-2: payments.credit_id thay cho regex trên note 'Áp dụng credits #N'.
+      await tx.exec(`ALTER TABLE payments ADD COLUMN IF NOT EXISTS credit_id INTEGER
+        CONSTRAINT fk_payments_credit REFERENCES credits(id) ON DELETE SET NULL`);
+      // J-A5: chỉ note do hệ thống ghi (khớp nguyên chuỗi) + credit cùng trung tâm với hóa đơn — note nhân viên
+      // tự gõ 'credits #N' (trước S-1) không được nối vào credit (hoàn tiền sau đó sẽ "hồi sinh" credit đó).
+      await tx.exec(`UPDATE payments p SET credit_id = m.cid
+        FROM (SELECT id, (substring(note from '^Áp dụng credits #([0-9]+)'))::int AS cid FROM payments
+              WHERE method = 'credit' AND credit_id IS NULL
+                AND note ~ '^Áp dụng credits #[0-9]+( \\(đã hoàn lại credits\\))*$') m
+        WHERE p.id = m.id AND EXISTS (
+          SELECT 1 FROM credits c JOIN invoices i ON i.id = p.invoice_id JOIN students s ON s.id = i.student_id
+          WHERE c.id = m.cid AND c.center_id = s.center_id)`);
+      await tx.exec(
+        'CREATE INDEX IF NOT EXISTS idx_payments_credit ON payments(credit_id) WHERE credit_id IS NOT NULL'
+      );
+      // 3) C-2: credits thưởng gắn hóa đơn nguồn + thu hồi bằng voided_at (không bị hoàn tiền hồi sinh).
+      await tx.exec(`ALTER TABLE credits ADD COLUMN IF NOT EXISTS source_invoice_id INTEGER
+        CONSTRAINT fk_credits_source_invoice REFERENCES invoices(id) ON DELETE SET NULL`);
+      await tx.exec('ALTER TABLE credits ADD COLUMN IF NOT EXISTS voided_at TEXT');
+      await tx.exec(String.raw`UPDATE credits c SET source_invoice_id = m.inv
+        FROM (SELECT id, (substring(reason from '\(HD([0-9]+)\)$'))::int AS inv FROM credits
+              WHERE source_invoice_id IS NULL
+                AND reason ~ '^(Thưởng giới thiệu|Ưu đãi học viên được giới thiệu).*\(HD[0-9]+\)$') m
+        WHERE c.id = m.id AND EXISTS (SELECT 1 FROM invoices i WHERE i.id = m.inv)`);
+      // Hóa đơn nguồn đã hoàn hết (amount 0, PAY-2) = thưởng phải bị thu hồi (kể cả lần revoke cũ bị crash)
+      await tx.exec(`UPDATE credits c SET voided_at = c.updated_at, used_amount = c.amount
+        FROM invoices i WHERE c.source_invoice_id = i.id AND i.amount = 0 AND c.voided_at IS NULL`);
+      await tx.exec(
+        'CREATE INDEX IF NOT EXISTS idx_credits_source_invoice ON credits(source_invoice_id) WHERE source_invoice_id IS NOT NULL'
+      );
+      // 4) PERF-3: payment_txns chưa có index phụ (đối soát quét pending; FK CASCADE khi xóa hóa đơn).
+      await tx.exec(
+        "CREATE INDEX IF NOT EXISTS idx_txns_pending ON payment_txns(created_at) WHERE status = 'pending'"
+      );
+      await tx.exec('CREATE INDEX IF NOT EXISTS idx_txns_invoice ON payment_txns(invoice_id)');
+      // 5) PERF-3: bỏ index trùng / là tiền tố của index composite hoặc UNIQUE (tốn ghi, không giúp đọc).
+      await tx.exec(`DROP INDEX IF EXISTS ${Object.keys(V23_REDUNDANT_INDEXES).join(', ')}`);
+    },
+    down: async (tx) => {
+      // Đảo ngược v23 (mất lịch sử đơn giá + liên kết credit; credit đã thu hồi vẫn used_amount = amount).
+      for (const [name, def] of Object.entries(V23_REDUNDANT_INDEXES)) {
+        await tx.exec(`CREATE INDEX IF NOT EXISTS ${name} ON ${def}`);
+      }
+      await tx.exec(
+        'DROP INDEX IF EXISTS idx_txns_invoice, idx_txns_pending, idx_credits_source_invoice, idx_payments_credit'
+      );
+      await tx.exec('ALTER TABLE credits DROP COLUMN IF EXISTS voided_at');
+      await tx.exec('ALTER TABLE credits DROP COLUMN IF EXISTS source_invoice_id');
+      await tx.exec('ALTER TABLE payments DROP COLUMN IF EXISTS credit_id');
+      await tx.exec('DROP TABLE IF EXISTS salary_rate_history');
+    },
+  },
+  {
+    version: 24,
+    name: 'quiz_max_attempts_and_payroll_closures',
+    up: async (tx) => {
+      // C-1/J-A2: giới hạn số lượt làm quiz (NULL = không giới hạn — giữ hành vi cũ cho quiz đã có).
+      await tx.exec(`ALTER TABLE homework ADD COLUMN IF NOT EXISTS max_attempts INTEGER`);
+      await tx.exec(`DO $$ BEGIN
+        IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'chk_homework_max_attempts') THEN
+          ALTER TABLE homework ADD CONSTRAINT chk_homework_max_attempts
+            CHECK (max_attempts IS NULL OR max_attempts BETWEEN 1 AND 100);
+        END IF; END $$;`);
+      // J-A8: chốt tháng lương.
+      await tx.exec(`CREATE TABLE IF NOT EXISTS payroll_closures (
+        center_id INTEGER NOT NULL CONSTRAINT fk_payroll_closures_center REFERENCES centers(id) ON DELETE CASCADE,
+        month TEXT NOT NULL CONSTRAINT chk_payroll_closures_month CHECK (month ~ '^[0-9]{4}-(0[1-9]|1[0-2])$'),
+        closed_by INTEGER CONSTRAINT fk_payroll_closures_user REFERENCES users(id) ON DELETE SET NULL,
+        closed_at TEXT NOT NULL DEFAULT (to_char(NOW(), 'YYYY-MM-DD HH24:MI:SS')),
+        CONSTRAINT pk_payroll_closures PRIMARY KEY (center_id, month)
+      )`);
+    },
+    down: async (tx) => {
+      await tx.exec('DROP TABLE IF EXISTS payroll_closures');
+      await tx.exec('ALTER TABLE homework DROP COLUMN IF EXISTS max_attempts');
+    },
+  },
+  {
+    version: 25,
+    name: 'must_change_password_and_payroll_snapshot',
+    up: async (tx) => {
+      // N-5: mật khẩu tạm (đặt lại / admin cấp) -> buộc đổi trước khi dùng API.
+      for (const t of ['users', 'parents']) {
+        await tx.exec(
+          `ALTER TABLE ${t} ADD COLUMN IF NOT EXISTS must_change_password BOOLEAN NOT NULL DEFAULT false`
+        );
+      }
+      // N-1: tháng đã chốt trả bảng lương chụp lúc chốt (bản chốt cũ: chụp lần đầu được đọc).
+      await tx.exec('ALTER TABLE payroll_closures ADD COLUMN IF NOT EXISTS snapshot JSONB');
+      // N-1: GV có lịch sử nhưng thiếu mốc 1970 = đơn giá đầu tiên đặt khi chưa có salary_rules (v23 đã
+      // backfill mốc cho mọi GV có salary_rules) -> trước đó là 0, không phải đơn giá hiện hành.
+      await tx.exec(`INSERT INTO salary_rate_history (teacher_id, effective_from, per_session_amount)
+        SELECT DISTINCT teacher_id, '1970-01-01', 0 FROM salary_rate_history ON CONFLICT DO NOTHING`);
+    },
+    down: async (tx) => {
+      // Mốc 1970 = 0 giữ lại (đúng với dữ liệu v24).
+      await tx.exec('ALTER TABLE payroll_closures DROP COLUMN IF EXISTS snapshot');
+      await tx.exec('ALTER TABLE parents DROP COLUMN IF EXISTS must_change_password');
+      await tx.exec('ALTER TABLE users DROP COLUMN IF EXISTS must_change_password');
+    },
+  },
 ];
+
+/**
+ * J-A3: mở đầu transaction migration (dùng chung cho runMigrations và scripts/migrate-down.ts).
+ * - statement_timeout = 0: backfill / CREATE INDEX lớn không bị cắt bởi 30s của pool.
+ * - advisory lock: chờ VÔ HẠN instance khác đang migrate (rolling deploy) — vì vậy lock_timeout đặt SAU.
+ * - lock_timeout: ALTER/DROP INDEX chờ lock bảng tối đa MIGRATION_LOCK_TIMEOUT (mặc định 10s) — một
+ *   transaction dài đang giữ bảng không làm mọi truy vấn khác xếp hàng sau ACCESS EXCLUSIVE suốt lúc deploy.
+ */
+export async function beginMigrationTx(tx: Tx): Promise<void> {
+  const raw = process.env.MIGRATION_LOCK_TIMEOUT ?? '';
+  const lockTimeout = /^\d+(ms|s|min)?$/.test(raw) ? raw : '10s';
+  await tx.exec(
+    `SET LOCAL statement_timeout = 0; SELECT pg_advisory_xact_lock(hashtext('educenter-migrations')); ` +
+      `SET LOCAL lock_timeout = '${lockTimeout}'`
+  );
+}
+
+/** J-A3: lỗi 55P03 (lock_not_available) -> thông báo rõ để thử lại (PM2 tự restart / chạy off-peak). */
+export function explainMigrationError(err: unknown, label: string): unknown {
+  if ((err as { code?: string } | null)?.code !== '55P03') return err;
+  return new Error(
+    `[MIGRATION] ${label}: không lấy được lock bảng trong MIGRATION_LOCK_TIMEOUT (có transaction dài đang giữ bảng). ` +
+      'Chưa thay đổi gì (đã rollback) — thử lại sau, hoặc chạy lúc ít tải / tăng MIGRATION_LOCK_TIMEOUT.',
+    { cause: err }
+  );
+}
+
+/** Câu DDL "IF NOT EXISTS" vẫn xin lock bảng trước khi biết đã có: CREATE INDEX (SHARE), ADD COLUMN (ACCESS EXCLUSIVE). */
+const LOCKING_IF_NOT_EXISTS =
+  /CREATE\s+(?:UNIQUE\s+)?INDEX\s+IF\s+NOT\s+EXISTS\s+(\w+)[^;]*;|ALTER\s+TABLE\s+(\w+)\s+ADD\s+COLUMN\s+IF\s+NOT\s+EXISTS\s+(\w+)[^;]*;/gi;
+
+/**
+ * N-2: DDL chạy MỖI lần boot (createSchema/createIndexes/createTriggers/createHistoryTables/createViews).
+ * - Bỏ CREATE INDEX / ADD COLUMN đã có (tra pg_indexes / information_schema) -> boot bình thường không xin
+ *   lock bảng nào, transaction dài đang ghi payments không làm boot chặn ghi các bảng khác.
+ * - Phần còn lại (DB mới, index mới thêm, view/function) chạy như migration: beginMigrationTx (lock_timeout)
+ *   + explainMigrationError — chờ lock tối đa MIGRATION_LOCK_TIMEOUT rồi rollback, báo lỗi rõ.
+ */
+export function bootDdlDb(db: Db): Db {
+  return {
+    ...db,
+    exec: (sql) =>
+      db
+        .transaction(async (tx) => {
+          await beginMigrationTx(tx);
+          const indexes = new Set(
+            (
+              (await tx
+                .prepare('SELECT indexname AS n FROM pg_indexes WHERE schemaname = current_schema()')
+                .all()) as { n: string }[]
+            ).map((r) => r.n)
+          );
+          const columns = new Set(
+            (
+              (await tx
+                .prepare(
+                  `SELECT table_name || '.' || column_name AS n FROM information_schema.columns
+                   WHERE table_schema = current_schema()`
+                )
+                .all()) as { n: string }[]
+            ).map((r) => r.n)
+          );
+          const rest = sql.replace(
+            LOCKING_IF_NOT_EXISTS,
+            (stmt, index?: string, table?: string, column?: string) =>
+              (index ? indexes.has(index.toLowerCase()) : columns.has(`${table}.${column}`.toLowerCase()))
+                ? ''
+                : stmt
+          );
+          if (rest.trim()) await tx.exec(rest);
+        })
+        .catch((err: unknown) => {
+          throw explainMigrationError(err, 'DDL lúc khởi động');
+        }),
+  };
+}
 
 /** Version migration cao nhất mà code hiện tại biết (để test đối chiếu). */
 export const LATEST_MIGRATION_VERSION: number = Math.max(...MIGRATIONS.map((m) => m.version));
@@ -528,15 +857,22 @@ export async function runMigrations(db: Db): Promise<void> {
     if (applied.has(m.version)) continue;
     // Advisory lock chống 2 instance chạy migration song song (rolling deploy).
     // Lock giữ trong transaction → tự release khi commit/rollback.
-    await db.transaction(async (tx) => {
-      await tx.exec("SELECT pg_advisory_xact_lock(hashtext('educenter-migrations'))");
-      await m.up(tx);
-      await tx
-        .prepare(
-          'INSERT INTO schema_migrations (version, name) VALUES (?, ?) ON CONFLICT (version) DO NOTHING'
-        )
-        .run(m.version, m.name);
-    });
+    await db
+      .transaction(async (tx) => {
+        // DB-2 + J-A3: statement_timeout 0, advisory lock, lock_timeout (xem beginMigrationTx).
+        await beginMigrationTx(tx);
+        // OPS-8: đọc lại SAU khi có lock — instance khác có thể vừa chạy xong migration này.
+        if (await tx.prepare('SELECT 1 FROM schema_migrations WHERE version = ?').get(m.version)) return;
+        await m.up(tx);
+        await tx
+          .prepare(
+            'INSERT INTO schema_migrations (version, name) VALUES (?, ?) ON CONFLICT (version) DO NOTHING'
+          )
+          .run(m.version, m.name);
+      })
+      .catch((err: unknown) => {
+        throw explainMigrationError(err, `v${m.version} ${m.name}`);
+      });
     applied.add(m.version);
   }
 }

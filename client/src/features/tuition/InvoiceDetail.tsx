@@ -1,19 +1,27 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { invoicesApi, type InvoiceDetailData } from './tuition.api';
-import { rolesApi } from '../system/roles.api';
+import { invoicesApi, paymentMethodLabel, type InvoiceDetailData, type PaymentItem } from './tuition.api';
+import { useMyPermissions } from '../system/roles.api';
+import { PayModal } from './Tuition';
+import { useGoBack } from '../../shared/hooks/useGoBack';
 import { EmptyState } from '../../shared/components/EmptyState';
 import { Skeleton, TableSkeleton } from '../../shared/components/Skeleton';
 import { EmptyCell } from '../../shared/components/EmptyCell';
 import { ReceiptModal } from '../../shared/components/ReceiptModal';
 import { Icon } from '../../shared/components/icons';
-import { formatVND, formatDate, formatDateTime } from '../../shared/types';
+import { formatVND, formatDate, formatDateTime, remainingOf } from '../../shared/types';
 import './Tuition.css';
+import { getUser } from '../../shared/api/client';
 
-/** Số còn nợ của một hóa đơn: tổng trừ đã thu (đã thu null coi như 0). */
-export function remainingOf(invoice: { amount: number; paid?: number | null }): number {
-  return invoice.amount - (invoice.paid || 0);
+/** ADM-3: số đã thu = `paid` server trả; server cũ không trả thì cộng các thanh toán đã xác nhận
+ * (dòng hoàn tiền là số âm nên tự trừ ra). */
+export function paidOf(
+  invoice: { paid?: number | null },
+  payments: Pick<PaymentItem, 'amount' | 'status'>[]
+): number {
+  if (invoice.paid != null) return Number(invoice.paid);
+  return payments.filter((p) => p.status === 'confirmed').reduce((sum, p) => sum + Number(p.amount), 0);
 }
 
 // Badge trạng thái thanh toán: reuse token semantic có sẵn (không thêm CSS mới).
@@ -22,29 +30,17 @@ const PAYMENT_STATUS_BADGE: Record<string, string> = {
   confirmed: 'badge-paid',
   rejected: 'badge-failed',
 };
-const METHOD_I18N_KEY: Record<string, string> = {
-  'Tiền mặt': 'cash',
-  'Chuyển khoản': 'transfer',
-  'Quẹt thẻ': 'card',
-  'Ví điện tử': 'ewallet',
-};
-
-/** Hiển thị phương thức thanh toán: chuỗi legacy -> label i18n, chuỗi lạ giữ nguyên. */
-export function paymentMethodLabel(method: string | null, t: (key: string) => string): string | null {
-  if (!method) return null;
-  const code = METHOD_I18N_KEY[method];
-  return code ? t(`pay.methods.${code}`) : method;
-}
 
 export function InvoiceDetail() {
   const { t } = useTranslation(['tuition', 'common']);
   const { id } = useParams<{ id: string }>();
-  const navigate = useNavigate();
   const [data, setData] = useState<InvoiceDetailData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<'notFound' | 'load' | null>(null);
-  const [canCollect, setCanCollect] = useState(false);
+  // Fail-closed: không kiểm tra được quyền thu tiền thì ẩn nút Thu tiền.
+  const canCollect = useMyPermissions().has('payments.collect');
   const [showReceipt, setShowReceipt] = useState(false);
+  const [paying, setPaying] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -63,20 +59,7 @@ export function InvoiceDetail() {
     void load();
   }, [load]);
 
-  // Fail-closed: không kiểm tra được quyền thu tiền thì ẩn nút Thu tiền.
-  useEffect(() => {
-    rolesApi
-      .mine()
-      .then((perms) => setCanCollect(perms.some((p) => p.code === 'payments.collect')))
-      .catch(() => setCanCollect(false));
-  }, []);
-
-  const goBack = () => {
-    // react-router lưu idx trong history.state; idx = 0 nghĩa là vào thẳng bằng URL.
-    const idx = (window.history.state as { idx?: number } | null)?.idx;
-    if (typeof idx === 'number' && idx > 0) navigate(-1);
-    else navigate('/app/tuition', { replace: true });
-  };
+  const goBack = useGoBack('/app/tuition');
 
   if (loading) {
     return (
@@ -131,8 +114,9 @@ export function InvoiceDetail() {
     );
   }
 
-  const { invoice, payments } = data as InvoiceDetailData;
-  const paid = invoice.paid || 0;
+  const { payments } = data as InvoiceDetailData;
+  const paid = paidOf(data!.invoice, payments);
+  const invoice = { ...data!.invoice, paid };
   const remain = remainingOf(invoice);
 
   return (
@@ -164,7 +148,7 @@ export function InvoiceDetail() {
             {t('detail.printReceipt')}
           </button>
           {canCollect && remain > 0 && (
-            <button type="button" className="btn btn-primary" onClick={() => navigate('/app/tuition')}>
+            <button type="button" className="btn btn-primary" onClick={() => setPaying(true)}>
               <Icon name="banknote" size={14} />
               {t('detail.collect')}
             </button>
@@ -221,11 +205,7 @@ export function InvoiceDetail() {
             desc={t('detail.noPaymentsDesc')}
             action={
               canCollect && remain > 0 ? (
-                <button
-                  type="button"
-                  className="btn btn-primary btn-sm"
-                  onClick={() => navigate('/app/tuition')}
-                >
+                <button type="button" className="btn btn-primary btn-sm" onClick={() => setPaying(true)}>
                   {t('detail.collect')}
                 </button>
               ) : undefined
@@ -265,10 +245,20 @@ export function InvoiceDetail() {
         )}
       </section>
 
+      {paying && (
+        <PayModal
+          invoice={invoice}
+          onClose={() => setPaying(false)}
+          onDone={() => {
+            setPaying(false);
+            void load();
+          }}
+        />
+      )}
       {showReceipt && (
         <ReceiptModal
           invoice={invoice}
-          centerName={t('receipt.defaultCenter')}
+          centerName={getUser()?.center_name || t('receipt.defaultCenter')}
           onClose={() => setShowReceipt(false)}
         />
       )}

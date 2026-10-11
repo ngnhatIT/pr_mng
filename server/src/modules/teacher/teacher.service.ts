@@ -1,4 +1,5 @@
-import { db, toISODate } from '../../db';
+import { db, toISODate, addDays } from '../../db';
+import { OWN_ATTENDANCE_MAX_AGE_DAYS } from '../sessions/sessions.service';
 import { AppError } from '../../shared/errors';
 import { hasPermission } from '../authorization/authorization.service';
 import { calcPayroll, currentMonth, assertValidMonth } from '../payroll/payroll.service';
@@ -28,9 +29,8 @@ export async function effTeacherId(req: AuthRequest): Promise<number | null> {
       if (!Number.isFinite(q) || q <= 0) return null;
       const cid = reqCenterId(req);
       if (cid !== null) {
-        const t = (await db
-          .prepare('SELECT id FROM teachers WHERE id = ? AND center_id = ?')
-          .get(q, cid)) as { id: number } | undefined;
+        const t = (await db.prepare('SELECT id FROM teachers WHERE id = ? AND center_id = ?').get(q, cid)) as
+          { id: number } | undefined;
         if (!t) return null;
       }
       return q;
@@ -49,7 +49,7 @@ export async function getTodaySessions(teacherId: number): Promise<TodaySession[
          CASE WHEN EXISTS (SELECT 1 FROM teacher_checkins tc WHERE tc.session_id = s.id AND tc.teacher_id = ?)
            THEN 1 ELSE 0 END as checked_in
        FROM sessions s JOIN classes c ON c.id = s.class_id
-       WHERE s.date = ? AND c.teacher_id = ?
+       WHERE s.date = ? AND s.teacher_id = ? AND s.status <> 'cancelled'
        ORDER BY s.id ASC`
     )
     .all(teacherId, today, teacherId)) as {
@@ -73,20 +73,32 @@ export async function checkinByCode(
     throw AppError.badRequest('Vui lòng nhập mã điểm danh');
   }
   const today = toISODate(new Date());
+  // Mã chỉ hợp lệ trong ngày sinh mã; buổi phải chưa hủy, không ở tương lai và không cũ quá 7 ngày
   const sess = (await db
     .prepare(
       `SELECT s.id as session_id, s.date, c.name as class_name
        FROM sessions s JOIN classes c ON c.id = s.class_id
-       WHERE s.checkin_code = ? AND s.checkin_date = ? AND c.teacher_id = ?`
+       WHERE s.checkin_code = ? AND s.checkin_date = ? AND (c.teacher_id = ? OR s.teacher_id = ?)
+         AND s.status <> 'cancelled' AND s.date <= ? AND s.date >= ?`
     )
-    .get(String(code).trim(), today, teacherId)) as
-    { session_id: number; date: string; class_name: string } | undefined;
+    .get(
+      String(code).trim(),
+      today,
+      teacherId,
+      teacherId,
+      today,
+      toISODate(addDays(new Date(), -OWN_ATTENDANCE_MAX_AGE_DAYS))
+    )) as { session_id: number; date: string; class_name: string } | undefined;
   if (!sess) {
     throw AppError.badRequest('Mã điểm danh không hợp lệ hoặc đã hết hạn');
   }
-  await db
-    .prepare('INSERT INTO teacher_checkins (session_id, teacher_id) VALUES (?, ?) ON CONFLICT DO NOTHING')
-    .run(sess.session_id, teacherId);
+  // Check-in xác nhận người dạy thực tế của buổi -> lương tính theo sessions.teacher_id
+  await db.transaction(async (tx) => {
+    await tx
+      .prepare('INSERT INTO teacher_checkins (session_id, teacher_id) VALUES (?, ?) ON CONFLICT DO NOTHING')
+      .run(sess.session_id, teacherId);
+    await tx.prepare('UPDATE sessions SET teacher_id = ? WHERE id = ?').run(teacherId, sess.session_id);
+  });
   return sess;
 }
 

@@ -13,10 +13,11 @@
  *
  * - setupTestDb(): xóa schema public và tạo lại từ schema.ts hiện tại.
  * - resetTestDb(): TRUNCATE toàn bộ bảng (CASCADE), giữ schema.
- * - teardownTestDb(): đóng pool test.
+ * - teardownTestDb(): đóng pool test (pool `db` của app tự nhả nhờ allowExitOnIdle).
  *
  * LƯU Ý: test chạy trên database RIÊNG (educenter_test), không bao giờ chạm
- * vào database chính (educenter).
+ * vào database chính (educenter). setupTestDb/resetTestDb TỪ CHỐI chạy nếu DB
+ * đang kết nối không có tên kết thúc bằng '_test' (hoặc dạng '_test_<suffix>').
  */
 import { Pool, types } from 'pg';
 
@@ -38,8 +39,29 @@ function getPool(): Pool {
   return pool;
 }
 
-/** Tạo schema mới từ schema.ts hiện tại (xóa hết bảng public trước). */
+let verified = false;
+
+/**
+ * DATA-8: chặn helper phá hủy (DROP/TRUNCATE) chạy nhầm vào DB thật. Cả pool test
+ * lẫn `db` (pg-compat — đọc DATABASE_URL, có thể lấy từ server/.env nếu file test
+ * quên đặt) đều phải trỏ tới database tên kết thúc bằng '_test'.
+ */
+export async function assertTestDatabase(): Promise<void> {
+  if (verified) return;
+  const { db } = await import('./pg-compat');
+  const sql = 'SELECT current_database() AS d';
+  const names = [(await getPool().query(sql)).rows[0].d, ((await db.query(sql)).rows[0] as { d: string }).d];
+  for (const name of names) {
+    if (!/_test(_\w+)?$/.test(String(name))) {
+      throw new Error(`[TEST] Từ chối DROP/TRUNCATE trên database "${name}" — tên phải kết thúc bằng _test`);
+    }
+  }
+  verified = true;
+}
+
+/** Tạo schema mới giống hệt production (xóa hết bảng public trước). */
 export async function setupTestDb(): Promise<void> {
+  await assertTestDatabase();
   const p = getPool();
   await p.query(`
     DO $$ DECLARE r RECORD;
@@ -49,66 +71,24 @@ export async function setupTestDb(): Promise<void> {
       END LOOP;
     END $$;
   `);
-  const dbAdapter = {
-    exec: (sql: string) => p.query(sql).then(() => undefined),
-    query: async (text: string, params: unknown[] = []) => {
-      let i = 0;
-      const pgSql = text.replace(/\?/g, () => `$${++i}`);
-      const r = await p.query(pgSql, params as unknown[]);
-      return { rows: r.rows, rowCount: r.rowCount };
-    },
-    // Tối thiểu cho runMigrations (mỗi migration chạy trong transaction riêng).
-    transaction: async <T>(
-      fn: (tx: {
-        prepare: (sql: string) => {
-          get: (...params: unknown[]) => Promise<unknown>;
-          all: (...params: unknown[]) => Promise<unknown[]>;
-          run: (...params: unknown[]) => Promise<{ changes: number; lastInsertRowid: number | undefined }>;
-        };
-        exec: (sql: string) => Promise<void>;
-      }) => Promise<T>
-    ): Promise<T> => {
-      const client = await p.connect();
-      const q = async (text: string, params: unknown[] = []) => {
-        let i = 0;
-        const pgSql = text.replace(/\?/g, () => `$${++i}`);
-        return client.query(pgSql, params as unknown[]);
-      };
-      try {
-        await client.query('BEGIN');
-        const tx = {
-          prepare: (sql: string) => ({
-            get: async (...params: unknown[]) => (await q(sql, params)).rows[0] ?? undefined,
-            all: async (...params: unknown[]) => (await q(sql, params)).rows,
-            run: async (...params: unknown[]) => {
-              const r = await q(sql, params);
-              return { changes: r.rowCount ?? 0, lastInsertRowid: undefined };
-            },
-          }),
-          exec: (sql: string) => client.query(sql).then(() => undefined),
-        };
-        const result = await fn(tx);
-        await client.query('COMMIT');
-        return result;
-      } catch (e) {
-        await client.query('ROLLBACK');
-        throw e;
-      } finally {
-        client.release();
-      }
-    },
-  };
+  // Cùng các bước DDL như initDatabase (DATA-7: gồm cả createIndexes), qua chính `db`
+  // của app — đã xác nhận ở trên là trỏ test DB.
+  const { db } = await import('./pg-compat');
   const { createSchema, createTriggers, createViews, createHistoryTables } = await import('./schema');
-  await createSchema(dbAdapter as never);
-  const { runMigrations } = await import('./migrations');
-  await runMigrations(dbAdapter as never);
-  await createTriggers(dbAdapter as never);
-  await createHistoryTables(dbAdapter as never);
-  await createViews(dbAdapter as never);
+  const { runMigrations, bootDdlDb } = await import('./migrations');
+  const { createIndexes } = await import('./indexes');
+  const ddl = bootDdlDb(db);
+  await createSchema(ddl);
+  await runMigrations(db);
+  await createIndexes(ddl);
+  await createTriggers(ddl);
+  await createHistoryTables(ddl);
+  await createViews(ddl);
 }
 
 /** Xóa dữ liệu tất cả bảng, giữ schema. Giữ lại schema_migrations. */
 export async function resetTestDb(): Promise<void> {
+  await assertTestDatabase();
   await getPool().query(`
     DO $$ DECLARE r RECORD;
     BEGIN
@@ -124,12 +104,10 @@ export async function teardownTestDb(): Promise<void> {
     await pool.end();
     pool = null;
   }
-  try {
-    const { closePool } = await import('./pg-compat');
-    await closePool();
-  } catch {
-    // pg-compat chưa được load — bỏ qua
-  }
+  verified = false;
+  // KHÔNG đóng pool của pg-compat: file test có nhiều describe (mỗi suite before/after riêng)
+  // dùng tiếp `db` sau after() của suite trước -> "Cannot use a pool after calling end on the
+  // pool". Pool app đặt allowExitOnIdle nên process test vẫn tự thoát khi xong.
 }
 
 /** Seed tối thiểu: 1 center + 1 student. */

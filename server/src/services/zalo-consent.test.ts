@@ -6,7 +6,8 @@
  * - sendTuitionReminder bỏ qua phụ huynh denied (không gửi, kể cả demo).
  */
 // PHẢI đặt trước mọi import db — pg-compat đọc DATABASE_URL lúc load module
-process.env.DATABASE_URL = process.env.TEST_DATABASE_URL || 'postgres://educenter:educenter123@localhost:5432/educenter_test';
+process.env.DATABASE_URL =
+  process.env.TEST_DATABASE_URL || 'postgres://educenter:educenter123@localhost:5432/educenter_test';
 
 import { describe, it, before, beforeEach, after } from 'node:test';
 import assert from 'node:assert/strict';
@@ -35,7 +36,9 @@ beforeEach(async () => {
     .prepare("INSERT INTO students (code, name, phone, center_id, status) VALUES (?, ?, ?, ?, 'studying')")
     .run('HV1', 'HV A', '0911111111', centerId);
   studentId = Number(s.lastInsertRowid);
-  await db.prepare('INSERT INTO parent_students (parent_id, student_id) VALUES (?, ?)').run(parentId, studentId);
+  await db
+    .prepare('INSERT INTO parent_students (parent_id, student_id) VALUES (?, ?)')
+    .run(parentId, studentId);
 });
 after(async () => {
   await teardownTestDb();
@@ -43,9 +46,9 @@ after(async () => {
 
 describe('H5: migration + consent API', () => {
   it('cột zalo_consent tồn tại, default unknown', async () => {
-    const row = (await db
-      .prepare('SELECT zalo_consent FROM parents WHERE id = ?')
-      .get(parentId)) as { zalo_consent: string };
+    const row = (await db.prepare('SELECT zalo_consent FROM parents WHERE id = ?').get(parentId)) as {
+      zalo_consent: string;
+    };
     assert.equal(row.zalo_consent, 'unknown');
   });
 
@@ -65,7 +68,10 @@ describe('H5: migration + consent API', () => {
 describe('H5: scheduler bỏ qua phụ huynh denied', () => {
   it('denied -> sendTuitionReminder failed, không gửi', async () => {
     await setZaloConsent(parentId, 'denied');
-    const inv = (await invoicesService.createInvoice(centerId, { student_id: studentId, amount: 1000000 })) as {
+    const inv = (await invoicesService.createInvoice(centerId, {
+      student_id: studentId,
+      amount: 1000000,
+    })) as {
       id: number;
     };
     const r = await sendTuitionReminder(inv.id, 'overdue', centerId);
@@ -79,7 +85,10 @@ describe('H5: scheduler bỏ qua phụ huynh denied', () => {
   });
 
   it('granted/unknown -> vẫn nhắc bình thường (demo)', async () => {
-    const inv = (await invoicesService.createInvoice(centerId, { student_id: studentId, amount: 1000000 })) as {
+    const inv = (await invoicesService.createInvoice(centerId, {
+      student_id: studentId,
+      amount: 1000000,
+    })) as {
       id: number;
     };
     const r = await sendTuitionReminder(inv.id, 'overdue', centerId);

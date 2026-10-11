@@ -31,7 +31,9 @@
   text-decoration: none;
   color: inherit;
   cursor: pointer;
-  transition: border-color 0.15s ease-out, transform 0.1s ease-out;
+  transition:
+    border-color 0.15s ease-out,
+    transform 0.1s ease-out;
 }
 
 .dash-hero:hover {

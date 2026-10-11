@@ -105,5 +105,9 @@
     "updated": "Đã cập nhật vai trò"
   },
   "turnOffAll": "Tắt hết",
-  "turnOnAll": "Bật hết"
+  "turnOnAll": "Bật hết",
+  "discard": {
+    "title": "Bỏ thay đổi quyền chưa lưu?",
+    "message": "Có {{count}} thay đổi quyền chưa lưu. Chuyển sang vai trò khác sẽ mất các thay đổi này."
+  }
 }

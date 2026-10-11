@@ -1,4 +1,5 @@
 {
+  "clear": "Xóa",
   "api": {
     "timeout": "Yêu cầu quá thời gian, vui lòng thử lại",
     "network": "Không thể kết nối máy chủ, vui lòng kiểm tra mạng và thử lại",
@@ -69,6 +70,8 @@
     "vi": "Tiếng Việt"
   },
   "nav": {
+    "actingCenter": "Trung tâm đang thao tác",
+    "allCenters": "Tất cả trung tâm (chỉ xem)",
     "logout": "Đăng xuất",
     "openMenu": "Mở menu",
     "sections": {
@@ -166,8 +169,14 @@
     "fail": "Không đổi được mật khẩu, vui lòng thử lại",
     "mismatch": "Mật khẩu mới không khớp",
     "tooShort": "Mật khẩu phải từ 8 ký tự",
-    "logoutAll": "Đăng xuất mọi thiết bị",
+    "logoutAll": "Đăng xuất các thiết bị khác",
     "logoutAllConfirm": "Đăng xuất khỏi tất cả thiết bị khác?",
-    "logoutAllSuccess": "Đã đăng xuất khỏi tất cả thiết bị"
+    "logoutAllSuccess": "Đã đăng xuất khỏi các thiết bị khác",
+    "forcedNotice": "Tài khoản đang dùng mật khẩu tạm. Vui lòng đặt mật khẩu mới để tiếp tục."
+  },
+  "discard": {
+    "title": "Bỏ các thay đổi chưa lưu?",
+    "message": "Bạn đã nhập dữ liệu nhưng chưa lưu. Đóng và bỏ các thay đổi này?",
+    "confirm": "Bỏ thay đổi"
   }
 }

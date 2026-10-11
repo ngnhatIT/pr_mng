@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { homeworkApi, type HomeworkScoreRow, type Rubric } from './homework.api';
 import { HomeworkItem } from '../../shared/types';
-import { useToast } from '../../shared/ui/toast';
+import { toastApiError, useToast } from '../../shared/ui/toast';
 import { Modal } from '../../shared/components/Modal';
 import { useFieldErrors } from '../../shared/components/Form';
 import { TableSkeleton } from '../../shared/components/Skeleton';
@@ -39,7 +39,7 @@ export function GradeModal({ homework, onClose }: { homework: HomeworkItem; onCl
         return next ? next.student_id : null;
       });
     } catch (err) {
-      toast(err instanceof Error ? err.message : t('grade.toast.loadFail'), 'error');
+      toastApiError(toast, err, t('grade.toast.loadFail'));
     } finally {
       setLoading(false);
     }
@@ -86,7 +86,7 @@ export function GradeModal({ homework, onClose }: { homework: HomeworkItem; onCl
       toast(t('grade.toast.saved'), 'success');
       void load(true);
     } catch (err) {
-      toast(err instanceof Error ? err.message : t('grade.toast.saveFail'), 'error');
+      toastApiError(toast, err, t('grade.toast.saveFail'));
     } finally {
       setBusy(false);
     }
@@ -95,9 +95,12 @@ export function GradeModal({ homework, onClose }: { homework: HomeworkItem; onCl
   const graded = rows.filter((r) => r.score !== null).length;
   const pct = rows.length > 0 ? Math.round((graded / rows.length) * 100) : 0;
   const current = rows.find((r) => r.student_id === selected);
+  // Điểm/nhận xét của học viên đang chọn đã sửa mà chưa lưu
+  const dirty =
+    !!current && (score !== (current.score?.toString() ?? '') || feedback !== (current.feedback ?? ''));
 
   return (
-    <Modal title={t('grade.title', { title: homework.title })} onClose={onClose} wide>
+    <Modal title={t('grade.title', { title: homework.title })} onClose={onClose} wide dirty={dirty}>
       {rubric && (
         <div className="rubric-banner">
           <strong>{t('grade.rubric', { name: rubric.name })}</strong>

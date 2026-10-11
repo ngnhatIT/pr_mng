@@ -1,43 +1,40 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { roomsApi, Room } from './classes.api';
-import { useToast } from '../../shared/ui/toast';
+import { toastApiError, useToast } from '../../shared/ui/toast';
 import { Modal, ConfirmDialog } from '../../shared/components/Modal';
 import { Field, useFieldErrors } from '../../shared/components/Form';
 import { PageHeader } from '../../shared/components/PageHeader';
-import { EmptyState } from '../../shared/components/EmptyState';
+import { EmptyState, LoadError } from '../../shared/components/EmptyState';
+import { useLoad } from '../../shared/hooks/useLoad';
+import { useUrlState } from '../../shared/hooks/useUrlState';
 import { CardGridSkeleton } from '../../shared/components/Skeleton';
-import { Pagination, type PaginationMeta } from '../../shared/components/Pagination';
+import { Pagination, clampPage } from '../../shared/components/Pagination';
+import { useMyPermissions } from '../system/roles.api';
 import { Icon } from '../../shared/components/icons';
 import './Rooms.css';
 
 export function Rooms() {
   const { t } = useTranslation(['classes', 'common']);
-  const [rooms, setRooms] = useState<Room[]>([]);
-  const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState<Room | null | 'new'>(null);
   const [deleting, setDeleting] = useState<Room | null>(null);
-  const [page, setPage] = useState(1);
-  const [pagination, setPagination] = useState<PaginationMeta | null>(null);
+  const [q, setQ] = useUrlState({ page: '1' });
+  const page = Number(q.page) || 1;
   const [busy, setBusy] = useState(false);
   const toast = useToast();
+  const canManage = useMyPermissions().has('rooms.manage');
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    try {
-      const res = await roomsApi.list({ page });
-      setRooms(res.data);
-      setPagination(res.pagination);
-    } catch (err) {
-      toast(err instanceof Error ? err.message : t('rooms.loadError'), 'error');
-    } finally {
-      setLoading(false);
-    }
-  }, [page, toast, t]);
-
+  const { data, loading, error, reload: load } = useLoad(() => roomsApi.list({ page }), [page]);
+  const rooms = data?.data ?? [];
+  const pagination = data?.pagination ?? null;
   useEffect(() => {
-    void load();
-  }, [load]);
+    if (error) toastApiError(toast, error, t('rooms.loadError'));
+  }, [error, toast, t]);
+  useEffect(() => {
+    if (!data) return;
+    const p = clampPage(page, data.pagination.totalPages);
+    if (p !== page) setQ({ page: String(p) });
+  }, [data]); // chỉ kéo trang khi có kết quả mới
 
   const save = async (form: { name: string; capacity: string }, id?: number) => {
     try {
@@ -46,9 +43,9 @@ export function Rooms() {
       else await roomsApi.create(payload);
       toast(t('rooms.saved'), 'success');
       setEditing(null);
-      void load();
+      load();
     } catch (err) {
-      toast(err instanceof Error ? err.message : t('states.saveError', { ns: 'common' }), 'error');
+      toastApiError(toast, err, t('states.saveError', { ns: 'common' }));
     }
   };
 
@@ -59,9 +56,9 @@ export function Rooms() {
       await roomsApi.remove(deleting.id);
       toast(t('rooms.deleted'), 'success');
       setDeleting(null);
-      void load();
+      load();
     } catch (err) {
-      toast(err instanceof Error ? err.message : t('states.deleteError', { ns: 'common' }), 'error');
+      toastApiError(toast, err, t('states.deleteError', { ns: 'common' }));
     } finally {
       setBusy(false);
     }
@@ -73,25 +70,31 @@ export function Rooms() {
         title={t('rooms.title')}
         desc={t('rooms.desc')}
         actions={
-          <button className="btn btn-primary btn-inline" onClick={() => setEditing('new')}>
-            <Icon name="plus" size={14} />
-            {t('rooms.add')}
-          </button>
+          canManage && (
+            <button className="btn btn-primary btn-inline" onClick={() => setEditing('new')}>
+              <Icon name="plus" size={14} />
+              {t('rooms.add')}
+            </button>
+          )
         }
       />
 
-      {loading ? (
+      {loading && !data ? (
         <CardGridSkeleton count={4} />
+      ) : error && !data ? (
+        <LoadError onRetry={load} />
       ) : rooms.length === 0 ? (
         <EmptyState
           icon="building"
           title={t('rooms.empty.title')}
           desc={t('rooms.empty.desc')}
           action={
-            <button className="btn btn-primary btn-inline" onClick={() => setEditing('new')}>
-              <Icon name="plus" size={14} />
-              {t('rooms.add')}
-            </button>
+            canManage && (
+              <button className="btn btn-primary btn-inline" onClick={() => setEditing('new')}>
+                <Icon name="plus" size={14} />
+                {t('rooms.add')}
+              </button>
+            )
           }
         />
       ) : (
@@ -120,26 +123,30 @@ export function Rooms() {
                   <span className="room-meta-value">{r.class_count ?? 0}</span>
                 </div>
               </div>
-              <div className="card-foot">
-                <button type="button" className="btn btn-sm btn-ghost" onClick={() => setEditing(r)}>
-                  <Icon name="pencil" size={15} />
-                  {t('actions.edit', { ns: 'common' })}
-                </button>
-                <button
-                  type="button"
-                  className="btn btn-sm btn-danger-ghost"
-                  onClick={() => setDeleting(r)}
-                >
-                  <Icon name="trash" size={15} />
-                  {t('actions.delete', { ns: 'common' })}
-                </button>
-              </div>
+              {canManage && (
+                <div className="card-foot">
+                  <button type="button" className="btn btn-sm btn-ghost" onClick={() => setEditing(r)}>
+                    <Icon name="pencil" size={15} />
+                    {t('actions.edit', { ns: 'common' })}
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-sm btn-danger-ghost"
+                    onClick={() => setDeleting(r)}
+                  >
+                    <Icon name="trash" size={15} />
+                    {t('actions.delete', { ns: 'common' })}
+                  </button>
+                </div>
+              )}
             </article>
           ))}
         </div>
       )}
 
-      {pagination && <Pagination pagination={pagination} onChange={(p) => setPage(p)} />}
+      {pagination && (
+        <Pagination pagination={pagination} onChange={(p) => setQ({ page: String(p) })} loading={loading} />
+      )}
 
       {editing && (
         <RoomFormModal
@@ -196,7 +203,13 @@ function RoomFormModal({
   };
 
   return (
-    <Modal title={initial ? t('rooms.form.editTitle') : t('rooms.form.addTitle')} onClose={onClose}>
+    <Modal
+      title={initial ? t('rooms.form.editTitle') : t('rooms.form.addTitle')}
+      onClose={onClose}
+      dirty={
+        name !== (initial?.name || '') || capacity !== (initial?.capacity ? String(initial.capacity) : '')
+      }
+    >
       <form onSubmit={submit}>
         <div className="form-grid">
           <Field label={t('rooms.form.name')} span error={errors.name}>

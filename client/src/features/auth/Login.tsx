@@ -63,7 +63,7 @@ export function ForgotPasswordModal({
   };
 
   return (
-    <Modal title={title} onClose={onClose}>
+    <Modal title={title} onClose={onClose} dirty={identifier.trim() !== ''}>
       <p className="muted" style={{ marginTop: 0 }}>
         {desc}
       </p>
@@ -113,21 +113,25 @@ export function Login() {
     if (!show(errs)) return;
     setBusy(true);
     try {
-      const data = await api<{ token: string; user: User }>('/auth/login', {
+      const data = await api<{ token: string; user: User; must_change_password?: boolean }>('/auth/login', {
         method: 'POST',
         body: JSON.stringify({ username, password }),
       });
-      setAuth(data.token, data.user);
+      // Cờ bắt đổi mật khẩu có thể nằm trong user hoặc ở top-level response
+      setAuth(
+        data.token,
+        data.must_change_password ? { ...data.user, must_change_password: true } : data.user
+      );
       // Quay lại deep-link đã lưu (khi bị 401 hoặc vào trang cần login), nếu không thì về home theo role.
       const next = takePostLoginRedirect();
       if (next) {
-        navigate(next, { replace: true });
+        void navigate(next, { replace: true });
         return;
       }
       const role = data.user.role;
-      if (role === 'teacher') navigate('/teacher');
-      else if (role === 'parent') navigate('/parent');
-      else navigate('/app');
+      if (role === 'teacher') void navigate('/teacher');
+      else if (role === 'parent') void navigate('/parent');
+      else void navigate('/app');
     } catch (err) {
       // Lỗi đăng nhập (sai tài khoản/mật khẩu) hiện inline dưới ô mật khẩu, focus để nhập lại
       show({ password: err instanceof Error ? err.message : t('fail') });

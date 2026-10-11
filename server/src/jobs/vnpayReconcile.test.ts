@@ -1,7 +1,7 @@
 /** Unit test cho G6 (đơn VNPay treo) — phần thuần, không cần DB/mạng. */
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { vnWallToVnpDate } from './vnpayReconcile';
+import { vnWallToVnpDate, classifyQuerydr } from './vnpayReconcile';
 import { buildVnpayUrl } from '../services/vnpay';
 
 function vnpToMs(s: string): number {
@@ -33,5 +33,16 @@ describe('G6: đơn VNPay treo', () => {
     assert.ok(/^\d{14}$/.test(create ?? ''), 'vnp_CreateDate đúng định dạng');
     assert.ok(/^\d{14}$/.test(expire ?? ''), 'vnp_ExpireDate đúng định dạng');
     assert.equal(vnpToMs(expire!) - vnpToMs(create!), 30 * 60 * 1000);
+  });
+
+  it('DATA-13: querydr lỗi tạm thời / VNPay đang xử lý -> retry (giữ pending), chỉ fail khi dứt khoát', () => {
+    const q = (ok: boolean, responseCode: string, transactionStatus: string) =>
+      classifyQuerydr({ ok, responseCode, transactionStatus });
+    assert.equal(q(false, '', ''), 'retry'); // timeout / sai chữ ký phản hồi
+    assert.equal(q(true, '99', ''), 'retry');
+    assert.equal(q(true, '00', '01'), 'retry'); // VNPay chưa hoàn tất
+    assert.equal(q(true, '00', '00'), 'confirm');
+    assert.equal(q(true, '00', '02'), 'fail');
+    assert.equal(q(true, '91', ''), 'fail'); // không có giao dịch
   });
 });

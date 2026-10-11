@@ -1,38 +1,42 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { teacherApi, SalaryInfo } from './teacher.api';
-import { useToast } from '../../shared/ui/toast';
+import { toastApiError, useToast } from '../../shared/ui/toast';
 import { Field } from '../../shared/components/Form';
 import { PageHeader } from '../../shared/components/PageHeader';
 import { EmptyState } from '../../shared/components/EmptyState';
 import { StatGridSkeleton } from '../../shared/components/Skeleton';
 import { Icon } from '../../shared/components/icons';
-import { formatVND } from '../../shared/types';
+import { formatVND, todayVN } from '../../shared/types';
 import './TeacherSalary.css';
 
 export function TeacherSalary() {
   const { t } = useTranslation(['teacher', 'common']);
-  const now = new Date();
-  const defaultMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-  const [month, setMonth] = useState(defaultMonth);
+  // UX-10: tháng mặc định theo giờ VN, không theo đồng hồ máy
+  const [month, setMonth] = useState(() => todayVN().slice(0, 7));
   const [salary, setSalary] = useState<SalaryInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
   const toast = useToast();
 
+  // Chống response về sai thứ tự khi đổi tháng liên tục: chỉ request mới nhất được ghi state
+  const loadSeq = useRef(0);
   const load = useCallback(async () => {
+    const seq = ++loadSeq.current;
     setLoading(true);
     setLoadError(false);
     try {
       const data = await teacherApi.payroll(month);
+      if (seq !== loadSeq.current) return;
       setSalary(data);
     } catch (err) {
+      if (seq !== loadSeq.current) return;
       // Lỗi tải: xóa số liệu tháng cũ để không hiện nhầm dưới nhãn tháng mới
       setSalary(null);
       setLoadError(true);
-      toast(err instanceof Error ? err.message : t('salary.loadError'), 'error');
+      toastApiError(toast, err, t('salary.loadError'));
     } finally {
-      setLoading(false);
+      if (seq === loadSeq.current) setLoading(false);
     }
   }, [month, toast, t]);
 

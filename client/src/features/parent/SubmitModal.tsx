@@ -54,7 +54,11 @@ export function SubmitModal({
   };
 
   return (
-    <Modal title={t('submit.title', { title: homework.title })} onClose={onClose}>
+    <Modal
+      title={t('submit.title', { title: homework.title })}
+      onClose={onClose}
+      dirty={!!file || note.trim() !== ''}
+    >
       <Field label={t('submit.fileLabel')} error={errors.file}>
         <label className="file-drop">
           <input

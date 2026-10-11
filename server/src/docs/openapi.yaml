@@ -1469,10 +1469,10 @@ paths:
     post:
       tags:
         - Auth
-      summary: Đăng xuất mọi thiết bị — thu hồi toàn bộ refresh token
+      summary: Đăng xuất mọi thiết bị KHÁC — thu hồi refresh token khác, giữ phiên hiện tại
       responses:
         '200':
-          description: OK
+          description: OK (kèm access token mới thay token cũ)
           content:
             application/json:
               schema:
@@ -1480,6 +1480,8 @@ paths:
                 properties:
                   ok:
                     type: boolean
+                  token:
+                    type: string
   /api/v1/auth/change-password:
     post:
       tags:
@@ -1512,6 +1514,123 @@ paths:
                     type: boolean
         '400':
           description: Mật khẩu cũ sai / mật khẩu mới yếu / trùng mật khẩu cũ
+  /api/v1/auth/me:
+    get:
+      tags:
+        - Auth
+      summary: Thông tin user đang đăng nhập (kèm tên trung tâm, must_change_password)
+      responses:
+        '200':
+          description: '{ user } — user.must_change_password=true thì mọi API khác (trừ change-password) trả 403 PASSWORD_CHANGE_REQUIRED'
+  /api/v1/auth/forgot-password:
+    post:
+      tags:
+        - Auth
+      summary: Gửi yêu cầu đặt lại mật khẩu (public, rate-limit như login) — admin xử lý thủ công
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - kind
+              properties:
+                kind:
+                  type: string
+                  enum: [staff, parent]
+                username:
+                  type: string
+                  description: Bắt buộc khi kind=staff
+                phone:
+                  type: string
+                  description: Bắt buộc khi kind=parent
+      responses:
+        '200':
+          description: Luôn trả ok (không tiết lộ tài khoản có tồn tại hay không)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+        '400':
+          description: Thiếu thông tin
+  /api/v1/auth/reset-requests:
+    get:
+      tags:
+        - Auth
+      summary: Danh sách yêu cầu đặt lại mật khẩu (quyền users.view; admin chỉ thấy trung tâm mình)
+      responses:
+        '200':
+          description: '{ data: [{ id, identifier, kind, status, created_at }] }'
+  /api/v1/auth/reset-requests/{id}/process:
+    post:
+      tags:
+        - Auth
+      summary: Xử lý yêu cầu — sinh mật khẩu tạm, thu hồi mọi session của tài khoản (quyền users.update)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: '{ ok: true, tempPassword }'
+        '400':
+          description: Yêu cầu đã được xử lý
+        '403':
+          description: Không đủ quyền với tài khoản đích (superadmin / trung tâm khác)
+        '404':
+          description: Không tìm thấy yêu cầu hoặc tài khoản
+  /api/v1/parent/consent:
+    get:
+      tags:
+        - Parent
+      summary: Trạng thái đồng ý nhận tin Zalo ZNS của phụ huynh
+      responses:
+        '200':
+          description: '{ zalo_consent }'
+    put:
+      tags:
+        - Parent
+      summary: Phụ huynh bật/tắt nhận tin Zalo ZNS
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - consent
+              properties:
+                consent:
+                  type: string
+                  enum: [granted, denied]
+      responses:
+        '200':
+          description: '{ ok: true, zalo_consent }'
+        '400':
+          description: Giá trị consent không hợp lệ
+  /api/v1/parent/vnpay-txn-status:
+    get:
+      tags:
+        - Parent
+      summary: Trạng thái giao dịch VNPay của phụ huynh (polling sau khi quay về từ VNPay)
+      parameters:
+        - name: ref
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Trạng thái giao dịch
+        '400':
+          description: Thiếu mã giao dịch
   /api/v1/students:
     get:
       tags:
@@ -2548,7 +2667,7 @@ paths:
     get:
       tags:
         - Payroll
-      summary: Bảng lương giáo viên (tự tính từ điểm danh)
+      summary: Bảng lương giáo viên (tự tính từ điểm danh; tháng đã chốt trả bảng chụp lúc chốt)
       parameters:
         - in: query
           name: month

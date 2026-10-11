@@ -3,7 +3,6 @@
  */
 import { http, type Paginated, type PageParams } from '../../shared/api/client';
 import { LeadItem, TrialItem } from '../../shared/types';
-import { ClassItem } from '../classes/classes.api';
 
 export interface LeadForm {
   name: string;
@@ -12,13 +11,17 @@ export interface LeadForm {
 }
 
 export const leadsApi = {
-  list: (page?: PageParams, search?: string) => {
+  list: (page?: PageParams, search?: string, status?: string) => {
     const q = new URLSearchParams();
     if (page?.page) q.set('page', String(page.page));
     if (page?.limit) q.set('limit', String(page.limit));
     if (search?.trim()) q.set('search', search.trim());
+    if (status) q.set('status', status);
     const qs = q.toString();
-    return http.get<Paginated<LeadItem>>(qs ? `/leads?${qs}` : '/leads');
+    // counts: số lead theo từng trạng thái (bỏ qua filter status, theo center + search)
+    return http.get<Paginated<LeadItem> & { counts?: Record<string, number> }>(
+      qs ? `/leads?${qs}` : '/leads'
+    );
   },
   create: (form: LeadForm) => http.post<LeadItem>('/leads', form),
   update: (id: number, form: LeadForm) => http.put<LeadItem>(`/leads/${id}`, form),
@@ -41,5 +44,4 @@ export const trialsApi = {
   remove: (id: number) => http.del<{ ok: boolean }>(`/trials/${id}`),
   convert: (id: number, classId: number | null) =>
     http.post<{ student_id: number }>(`/trials/${id}/convert`, { class_id: classId }),
-  listClasses: () => http.get<Paginated<ClassItem>>('/classes?limit=100').then((r) => r.data),
 };

@@ -1,5 +1,7 @@
 import { Router, Response } from 'express';
-import { AuthRequest, reqCenterId } from '../../middleware/auth';
+import { AuthRequest, reqCenterId, requireCenterId } from '../../middleware/auth';
+import { ownScoped } from '../../shared/scope';
+import { getPermissionScope } from '../authorization/authorization.service';
 import { requirePermission } from '../authorization/authorization.middleware';
 import { asyncHandler } from '../../shared/http';
 import { validate, v, paramId } from '../../shared/validate';
@@ -7,6 +9,15 @@ import * as studentService from './students.service';
 import { actorFromReq } from '../../shared/audit';
 
 const router = Router();
+
+/** Scope đọc học viên theo permission (không theo teacher_id truthy): 'own' -> chỉ lớp mình dạy. */
+async function readOpts(req: AuthRequest): Promise<studentService.StudentReadOpts> {
+  return {
+    ownOnly: await ownScoped(req, 'students.view'),
+    teacherId: req.user?.teacher_id ?? null,
+    canViewInvoices: !!req.user && (await getPermissionScope(req.user.id, 'invoices.view')) !== null,
+  };
+}
 
 const studentSchema = {
   code: v.string({ max: 20, label: 'Mã học viên' }),
@@ -21,7 +32,7 @@ const studentSchema = {
 
 router.get(
   '/',
-  requirePermission('students.view'),
+  requirePermission('students.view', 'own'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const { search, status, page, limit } = req.query as {
       search?: string;
@@ -34,9 +45,7 @@ router.get(
         reqCenterId(req),
         { search, status },
         { page, limit },
-        {
-          teacherId: req.user?.teacher_id ?? null,
-        }
+        await readOpts(req)
       )
     );
   })
@@ -44,12 +53,10 @@ router.get(
 
 router.get(
   '/:id',
-  requirePermission('students.view'),
+  requirePermission('students.view', 'own'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     res.json(
-      await studentService.getStudentDetail(reqCenterId(req), paramId(req.params), {
-        teacherId: (req as AuthRequest).user?.teacher_id ?? null,
-      })
+      await studentService.getStudentDetail(reqCenterId(req), paramId(req.params), await readOpts(req))
     );
   })
 );
@@ -59,7 +66,8 @@ router.post(
   requirePermission('students.create'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const input = validate(req.body, studentSchema);
-    const created = await studentService.createStudent(reqCenterId(req), req.user?.role === 'superadmin', {
+    // Superadmin phải chỉ rõ center_id (400 CENTER_REQUIRED) — không tạo học viên "vô chủ" center NULL
+    const created = await studentService.createStudent(requireCenterId(req), {
       code: input.code ?? undefined,
       name: input.name,
       phone: input.phone ?? undefined,

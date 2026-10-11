@@ -52,7 +52,7 @@ export function ParentProfile() {
   const logout = () => {
     void doLogout();
     toast(t('profile.loggedOut'), 'info');
-    navigate('/parent/login');
+    void navigate('/parent/login');
   };
 
   return (

@@ -25,12 +25,12 @@ let centerId = 0;
 let studentId = 0;
 let invoiceId = 0;
 
-/** Giả lập VNPay ký lại params trả về (giống thuật toán trong services/vnpay.ts). */
+/** Giả lập VNPay ký (bản chép độc lập mẫu Node chính thức: encode giá trị, khoảng trắng -> '+'). */
 function vnpaySign(params: Record<string, string>): string {
   const signData = Object.keys(params)
-    .filter((k) => k.startsWith('vnp_'))
+    .map(encodeURIComponent)
     .sort()
-    .map((k) => `${k}=${params[k]}`)
+    .map((k) => `${k}=${encodeURIComponent(params[k]).replace(/%20/g, '+')}`)
     .join('&');
   return crypto.createHmac('sha512', VNP_SECRET).update(Buffer.from(signData, 'utf-8')).digest('hex');
 }

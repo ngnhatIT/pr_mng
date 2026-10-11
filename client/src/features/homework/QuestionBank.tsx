@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { homeworkApi, type BankQuestion } from './homework.api';
-import { useToast } from '../../shared/ui/toast';
+import { homeworkApi, blankOptions, type BankQuestion, type QType } from './homework.api';
+import { toastApiError, useToast } from '../../shared/ui/toast';
 import { Modal, ConfirmDialog } from '../../shared/components/Modal';
 import { Field, useFieldErrors } from '../../shared/components/Form';
 import { EmptyState } from '../../shared/components/EmptyState';
@@ -9,7 +9,6 @@ import { Pagination, type PaginationMeta } from '../../shared/components/Paginat
 import { Icon } from '../../shared/components/icons';
 import { useDebounce } from '../../shared/hooks/useDebounce';
 
-type QType = 'single' | 'multiple' | 'truefalse' | 'essay';
 type Difficulty = 'easy' | 'medium' | 'hard';
 
 /** Nhãn loại câu hỏi (dùng chung list + form). */
@@ -69,21 +68,26 @@ export function QuestionBank({
   const [pointsEach, setPointsEach] = useState('1');
   // Cache mọi câu hỏi đã thấy để giữ lựa chọn khi đổi filter
   const allSeen = useRef(new Map<number, BankQuestion>());
+  // Chống response về sai thứ tự: chỉ request mới nhất được ghi state
+  const loadSeq = useRef(0);
 
   const load = useCallback(async () => {
+    const seq = ++loadSeq.current;
     setLoading(true);
     setLoadError(null);
     try {
       const res = await homeworkApi.bankList(debouncedSearch, debouncedTag, page, 50, subject, difficulty);
+      if (seq !== loadSeq.current) return;
       setQuestions(res.data);
       setTags(res.tags);
       setSubjects(res.subjects ?? []);
       setPagination(res.pagination);
       res.data.forEach((q) => allSeen.current.set(q.id, q));
     } catch (err) {
-      setLoadError(err instanceof Error ? err.message : t('bank.toast.loadFail'));
+      if (seq === loadSeq.current)
+        setLoadError(err instanceof Error ? err.message : t('bank.toast.loadFail'));
     } finally {
-      setLoading(false);
+      if (seq === loadSeq.current) setLoading(false);
     }
   }, [debouncedSearch, debouncedTag, page, subject, difficulty, t]);
 
@@ -122,7 +126,7 @@ export function QuestionBank({
       allSeen.current.delete(id);
       void load();
     } catch (err) {
-      toast(err instanceof Error ? err.message : t('bank.toast.deleteFail'), 'error');
+      toastApiError(toast, err, t('bank.toast.deleteFail'));
     }
   };
 
@@ -138,8 +142,7 @@ export function QuestionBank({
       toast(t('bank.toast.staleSelection', { count: selected.length - picked.length }), 'error');
       return;
     }
-    const withPoints =
-      pointsMode === 'set' ? picked.map((q) => ({ ...q, points: pointsEachNum })) : picked;
+    const withPoints = pointsMode === 'set' ? picked.map((q) => ({ ...q, points: pointsEachNum })) : picked;
     onImport(withPoints);
     onClose();
   };
@@ -148,7 +151,13 @@ export function QuestionBank({
   const pageAllSelected = pageIds.length > 0 && pageIds.every((id) => selected.includes(id));
 
   return (
-    <Modal title={t('bank.title')} onClose={onClose} wide>
+    <Modal
+      title={t('bank.title')}
+      onClose={onClose}
+      wide
+      // đang mở form câu hỏi hoặc đã chọn câu để import: hỏi trước khi đóng
+      dirty={showForm || editing !== null || selected.length > 0}
+    >
       <div className="toolbar">
         <div className={`search-wrap${search ? ' has-clear' : ''}`}>
           <span className="search-icon">
@@ -209,13 +218,21 @@ export function QuestionBank({
           <option value="medium">{t('bank.difficultyMedium')}</option>
           <option value="hard">{t('bank.difficultyHard')}</option>
         </select>
-        <button className="btn btn-primary hw-action-icon" onClick={() => setShowForm(true)}>
+        <button
+          className="btn btn-primary hw-action-icon"
+          onClick={() => {
+            setEditing(null);
+            setShowForm(true);
+          }}
+        >
           <Icon name="plus" size={15} /> {t('bank.add')}
         </button>
       </div>
 
       {(showForm || editing) && (
         <BankQuestionForm
+          // key: form seed state 1 lần từ initial → đổi câu đang sửa phải remount, tránh lưu nội dung câu cũ vào câu khác
+          key={editing ? `edit-${editing.id}` : 'new'}
           tags={tags}
           initial={editing}
           onClose={() => {
@@ -264,7 +281,13 @@ export function QuestionBank({
                 {t('bank.emptyFiltered.clear')}
               </button>
             ) : (
-              <button className="btn btn-primary btn-inline" onClick={() => setShowForm(true)}>
+              <button
+                className="btn btn-primary btn-inline"
+                onClick={() => {
+                  setEditing(null);
+                  setShowForm(true);
+                }}
+              >
                 <Icon name="plus" size={14} />
                 {t('bank.add')}
               </button>
@@ -323,7 +346,12 @@ export function QuestionBank({
 
       {selectMode && (
         <div className="modal-actions bank-select-footer">
-          <button type="button" className="btn btn-sm" onClick={toggleSelectPage} disabled={!questions.length}>
+          <button
+            type="button"
+            className="btn btn-sm"
+            onClick={toggleSelectPage}
+            disabled={!questions.length}
+          >
             {pageAllSelected ? t('bank.deselectAllPage') : t('bank.selectAllPage')}
           </button>
           <span className="muted">{t('bank.selected', { count: selected.length })}</span>
@@ -412,11 +440,6 @@ function BankOptionsPreview({ q }: { q: BankQuestion }) {
   );
 }
 
-const BLANK_OPTIONS = [
-  { text: '', is_correct: true },
-  { text: '', is_correct: false },
-];
-
 function BankQuestionForm({
   tags,
   initial,
@@ -441,7 +464,7 @@ function BankQuestionForm({
   const [options, setOptions] = useState(
     initial && initial.qtype !== 'essay'
       ? initial.options.map((o) => ({ text: o.text, is_correct: o.is_correct }))
-      : BLANK_OPTIONS.map((o) => ({ ...o }))
+      : blankOptions()
   );
   const [busy, setBusy] = useState(false);
   // Lỗi inline dưới field (skill 8.2), focus vào field lỗi đầu tiên
@@ -457,7 +480,7 @@ function BankQuestionForm({
         { text: t('bank.falseLabel'), is_correct: false },
       ]);
     } else if (options.length === 0) {
-      setOptions(BLANK_OPTIONS.map((o) => ({ ...o })));
+      setOptions(blankOptions());
     }
   };
 
@@ -516,7 +539,7 @@ function BankQuestionForm({
       }
       onSaved();
     } catch (err) {
-      toast(err instanceof Error ? err.message : t('form.toast.saveFail'), 'error');
+      toastApiError(toast, err, t('form.toast.saveFail'));
     } finally {
       setBusy(false);
     }
@@ -524,7 +547,7 @@ function BankQuestionForm({
 
   return (
     <div className="bank-form">
-      <Field label={t('bank.form.question')} error={errors.question} required>
+      <Field label={t('bank.form.question')} error={errors.question}>
         <input
           ref={refFor('question')}
           className="text-input"
@@ -538,11 +561,7 @@ function BankQuestionForm({
       </Field>
       <div className="form-grid">
         <Field label={t('bank.qtype')}>
-          <select
-            className="text-input"
-            value={qtype}
-            onChange={(e) => changeQtype(e.target.value as QType)}
-          >
+          <select className="text-input" value={qtype} onChange={(e) => changeQtype(e.target.value as QType)}>
             <option value="single">{t('bank.qtypeSingle')}</option>
             <option value="multiple">{t('bank.qtypeMultiple')}</option>
             <option value="truefalse">{t('bank.qtypeTruefalse')}</option>
@@ -623,6 +642,7 @@ function BankQuestionForm({
           <Field
             label={t(qtype === 'multiple' ? 'bank.answersMultiple' : 'bank.form.answers')}
             error={errors.answers}
+            group
           >
             {options.map((o, i) => (
               <div key={i} className="quiz-opt bank-opt">
@@ -675,7 +695,11 @@ function BankQuestionForm({
         </button>
         <button type="button" className="btn btn-primary" disabled={busy} onClick={save}>
           {busy && <span className="spinner" aria-hidden="true" />}
-          {busy ? t('actions.saving', { ns: 'common' }) : initial ? t('bank.form.update') : t('bank.form.save')}
+          {busy
+            ? t('actions.saving', { ns: 'common' })
+            : initial
+              ? t('bank.form.update')
+              : t('bank.form.save')}
         </button>
       </div>
     </div>

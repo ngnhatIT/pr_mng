@@ -35,3 +35,8 @@ export async function ownScoped(req: AuthRequest, permission: string): Promise<b
   if (!req.user) return false;
   return (await getPermissionScope(req.user.id, permission)) === 'own';
 }
+
+/** scopeOf + ownOnly theo permission scope của route (thay cho so sánh role === 'teacher'). */
+export async function scopeFor(req: AuthRequest, permission: string): Promise<ScopeCtx> {
+  return { ...scopeOf(req), ownOnly: await ownScoped(req, permission) };
+}

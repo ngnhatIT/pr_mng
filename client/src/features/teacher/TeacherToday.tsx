@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { teacherApi } from './teacher.api';
-import { useToast } from '../../shared/ui/toast';
+import { toastApiError, useToast } from '../../shared/ui/toast';
 import { Field, useFieldErrors } from '../../shared/components/Form';
 import { PageHeader } from '../../shared/components/PageHeader';
 import { EmptyState } from '../../shared/components/EmptyState';
@@ -29,7 +29,7 @@ export function TeacherToday() {
       setSessions(data);
     } catch (err) {
       setError(true);
-      toast(err instanceof Error ? err.message : t('today.loadError'), 'error');
+      toastApiError(toast, err, t('today.loadError'));
     } finally {
       setLoading(false);
     }

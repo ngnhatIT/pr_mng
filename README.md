@@ -34,21 +34,24 @@ sudo apt install postgresql
 sudo -u postgres psql -c "CREATE USER educenter WITH PASSWORD 'educenter123' SUPERUSER;"
 sudo -u postgres psql -c "CREATE DATABASE educenter OWNER educenter;"
 
-# 2. Cấu hình (copy .env.example thành server/.env)
+# 2. Cấu hình (copy server/.env.example thành server/.env — chỉ file này được nạp, .env ở thư mục gốc bị bỏ qua)
 DATABASE_URL=postgres://educenter:educenter123@localhost:5432/educenter
 
-# 3. Chạy — schema 44 bảng + 36 trigger tự tạo lần đầu
+# 3. Chạy — schema (bảng, trigger, index, migration) tự tạo lần đầu
 npm run dev
 ```
 
 Đang dùng SQLite cũ? Migrate dữ liệu:
 
 ```bash
+# better-sqlite3 KHÔNG nằm trong dependencies — cài riêng trước khi migrate:
+npm i -D better-sqlite3 @types/better-sqlite3
 npx tsx scripts/migrate-sqlite-to-pg.ts --sqlite ./server/data.db --pg $DATABASE_URL
 ```
 
 Script chỉ đọc SQLite (read-only), ghi PG trong 1 transaction, giữ nguyên id,
-reset sequence và đối chiếu số dòng từng bảng.
+reset sequence và đối chiếu số dòng từng bảng. Cột thời điểm `*_at` (SQLite lưu UTC)
+được đổi sang giờ VN (Asia/Ho_Chi_Minh) như schema PG; RBAC/refresh token của PG được giữ.
 
 ## Giai đoạn 1 — Cổng phụ huynh & vận hành
 
@@ -81,14 +84,15 @@ reset sequence và đối chiếu số dòng từng bảng.
 Vào `/app/cau-hinh-thanh-toan` (quyền admin), theo từng trung tâm:
 
 1. **VietQR (không cần đăng ký):** nhập _mã ngân hàng_ (vietcombank, mb, techcombank...), _số tài khoản_, _tên tài khoản_. Phụ huynh sẽ thấy nút "Quét VietQR" kèm mã QR đúng số tiền + nội dung `HD<mã hóa đơn>`.
-2. **VNPay:** đăng ký merchant tại VNPay để có `TMN Code` và `Hash Secret`; nhập vào form và bật công tắc. Hệ thống đang dùng **môi trường SANDBOX** (`sandbox.vnpayment.vn`) để demo — khi chạy thật, đổi `VNPAY_PAY_URL` trong `server/src/services/vnpay.ts` sang `https://www.vnpayment.vn/paymentv2/vpcpay.html`.
+2. **VNPay:** đăng ký merchant tại VNPay để có `TMN Code` và `Hash Secret`; nhập vào form và bật công tắc. Hệ thống đang dùng **môi trường SANDBOX** (`sandbox.vnpayment.vn`) để demo — khi chạy thật, đặt biến môi trường `VNPAY_PAY_URL=https://pay.vnpay.vn/vpcpay.html` và `VNPAY_API_URL=https://merchant.vnpay.vn/merchant_webapi/api/transaction` (job đối soát querydr) trong `server/.env` (xem `server/.env.example`).
 3. **Thưởng giới thiệu:** nhập số tiền credits cho người giới thiệu / người được giới thiệu (mặc định 200.000đ).
 
 Luồng "Đã chuyển khoản": phụ huynh bấm báo đã chuyển → khoản thu ở trạng thái `pending` (không tính vào công nợ) → admin vào tab **Chờ duyệt** để Duyệt/Từ chối.
 
 ## Yêu cầu & cách chạy
 
-- Node.js 18+
+- Node.js 22 LTS (tối thiểu 20.19 — ESLint 10 yêu cầu)
+- PostgreSQL 16+
 
 ```bash
 # Cài đặt (chạy 1 lần ở thư mục gốc)
@@ -113,8 +117,14 @@ npm start   # phục vụ cả client đã build tại http://localhost:4000
 
 | Biến         | Bắt buộc | Mô tả                                                                                                                                                 |
 | ------------ | -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `JWT_SECRET` | **Có**   | Chuỗi bí mật để ký JWT (tối thiểu 32 ký tự ngẫu nhiên). Nếu không đặt, server dùng secret mặc định và in cảnh báo — **không an toàn cho production**. |
-| `PORT`       | Không    | Cổng chạy server (mặc định `4000`).                                                                                                                   |
+| `JWT_SECRET` | **Có**   | Chuỗi bí mật ký JWT, tối thiểu 32 ký tự. Thiếu/ngắn thì server từ chối khởi động (trừ `NODE_ENV=development`/`test`). |
+| `DATABASE_URL` | **Có** | Connection string PostgreSQL. |
+| `APP_BASE_URL` | **Có** (production) | URL công khai, vd `https://app.trungtam.vn` (VNPay returnUrl). |
+| `VNPAY_PAY_URL`, `VNPAY_API_URL` | Production | URL VNPay thật (mặc định sandbox) — xem `server/.env.example`. |
+| `UPLOAD_DIR` | Không | Thư mục file upload (mặc định `<repo>/uploads`) — nhớ đưa vào backup. |
+| `PORT`       | Không    | Cổng chạy server (mặc định `4000`). |
+
+Danh sách đầy đủ: `server/.env.example`, hướng dẫn deploy: `docs/DEPLOYMENT.md`.
 
 Ví dụ:
 
@@ -160,5 +170,5 @@ API cũ (`/api/students`, `/api/classes`, `/api/sessions`, `/api/invoices`, `/ap
 - Lịch học lưu JSON `[{day: 2-8, start: "18:00", end: "20:00"}]` (2 = Thứ Hai … 8 = Chủ Nhật).
 - Trạng thái hóa đơn chỉ tính các khoản `payments.status='confirmed'`; khoản `pending` (chờ duyệt) không trừ công nợ.
 - Cấu hình Zalo/thanh toán lưu theo trung tâm (`center_settings`), có fallback về `settings` toàn cục cho DB cũ.
-- Public API xác định trung tâm qua subdomain của Host, ngược lại dùng trung tâm đầu tiên.
+- Public API xác định trung tâm qua subdomain của Host; Host không khớp thì chỉ khi hệ thống có đúng 1 trung tâm mới dùng trung tâm đó, nhiều trung tâm → `404`.
 - Zalo ZNS: xem hướng dẫn cấu hình trong bản MVP (mục "Nhắc học phí qua Zalo" ở README cũ). Các loại nhắc mới (vắng mặt, duyệt nghỉ, xác nhận thanh toán) hiện ghi log ở chế độ demo trong Lịch sử nhắc — cần thêm Template ID riêng nếu muốn gửi ZNS thật.

@@ -28,7 +28,7 @@
       "hashSecret": "Hash Secret",
       "hashSecretHint": "Issued by VNPay with the TMN code. Leave blank to keep the current one.",
       "tmnCodeHint": "Issued by VNPay when the center registers as a merchant; see the confirmation email.",
-      "savedPlaceholder": "Saved (leave blank to keep)",
+      "savedPlaceholder": "{{mask}} (saved - leave blank to keep)",
       "status": "Status",
       "statusHint": "Turn off to pause online payments; cash and bank transfer still work.",
       "title": "VNPay",
@@ -44,13 +44,16 @@
     "applied": "Applied {{amount}} credits to the invoice",
     "apply": "Apply",
     "applyError": "Could not apply credits, please try again",
-    "applying": "Applying credits...",
+    "applyRow": "Apply credit",
     "applyTitle": "Apply parent credits to the invoice",
+    "applying": "Applying credits...",
     "confirmText": "{{name}} ({{code}}) - owes <strong>{{amount}}</strong>",
-    "help": "Enter the parent's <strong>credit ID</strong> (see the parent Referrals page or credit management). The system will deduct available credits from the invoice balance.",
-    "idLabel": "Credit ID *",
-    "idPlaceholder": "E.g. 12",
-    "idRequired": "Please enter the credit ID",
+    "help": "Choose one of the student's parents' available credits. The system will deduct it from the invoice balance.",
+    "idLabel": "Credits",
+    "idRequired": "Please choose credits",
+    "none": "The student's parents have no available credits.",
+    "option": "#{{id}} · {{parent}} · {{amount}} left · {{reason}}",
+    "selectPlaceholder": "Choose credits...",
     "title": "Apply credits to invoice"
   },
   "debt": {
@@ -94,7 +97,7 @@
     }
   },
   "invoiceForm": {
-    "amount": "Amount (VND) *",
+    "amount": "Amount (VND)",
     "class": "Class",
     "classOption": "{{name}} - {{fee}}",
     "create": "Create invoice",
@@ -105,10 +108,12 @@
     "noClass": "- No class -",
     "note": "Note",
     "selectStudent": "- Select student -",
-    "student": "Student *",
+    "student": "Student",
     "studentRequired": "Please select a student",
     "title": "Create invoice",
-    "amountInvalid": "Amount must be a positive number"
+    "amountInvalid": "Amount must be a positive number",
+    "searchStudent": "Find student",
+    "searchStudentPlaceholder": "Type student name or code"
   },
   "detail": {
     "title": "Invoice #{{id}}",
@@ -167,7 +172,7 @@
       "desc": "Try a different keyword or clear the filters to see the full list.",
       "clear": "Clear filters"
     },
-    "debtStrip": "{count} students still owe {total} in total",
+    "debtStrip": "{{count}} students still owe {{total}} in total",
     "debtStripTitle": "Total outstanding tuition across the center"
   },
   "pay": {
@@ -181,7 +186,9 @@
       "cash": "Cash",
       "transfer": "Bank transfer",
       "card": "Card",
-      "ewallet": "E-wallet"
+      "ewallet": "E-wallet",
+      "refund": "Refund",
+      "credit": "Credit applied"
     },
     "note": "Note",
     "payError": "Could not collect the payment, please try again",
@@ -238,10 +245,9 @@
     "class": "Class",
     "amount": "Total",
     "paid": "Paid",
-    "discount": "Discount",
     "remaining": "Remaining",
     "note": "Note",
-    "date": "Date {date}",
+    "date": "Date {{date}}",
     "cashier": "Cashier",
     "payer": "Payer",
     "print": "Print receipt",

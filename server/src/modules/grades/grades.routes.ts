@@ -13,7 +13,7 @@ const router = Router();
 /** Danh sách điểm */
 router.get(
   '/',
-  requirePermission('grades.view'),
+  requirePermission('grades.view', 'own'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const {
       student_id = '',
@@ -35,7 +35,7 @@ router.get(
 /** Nhập điểm */
 router.post(
   '/',
-  requirePermission('grades.manage'),
+  requirePermission('grades.manage', 'own'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const cid = reqCenterId(req);
     const { student_id, class_id, title, score, max_score, comment } = req.body as Record<string, unknown>;
@@ -65,7 +65,7 @@ router.post(
 /** Xóa điểm */
 router.delete(
   '/:id',
-  requirePermission('grades.manage'),
+  requirePermission('grades.manage', 'own'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const cid = reqCenterId(req);
     const id = paramId(req.params);

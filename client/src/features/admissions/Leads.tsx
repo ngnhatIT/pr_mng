@@ -1,14 +1,16 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { leadsApi, LeadForm } from './admissions.api';
-import { useToast } from '../../shared/ui/toast';
+import { toastApiError, useToast } from '../../shared/ui/toast';
 import { Modal, ConfirmDialog } from '../../shared/components/Modal';
 import { Field, useFieldErrors } from '../../shared/components/Form';
+import { isValidVNPhone } from '../../shared/validation';
 import { PageHeader } from '../../shared/components/PageHeader';
-import { EmptyState } from '../../shared/components/EmptyState';
+import { EmptyState, LoadError } from '../../shared/components/EmptyState';
 import { Skeleton } from '../../shared/components/Skeleton';
-import { Pagination, type PaginationMeta } from '../../shared/components/Pagination';
-import { useDebounce } from '../../shared/hooks/useDebounce';
+import { useMyPermissions } from '../system/roles.api';
+import { useLoad } from '../../shared/hooks/useLoad';
+import { useUrlSearch, useUrlState } from '../../shared/hooks/useUrlState';
 import { LeadItem, formatDate } from '../../shared/types';
 import { Icon } from '../../shared/components/icons';
 import { ConvertModal } from './Trials';
@@ -16,44 +18,53 @@ import './Admissions.css';
 
 const COLUMNS = ['new', 'contacted', 'trial', 'enrolled', 'lost'] as const;
 
+// 'trial' -> 'enrolled' không đi qua PUT (server chặn) mà mở ConvertModal để tạo học viên (ADM-10)
 const NEXT_STATUS: Record<string, string> = {
   new: 'contacted',
   contacted: 'trial',
   trial: 'enrolled',
 };
+// Mỗi cột tải tối đa 100 lead (server chặn limit 100); số đếm cột lấy từ tổng thật của server.
+const COL_LIMIT = 100;
+type ColData = Record<string, { items: LeadItem[]; total: number }>;
 
 export function Leads() {
   const { t } = useTranslation(['ops', 'common']);
-  const [leads, setLeads] = useState<LeadItem[]>([]);
-  const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState<LeadItem | null | 'new'>(null);
   const [deleting, setDeleting] = useState<LeadItem | null>(null);
   const [converting, setConverting] = useState<LeadItem | null>(null);
-  const [page, setPage] = useState(1);
-  const [pagination, setPagination] = useState<PaginationMeta | null>(null);
-  const [search, setSearch] = useState('');
+  const [q, setQ] = useUrlState({ search: '' });
+  // B-2: chữ đang gõ ở state cục bộ, URL nhận giá trị đã debounce
+  const [search, setSearch] = useUrlSearch(q.search, (v) => setQ({ search: v }));
+  // UX-12: id lead đang đổi trạng thái -> khóa nút của thẻ đó, chống bấm 2 lần gửi 2 request
+  const [movingId, setMovingId] = useState<number | null>(null);
   const toast = useToast();
+  const canManage = useMyPermissions().has('leads.manage');
 
   const statusLabel = (s: string) => t(`leads.status.${s}`);
-  const debouncedSearch = useDebounce(search);
+  const debouncedSearch = q.search;
   const filtering = search.trim() !== '';
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    try {
-      const res = await leadsApi.list({ page }, debouncedSearch);
-      setLeads(res.data);
-      setPagination(res.pagination);
-    } catch (err) {
-      toast(err instanceof Error ? err.message : t('leads.toast.loadFail'), 'error');
-    } finally {
-      setLoading(false);
-    }
-  }, [page, debouncedSearch, toast, t]);
-
+  // ADM-10: tải theo từng cột trạng thái (thay vì 1 trang 20 lead chia vào 5 cột) để số đếm mỗi cột đúng
+  const {
+    data: cols,
+    loading,
+    error,
+    reload,
+  } = useLoad(async (): Promise<ColData> => {
+    const res = await Promise.all(
+      COLUMNS.map((st) => leadsApi.list({ limit: COL_LIMIT }, debouncedSearch, st))
+    );
+    // Tổng mỗi cột lấy từ `counts` server trả (fallback: pagination.total của chính cột đó)
+    const counts = res[0].counts;
+    return Object.fromEntries(
+      COLUMNS.map((st, i) => [st, { items: res[i].data, total: counts?.[st] ?? res[i].pagination.total }])
+    );
+  }, [debouncedSearch]);
+  const leadCount = COLUMNS.reduce((n, st) => n + (cols?.[st]?.total ?? 0), 0);
   useEffect(() => {
-    void load();
-  }, [load]);
+    if (error) toastApiError(toast, error, t('leads.toast.loadFail'));
+  }, [error, toast, t]);
 
   const save = async (form: LeadForm, id?: number) => {
     try {
@@ -61,9 +72,9 @@ export function Leads() {
       else await leadsApi.create(form);
       toast(t('leads.toast.saved'), 'success');
       setEditing(null);
-      void load();
+      reload();
     } catch (err) {
-      toast(err instanceof Error ? err.message : t('leads.toast.saveFail'), 'error');
+      toastApiError(toast, err, t('leads.toast.saveFail'));
     }
   };
 
@@ -73,19 +84,23 @@ export function Leads() {
       await leadsApi.remove(deleting.id);
       toast(t('leads.toast.deleted'), 'success');
       setDeleting(null);
-      void load();
+      reload();
     } catch (err) {
-      toast(err instanceof Error ? err.message : t('leads.toast.deleteFail'), 'error');
+      toastApiError(toast, err, t('leads.toast.deleteFail'));
     }
   };
 
   const moveStatus = async (l: LeadItem, next: string) => {
+    if (movingId !== null) return;
+    setMovingId(l.id);
     try {
       await leadsApi.setStatus(l.id, next);
       toast(t('leads.toast.moved', { name: l.name, label: statusLabel(next) }), 'success');
-      void load();
+      reload();
     } catch (err) {
-      toast(err instanceof Error ? err.message : t('leads.toast.updateFail'), 'error');
+      toastApiError(toast, err, t('leads.toast.updateFail'));
+    } finally {
+      setMovingId(null);
     }
   };
 
@@ -95,10 +110,12 @@ export function Leads() {
         title={t('leads.title')}
         desc={t('leads.desc')}
         actions={
-          <button className="btn btn-primary" onClick={() => setEditing('new')}>
-            <Icon name="plus" size={15} />
-            {t('leads.add')}
-          </button>
+          canManage && (
+            <button className="btn btn-primary" onClick={() => setEditing('new')}>
+              <Icon name="plus" size={15} />
+              {t('leads.add')}
+            </button>
+          )
         }
       />
 
@@ -112,10 +129,7 @@ export function Leads() {
             aria-label={t('leads.searchPlaceholder')}
             placeholder={t('leads.searchPlaceholder')}
             value={search}
-            onChange={(e) => {
-              setSearch(e.target.value);
-              setPage(1);
-            }}
+            onChange={(e) => setSearch(e.target.value)}
           />
           {search !== '' &&
             (loading || search !== debouncedSearch ? (
@@ -126,10 +140,7 @@ export function Leads() {
               <button
                 type="button"
                 className="search-clear"
-                onClick={() => {
-                  setSearch('');
-                  setPage(1);
-                }}
+                onClick={() => setSearch('')}
                 aria-label={t('leads.clearSearch')}
               >
                 <Icon name="x" size={14} />
@@ -138,7 +149,7 @@ export function Leads() {
         </span>
       </div>
 
-      {loading && leads.length === 0 ? (
+      {loading && !cols ? (
         <div className="pipeline" aria-hidden="true">
           {COLUMNS.map((col) => (
             <div key={col} className="pipeline-col">
@@ -152,28 +163,26 @@ export function Leads() {
             </div>
           ))}
         </div>
-      ) : leads.length === 0 ? (
+      ) : error && !cols ? (
+        <LoadError onRetry={reload} />
+      ) : leadCount === 0 ? (
         <EmptyState
           icon="inbox"
           title={t(filtering ? 'leads.emptyFiltered.title' : 'leads.empty.title')}
           desc={t(filtering ? 'leads.emptyFiltered.desc' : 'leads.empty.desc')}
           action={
             filtering ? (
-              <button
-                className="btn btn-secondary btn-inline"
-                onClick={() => {
-                  setSearch('');
-                  setPage(1);
-                }}
-              >
+              <button className="btn btn-secondary btn-inline" onClick={() => setSearch('')}>
                 <Icon name="x" size={14} />
                 {t('leads.emptyFiltered.clear')}
               </button>
             ) : (
-              <button className="btn btn-primary" onClick={() => setEditing('new')}>
-                <Icon name="plus" size={15} />
-                {t('leads.add')}
-              </button>
+              canManage && (
+                <button className="btn btn-primary" onClick={() => setEditing('new')}>
+                  <Icon name="plus" size={15} />
+                  {t('leads.add')}
+                </button>
+              )
             )
           }
         />
@@ -181,16 +190,22 @@ export function Leads() {
         <div className="lead-pipeline" aria-busy={loading || undefined}>
           <div className="pipeline" role="list" aria-label={t('leads.pipelineLabel')}>
             {COLUMNS.map((col) => {
-              const items = leads.filter((l) => l.status === col);
+              const items = cols?.[col]?.items ?? [];
+              const total = cols?.[col]?.total ?? 0;
               return (
                 <div key={col} className="pipeline-col" role="listitem">
                   <div className="pipeline-head">
                     <span className={`badge badge-${col}`}>{statusLabel(col)}</span>
-                    <span className="pipeline-count" title={t('leads.countTitle', { count: items.length })}>
-                      {items.length}
+                    <span className="pipeline-count" title={t('leads.countTitle', { count: total })}>
+                      {total}
                     </span>
                   </div>
                   {items.length === 0 && <p className="muted pipeline-empty">{t('leads.emptyCol')}</p>}
+                  {total > items.length && (
+                    <p className="muted pipeline-empty">
+                      {t('leads.colMore', { shown: items.length, total })}
+                    </p>
+                  )}
                   {items.map((l) => (
                     <div key={l.id} className="pipeline-card">
                       <div className="lead-name" title={l.name}>
@@ -199,59 +214,76 @@ export function Leads() {
                       <div className="lead-phone mono">{l.phone}</div>
                       {l.note && <p className="pipeline-note">{l.note}</p>}
                       <div className="muted">{formatDate(l.created_at)}</div>
-                      <div className="pipeline-actions">
-                        {/* HIGH-3: ẩn nút convert khi lead đã thành học viên để tránh tạo trùng */}
-                        {l.status !== 'enrolled' ? (
+                      {canManage && (
+                        <div className="pipeline-actions">
+                          {/* HIGH-3: ẩn nút convert khi lead đã thành học viên để tránh tạo trùng */}
+                          {l.status !== 'enrolled' ? (
+                            <button
+                              className="btn btn-sm btn-primary"
+                              onClick={() => setConverting(l)}
+                              title={t('leads.convertTitle')}
+                            >
+                              {t('leads.convert')}
+                            </button>
+                          ) : (
+                            <span className="badge badge-enrolled">{t('leads.status.enrolled')}</span>
+                          )}
                           <button
-                            className="btn btn-sm btn-primary"
-                            onClick={() => setConverting(l)}
-                            title={t('leads.convertTitle')}
+                            className="btn btn-sm btn-ghost"
+                            onClick={() => setEditing(l)}
+                            title={t('leads.editTitle')}
                           >
-                            {t('leads.convert')}
+                            <Icon name="pencil" size={14} />
+                            {t('actions.edit', { ns: 'common' })}
                           </button>
-                        ) : (
-                          <span className="badge badge-enrolled">{t('leads.status.enrolled')}</span>
-                        )}
-                        <button
-                          className="btn btn-sm btn-ghost"
-                          onClick={() => setEditing(l)}
-                          title={t('leads.editTitle')}
-                        >
-                          <Icon name="pencil" size={14} />
-                          {t('actions.edit', { ns: 'common' })}
-                        </button>
-                        <button
-                          className="btn btn-sm btn-danger-ghost"
-                          onClick={() => setDeleting(l)}
-                          title={t('leads.deleteTitle')}
-                        >
-                          <Icon name="trash" size={14} />
-                          {t('actions.delete', { ns: 'common' })}
-                        </button>
-                        {NEXT_STATUS[col] && (
                           <button
-                            className="btn btn-sm btn-icon"
-                            onClick={() => void moveStatus(l, NEXT_STATUS[col])}
-                            title={t('leads.moveNext', { label: statusLabel(NEXT_STATUS[col]) })}
-                            aria-label={t('leads.moveNextAria', {
-                              name: l.name,
-                              label: statusLabel(NEXT_STATUS[col]),
-                            })}
+                            className="btn btn-sm btn-danger-ghost"
+                            onClick={() => setDeleting(l)}
+                            title={t('leads.deleteTitle')}
                           >
-                            <Icon name="arrow-right" size={15} />
+                            <Icon name="trash" size={14} />
+                            {t('actions.delete', { ns: 'common' })}
                           </button>
-                        )}
-                        {col === 'lost' && (
-                          <button
-                            className="btn btn-sm btn-icon"
-                            onClick={() => void moveStatus(l, 'new')}
-                            title={t('leads.reopen')}
-                            aria-label={t('leads.reopenAria', { name: l.name })}
-                          >
-                            <Icon name="rotate" size={15} />
-                          </button>
-                        )}
-                      </div>
+                          {col !== 'lost' && col !== 'enrolled' && (
+                            <button
+                              className="btn btn-sm btn-icon"
+                              onClick={() => void moveStatus(l, 'lost')}
+                              disabled={movingId === l.id}
+                              title={t('leads.markLost')}
+                              aria-label={t('leads.markLostAria', { name: l.name })}
+                            >
+                              <Icon name="x" size={15} />
+                            </button>
+                          )}
+                          {NEXT_STATUS[col] && (
+                            <button
+                              className="btn btn-sm btn-icon"
+                              onClick={() =>
+                                col === 'trial' ? setConverting(l) : void moveStatus(l, NEXT_STATUS[col])
+                              }
+                              disabled={movingId === l.id}
+                              title={t('leads.moveNext', { label: statusLabel(NEXT_STATUS[col]) })}
+                              aria-label={t('leads.moveNextAria', {
+                                name: l.name,
+                                label: statusLabel(NEXT_STATUS[col]),
+                              })}
+                            >
+                              <Icon name="arrow-right" size={15} />
+                            </button>
+                          )}
+                          {col === 'lost' && (
+                            <button
+                              className="btn btn-sm btn-icon"
+                              onClick={() => void moveStatus(l, 'new')}
+                              disabled={movingId === l.id}
+                              title={t('leads.reopen')}
+                              aria-label={t('leads.reopenAria', { name: l.name })}
+                            >
+                              <Icon name="rotate" size={15} />
+                            </button>
+                          )}
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -260,8 +292,6 @@ export function Leads() {
           </div>
         </div>
       )}
-
-      {pagination && <Pagination pagination={pagination} onChange={(p) => setPage(p)} loading={loading} />}
 
       {editing && (
         <LeadFormModal
@@ -288,9 +318,9 @@ export function Leads() {
               const r = await leadsApi.convert(converting.id, classId ?? null);
               toast(t('leads.toast.converted', { id: r.student_id }), 'success');
               setConverting(null);
-              void load();
+              reload();
             } catch (err) {
-              toast(err instanceof Error ? err.message : t('leads.toast.convertFail'), 'error');
+              toastApiError(toast, err, t('leads.toast.convertFail'));
             }
           }}
         />
@@ -314,13 +344,14 @@ function LeadFormModal({
   const [note, setNote] = useState(initial?.note || '');
   const [busy, setBusy] = useState(false);
   const { errors, refFor, show, clear } = useFieldErrors<'name' | 'phone'>();
+  const dirty =
+    name !== (initial?.name || '') || phone !== (initial?.phone || '') || note !== (initial?.note || '');
 
   const validate = () => {
     const errs: { name?: string; phone?: string } = {};
     if (!name.trim()) errs.name = t('leads.form.errors.nameRequired');
     if (!phone.trim()) errs.phone = t('leads.form.errors.phoneRequired');
-    else if (!/^\+?[0-9][0-9\s.-]{6,13}[0-9]$/.test(phone.trim()))
-      errs.phone = t('leads.form.errors.phoneInvalid');
+    else if (!isValidVNPhone(phone)) errs.phone = t('leads.form.errors.phoneInvalid');
     return show(errs);
   };
 
@@ -336,7 +367,11 @@ function LeadFormModal({
   };
 
   return (
-    <Modal title={initial ? t('leads.form.titleEdit') : t('leads.form.titleNew')} onClose={onClose}>
+    <Modal
+      title={initial ? t('leads.form.titleEdit') : t('leads.form.titleNew')}
+      onClose={onClose}
+      dirty={dirty}
+    >
       <form onSubmit={submit}>
         <div className="form-grid">
           <Field label={t('leads.form.name')} span error={errors.name}>

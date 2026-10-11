@@ -1,6 +1,6 @@
 import crypto from 'crypto';
 import { db } from '../../db';
-import { signToken, AuthUser } from '../../middleware/auth';
+import { signToken, AuthUser, invalidateTokenCheck } from '../../middleware/auth';
 import { AppError } from '../../shared/errors';
 import { env } from '../../config/env';
 
@@ -30,6 +30,8 @@ export interface TokenPair {
   token: string;
   refresh_token: string;
   expires_in: number; // giây
+  /** Payload đã ký vào access token (để route trả thông tin user sau refresh). */
+  user: AuthUser;
 }
 
 interface RefreshRow {
@@ -97,16 +99,26 @@ export async function issueTokenPair(
       meta?.ip ?? null,
       meta?.userAgent ?? null
     );
-  return { token, refresh_token: refreshToken, expires_in: ttlToSeconds(ACCESS_TOKEN_TTL) };
+  return { token, refresh_token: refreshToken, expires_in: ttlToSeconds(ACCESS_TOKEN_TTL), user };
 }
 
 /** Dựng lại AuthUser từ refresh token row (để ký access token mới). */
 async function buildAuthUser(row: RefreshRow): Promise<AuthUser> {
   if (row.kind === 'parent') {
     const p = (await db
-      .prepare('SELECT id, phone, name, center_id, token_version, is_active FROM parents WHERE id = ?')
+      .prepare(
+        'SELECT id, phone, name, center_id, token_version, is_active, must_change_password FROM parents WHERE id = ?'
+      )
       .get(row.parent_id)) as
-      | { id: number; phone: string; name: string; center_id: number | null; token_version: number; is_active: boolean }
+      | {
+          id: number;
+          phone: string;
+          name: string;
+          center_id: number | null;
+          token_version: number;
+          is_active: boolean;
+          must_change_password: boolean;
+        }
       | undefined;
     if (!p) throw AppError.unauthorized('Phiên đăng nhập không còn hiệu lực');
     if (!p.is_active) throw AppError.unauthorized('Tài khoản đã bị khóa');
@@ -119,10 +131,13 @@ async function buildAuthUser(row: RefreshRow): Promise<AuthUser> {
       center_id: p.center_id,
       parent_id: p.id,
       tv: p.token_version,
+      must_change_password: !!p.must_change_password,
     };
   }
   const u = (await db
-    .prepare('SELECT id, username, role, name, center_id, teacher_id, token_version, is_active FROM users WHERE id = ?')
+    .prepare(
+      'SELECT id, username, role, name, center_id, teacher_id, token_version, is_active, must_change_password FROM users WHERE id = ?'
+    )
     .get(row.user_id)) as
     | {
         id: number;
@@ -133,10 +148,14 @@ async function buildAuthUser(row: RefreshRow): Promise<AuthUser> {
         teacher_id: number | null;
         token_version: number;
         is_active: boolean;
+        must_change_password: boolean;
       }
     | undefined;
   if (!u) throw AppError.unauthorized('Phiên đăng nhập không còn hiệu lực');
   if (!u.is_active) throw AppError.unauthorized('Tài khoản đã bị khóa');
+  // Fail-closed: user thường không có trung tâm không được cấp token (tránh scope toàn hệ thống)
+  if (u.role !== 'superadmin' && u.center_id == null)
+    throw AppError.forbidden('Tài khoản chưa được gán trung tâm', 'NO_CENTER');
   return {
     id: u.id,
     username: u.username,
@@ -146,6 +165,7 @@ async function buildAuthUser(row: RefreshRow): Promise<AuthUser> {
     center_id: u.center_id,
     teacher_id: u.teacher_id,
     tv: u.token_version,
+    must_change_password: !!u.must_change_password,
   };
 }
 
@@ -157,8 +177,8 @@ const GRACE_PERIOD_MS = 30 * 1000;
  * - Token không tồn tại / hết hạn -> 401.
  * - Token đã bị revoke do rotation trong vòng 30s (grace) -> cấp cặp mới,
  *   KHÔNG thu hồi chuỗi (chống logout oan khi 2 tab refresh đồng thời).
- * - Token đã bị revoke quá 30s (hoặc revoke không phải do rotation: logout,
- *   revoke-all) -> coi là trộm -> thu hồi toàn bộ chuỗi của user + 401.
+ * - Token đã bị revoke do rotation quá 30s -> coi là trộm -> thu hồi toàn bộ chuỗi của user + 401.
+ * - Token bị revoke bởi logout/revoke-all -> 401 (không thu hồi chuỗi).
  */
 export async function rotateRefreshToken(
   refreshToken: string,
@@ -182,10 +202,11 @@ export async function rotateRefreshToken(
     // Không claim được: kiểm tra xem là token không tồn tại hay đã bị dùng lại (theft)
     const row = (await db.prepare('SELECT * FROM refresh_tokens WHERE token_hash = ?').get(h)) as
       RefreshRow | undefined;
-    if (row?.revoked_at) {
-      const withinGrace =
-        row.replaced_by !== null &&
-        Date.now() - new Date(row.revoked_at).getTime() <= GRACE_PERIOD_MS;
+    // Chỉ token bị revoke DO ROTATION (replaced_by != NULL) mới là tín hiệu trộm. Token bị revoke
+    // bởi logout/revoke-all chỉ là token hết hiệu lực: 401, KHÔNG thu hồi chuỗi — nếu không, thiết bị
+    // vừa bị "đăng xuất mọi nơi" gọi refresh sẽ đá luôn phiên hiện tại của chính chủ.
+    if (row?.revoked_at && row.replaced_by !== null) {
+      const withinGrace = Date.now() - new Date(row.revoked_at).getTime() <= GRACE_PERIOD_MS;
       if (withinGrace) {
         // Request đồng thời hợp lệ: cấp cặp mới thay vì thu hồi chuỗi.
         // (Không trả lại cặp đã cấp ở replaced_by vì DB chỉ lưu hash, không lưu token thô.)
@@ -210,32 +231,48 @@ export async function revokeRefreshToken(refreshToken: string): Promise<void> {
     .run(hashToken(refreshToken));
 }
 
+/*
+ * SEC-12: revoke-all còn xóa replaced_by của các token đã rotate — nếu không, token vừa rotate
+ * (< 30s) vẫn lọt nhánh grace và được cấp cặp mới SAU khi user đã "đăng xuất mọi nơi"/đổi mật khẩu.
+ */
+
 /** Thu hồi toàn bộ refresh token của 1 user (đổi mật khẩu / nghi trộm). */
 export async function revokeAllForOwner(kind: 'staff' | 'parent', ownerId: number): Promise<void> {
-  const col = kind === 'parent' ? 'parent_id' : 'user_id';
-  await db
-    .prepare(
-      `UPDATE refresh_tokens SET revoked_at = NOW() WHERE kind = ? AND ${col} = ? AND revoked_at IS NULL`
-    )
-    .run(kind, ownerId);
+  await revokeAllForOwnerExcept(kind, ownerId);
 }
 
-/** Thu hồi mọi session trừ token hiện tại (dùng khi đổi mật khẩu). */
+/** Thu hồi mọi session trừ token hiện tại (dùng khi đổi mật khẩu / đăng xuất thiết bị khác). */
 export async function revokeAllForOwnerExcept(
   kind: 'staff' | 'parent',
   ownerId: number,
   exceptToken?: string
 ): Promise<void> {
   const col = kind === 'parent' ? 'parent_id' : 'user_id';
-  if (exceptToken) {
-    const hash = hashToken(exceptToken);
-    await db
-      .prepare(
-        `UPDATE refresh_tokens SET revoked_at = NOW()
-         WHERE kind = ? AND ${col} = ? AND revoked_at IS NULL AND token_hash != ?`
-      )
-      .run(kind, ownerId, hash);
-  } else {
-    await revokeAllForOwner(kind, ownerId);
-  }
+  await db
+    .prepare(
+      `UPDATE refresh_tokens SET revoked_at = COALESCE(revoked_at, NOW()), replaced_by = NULL
+       WHERE kind = ? AND ${col} = ? AND (revoked_at IS NULL OR replaced_by IS NOT NULL) AND token_hash != ?`
+    )
+    .run(kind, ownerId, exceptToken ? hashToken(exceptToken) : '');
+}
+
+/**
+ * Đăng xuất mọi thiết bị KHÁC: thu hồi refresh token trừ token hiện tại, tăng token_version
+ * (access token bị lộ chết ngay) và trả access token mới để phiên hiện tại vẫn dùng tiếp.
+ */
+export async function logoutOtherSessions(user: AuthUser, currentRefreshToken?: string): Promise<string> {
+  const isParent = user.kind === 'parent' || user.role === 'parent';
+  const kind = isParent ? 'parent' : 'staff';
+  const ownerId = isParent ? (user.parent_id ?? user.id) : user.id;
+  await revokeAllForOwnerExcept(kind, ownerId, currentRefreshToken);
+  const row = (await db
+    .prepare(
+      `UPDATE ${isParent ? 'parents' : 'users'} SET token_version = token_version + 1 WHERE id = ? RETURNING token_version`
+    )
+    .get(ownerId)) as { token_version: number } | undefined;
+  if (!row) throw AppError.unauthorized('Phiên đăng nhập không còn hiệu lực');
+  invalidateTokenCheck(kind, ownerId);
+  // Payload đã verify chứa iat/exp — bỏ đi trước khi ký lại (jwt.sign từ chối exp + expiresIn)
+  const { iat: _iat, exp: _exp, ...rest } = user as AuthUser & { iat?: number; exp?: number };
+  return signToken({ ...rest, tv: row.token_version }, ACCESS_TOKEN_TTL);
 }

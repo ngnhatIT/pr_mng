@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { peopleApi } from './people.api';
 import { classesApi, type ClassItem } from '../classes/classes.api';
@@ -8,12 +8,13 @@ import { Skeleton, TableSkeleton } from '../../shared/components/Skeleton';
 import { EmptyCell } from '../../shared/components/EmptyCell';
 import { Icon } from '../../shared/components/icons';
 import { formatDate, type Teacher } from '../../shared/types';
+import { fetchAllPages } from '../../shared/components/Pagination';
+import { useGoBack } from '../../shared/hooks/useGoBack';
 import './Teachers.css';
 
 export function TeacherDetail() {
   const { t } = useTranslation(['people', 'classes', 'common']);
   const { id } = useParams<{ id: string }>();
-  const navigate = useNavigate();
   const [teacher, setTeacher] = useState<Teacher | null>(null);
   const [classes, setClasses] = useState<ClassItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -26,10 +27,10 @@ export function TeacherDetail() {
       const tid = Number(id);
       const [tch, cls] = await Promise.all([
         peopleApi.getTeacherDetail(tid),
-        classesApi.list('', { limit: 100 }, tid),
+        fetchAllPages((p) => classesApi.list('', p, tid)),
       ]);
       setTeacher(tch);
-      setClasses(cls.data);
+      setClasses(cls);
     } catch (err) {
       const code = err instanceof Error ? (err as Error & { code?: string }).code : undefined;
       setError(code === 'NOT_FOUND' ? 'notFound' : 'load');
@@ -42,12 +43,7 @@ export function TeacherDetail() {
     void load();
   }, [load]);
 
-  const goBack = () => {
-    // react-router lưu idx trong history.state; idx = 0 nghĩa là vào thẳng bằng URL.
-    const idx = (window.history.state as { idx?: number } | null)?.idx;
-    if (typeof idx === 'number' && idx > 0) navigate(-1);
-    else navigate('/app/teachers', { replace: true });
-  };
+  const goBack = useGoBack('/app/teachers');
 
   if (loading) {
     return (

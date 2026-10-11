@@ -19,7 +19,12 @@ export function useToast(): (message: string, type?: ToastType) => void {
 
 /**
  * Toast lỗi từ Error API: tự gắn mã lỗi (request_id) để user báo support.
- * Dùng thay cho toast(err.message, 'error') ở các catch.
+ * Dùng thay cho toast(err.message, 'error') ở các catch: toastApiError(toast, err, t('...saveError')).
+ *
+ * UX-2: server gửi hầu hết quy tắc nghiệp vụ dưới mã chung (BAD_REQUEST, CONFLICT, ...) kèm câu cụ thể
+ * ("Số tiền vượt quá số còn nợ ...") -> câu của server THẮNG. Server chỉ nói tiếng Việt, nên khi UI là
+ * tiếng Anh mới ưu tiên text theo mã (api.errors.*). Không có message (lỗi lạ) -> fallback của caller.
+ * Lỗi mạng/timeout/502-504: api() đã đổi message thành câu chung đa ngôn ngữ (api.network/api.timeout/api.error).
  */
 export function toastApiError(
   toast: (message: string, type?: ToastType) => void,
@@ -27,14 +32,13 @@ export function toastApiError(
   fallback: string
 ): void {
   const e = err as (Error & { requestId?: string; code?: string }) | undefined;
-  // Ưu tiên thông điệp theo mã lỗi (đa ngôn ngữ); chưa có key thì giữ message gốc của server
   const codeKey = e?.code ? `api.errors.${e.code}` : '';
-  const msg =
-    codeKey && i18n.exists(codeKey, { ns: 'common' })
-      ? String(i18n.t(codeKey, { ns: 'common' }))
-      : e instanceof Error
-        ? e.message
-        : fallback;
+  const mapped =
+    codeKey && i18n.exists(codeKey, { ns: 'common' }) ? String(i18n.t(codeKey, { ns: 'common' })) : '';
+  const serverMsg = e instanceof Error ? e.message : '';
+  // 5xx (INTERNAL_ERROR): câu server chỉ là "Lỗi máy chủ" -> dùng câu chung thân thiện theo mã
+  const preferMapped = i18n.language === 'en' || e?.code === 'INTERNAL_ERROR';
+  const msg = (preferMapped ? mapped || serverMsg : serverMsg || mapped) || fallback;
   const suffix = e?.requestId ? ` (${i18n.t('errorCode', { ns: 'common' })}: ${e.requestId})` : '';
   toast(`${msg}${suffix}`, 'error');
 }

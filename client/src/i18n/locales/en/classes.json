@@ -66,7 +66,11 @@
       "label": "Session topic",
       "placeholder": "E.g.: Present simple tense..."
     },
-    "desc": "Pick a class and session, then record each student's status"
+    "desc": "Pick a class and session, then record each student's status",
+    "discard": {
+      "title": "Discard unsaved attendance?",
+      "message": "You have unsaved attendance marks or notes. Switching class/session will discard them."
+    }
   },
   "classStatus": {
     "active": "Open",
@@ -167,9 +171,12 @@
       "nameRequired": "Please enter the class name",
       "endBeforeStart": "End date must be after start date",
       "feeInvalid": "Tuition fee must be a non-negative number",
-      "maxStudentsInvalid": "Max students must be a whole number of 1 or more"
+      "maxStudentsInvalid": "Max students must be a whole number of 1 or more",
+      "slotEndBeforeStart": "End time must be after start time"
     },
-    "dayOfWeekAria": "Day of week"
+    "dayOfWeekAria": "Day of week",
+    "startTimeAria": "Start time",
+    "endTimeAria": "End time"
   },
   "rooms": {
     "add": "Add room",
@@ -221,14 +228,5 @@
     "deleted": "Class deleted",
     "loadError": "Could not load class list, please try again",
     "saved": "Class saved"
-  },
-  "days": {
-    "2": "Monday",
-    "3": "Tuesday",
-    "4": "Wednesday",
-    "5": "Thursday",
-    "6": "Friday",
-    "7": "Saturday",
-    "8": "Sunday"
   }
 }

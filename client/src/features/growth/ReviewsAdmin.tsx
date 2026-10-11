@@ -1,12 +1,14 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { reviewsApi } from './growth.api';
-import { useToast } from '../../shared/ui/toast';
+import { toastApiError, useToast } from '../../shared/ui/toast';
 import { ConfirmDialog } from '../../shared/components/Modal';
 import { PageHeader } from '../../shared/components/PageHeader';
-import { EmptyState } from '../../shared/components/EmptyState';
+import { EmptyState, LoadError } from '../../shared/components/EmptyState';
 import { CardGridSkeleton } from '../../shared/components/Skeleton';
-import { Pagination, type PaginationMeta } from '../../shared/components/Pagination';
+import { Pagination, clampPage } from '../../shared/components/Pagination';
+import { useLoad } from '../../shared/hooks/useLoad';
+import { useUrlState } from '../../shared/hooks/useUrlState';
 import { Icon } from '../../shared/components/icons';
 import { ReviewItem, formatDate } from '../../shared/types';
 import './Growth.css';
@@ -25,35 +27,25 @@ function Stars({ rating }: { rating: number }) {
 
 export function ReviewsAdmin() {
   const { t } = useTranslation(['ops', 'common']);
-  const [tab, setTab] = useState<'pending' | 'approved'>('pending');
-  const [reviews, setReviews] = useState<ReviewItem[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [q, setQ] = useUrlState({ tab: 'pending', page: '1' });
+  const tab: 'pending' | 'approved' = q.tab === 'approved' ? 'approved' : 'pending';
+  const page = Number(q.page) || 1;
   const [deleting, setDeleting] = useState<ReviewItem | null>(null);
-  const [page, setPage] = useState(1);
-  const [pagination, setPagination] = useState<PaginationMeta | null>(null);
   const toast = useToast();
 
-  const switchTab = (tb: 'pending' | 'approved') => {
-    setTab(tb);
-    setPage(1);
-  };
+  const switchTab = (tb: 'pending' | 'approved') => setQ({ tab: tb, page: '1' });
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    try {
-      const res = await reviewsApi.list(tab, { page });
-      setReviews(res.data);
-      setPagination(res.pagination);
-    } catch (err) {
-      toast(err instanceof Error ? err.message : t('reviews.toast.loadFail'), 'error');
-    } finally {
-      setLoading(false);
-    }
-  }, [tab, page, toast, t]);
-
+  const { data, loading, error, reload } = useLoad(() => reviewsApi.list(tab, { page }), [tab, page]);
+  const reviews = data?.data ?? [];
+  const pagination = data?.pagination ?? null;
   useEffect(() => {
-    void load();
-  }, [load]);
+    if (!data) return;
+    const p = clampPage(page, data.pagination.totalPages);
+    if (p !== page) setQ({ page: String(p) });
+  }, [data]); // chỉ kéo trang khi có kết quả mới
+  useEffect(() => {
+    if (error) toastApiError(toast, error, t('reviews.toast.loadFail'));
+  }, [error, toast, t]);
 
   // Id review đang duyệt/từ chối: chống bấm 2 lần (pattern như Tuition moderate)
   const [busyId, setBusyId] = useState<number | null>(null);
@@ -65,9 +57,9 @@ export function ReviewsAdmin() {
       if (action === 'approve') await reviewsApi.approve(r.id);
       else await reviewsApi.reject(r.id);
       toast(action === 'approve' ? t('reviews.toast.approved') : t('reviews.toast.rejected'), 'success');
-      void load();
+      reload();
     } catch (err) {
-      toast(err instanceof Error ? err.message : t('reviews.toast.moderateFail'), 'error');
+      toastApiError(toast, err, t('reviews.toast.moderateFail'));
     } finally {
       setBusyId(null);
     }
@@ -79,9 +71,9 @@ export function ReviewsAdmin() {
       await reviewsApi.remove(deleting.id);
       toast(t('reviews.toast.deleted'), 'success');
       setDeleting(null);
-      void load();
+      reload();
     } catch (err) {
-      toast(err instanceof Error ? err.message : t('reviews.toast.deleteFail'), 'error');
+      toastApiError(toast, err, t('reviews.toast.deleteFail'));
     }
   };
 
@@ -89,14 +81,24 @@ export function ReviewsAdmin() {
     <div className="page">
       <PageHeader title={t('reviews.title')} desc={t('reviews.desc')} />
 
-      <div className="tabs">
-        <button className={`tab${tab === 'pending' ? ' active' : ''}`} onClick={() => switchTab('pending')}>
+      <div className="tabs" role="tablist">
+        <button
+          role="tab"
+          aria-selected={tab === 'pending'}
+          className={`tab${tab === 'pending' ? ' active' : ''}`}
+          onClick={() => switchTab('pending')}
+        >
           {t('reviews.tabs.pending')}
           {tab === 'pending' && pagination && pagination.total > 0 && (
             <span className="tab-count">{pagination.total}</span>
           )}
         </button>
-        <button className={`tab${tab === 'approved' ? ' active' : ''}`} onClick={() => switchTab('approved')}>
+        <button
+          role="tab"
+          aria-selected={tab === 'approved'}
+          className={`tab${tab === 'approved' ? ' active' : ''}`}
+          onClick={() => switchTab('approved')}
+        >
           {t('reviews.tabs.approved')}
           {tab === 'approved' && pagination && pagination.total > 0 && (
             <span className="tab-count">{pagination.total}</span>
@@ -104,8 +106,10 @@ export function ReviewsAdmin() {
         </button>
       </div>
 
-      {loading && reviews.length === 0 ? (
+      {loading && !data ? (
         <CardGridSkeleton count={3} />
+      ) : error && !data ? (
+        <LoadError onRetry={reload} />
       ) : reviews.length === 0 ? (
         <EmptyState
           icon="star"
@@ -167,7 +171,9 @@ export function ReviewsAdmin() {
         </div>
       )}
 
-      {pagination && <Pagination pagination={pagination} onChange={(p) => setPage(p)} loading={loading} />}
+      {pagination && (
+        <Pagination pagination={pagination} onChange={(p) => setQ({ page: String(p) })} loading={loading} />
+      )}
 
       {deleting && (
         <ConfirmDialog

@@ -1,5 +1,5 @@
 import { Router, Response } from 'express';
-import { AuthRequest, requireAuth, reqCenterId } from '../../middleware/auth';
+import { AuthRequest, requireAuth, reqCenterId, requireCenterId } from '../../middleware/auth';
 import { requirePermission } from '../authorization/authorization.middleware';
 import { asyncHandler } from '../../shared/http';
 import { validate, v, paramId } from '../../shared/validate';
@@ -35,21 +35,20 @@ async function handleIpn(req: AuthRequest, res: Response) {
     ...(req.query as Record<string, string | undefined>),
     ...(req.body as Record<string, string | undefined>),
   };
-  const result = await paymentService.handleVnpayIpn(
-    query as Record<string, string | string[] | undefined>
-  );
+  const result = await paymentService.handleVnpayIpn(query as Record<string, string | string[] | undefined>);
   res.json(result);
 }
 router.get('/vnpay-ipn', asyncHandler(handleIpn));
 router.post('/vnpay-ipn', asyncHandler(handleIpn));
 
 /* --------------------- Từ đây yêu cầu đăng nhập --------------------- */
+// AUTHZ-1: service thao tác toàn trung tâm -> mọi quyền tiền yêu cầu scope 'center' (không nhận 'own')
 router.use(requireAuth);
 
 /** Các khoản phụ huynh báo đã chuyển khoản, chờ nhân viên duyệt (staff) */
 router.get(
   '/pending',
-  requirePermission('payments.approve'),
+  requirePermission('payments.approve', 'center'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const { page, limit } = req.query as { page?: string; limit?: string };
     res.json(await paymentService.listPendingPayments(reqCenterId(req), { page, limit }));
@@ -59,7 +58,7 @@ router.get(
 /** Duyệt khoản thanh toán chờ (staff) */
 router.post(
   '/pending/:id/approve',
-  requirePermission('payments.approve'),
+  requirePermission('payments.approve', 'center'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const { status } = await paymentService.approvePendingPayment(
       reqCenterId(req),
@@ -73,7 +72,7 @@ router.post(
 /** Từ chối khoản thanh toán chờ (staff) */
 router.post(
   '/pending/:id/reject',
-  requirePermission('payments.approve'),
+  requirePermission('payments.approve', 'center'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     await paymentService.rejectPendingPayment(reqCenterId(req), paramId(req.params), actorFromReq(req));
     res.json({ ok: true });
@@ -83,16 +82,16 @@ router.post(
 /** Xem cấu hình thanh toán (admin) — hashsecret được che */
 router.get(
   '/config',
-  requirePermission('payment_config.manage'),
+  requirePermission('payment_config.manage', 'center'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
-    res.json(await paymentService.getPaymentConfig(reqCenterId(req)));
+    res.json(await paymentService.getPaymentConfig(requireCenterId(req)));
   })
 );
 
 /** Lưu cấu hình thanh toán (admin) */
 router.put(
   '/config',
-  requirePermission('payment_config.manage'),
+  requirePermission('payment_config.manage', 'center'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const body = validate(req.body, {
       pay_bank_code: v.string({ max: 20, label: 'Mã ngân hàng' }),
@@ -104,7 +103,7 @@ router.put(
       referral_reward_referrer: v.number({ min: 0, label: 'Thưởng người giới thiệu' }),
       referral_reward_referred: v.number({ min: 0, label: 'Thưởng người được giới thiệu' }),
     });
-    await paymentService.savePaymentConfig(reqCenterId(req), body as Record<string, unknown>);
+    await paymentService.savePaymentConfig(requireCenterId(req), body as Record<string, unknown>);
     res.json({ ok: true });
   })
 );

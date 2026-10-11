@@ -51,11 +51,10 @@
   overflow: hidden;
   background:
     radial-gradient(240px 240px at 80% 18%, rgba(36, 86, 224, 0.14), transparent 70%),
-    radial-gradient(200px 200px at 18% 82%, rgba(13, 148, 136, 0.12), transparent 70%),
-    var(--primary-soft);
+    radial-gradient(200px 200px at 18% 82%, rgba(13, 148, 136, 0.12), transparent 70%), var(--primary-soft);
 }
 .landing-hero-visual::before {
-  content: "";
+  content: '';
   position: absolute;
   inset: 0;
   background-image: radial-gradient(rgba(36, 86, 224, 0.16) 1.2px, transparent 1.3px);
@@ -180,6 +179,29 @@
   }
 }
 
+/* B-5: ≤420px không đủ 1 hàng (logo + 2 CTA + switch tràn ~5px ở 375, logo bị bóp về 0):
+   hàng 1 = logo + switch ngôn ngữ/theme, hàng 2 = 2 CTA chia đôi chiều ngang. */
+@media (max-width: 420px) {
+  .landing-nav {
+    flex-wrap: wrap;
+    row-gap: 8px;
+  }
+  .landing-nav-links {
+    display: contents;
+  }
+  .landing-brand {
+    flex: 1 1 auto;
+  }
+  .landing-nav .theme-lang-switch {
+    order: 1;
+  }
+  .landing-nav-links > .btn {
+    order: 2;
+    flex: 1 1 0;
+    justify-content: center;
+  }
+}
+
 /* 360px: CTA hero xếp dọc full-width, dễ bấm bằng ngón tay */
 @media (max-width: 480px) {
   .landing-hero-cta {
@@ -243,8 +265,7 @@
 [data-theme='dark'] .landing-hero-visual {
   background:
     radial-gradient(240px 240px at 80% 18%, rgba(107, 148, 255, 0.2), transparent 70%),
-    radial-gradient(200px 200px at 18% 82%, rgba(45, 212, 191, 0.14), transparent 70%),
-    #141b30;
+    radial-gradient(200px 200px at 18% 82%, rgba(45, 212, 191, 0.14), transparent 70%), #141b30;
 }
 [data-theme='dark'] .landing-hero-visual::before {
   background-image: radial-gradient(rgba(107, 148, 255, 0.22) 1.2px, transparent 1.3px);

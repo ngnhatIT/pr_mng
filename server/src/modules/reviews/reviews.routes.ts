@@ -1,27 +1,13 @@
 import { Router, Response } from 'express';
-import { db } from '../../db';
 import { AuthRequest, reqCenterId } from '../../middleware/auth';
 import { requirePermission } from '../authorization/authorization.middleware';
 import { asyncHandler } from '../../shared/http';
 import { paramId } from '../../shared/validate';
-import { audit, actorFromReq } from '../../shared/audit';
-import { listReviews } from './reviews.service';
+import { actorFromReq } from '../../shared/audit';
+import { listReviews, setReviewStatus, deleteReview } from './reviews.service';
 
 const router = Router();
 router.use(requirePermission('reviews.view'));
-
-interface ReviewRow {
-  id: number;
-  center_id: number | null;
-}
-
-/** Lấy review và kiểm tra thuộc trung tâm của user */
-async function getReview(id: number, cid: number | null): Promise<ReviewRow | undefined> {
-  const row = (await db.prepare('SELECT * FROM reviews WHERE id = ?').get(id)) as ReviewRow | undefined;
-  if (!row) return undefined;
-  if (cid !== null && row.center_id !== cid) return undefined;
-  return row;
-}
 
 /* ------------------------- Danh sách đánh giá ------------------------- */
 
@@ -49,24 +35,7 @@ router.post(
   '/:id/approve',
   requirePermission('reviews.manage'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
-    const cid = reqCenterId(req);
-    const id = paramId(req.params);
-    const review = await getReview(id, cid);
-    if (!review) {
-      res.status(404).json({ error: 'Không tìm thấy đánh giá', code: 'NOT_FOUND' });
-      return;
-    }
-    await db.prepare("UPDATE reviews SET status = 'approved' WHERE id = ?").run(id);
-    await audit({
-      centerId: cid,
-      actor: actorFromReq(req),
-      action: 'approve',
-      entity: 'reviews',
-      entityId: id,
-      summary: `Duyệt đánh giá #${id}`,
-    });
-    const row = await db.prepare('SELECT * FROM reviews WHERE id = ?').get(id);
-    res.json(row);
+    res.json(await setReviewStatus(reqCenterId(req), paramId(req.params), 'approved', actorFromReq(req)));
   })
 );
 
@@ -75,16 +44,7 @@ router.post(
   '/:id/reject',
   requirePermission('reviews.manage'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
-    const cid = reqCenterId(req);
-    const id = paramId(req.params);
-    const review = await getReview(id, cid);
-    if (!review) {
-      res.status(404).json({ error: 'Không tìm thấy đánh giá', code: 'NOT_FOUND' });
-      return;
-    }
-    await db.prepare("UPDATE reviews SET status = 'rejected' WHERE id = ?").run(id);
-    const row = await db.prepare('SELECT * FROM reviews WHERE id = ?').get(id);
-    res.json(row);
+    res.json(await setReviewStatus(reqCenterId(req), paramId(req.params), 'rejected', actorFromReq(req)));
   })
 );
 
@@ -95,14 +55,7 @@ router.delete(
   '/:id',
   requirePermission('reviews.manage'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
-    const cid = reqCenterId(req);
-    const id = paramId(req.params);
-    const review = await getReview(id, cid);
-    if (!review) {
-      res.status(404).json({ error: 'Không tìm thấy đánh giá', code: 'NOT_FOUND' });
-      return;
-    }
-    await db.prepare('DELETE FROM reviews WHERE id = ?').run(id);
+    await deleteReview(reqCenterId(req), paramId(req.params), actorFromReq(req));
     res.json({ ok: true });
   })
 );

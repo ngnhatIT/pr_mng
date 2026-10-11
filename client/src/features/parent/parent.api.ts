@@ -38,7 +38,7 @@ export interface LeaveForm {
 
 export const parentApi = {
   login: (phone: string, password: string) =>
-    http.post<{ token: string; parent: ParentUser }>('/parent/login', {
+    http.post<{ token: string; parent: ParentUser; must_change_password?: boolean }>('/parent/login', {
       phone,
       password,
     }),
@@ -78,7 +78,12 @@ export const parentApi = {
   submitQuiz: (
     homeworkId: number,
     studentId: number,
-    answers: { question_id: number; option_id?: number | null; option_ids?: number[]; answer_text?: string | null }[]
+    answers: {
+      question_id: number;
+      option_id?: number | null;
+      option_ids?: number[];
+      answer_text?: string | null;
+    }[]
   ) =>
     http.post<{ score: number; max_score: number; attempt_id: number; attempt_no: number }>(
       `/parent/homework/${homeworkId}/quiz/submit`,
@@ -138,7 +143,12 @@ export interface QuizAttemptDetail {
   question: string;
   qtype: 'single' | 'multiple' | 'truefalse' | 'essay';
   points: number;
-  options: { id: number; text: string; is_correct: boolean; chosen: boolean }[];
+  options: {
+    id: number;
+    text: string;
+    /** null = đáp án còn ẩn (chưa qua hạn chót) */ is_correct: boolean | null;
+    chosen: boolean;
+  }[];
   answer_text: string | null;
   correct: boolean | null;
   /** YC2: điểm chấm tay câu essay (null = chưa chấm). */
@@ -149,5 +159,10 @@ export interface QuizAttemptDetail {
   question_id: number;
   question: string;
   points: number;
-  options: { id: number; text: string; is_correct: boolean; chosen: boolean }[];
+  options: {
+    id: number;
+    text: string;
+    /** null = đáp án còn ẩn (chưa qua hạn chót) */ is_correct: boolean | null;
+    chosen: boolean;
+  }[];
 }

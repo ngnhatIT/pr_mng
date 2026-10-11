@@ -44,7 +44,9 @@ after(async () => {
 describe('seed - SEED_DEMO gate', () => {
   beforeEach(async () => {
     await resetTestDb();
-    delete process.env.SEED_DEMO;
+    // 'false' chứ không delete: env.ts nạp lại server/.env khi bust cache, dotenv chỉ
+    // điền biến CHƯA có — delete thì SEED_DEMO=true trong .env dev sẽ quay lại.
+    process.env.SEED_DEMO = 'false';
   });
 
   it('SEED_DEMO unset -> seedDatabase() không tạo gì (không có root/123456)', async () => {
@@ -60,5 +62,17 @@ describe('seed - SEED_DEMO gate', () => {
     assert.equal(await userExists('root'), true, 'phải tạo root');
     assert.equal(await userExists('teacher1'), true, 'phải tạo teacher1');
     assert.equal(await userExists('admin'), true, 'phải tạo admin demo');
+    // DATA-21: hóa đơn demo phải có center_id
+    const r = (await db.prepare('SELECT COUNT(*) AS c FROM invoices WHERE center_id IS NULL').get()) as {
+      c: number;
+    };
+    assert.equal(r.c, 0);
+  });
+
+  it('SEED_DEMO=true nhưng DB đã có trung tâm thật -> không seed', async () => {
+    process.env.SEED_DEMO = 'true';
+    await db.prepare("INSERT INTO centers (name, subdomain) VALUES ('TT thật', 'that')").run();
+    await freshSeedDatabase()();
+    assert.equal(await userExists('admin'), false);
   });
 });

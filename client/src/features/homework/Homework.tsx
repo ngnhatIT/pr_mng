@@ -4,15 +4,16 @@ import type { TFunction } from 'i18next';
 import { homeworkApi, type HomeworkStats, type HomeworkFilters } from './homework.api';
 import { getUser } from '../../shared/api/client';
 import { ClassItem } from '../classes/classes.api';
-import { useToast } from '../../shared/ui/toast';
+import { toastApiError, useToast } from '../../shared/ui/toast';
 import { ConfirmDialog } from '../../shared/components/Modal';
 import { PageHeader } from '../../shared/components/PageHeader';
-import { EmptyState } from '../../shared/components/EmptyState';
+import { EmptyState, LoadError } from '../../shared/components/EmptyState';
 import { TableSkeleton } from '../../shared/components/Skeleton';
-import { Pagination, type PaginationMeta } from '../../shared/components/Pagination';
+import { Pagination } from '../../shared/components/Pagination';
 import { Icon } from '../../shared/components/icons';
 import { HomeworkItem, formatDate, todayVN } from '../../shared/types';
-import { useDebounce } from '../../shared/hooks/useDebounce';
+import { useLoad } from '../../shared/hooks/useLoad';
+import { useUrlSearch, useUrlState } from '../../shared/hooks/useUrlState';
 import './Homework.css';
 import { HomeworkFormModal } from './HomeworkFormModal';
 import { GradeModal } from './GradeModal';
@@ -36,13 +37,14 @@ type StatusTab = '' | 'published' | 'draft' | 'scheduled';
 export function Homework() {
   const { t } = useTranslation(['homework', 'common']);
   const [classes, setClasses] = useState<ClassItem[]>([]);
-  const [items, setItems] = useState<HomeworkItem[]>([]);
   const [stats, setStats] = useState<HomeworkStats | null>(null);
-  const [filters, setFilters] = useState<HomeworkFilters>({});
-  const [search, setSearch] = useState('');
-  const debouncedSearch = useDebounce(search, 400);
-  const [statusTab, setStatusTab] = useState<StatusTab>('');
-  const [loading, setLoading] = useState(false);
+  // UX-6: tab/bộ lọc/trang nằm trên URL -> reload hay Back vẫn giữ đúng chỗ
+  const [q, setQ] = useUrlState({ search: '', class_id: '', kind: '', due: '', status: '', page: '1' });
+  // B-2: chữ đang gõ ở state cục bộ, URL nhận giá trị đã debounce (fetch theo q.search)
+  const [search, setSearch] = useUrlSearch(q.search, (v) => setQ({ search: v, page: '1' }), 400);
+  const debouncedSearch = q.search;
+  const statusTab = q.status as StatusTab;
+  const page = Number(q.page) || 1;
   const [editing, setEditing] = useState<HomeworkItem | null | 'new'>(null);
   const [deleting, setDeleting] = useState<HomeworkItem | null>(null);
   const [unpublishing, setUnpublishing] = useState<HomeworkItem | null>(null);
@@ -51,8 +53,6 @@ export function Homework() {
   const [showBank, setShowBank] = useState(false);
   const [showAnalytics, setShowAnalytics] = useState(false);
   const [viewSubs, setViewSubs] = useState<HomeworkItem | null>(null);
-  const [page, setPage] = useState(1);
-  const [pagination, setPagination] = useState<PaginationMeta | null>(null);
   const toast = useToast();
   // Chống bấm đúp nút hành động trên từng dòng (pattern busyId của Tuition)
   const [busyId, setBusyId] = useState<number | null>(null);
@@ -69,34 +69,34 @@ export function Homework() {
     homeworkApi
       .listClasses()
       .then((c) => setClasses(c.filter((x) => x.status === 'active')))
-      .catch((err: Error) => toast(err.message, 'error'));
+      .catch((err: unknown) => toastApiError(toast, err, t('states.loadError', { ns: 'common' })));
     homeworkApi
       .stats()
       .then(setStats)
       .catch(() => {});
   }, [toast]);
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    try {
-      const res = await homeworkApi.list({ ...filters, status: statusTab || undefined }, { page });
-      setItems(res.data);
-      setPagination(res.pagination);
-    } catch (err) {
-      toast(err instanceof Error ? err.message : t('toast.loadFail'), 'error');
-    } finally {
-      setLoading(false);
-    }
-  }, [filters, statusTab, page, toast, t]);
-
+  // useLoad bỏ qua response cũ về muộn (đổi filter/tab/trang liên tục)
+  const filters: HomeworkFilters = {
+    class_id: q.class_id || undefined,
+    kind: (q.kind || undefined) as HomeworkFilters['kind'],
+    due: (q.due || undefined) as HomeworkFilters['due'],
+    search: debouncedSearch.trim() || undefined,
+  };
+  const {
+    data,
+    loading,
+    error,
+    reload: load,
+  } = useLoad(
+    () => homeworkApi.list({ ...filters, status: statusTab || undefined }, { page }),
+    [q.class_id, q.kind, q.due, debouncedSearch, statusTab, page]
+  );
+  const items = data?.data ?? [];
+  const pagination = data?.pagination ?? null;
   useEffect(() => {
-    setFilters((f) => ({ ...f, search: debouncedSearch.trim() || undefined }));
-    setPage(1);
-  }, [debouncedSearch]);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
+    if (error) toastApiError(toast, error, t('toast.loadFail'));
+  }, [error, toast, t]);
 
   const refreshStats = useCallback(() => {
     homeworkApi
@@ -107,7 +107,7 @@ export function Homework() {
 
   const onSaved = () => {
     setEditing(null);
-    void load();
+    load();
     refreshStats();
   };
 
@@ -117,10 +117,10 @@ export function Homework() {
       await homeworkApi.remove(deleting.id);
       toast(t('toast.deleted'), 'success');
       setDeleting(null);
-      void load();
+      load();
       refreshStats();
     } catch (err) {
-      toast(err instanceof Error ? err.message : t('toast.deleteFail'), 'error');
+      toastApiError(toast, err, t('toast.deleteFail'));
     }
   };
 
@@ -131,9 +131,9 @@ export function Homework() {
       const res = await homeworkApi.reuse(h.id);
       toast(t('toast.reused'), 'success');
       setEditing(res.created);
-      void load();
+      load();
     } catch (err) {
-      toast(err instanceof Error ? err.message : t('toast.reuseFail'), 'error');
+      toastApiError(toast, err, t('toast.reuseFail'));
     } finally {
       setBusyId(null);
     }
@@ -145,10 +145,10 @@ export function Homework() {
     try {
       await homeworkApi.publish(h.id);
       toast(t('toast.published'), 'success');
-      void load();
+      load();
       refreshStats();
     } catch (err) {
-      toast(err instanceof Error ? err.message : t('toast.publishFail'), 'error');
+      toastApiError(toast, err, t('toast.publishFail'));
     } finally {
       setBusyId(null);
     }
@@ -165,17 +165,15 @@ export function Homework() {
     try {
       await homeworkApi.unpublish(h.id);
       toast(t('toast.unpublished'), 'success');
-      void load();
+      load();
       refreshStats();
     } catch (err) {
-      toast(err instanceof Error ? err.message : t('toast.unpublishFail'), 'error');
+      toastApiError(toast, err, t('toast.unpublishFail'));
     }
   };
 
-  const setFilter = (patch: Partial<HomeworkFilters>) => {
-    setFilters((f) => ({ ...f, ...patch }));
-    setPage(1);
-  };
+  const setFilter = (patch: Partial<Record<'class_id' | 'kind' | 'due', string>>) =>
+    setQ({ ...patch, page: '1' });
 
   // Giáo viên không thấy tab quản trị Bản nháp / Đã lên lịch
   const tabs: { id: StatusTab; label: string }[] = [
@@ -183,10 +181,7 @@ export function Homework() {
     { id: 'published', label: t('tabs.published') },
   ];
   if (!isTeacher) {
-    tabs.push(
-      { id: 'scheduled', label: t('tabs.scheduled') },
-      { id: 'draft', label: t('tabs.draft') },
-    );
+    tabs.push({ id: 'scheduled', label: t('tabs.scheduled') }, { id: 'draft', label: t('tabs.draft') });
   }
 
   return (
@@ -261,10 +256,7 @@ export function Homework() {
           <button
             key={tab.id}
             className={`tab ${statusTab === tab.id ? 'active' : ''}`}
-            onClick={() => {
-              setStatusTab(tab.id);
-              setPage(1);
-            }}
+            onClick={() => setQ({ status: tab.id, page: '1' })}
           >
             {tab.label}
           </button>
@@ -284,7 +276,7 @@ export function Homework() {
             onChange={(e) => setSearch(e.target.value)}
           />
           {search !== '' &&
-            (loading || (search.trim() || undefined) !== filters.search ? (
+            (loading || search !== debouncedSearch ? (
               <span className="search-clear" aria-hidden="true">
                 <span className="spinner spinner-dark" />
               </span>
@@ -302,8 +294,8 @@ export function Homework() {
         <select
           aria-label={t('filters.classFilterLabel')}
           className="text-input"
-          value={filters.class_id || ''}
-          onChange={(e) => setFilter({ class_id: e.target.value || undefined })}
+          value={q.class_id}
+          onChange={(e) => setFilter({ class_id: e.target.value })}
         >
           <option value="">{t('filters.allClasses')}</option>
           {classes.map((c) => (
@@ -315,8 +307,8 @@ export function Homework() {
         <select
           aria-label={t('filters.kindFilterLabel')}
           className="text-input"
-          value={filters.kind || ''}
-          onChange={(e) => setFilter({ kind: (e.target.value || undefined) as HomeworkFilters['kind'] })}
+          value={q.kind}
+          onChange={(e) => setFilter({ kind: e.target.value })}
         >
           <option value="">{t('filters.allKinds')}</option>
           <option value="homework">{t('filters.kindHomework')}</option>
@@ -325,8 +317,8 @@ export function Homework() {
         <select
           aria-label={t('filters.dueFilterLabel')}
           className="text-input"
-          value={filters.due || ''}
-          onChange={(e) => setFilter({ due: (e.target.value || undefined) as HomeworkFilters['due'] })}
+          value={q.due}
+          onChange={(e) => setFilter({ due: e.target.value })}
         >
           <option value="">{t('filters.allDues')}</option>
           <option value="upcoming">{t('filters.upcoming')}</option>
@@ -336,8 +328,10 @@ export function Homework() {
       </div>
 
       <div className="card" aria-busy={loading || undefined}>
-        {loading && items.length === 0 ? (
+        {loading && !data ? (
           <TableSkeleton rows={6} cols={6} />
+        ) : error && !data ? (
+          <LoadError onRetry={load} />
         ) : items.length === 0 ? (
           <EmptyState
             icon="file"
@@ -488,7 +482,9 @@ export function Homework() {
         )}
       </div>
 
-      {pagination && <Pagination pagination={pagination} onChange={(p) => setPage(p)} loading={loading} />}
+      {pagination && (
+        <Pagination pagination={pagination} onChange={(p) => setQ({ page: String(p) })} loading={loading} />
+      )}
 
       {editing && (
         <HomeworkFormModal
@@ -503,7 +499,7 @@ export function Homework() {
           homework={grading}
           onClose={() => {
             setGrading(null);
-            void load();
+            load();
           }}
         />
       )}

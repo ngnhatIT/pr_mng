@@ -1,58 +1,66 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { trialsApi } from './admissions.api';
-import { ClassItem } from '../classes/classes.api';
-import { useToast } from '../../shared/ui/toast';
+import { classesApi, type ClassItem } from '../classes/classes.api';
+import { fetchAllPages } from '../../shared/components/Pagination';
+import { toastApiError, useToast } from '../../shared/ui/toast';
 import { Modal } from '../../shared/components/Modal';
 import { Field, useFieldErrors } from '../../shared/components/Form';
 import { PageHeader } from '../../shared/components/PageHeader';
-import { EmptyState } from '../../shared/components/EmptyState';
+import { EmptyState, LoadError } from '../../shared/components/EmptyState';
 import { TableSkeleton } from '../../shared/components/Skeleton';
 import { Icon } from '../../shared/components/icons';
-import { Pagination, type PaginationMeta } from '../../shared/components/Pagination';
+import { Pagination, clampPage } from '../../shared/components/Pagination';
+import { useLoad } from '../../shared/hooks/useLoad';
+import { useUrlState } from '../../shared/hooks/useUrlState';
+import { useMyPermissions } from '../system/roles.api';
 import { TrialItem, formatDate } from '../../shared/types';
 import './Admissions.css';
 import { EmptyCell } from '../../shared/components/EmptyCell';
 
-const STATUSES = ['new', 'contacted', 'trialed', 'enrolled', 'lost'] as const;
+// ADM-5: khớp TRIAL_STATUS của server. 'converted' chỉ đạt được qua nút Chuyển đổi (không chọn tay).
+const STATUSES = ['new', 'contacted', 'converted'] as const;
+const EDITABLE_STATUSES = ['new', 'contacted'] as const;
 
 export function Trials() {
   const { t } = useTranslation(['ops', 'common']);
-  const [trials, setTrials] = useState<TrialItem[]>([]);
-  const [status, setStatus] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [q, setQ] = useUrlState({ status: '', page: '1' });
+  const { status } = q;
+  const page = Number(q.page) || 1;
   const [converting, setConverting] = useState<TrialItem | null>(null);
-  const [page, setPage] = useState(1);
-  const [pagination, setPagination] = useState<PaginationMeta | null>(null);
   const toast = useToast();
+  const canManage = useMyPermissions().has('trials.manage');
+  const { data, loading, error, reload, setData } = useLoad(
+    () => trialsApi.list(status, { page }),
+    [status, page]
+  );
+  const trials = data?.data ?? [];
+  const pagination = data?.pagination ?? null;
+
+  useEffect(() => {
+    if (!data) return;
+    const p = clampPage(page, data.pagination.totalPages);
+    if (p !== page) setQ({ page: String(p) });
+  }, [data]); // chỉ kéo trang khi có kết quả mới
+  useEffect(() => {
+    if (error) toastApiError(toast, error, t('trials.toast.loadFail'));
+  }, [error, toast, t]);
 
   const statusLabel = (s: string) => t(`trials.status.${s}`);
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    try {
-      const res = await trialsApi.list(status, { page });
-      setTrials(res.data);
-      setPagination(res.pagination);
-    } catch (err) {
-      toast(err instanceof Error ? err.message : t('trials.toast.loadFail'), 'error');
-    } finally {
-      setLoading(false);
-    }
-  }, [status, page, toast, t]);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
-
-  const changeStatus = async (tr: TrialItem, next: string) => {
+  // UX-12: đổi trạng thái lạc quan (select không bật về giá trị cũ trong lúc chờ), lỗi thì trả lại.
+  const patchStatus = (id: number, next: TrialItem['status']) =>
+    setData((d) => d && { ...d, data: d.data.map((x) => (x.id === id ? { ...x, status: next } : x)) });
+  const changeStatus = async (tr: TrialItem, next: TrialItem['status']) => {
+    patchStatus(tr.id, next);
     try {
       await trialsApi.setStatus(tr.id, next);
       toast(t('trials.toast.statusUpdated'), 'success');
-      void load();
+      reload();
     } catch (err) {
-      toast(err instanceof Error ? err.message : t('trials.toast.updateFail'), 'error');
+      patchStatus(tr.id, tr.status);
+      toastApiError(toast, err, t('trials.toast.updateFail'));
     }
   };
 
@@ -64,10 +72,7 @@ export function Trials() {
         <select
           className="text-input"
           value={status}
-          onChange={(e) => {
-            setStatus(e.target.value);
-            setPage(1);
-          }}
+          onChange={(e) => setQ({ status: e.target.value, page: '1' })}
           aria-label={t('trials.filterLabel')}
         >
           <option value="">{t('trials.allStatuses')}</option>
@@ -82,8 +87,10 @@ export function Trials() {
         )}
       </div>
 
-      {loading ? (
+      {loading && !data ? (
         <TableSkeleton cols={7} />
+      ) : error && !data ? (
+        <LoadError onRetry={reload} />
       ) : trials.length === 0 ? (
         <EmptyState
           icon="play"
@@ -93,10 +100,7 @@ export function Trials() {
             status ? (
               <button
                 className="btn btn-secondary btn-inline"
-                onClick={() => {
-                  setStatus('');
-                  setPage(1);
-                }}
+                onClick={() => setQ({ status: '', page: '1' })}
               >
                 <Icon name="x" size={14} />
                 {t('trials.emptyFiltered.clear')}
@@ -109,7 +113,7 @@ export function Trials() {
           }
         />
       ) : (
-        <div className="table-wrap sticky">
+        <div className="table-wrap sticky" aria-busy={loading || undefined}>
           <table className="table">
             <thead>
               <tr>
@@ -137,26 +141,31 @@ export function Trials() {
                   </td>
                   <td className="td-right">
                     <span className="trial-actions">
-                      <select
-                        className="text-input input-sm trial-status-select"
-                        value={tr.status}
-                        onChange={(e) => void changeStatus(tr, e.target.value)}
-                        aria-label={t('trials.changeStatusAria', { name: tr.name })}
-                        title={t('trials.quickStatus')}
-                      >
-                        {STATUSES.map((s) => (
-                          <option key={s} value={s}>
-                            {statusLabel(s)}
-                          </option>
-                        ))}
-                      </select>
-                      {/* HIGH-3: ẩn nút convert khi trial đã chuyển đổi để tránh tạo trùng */}
-                      {tr.status !== 'converted' ? (
-                        <button className="btn btn-sm btn-primary" onClick={() => setConverting(tr)}>
-                          {t('trials.convert')}
-                        </button>
-                      ) : (
+                      {/* ADM-5: đã chuyển đổi thì chỉ hiện badge, không cho đổi ngược trạng thái (tránh convert lần 2
+                          tạo học viên trùng) */}
+                      {tr.status === 'converted' ? (
                         <span className="badge badge-converted">{t('trials.status.converted')}</span>
+                      ) : (
+                        canManage && (
+                          <>
+                            <select
+                              className="text-input input-sm trial-status-select"
+                              value={tr.status}
+                              onChange={(e) => void changeStatus(tr, e.target.value as TrialItem['status'])}
+                              aria-label={t('trials.changeStatusAria', { name: tr.name })}
+                              title={t('trials.quickStatus')}
+                            >
+                              {EDITABLE_STATUSES.map((s) => (
+                                <option key={s} value={s}>
+                                  {statusLabel(s)}
+                                </option>
+                              ))}
+                            </select>
+                            <button className="btn btn-sm btn-primary" onClick={() => setConverting(tr)}>
+                              {t('trials.convert')}
+                            </button>
+                          </>
+                        )
                       )}
                     </span>
                   </td>
@@ -167,7 +176,9 @@ export function Trials() {
         </div>
       )}
 
-      {pagination && <Pagination pagination={pagination} onChange={(p) => setPage(p)} />}
+      {pagination && (
+        <Pagination pagination={pagination} onChange={(p) => setQ({ page: String(p) })} loading={loading} />
+      )}
 
       {converting && (
         <ConvertModal
@@ -178,9 +189,9 @@ export function Trials() {
               const r = await trialsApi.convert(converting.id, classId ?? null);
               toast(t('trials.toast.converted', { id: r.student_id }), 'success');
               setConverting(null);
-              void load();
+              reload();
             } catch (err) {
-              toast(err instanceof Error ? err.message : t('trials.toast.convertFail'), 'error');
+              toastApiError(toast, err, t('trials.toast.convertFail'));
             }
           }}
         />
@@ -206,11 +217,10 @@ export function ConvertModal({
   const { errors, refFor, show, clear } = useFieldErrors<'classId'>();
 
   useEffect(() => {
-    trialsApi
-      .listClasses()
+    fetchAllPages((p) => classesApi.list('', p))
       .then((c) => setClasses(c.filter((x) => x.status === 'active')))
-      .catch((err: Error) => {
-        toast(err.message, 'error');
+      .catch((err: unknown) => {
+        toastApiError(toast, err, t('trials.convertForm.loadFail'));
         show({ classId: t('trials.convertForm.loadFail') });
       });
   }, [toast, show, t]);
@@ -227,7 +237,7 @@ export function ConvertModal({
   };
 
   return (
-    <Modal title={title} onClose={onClose}>
+    <Modal title={title} onClose={onClose} dirty={classId !== ''}>
       <form onSubmit={submit}>
         <Field label={t('trials.convertForm.classLabel')} error={errors.classId}>
           <select

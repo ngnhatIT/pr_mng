@@ -1,37 +1,24 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { parentApi } from './parent.api';
-import { useToast } from '../../shared/ui/toast';
+import { toastApiError, useToast } from '../../shared/ui/toast';
+import { useLoad } from '../../shared/hooks/useLoad';
 import { Modal } from '../../shared/components/Modal';
 import { Field, useFieldErrors } from '../../shared/components/Form';
-import { EmptyState } from '../../shared/components/EmptyState';
+import { EmptyState, LoadError } from '../../shared/components/EmptyState';
 import { Skeleton } from '../../shared/components/Skeleton';
-import { LeaveRequest, ParentChild, formatDate } from '../../shared/types';
+import { ParentChild, formatDate } from '../../shared/types';
 import { Icon } from '../../shared/components/icons';
 import './parent.css';
 
 export function ParentLeaves() {
   const { t } = useTranslation(['parent', 'common']);
-  const [leaves, setLeaves] = useState<LeaveRequest[]>([]);
-  const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const toast = useToast();
-
-  const load = useCallback(async () => {
-    setLoading(true);
-    try {
-      const data = await parentApi.leaves();
-      setLeaves(data);
-    } catch (err) {
-      toast(err instanceof Error ? err.message : t('leaves.loadError'), 'error');
-    } finally {
-      setLoading(false);
-    }
-  }, [toast, t]);
-
+  const { data: leaves, loading, error, reload } = useLoad(() => parentApi.leaves(), []);
   useEffect(() => {
-    void load();
-  }, [load]);
+    if (error) toastApiError(toast, error, t('leaves.loadError'));
+  }, [error, toast, t]);
 
   return (
     <div className="parent-page">
@@ -43,7 +30,7 @@ export function ParentLeaves() {
         </button>
       </div>
 
-      {loading ? (
+      {loading && !leaves ? (
         <div className="leave-list" aria-hidden="true">
           {[0, 1].map((i) => (
             <div key={i} className="card">
@@ -54,7 +41,9 @@ export function ParentLeaves() {
             </div>
           ))}
         </div>
-      ) : leaves.length === 0 ? (
+      ) : error && !leaves ? (
+        <LoadError onRetry={reload} />
+      ) : !leaves || leaves.length === 0 ? (
         <EmptyState
           icon="calendar-x"
           title={t('leaves.emptyTitle')}
@@ -67,7 +56,7 @@ export function ParentLeaves() {
           }
         />
       ) : (
-        <div className="leave-list">
+        <div className="leave-list" aria-busy={loading || undefined}>
           {leaves.map((l) => (
             <div key={l.id} className="card leave-card">
               <div className="leave-card-head">
@@ -90,7 +79,7 @@ export function ParentLeaves() {
           onClose={() => setShowForm(false)}
           onDone={() => {
             setShowForm(false);
-            void load();
+            reload();
           }}
         />
       )}
@@ -110,13 +99,14 @@ function LeaveFormModal({ onClose, onDone }: { onClose: () => void; onDone: () =
   const [submitError, setSubmitError] = useState('');
   const { errors, refFor, show, clear } = useFieldErrors<'child' | 'fromDate' | 'toDate'>();
   const toast = useToast();
+  const dirty = !!(studentId || classId || fromDate || toDate || reason);
 
   useEffect(() => {
     parentApi
       .children()
       .then(setChildren)
-      .catch((err: Error) => toast(err.message, 'error'));
-  }, [toast]);
+      .catch((err: unknown) => toastApiError(toast, err, t('leaves.loadError')));
+  }, [toast, t]);
 
   const student = children.find((c) => String(c.id) === studentId);
   const classes = student?.classes || [];
@@ -151,7 +141,7 @@ function LeaveFormModal({ onClose, onDone }: { onClose: () => void; onDone: () =
   };
 
   return (
-    <Modal title={t('leaves.formTitle')} onClose={onClose}>
+    <Modal title={t('leaves.formTitle')} onClose={onClose} dirty={dirty}>
       <form onSubmit={submit} noValidate>
         <div className="form-grid">
           <Field label={t('leaves.child')} error={errors.child} span required>

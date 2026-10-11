@@ -53,6 +53,8 @@ function setupState(): void {
         class_name: 'Lop 1',
       }),
     },
+    // J-A8: tháng lương chưa chốt
+    { match: 'FROM payroll_closures', get: () => undefined },
     {
       match: "FROM enrollments WHERE class_id = ? AND status = 'active'",
       all: () => enrolledIds.map((id) => ({ student_id: id })),

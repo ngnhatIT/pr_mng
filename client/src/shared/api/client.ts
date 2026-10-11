@@ -22,9 +22,43 @@ export function getToken(): string | null {
   return accessToken;
 }
 
-export function getUser(): { id: number; username: string; role: string; name: string } | null {
+export type StoredUser = {
+  id: number;
+  username: string;
+  role: string;
+  name: string;
+  /** Tên trung tâm (server trả ở login/refresh/me); null với superadmin. */
+  center_name?: string | null;
+  /** Server bắt đổi mật khẩu (mật khẩu tạm do admin đặt lại): app mở form đổi mật khẩu bắt buộc. */
+  must_change_password?: boolean;
+};
+type Portal = 'staff' | 'parent';
+
+/**
+ * CORR-5: user lưu RIÊNG theo cổng (staff / parent) — refresh cookie của 2 cổng đã tách path,
+ * nên 2 tab (giáo viên ở /teacher, phụ huynh ở /parent) không được đè nhau. Cổng chọn theo path.
+ */
+const USER_KEYS: Record<Portal, string> = { staff: 'edu_user_staff', parent: 'edu_user_parent' };
+
+function currentPortal(): Portal {
+  return window.location.pathname.startsWith('/parent') ? 'parent' : 'staff';
+}
+
+// Migrate 1 lần key cũ 'edu_user' (dùng chung 2 cổng) sang key theo cổng.
+try {
+  const legacy = localStorage.getItem('edu_user');
+  if (legacy) {
+    const portal: Portal = (JSON.parse(legacy) as StoredUser).role === 'parent' ? 'parent' : 'staff';
+    if (!localStorage.getItem(USER_KEYS[portal])) localStorage.setItem(USER_KEYS[portal], legacy);
+    localStorage.removeItem('edu_user');
+  }
+} catch {
+  /* bỏ qua */
+}
+
+export function getUser(): StoredUser | null {
   try {
-    const raw = localStorage.getItem('edu_user');
+    const raw = localStorage.getItem(USER_KEYS[currentPortal()]);
     return raw ? JSON.parse(raw) : null;
   } catch {
     return null;
@@ -35,24 +69,81 @@ export function getUser(): { id: number; username: string; role: string; name: s
  * token trong memory; refresh token nằm trong HttpOnly cookie do server set. */
 export function setAuth(token: string, user: unknown): void {
   accessToken = token;
-  localStorage.setItem('edu_user', JSON.stringify(user));
+  const portal: Portal = (user as StoredUser | null)?.role === 'parent' ? 'parent' : 'staff';
+  localStorage.setItem(USER_KEYS[portal], JSON.stringify(user));
   sessionExpiredNotified = false;
 }
 
-/** Xóa phiên đăng nhập. */
+/** Gộp thay đổi vào user đã lưu của cổng hiện tại (vd: tắt must_change_password sau khi đổi). */
+export function updateUser(patch: Partial<StoredUser>): void {
+  const user = getUser();
+  if (user) localStorage.setItem(USER_KEYS[currentPortal()], JSON.stringify({ ...user, ...patch }));
+}
+
+/** api() phát event này khi server trả 403 PASSWORD_CHANGE_REQUIRED (PasswordChangeGate lắng nghe). */
+export const PASSWORD_CHANGE_EVENT = 'edu:password-change-required';
+
+/** Xóa phiên đăng nhập của cổng hiện tại + deep-link đã lưu + CacheStorage của SW (SEC-1/SEC-4). */
+/**
+ * Superadmin chọn 1 trung tâm để thao tác (ô "Trung tâm" trên thanh tiêu đề). api() tự gắn
+ * `?center_id=` — server coi superadmin như thành viên trung tâm đó (đọc lẫn ghi).
+ * null = toàn hệ thống (chỉ xem; thao tác ghi dữ liệu trung tâm sẽ bị 400 CENTER_REQUIRED).
+ */
+const ACTING_CENTER_KEY = 'edu_sa_center';
+
+export function getActingCenter(): number | null {
+  try {
+    const n = Number(localStorage.getItem(ACTING_CENTER_KEY));
+    return Number.isInteger(n) && n > 0 ? n : null;
+  } catch {
+    return null;
+  }
+}
+
+export function setActingCenter(id: number | null): void {
+  try {
+    if (id) localStorage.setItem(ACTING_CENTER_KEY, String(id));
+    else localStorage.removeItem(ACTING_CENTER_KEY);
+  } catch {
+    /* bỏ qua */
+  }
+}
+
+/** Gắn ?center_id cho superadmin đang chọn trung tâm (không đụng /auth, /centers, path đã có). */
+export function withActingCenter(path: string): string {
+  if (currentPortal() !== 'staff' || getUser()?.role !== 'superadmin') return path;
+  const cid = getActingCenter();
+  if (!cid || /[?&]center_id=/.test(path) || /^\/(auth|centers)(\/|\?|$)/.test(path)) return path;
+  return `${path}${path.includes('?') ? '&' : '?'}center_id=${cid}`;
+}
+
 export function clearAuth(): void {
   accessToken = null;
-  localStorage.removeItem('edu_user');
+  try {
+    localStorage.removeItem(USER_KEYS[currentPortal()]);
+    if (currentPortal() === 'staff') localStorage.removeItem(ACTING_CENTER_KEY);
+    sessionStorage.removeItem(NEXT_KEY);
+  } catch {
+    /* bỏ qua */
+  }
+  if (typeof caches !== 'undefined') {
+    void caches
+      .keys()
+      .then((keys) => Promise.all(keys.map((k) => caches.delete(k))))
+      .catch(() => undefined);
+  }
+}
+
+export function authPath(action: 'refresh' | 'logout' | 'change-password' | 'logout-all'): string {
+  return currentPortal() === 'parent' ? `/parent/${action}` : `/auth/${action}`;
 }
 
 /** Đăng xuất: thu hồi refresh token trên server qua cookie (best-effort) rồi xóa local. */
 export async function logout(): Promise<void> {
-  const user = getUser();
-  if (user) {
-    const path = user.role === 'parent' ? '/parent/logout' : '/auth/logout';
+  if (getUser()) {
     try {
       // D4: không gửi body nữa — server đọc refresh token từ HttpOnly cookie
-      await fetch(API_BASE + path, { method: 'POST', credentials: 'include' });
+      await fetch(API_BASE + authPath('logout'), { method: 'POST', credentials: 'include' });
     } catch {
       /* best-effort */
     }
@@ -65,22 +156,22 @@ export async function logout(): Promise<void> {
  * Dùng chung promise để chống refresh dồn dập.
  */
 let refreshPromise: Promise<boolean> | null = null;
-function tryRefresh(): Promise<boolean> {
+export function tryRefresh(): Promise<boolean> {
   if (refreshPromise) return refreshPromise;
   refreshPromise = (async () => {
     try {
       const user = getUser();
       if (!user) return false;
-      const path = user.role === 'parent' ? '/parent/refresh' : '/auth/refresh';
-      const res = await fetch(API_BASE + path, {
+      const res = await fetch(API_BASE + authPath('refresh'), {
         method: 'POST',
         credentials: 'include', // D4: gửi HttpOnly cookie refresh_token
         headers: { 'Content-Type': 'application/json' },
       });
       if (!res.ok) return false;
-      const data = (await res.json()) as { token: string };
+      const data = (await res.json()) as { token: string; user?: Partial<StoredUser> };
       if (!data.token) return false;
-      setAuth(data.token, user);
+      // Gộp user mới từ server (vd: center_name) — phiên cũ không phải đăng nhập lại mới có.
+      setAuth(data.token, data.user ? { ...user, ...data.user } : user);
       return true;
     } catch {
       return false;
@@ -109,23 +200,36 @@ function tApi(key: string): string {
 
 const REFRESH_RETRIED = Symbol('refreshRetried');
 
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
 export async function api<T>(path: string, options: RequestInit = {}): Promise<T> {
   const token = getToken();
   const isForm = typeof FormData !== 'undefined' && options.body instanceof FormData;
   const isRefreshRetry = (options as Record<symbol, boolean>)[REFRESH_RETRIED] === true;
-
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), isForm ? UPLOAD_TIMEOUT_MS : TIMEOUT_MS);
+  const callerSignal = options.signal;
 
   let res: Response;
   // Retry 1 lần cho lỗi transient (502/503/504 hoặc timeout) với GET — mạng VN chập chờn
   const isIdempotent = !options.method || options.method.toUpperCase() === 'GET';
-  let attempt = 0;
-  for (;;) {
+  for (let attempt = 0; ; attempt++) {
+    // CORR-6: mỗi lần thử có AbortController + timer RIÊNG (lần retry không dùng lại signal đã abort).
+    // Signal của caller vẫn được tôn trọng: caller abort -> abort request, ném nguyên AbortError.
+    const controller = new AbortController();
+    let timedOut = false;
+    const timer = setTimeout(
+      () => {
+        timedOut = true;
+        controller.abort();
+      },
+      isForm ? UPLOAD_TIMEOUT_MS : TIMEOUT_MS
+    );
+    const onCallerAbort = () => controller.abort();
+    if (callerSignal?.aborted) controller.abort();
+    else callerSignal?.addEventListener('abort', onCallerAbort, { once: true });
     try {
-      res = await fetch(API_BASE + path, {
+      res = await fetch(API_BASE + withActingCenter(path), {
         ...options,
-        signal: options.signal ?? controller.signal,
+        signal: controller.signal,
         credentials: 'include', // D4: gửi HttpOnly cookie refresh_token (same-origin; CORS credentials vẫn false)
         headers: {
           ...(isForm ? {} : { 'Content-Type': 'application/json' }),
@@ -134,29 +238,30 @@ export async function api<T>(path: string, options: RequestInit = {}): Promise<T
         },
       });
     } catch (err) {
-      // Timeout (AbortError) với GET: retry 1 lần (mạng VN chập chờn)
-      if (err instanceof DOMException && err.name === 'AbortError') {
+      if (timedOut) {
         if (isIdempotent && attempt < 1) {
-          attempt++;
-          await new Promise((r) => setTimeout(r, 500));
+          await sleep(500);
           continue;
         }
         throw new Error(tApi('api.timeout'), { cause: err });
       }
+      if (callerSignal?.aborted) throw err; // caller tự hủy: không đổi thành 'timeout'
       throw new Error(tApi('api.network'), { cause: err });
+    } finally {
+      clearTimeout(timer);
+      callerSignal?.removeEventListener('abort', onCallerAbort);
     }
-    attempt++;
     const transient = res.status === 502 || res.status === 503 || res.status === 504;
-    if (isIdempotent && transient && attempt < 2) {
-      // Chờ 500ms rồi thử lại 1 lần
-      await new Promise((r) => setTimeout(r, 500));
+    if (isIdempotent && transient && attempt < 1) {
+      await sleep(500);
       continue;
     }
     break;
   }
-  clearTimeout(timer);
 
-  if (res.status === 401) {
+  // CORR-4: chỉ coi 401 là "hết phiên" khi request CÓ gửi token. Request không token (login, quên mật khẩu...)
+  // trả 401 = sai thông tin -> rơi xuống nhánh lỗi chung để hiện đúng message của server.
+  if (res.status === 401 && token) {
     // Thử refresh token 1 lần trước khi đá về login (access token chỉ sống 15 phút).
     if (!isRefreshRetry && (await tryRefresh())) {
       return api<T>(path, { ...options, [REFRESH_RETRIED]: true } as RequestInit);
@@ -189,6 +294,10 @@ export async function api<T>(path: string, options: RequestInit = {}): Promise<T
     const err = new Error(body.error || tApi('api.error')) as Error & { code?: string; requestId?: string };
     if (body.code) err.code = body.code;
     if (body.request_id) err.requestId = body.request_id;
+    if (res.status === 403 && body.code === 'PASSWORD_CHANGE_REQUIRED') {
+      updateUser({ must_change_password: true });
+      window.dispatchEvent(new Event(PASSWORD_CHANGE_EVENT));
+    }
     throw err;
   }
   return data as T;

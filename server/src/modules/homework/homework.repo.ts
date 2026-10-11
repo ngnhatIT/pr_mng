@@ -1,5 +1,5 @@
 import { db } from '../../db';
-import type { HomeworkRow, HomeworkStatus } from './homework.service';
+import type { HomeworkRow } from './homework.service';
 import { deleteUploadFileByUrl } from '../../shared/upload';
 
 /**
@@ -38,54 +38,9 @@ export const homeworkRepo = {
     ).c;
   },
 
-  /** Insert bài tập, trả về id. */
-  async insert(data: {
-    center_id: number | null;
-    class_id: number;
-    title: string;
-    content: string | null;
-    due_date: string | null;
-    created_by: number | null;
-    status: HomeworkStatus;
-    publish_at: string | null;
-    max_score: number | null;
-    close_date: string | null;
-    kind: string;
-    rubric_id: number | null;
-  }): Promise<number> {
-    const r = await db
-      .prepare(
-        `INSERT INTO homework (center_id, class_id, title, content, due_date, created_by,
-          status, publish_at, max_score, close_date, kind, rubric_id)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-      )
-      .run(
-        data.center_id,
-        data.class_id,
-        data.title,
-        data.content,
-        data.due_date,
-        data.created_by,
-        data.status,
-        data.publish_at,
-        data.max_score,
-        data.close_date,
-        data.kind,
-        data.rubric_id
-      );
-    return Number(r.lastInsertRowid);
-  },
-
   /** Đặt trạng thái đăng/gỡ đăng. */
   async setStatus(id: number, status: 'published' | 'draft'): Promise<void> {
     await db.prepare('UPDATE homework SET status = ?, publish_at = NULL WHERE id = ?').run(status, id);
-  },
-
-  /** Các bài hẹn giờ đã đến hạn (chưa publish). */
-  async findDueScheduled(now: string): Promise<{ id: number; center_id: number | null }[]> {
-    return (await db
-      .prepare("SELECT id, center_id FROM homework WHERE status = 'scheduled' AND publish_at <= ?")
-      .all(now)) as { id: number; center_id: number | null }[];
   },
 
   /** Publish tất cả bài hẹn giờ đến hạn, trả về số bài. */
@@ -100,7 +55,6 @@ export const homeworkRepo = {
   },
 };
 
-/** Xóa file vật lý an toàn (chỉ trong upload dir, bỏ qua lỗi). */
 /**
  * Xóa bài tập và toàn bộ dữ liệu liên quan (cascade trong transaction),
  * đồng thời dọn file đính kèm vật lý trên disk (chống file mồ côi).
@@ -134,7 +88,8 @@ export async function deleteHomeworkCascade(id: number): Promise<void> {
     await tx.prepare('DELETE FROM homework_submissions WHERE homework_id = ?').run(id);
     await tx.prepare('DELETE FROM homework WHERE id = ?').run(id);
   });
-  // Xóa file vật lý (sau khi DB đã xóa thành công)
+  // Xóa file vật lý (sau khi DB đã xóa thành công). HW-3: deleteUploadFileByUrl bỏ qua file
+  // còn bài/bài nộp khác tham chiếu (dữ liệu cũ giao nhiều lớp dùng chung 1 file).
   for (const f of files) await deleteUploadFileByUrl(f.url);
   for (const f of submissionFiles) await deleteUploadFileByUrl(f.file_url);
 }

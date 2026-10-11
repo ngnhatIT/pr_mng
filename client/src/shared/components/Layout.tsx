@@ -1,13 +1,16 @@
 import { useEffect, useRef, useState } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { getUser, logout as doLogout } from '../../shared/api/client';
+import { getUser, logout as doLogout, getActingCenter, setActingCenter } from '../../shared/api/client';
+import { systemApi } from '../../features/system/system.api';
+import type { CenterItem } from '../types';
 import { Icon, IconName } from './icons';
 import { ThemeLangSwitch } from '../ui/ThemeLangSwitch';
 import { useTheme } from '../ui/theme';
 import { ChangePasswordModal } from './ChangePasswordModal';
 import { ConfirmDialog } from './Modal';
-import { rolesApi } from '../../features/system/roles.api';
+import { lockScroll, unlockScroll } from '../scrollLock';
+import { loadMyPermissions } from '../../features/system/roles.api';
 import { leavesApi } from '../../features/leaves/leaves.api';
 import { trialsApi } from '../../features/admissions/admissions.api';
 
@@ -121,8 +124,34 @@ export function Layout() {
   }, []);
   const [myPerms, setMyPerms] = useState<Set<string> | null>(null);
   const isSuperadmin = user?.role === 'superadmin';
+  // Superadmin chọn trung tâm để thao tác (api() tự gắn ?center_id). null = toàn hệ thống.
+  const [centers, setCenters] = useState<CenterItem[] | null>(null);
+  const actingCenter = getActingCenter();
+  useEffect(() => {
+    if (!isSuperadmin) return;
+    let cancelled = false;
+    systemApi
+      .listCenters()
+      .then((list) => {
+        if (cancelled) return;
+        setCenters(list);
+        // Trung tâm đã chọn bị xóa -> về toàn hệ thống
+        if (actingCenter && !list.some((c) => c.id === actingCenter)) setActingCenter(null);
+      })
+      .catch(() => {
+        if (!cancelled) setCenters(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [isSuperadmin, actingCenter]);
+  const switchCenter = (value: string) => {
+    setActingCenter(value ? Number(value) : null);
+    // Tải lại để mọi trang đọc dữ liệu theo trung tâm mới (đơn giản, không sót state cũ)
+    window.location.reload();
+  };
   // Số việc chờ xử lý từ API thật (null = chưa tải / lỗi -> ẩn badge, không bịa số).
-  // shortcut: badge chỉ tải 1 lần khi mở app; thao tác xử lý trong trang không tự refresh số.
+  // UX-9: tải lại mỗi lần chuyển trang -> duyệt đơn xong rời trang là số cập nhật (không cần reload app).
   const [badges, setBadges] = useState<{ pendingLeaves: number | null; newTrials: number | null }>({
     pendingLeaves: null,
     newTrials: null,
@@ -131,10 +160,9 @@ export function Layout() {
   // Tải quyền của mình để ẩn menu không được phép (fail-open: lỗi thì hiện tất cả)
   useEffect(() => {
     let cancelled = false;
-    rolesApi
-      .mine()
-      .then((r) => {
-        if (!cancelled) setMyPerms(new Set(r.map((p) => p.code)));
+    loadMyPermissions()
+      .then((set) => {
+        if (!cancelled) setMyPerms(set);
       })
       .catch(() => {
         if (!cancelled) setMyPerms(null);
@@ -177,7 +205,7 @@ export function Layout() {
     return () => {
       cancelled = true;
     };
-  }, [myPerms]);
+  }, [myPerms, location.pathname]);
 
   const logout = () => {
     void doLogout().then(() => navigate('/login'));
@@ -188,10 +216,9 @@ export function Layout() {
   }, [location.pathname]);
 
   useEffect(() => {
-    document.body.style.overflow = drawerOpen ? 'hidden' : '';
-    return () => {
-      document.body.style.overflow = '';
-    };
+    if (!drawerOpen) return;
+    lockScroll();
+    return unlockScroll;
   }, [drawerOpen]);
 
   // Escape đóng drawer mobile + focus trap (WCAG 2.4.3)
@@ -345,6 +372,22 @@ export function Layout() {
           </button>
           <div className="topbar-title">{title}</div>
           <div className="spacer" />
+          {isSuperadmin && centers && (
+            <select
+              className="text-input input-sm topbar-center"
+              aria-label={t('nav.actingCenter')}
+              title={t('nav.actingCenter')}
+              value={actingCenter ?? ''}
+              onChange={(e) => switchCenter(e.target.value)}
+            >
+              <option value="">{t('nav.allCenters')}</option>
+              {centers.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
+          )}
           <ThemeLangSwitch />
           <div className="topbar-user">
             <div className="topbar-avatar" aria-hidden="true">

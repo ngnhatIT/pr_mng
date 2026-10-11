@@ -1,34 +1,21 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { parentApi, ReferralData } from './parent.api';
-import { useToast } from '../../shared/ui/toast';
-import { EmptyState } from '../../shared/components/EmptyState';
+import { parentApi } from './parent.api';
+import { toastApiError, useToast } from '../../shared/ui/toast';
+import { useLoad } from '../../shared/hooks/useLoad';
+import { EmptyState, LoadError } from '../../shared/components/EmptyState';
 import { Skeleton } from '../../shared/components/Skeleton';
 import { formatDate } from '../../shared/types';
 import './parent.css';
 
 export function ParentReferral() {
   const { t } = useTranslation(['parent', 'common']);
-  const [data, setData] = useState<ReferralData | null>(null);
-  const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
   const toast = useToast();
-
-  const load = useCallback(async () => {
-    setLoading(true);
-    try {
-      const d = await parentApi.referral();
-      setData(d);
-    } catch (err) {
-      toast(err instanceof Error ? err.message : t('referral.loadError'), 'error');
-    } finally {
-      setLoading(false);
-    }
-  }, [toast, t]);
-
+  const { data, loading, error, reload } = useLoad(() => parentApi.referral(), []);
   useEffect(() => {
-    void load();
-  }, [load]);
+    if (error) toastApiError(toast, error, t('referral.loadError'));
+  }, [error, toast, t]);
 
   const copyLink = async () => {
     if (!data?.share_link) return;
@@ -42,7 +29,7 @@ export function ParentReferral() {
     }
   };
 
-  if (loading)
+  if (loading && !data)
     return (
       <div className="parent-page">
         <h1 className="parent-title">{t('referral.title')}</h1>
@@ -68,7 +55,7 @@ export function ParentReferral() {
     return (
       <div className="parent-page">
         <h1 className="parent-title">{t('referral.title')}</h1>
-        <EmptyState icon="gift" title={t('referral.dataErrorTitle')} desc={t('referral.dataErrorDesc')} />
+        <LoadError title={t('referral.dataErrorTitle')} onRetry={reload} />
       </div>
     );
 

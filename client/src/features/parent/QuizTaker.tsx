@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { parentApi, type QuizQuestion, type QuizAttempt, type QuizAttemptDetail } from './parent.api';
-import { HomeworkItem, formatDate, formatDateTime, isPastCloseDate } from '../../shared/types';
-import { useToast } from '../../shared/ui/toast';
+import { HomeworkItem, formatDate, formatDateTime, isPastCloseDate, nowVN } from '../../shared/types';
+import { toastApiError, useToast } from '../../shared/ui/toast';
 import { ConfirmDialog, Modal } from '../../shared/components/Modal';
 import { EmptyState } from '../../shared/components/EmptyState';
 import { Skeleton } from '../../shared/components/Skeleton';
@@ -30,7 +30,11 @@ function QuizReviewView({
           return (
             <div key={q.question_id} className={`quiz-review-q ${graded ? 'correct' : 'pending'}`}>
               <div className="quiz-review-qhead">
-                <Icon name={graded ? 'check' : 'clock'} size={18} className={graded ? 'icon-ok' : 'icon-warn'} />
+                <Icon
+                  name={graded ? 'check' : 'clock'}
+                  size={18}
+                  className={graded ? 'icon-ok' : 'icon-warn'}
+                />
                 <span>{t('quiz.questionLabel', { num: qi + 1, question: q.question })}</span>
                 {graded ? (
                   <span className="badge badge-paid">
@@ -48,10 +52,17 @@ function QuizReviewView({
           );
         }
         const gotIt = q.correct === true;
+        // C-1: chưa qua hạn chót -> server ẩn đúng/sai từng câu (correct = null), hiện trung tính
+        const hidden = q.correct === null;
         return (
-          <div key={q.question_id} className={`quiz-review-q ${gotIt ? 'correct' : 'wrong'}`}>
+          <div
+            key={q.question_id}
+            className={`quiz-review-q ${hidden ? 'pending' : gotIt ? 'correct' : 'wrong'}`}
+          >
             <div className="quiz-review-qhead">
-              {gotIt ? (
+              {hidden ? (
+                <Icon name="clock" size={18} className="icon-warn" />
+              ) : gotIt ? (
                 <Icon name="check" size={18} className="icon-ok" />
               ) : (
                 <Icon name="x" size={18} className="icon-bad" />
@@ -61,7 +72,7 @@ function QuizReviewView({
             {q.options.map((o) => (
               <div
                 key={o.id}
-                className={`quiz-review-opt ${o.is_correct ? 'is-correct' : ''} ${o.chosen && !o.is_correct ? 'is-wrong-choice' : ''}`}
+                className={`quiz-review-opt ${o.is_correct ? 'is-correct' : ''} ${o.chosen && o.is_correct === false ? 'is-wrong-choice' : ''}`}
               >
                 {o.is_correct ? (
                   <Icon name="check" size={14} />
@@ -124,21 +135,28 @@ export function QuizTaker({
   const [review, setReview] = useState<QuizAttemptDetail[] | null>(null);
   const [showReview, setShowReview] = useState(false);
   const [history, setHistory] = useState<QuizAttempt[]>([]);
-  const [attemptsLoading, setAttemptsLoading] = useState(reviewOnly);
+  const [attemptsLoading, setAttemptsLoading] = useState(true);
+  // B3-2: mở ở chế độ xem lại vẫn chuyển sang làm bài được khi còn lượt ("Làm lại (còn N lượt)").
+  const [reviewMode, setReviewMode] = useState(reviewOnly);
 
-  // Lịch sử làm bài: chế độ làm bài dùng cho thanh info, chế độ xem lại dùng làm nội dung chính
+  // Lịch sử làm bài: chế độ làm bài dùng cho thanh info + số lượt còn lại, chế độ xem lại dùng làm nội dung chính
   useEffect(() => {
-    setAttemptsLoading(reviewOnly);
+    setAttemptsLoading(true);
     parentApi
       .getQuizAttempts(homework.id, studentId)
       .then(setHistory)
       .catch(() => {})
       .finally(() => setAttemptsLoading(false));
-  }, [homework.id, studentId, reviewOnly]);
+  }, [homework.id, studentId]);
 
   // FIX 2: quiz đã qua hạn chót thì không cho mở làm, báo rõ ngay từ đầu
   // (trước đây phụ huynh làm xong mới bị server chặn lúc nộp)
-  const isExpired = !reviewOnly && isPastCloseDate(homework.close_date);
+  const isExpired = !reviewMode && isPastCloseDate(homework.close_date);
+  // C-1: quiz giới hạn lượt — còn bao nhiêu lượt (null = không giới hạn). Server vẫn chặn 409 MAX_ATTEMPTS.
+  const attemptsLeft =
+    homework.max_attempts != null ? Math.max(0, homework.max_attempts - history.length) : null;
+  const outOfAttempts = !reviewMode && !attemptsLoading && attemptsLeft === 0;
+  const canRetake = !attemptsLoading && attemptsLeft !== 0 && !isPastCloseDate(homework.close_date);
 
   // Tách riêng tải đề để nút "Thử lại" dùng lại được khi mất mạng
   const loadQuiz = useCallback(() => {
@@ -155,9 +173,9 @@ export function QuizTaker({
   }, [homework.id, studentId]);
 
   useEffect(() => {
-    if (isExpired || reviewOnly) return; // Đã hết hạn / chỉ xem lại thì không tải đề
+    if (isExpired || reviewMode || outOfAttempts) return; // Hết hạn / hết lượt / chỉ xem lại thì không tải đề
     loadQuiz();
-  }, [loadQuiz, isExpired, reviewOnly]);
+  }, [loadQuiz, isExpired, reviewMode, outOfAttempts]);
 
   const [confirming, setConfirming] = useState(false);
   const qRef = useRef<HTMLDivElement>(null);
@@ -165,9 +183,7 @@ export function QuizTaker({
   // Một câu được coi là đã trả lời: trắc nghiệm → chọn ít nhất 1 đáp án;
   // tự luận → gõ nội dung
   const isAnswered = (q: QuizQuestion) =>
-    q.qtype === 'essay'
-      ? (essayAnswers[q.id] ?? '').trim().length > 0
-      : (answers[q.id] ?? []).length > 0;
+    q.qtype === 'essay' ? (essayAnswers[q.id] ?? '').trim().length > 0 : (answers[q.id] ?? []).length > 0;
 
   // Bấm Nộp bài -> mở dialog xác nhận của app (không dùng confirm() native)
   const submit = () => {
@@ -204,13 +220,15 @@ export function QuizTaker({
         )
       );
       // HIGH-1: KHÔNG gọi onDone() ngay, hiện màn hình kết quả trước.
+      submittedRef.current = true;
       setResult(res);
       setHistory((h) => [
         {
           id: res.attempt_id,
           score: res.score,
           max_score: res.max_score,
-          submitted_at: new Date().toISOString(),
+          // UX-10: server lưu giờ VN dạng 'YYYY-MM-DD HH:MM'; ISO UTC sẽ hiện lệch 7 tiếng
+          submitted_at: nowVN().replace('T', ' '),
           answers: [],
         },
         ...h,
@@ -230,13 +248,13 @@ export function QuizTaker({
       setReview(r);
       setShowReview(true);
     } catch (err) {
-      toast(err instanceof Error ? err.message : t('quiz.reviewError'), 'error');
+      toastApiError(toast, err, t('quiz.reviewError'));
     } finally {
       setReviewLoading(false);
     }
   };
 
-  // MEDIUM-12: làm lại quiz (server cho phép không giới hạn, giữ điểm cao nhất)
+  // MEDIUM-12: làm lại quiz (giữ điểm cao nhất; quiz có max_attempts thì ẩn nút khi hết lượt)
   const retry = () => {
     if (isPastCloseDate(homework.close_date)) {
       toast(t('quiz.expiredTitle'), 'error'); // Hạn chót trôi qua giữa chừng thì khóa làm lại
@@ -250,12 +268,28 @@ export function QuizTaker({
     setQIndex(0);
   };
 
+  // Đóng modal: đang làm dở (hasAnswers) thì Modal tự hỏi xác nhận khi X/Esc/bấm nền/bấm link khác (UX-4);
+  // nút "Để sau" hỏi bằng dialog riêng. Đã nộp ít nhất 1 lượt thì gọi onDone để trang con tải lại.
+  const [confirmLeave, setConfirmLeave] = useState(false);
+  const submittedRef = useRef(false);
+  const hasAnswers =
+    !reviewMode &&
+    !result &&
+    (Object.values(answers).some((a) => a.length > 0) ||
+      Object.values(essayAnswers).some((v) => v.trim() !== ''));
+  const leave = () => {
+    setConfirmLeave(false);
+    if (submittedRef.current) onDone();
+    else onClose();
+  };
+  const tryClose = () => (hasAnswers ? setConfirmLeave(true) : leave());
+
   const pct = result && result.max_score > 0 ? (result.score / result.max_score) * 100 : 0;
 
   return (
-    <Modal title={t('quiz.title', { title: homework.title })} onClose={onClose} wide>
+    <Modal title={t('quiz.title', { title: homework.title })} onClose={leave} dirty={hasAnswers} wide>
       {/* Thông tin quiz + lịch sử làm bài */}
-      {!reviewOnly && !result && !showReview && (
+      {!reviewMode && !result && !showReview && (
         <div className="quiz-info-bar">
           <span className="muted-sm">
             {t('quiz.questionCount', { count: questions.length })}
@@ -276,9 +310,12 @@ export function QuizTaker({
               </strong>
             </span>
           )}
+          {attemptsLeft !== null && (
+            <span className="muted-sm">{t('quiz.attemptsLeft', { count: attemptsLeft })}</span>
+          )}
         </div>
       )}
-      {reviewOnly ? (
+      {reviewMode ? (
         showReview && review ? (
           <QuizReviewView review={review} onBack={() => setShowReview(false)} onDone={onDone} />
         ) : attemptsLoading ? (
@@ -307,7 +344,18 @@ export function QuizTaker({
                   max: history[0].max_score,
                 })}
               </strong>
+              {attemptsLeft !== null && ` · ${t('quiz.attemptsLeft', { count: attemptsLeft })}`}
             </p>
+            {canRetake && (
+              <button
+                className="btn btn-primary"
+                style={{ marginBottom: 12 }}
+                onClick={() => setReviewMode(false)}
+              >
+                <Icon name="rotate" size={16} />
+                {attemptsLeft === null ? t('quiz.retry') : t('quiz.retakeN', { count: attemptsLeft })}
+              </button>
+            )}
             <ul className="list">
               {history.map((a) => (
                 <li key={a.id} className="list-item">
@@ -327,6 +375,17 @@ export function QuizTaker({
             </ul>
           </div>
         )
+      ) : outOfAttempts && !result ? (
+        <EmptyState
+          icon="clock"
+          title={t('quiz.noAttemptsLeft')}
+          desc={t('quiz.noAttemptsLeftDesc', { count: homework.max_attempts ?? 0 })}
+          action={
+            <button className="btn btn-inline" onClick={onClose}>
+              {t('actions.close', { ns: 'common' })}
+            </button>
+          }
+        />
       ) : isExpired && !result ? (
         <EmptyState
           icon="clock"
@@ -379,9 +438,11 @@ export function QuizTaker({
               {reviewLoading && <span className="spinner" aria-hidden="true" />}
               {t('quiz.viewAnswers')}
             </button>
-            <button className="btn" onClick={retry}>
-              {t('quiz.retry')}
-            </button>
+            {attemptsLeft !== 0 && (
+              <button className="btn" onClick={retry}>
+                {t('quiz.retry')}
+              </button>
+            )}
             <button className="btn btn-primary" onClick={onDone}>
               {t('actions.close', { ns: 'common' })}
             </button>
@@ -490,7 +551,10 @@ export function QuizTaker({
                           className={`quiz-take-opt ${isChosen ? 'selected' : ''}`}
                           onClick={() => toggleOption(o.id)}
                         >
-                          <span className={q.qtype === 'multiple' ? 'quiz-checkbox' : 'quiz-radio'} aria-hidden="true" />
+                          <span
+                            className={q.qtype === 'multiple' ? 'quiz-checkbox' : 'quiz-radio'}
+                            aria-hidden="true"
+                          />
                           <span>{o.text}</span>
                         </button>
                       );
@@ -507,7 +571,7 @@ export function QuizTaker({
                 {t('actions.prev', { ns: 'common' })}
               </button>
             ) : (
-              <button className="btn" onClick={onClose}>
+              <button className="btn" onClick={tryClose}>
                 {t('quiz.later')}
               </button>
             )}
@@ -530,10 +594,25 @@ export function QuizTaker({
           )}
         </>
       )}
+      {confirmLeave && (
+        <ConfirmDialog
+          title={t('quiz.leaveTitle')}
+          message={t('quiz.leaveMessage')}
+          onClose={() => setConfirmLeave(false)}
+          onConfirm={leave}
+          danger
+        />
+      )}
       {confirming && (
         <ConfirmDialog
           title={t('quiz.confirmTitle')}
-          message={t('quiz.confirmSubmit')}
+          message={
+            attemptsLeft === null
+              ? t('quiz.confirmSubmit')
+              : attemptsLeft <= 1
+                ? t('quiz.confirmSubmitLast')
+                : t('quiz.confirmSubmitN', { count: attemptsLeft - 1 })
+          }
           onClose={() => setConfirming(false)}
           onConfirm={doSubmit}
         />

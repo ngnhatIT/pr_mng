@@ -5,9 +5,10 @@
  * - Phát hiện payment mồ côi / số tiền bất thường
  * - DB sạch thì không báo gì
  */
-// LƯU Ý: Chạy test với DATABASE_URL trỏ tới test DB:
-//   DATABASE_URL=postgres://educenter:educenter123@localhost:5432/educenter_test node --test ...
-// (pg-compat đọc DATABASE_URL lúc load module — không set trong file vì ES module hoist imports)
+// PHẢI đặt trước mọi import db — pg-compat đọc DATABASE_URL lúc load module (DATA-8:
+// không để `db` rơi về DATABASE_URL thật trong server/.env khi chạy lẻ file này).
+process.env.DATABASE_URL =
+  process.env.TEST_DATABASE_URL || 'postgres://educenter:educenter123@localhost:5432/educenter_test';
 
 import { describe, it, before, beforeEach, after } from 'node:test';
 import assert from 'node:assert/strict';
@@ -91,5 +92,44 @@ describe('checkFinancialConsistency (PostgreSQL)', () => {
       .prepare("INSERT INTO payments (invoice_id, amount, status) VALUES (?, ?, 'pending')")
       .run(inId, 1000000);
     assert.deepEqual(await checkFinancialConsistency(db), []);
+  });
+
+  it('J-A5: payment credit đã duyệt không gắn credit_id bị báo credit_payment_unlinked', async () => {
+    const inv = Number(
+      (
+        await db
+          .prepare("INSERT INTO invoices (student_id, amount, center_id, status) VALUES (?, 100, ?, 'paid')")
+          .run(studentId, centerId)
+      ).lastInsertRowid
+    );
+    await db
+      .prepare(
+        "INSERT INTO payments (invoice_id, amount, method, note, status) VALUES (?, 100, 'credit', 'credits #57', 'confirmed')"
+      )
+      .run(inv);
+    assert.deepEqual(
+      (await checkFinancialConsistency(db)).map((i) => i.code),
+      ['credit_payment_unlinked']
+    );
+  });
+
+  it('OPS-1: user không phải superadmin mà center_id NULL bị báo user_without_center', async () => {
+    // Giả lập DB cũ trước v22 (chk_users_center chưa validate/chưa tồn tại).
+    await db.exec('ALTER TABLE users DROP CONSTRAINT chk_users_center');
+    try {
+      await db.exec(
+        "INSERT INTO users (username, password_hash, role, name, center_id) VALUES ('mo_coi', 'x', 'admin', 'Mồ côi', NULL)"
+      );
+      const issues = await checkFinancialConsistency(db);
+      assert.deepEqual(
+        issues.map((i) => i.code),
+        ['user_without_center']
+      );
+    } finally {
+      await db.exec("DELETE FROM users WHERE username = 'mo_coi'");
+      await db.exec(
+        "ALTER TABLE users ADD CONSTRAINT chk_users_center CHECK (role = 'superadmin' OR center_id IS NOT NULL)"
+      );
+    }
   });
 });

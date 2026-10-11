@@ -1,109 +1,44 @@
 import { db } from '../../db';
 import type { Tx } from '../../db';
 import type { ScopeCtx } from '../../shared/scope';
-import { countQuizQuestions } from './quiz.service';
+import { countQuizQuestions, insertQuizQuestionsTx, type NormalizedQuizQuestion } from './quiz.service';
 import { parsePagination, paginate, type PageOptions, type Paginated } from '../../shared/pagination';
 import { DAY_MS } from '../../shared/time';
 import { AppError } from '../../shared/errors';
-import { nowVNMinute, assignedCountExpr, assertValidDates, sumQuestionPoints, normalizeQtype } from './homework.helpers';
+import {
+  nowVNMinute,
+  assertValidDates,
+  sumQuestionPoints,
+  normalizeQtype,
+  scopeConds,
+} from './homework.helpers';
 import { todayVN } from '../../shared/vnTime';
 import { homeworkRepo, deleteHomeworkCascade } from './homework.repo';
 import { eventBus } from '../../shared/events/eventBus';
 import { escapeLike } from '../../shared/like';
-import { copyUploadedFileByUrl, deleteUploadFileByUrl, isValidUploadFilename } from '../../shared/upload';
+import { copyUploadedFileByUrl, deleteUploadFileByUrl, recordUpload } from '../../shared/upload';
 import { getRubric } from './rubric.service';
-
-/** Chuyển thành ID hợp lệ, throw 400 nếu không phải số nguyên dương. */
-function toValidId(v: unknown): number {
-  const n = Number(v);
-  if (!Number.isInteger(n) || n <= 0) throw AppError.badRequest('ID không hợp lệ');
-  return n;
-}
 import {
   HomeworkCreatedEvent,
   HomeworkPublishedEvent,
   HomeworkUnpublishedEvent,
   HomeworkDeletedEvent,
-  HomeworkGradedEvent,
 } from '../../shared/events/homework.events';
+import {
+  HOMEWORK_STATUS,
+  type HomeworkRow,
+  type HomeworkQuery,
+  type CreateHomeworkInput,
+  type HomeworkStatus,
+} from './homework.types';
+import { validateAttachmentInputs, parseMaxAttempts, type HomeworkAttachmentInput } from './homework.input';
 
-/* ---------------------------------- Types ---------------------------------- */
-
-/** Trạng thái bài tập — dùng const thay vì string literal rải rác (chống typo). */
-export const HOMEWORK_STATUS = ['draft', 'scheduled', 'published'] as const;
-export type HomeworkStatus = (typeof HOMEWORK_STATUS)[number];
-
-/** Loại bài tập. */
-export const HOMEWORK_KIND = ['homework', 'quiz'] as const;
-export type HomeworkKind = (typeof HOMEWORK_KIND)[number];
-
-/** Ai đánh dấu hoàn thành. */
-export type CompletedBy = 'parent' | 'teacher' | 'student';
-
-/** Context phân quyền tối thiểu mà service cần (tách khỏi AuthRequest). */
-export interface HomeworkRow {
-  id: number;
-  class_id: number;
-  class_name?: string;
-  center_id: number | null;
-  title: string;
-  content: string | null;
-  due_date: string | null;
-  created_at: string;
-  status: HomeworkStatus;
-  publish_at: string | null;
-  max_score: number | null;
-  close_date: string | null;
-  kind: HomeworkKind;
-  rubric_id: number | null;
-  completed_count?: number;
-  student_count?: number;
-  question_count?: number;
-  attachments?: { id: number; name: string; url: string; kind: string }[];
-  [key: string]: unknown;
-}
-
-export interface HomeworkQuery {
-  class_id?: string;
-  search?: string;
-  due?: '' | 'upcoming' | 'overdue' | 'nodate';
-  status?: '' | 'draft' | 'scheduled' | 'published';
-  kind?: '' | 'homework' | 'quiz';
-}
-
-export interface CreateHomeworkInput {
-  class_ids: number[];
-  title: string;
-  content?: string | null;
-  due_date?: string | null;
-  created_by: number;
-  centerId: number | null;
-  status?: string;
-  publish_at?: string | null;
-  max_score?: number | null;
-  close_date?: string | null;
-  kind?: string;
-  rubric_id?: number | null;
-  attachments?: { name: string; url: string; kind: string }[];
-  target_student_ids?: number[];
-}
+/* B3-3: kiểu, validate input, chấm điểm tách file riêng — re-export để importer cũ không đổi. */
+export * from './homework.types';
+export * from './homework.input';
+export * from './homework.grading';
 
 /* --------------------------------- Helpers --------------------------------- */
-
-function scopeConds(ctx: ScopeCtx, params: unknown[]): string[] {
-  const conds = ['1=1'];
-  if (ctx.centerId !== null) {
-    conds.push('(h.center_id = ? OR (h.center_id IS NULL AND c.center_id = ?))');
-    params.push(ctx.centerId, ctx.centerId);
-  }
-  if (ctx.ownOnly) {
-    // Scope 'own' (giáo viên hoặc custom role scope own): chỉ lớp của mình dạy.
-    // teacherId null → c.teacher_id = NULL không khớp dòng nào (fail-closed).
-    conds.push('c.teacher_id = ?');
-    params.push(ctx.teacherId);
-  }
-  return conds;
-}
 
 function dueCond(due: string, conds: string[], params: unknown[]): void {
   const today = todayVN();
@@ -155,25 +90,28 @@ export async function listHomework(
   const { page, limit, offset } = parsePagination(pageOpts);
   const total = ((await db.prepare(`SELECT COUNT(*) as c ${from} ${where}`).get(...params)) as { c: number })
     .c;
-  // P1-4: gộp 4 correlated subquery/row thành JOIN + GROUP BY (1 round-trip).
-  // COUNT(DISTINCT ...) chống nhân dòng do fan-out của các JOIN.
-  // student_count giữ đúng ngữ nghĩa assignedCountExpr: có target riêng → đếm
-  // target, không có → đếm học viên đang học của lớp.
+  // HW-13: phân trang id TRƯỚC (CTE p), rồi đếm bằng subquery gộp sẵn theo homework_id
+  // chỉ cho ≤ limit bài của trang — không còn fan-out completions × targets × enrollments
+  // × questions trên toàn bộ bài trong scope. student_count giữ ngữ nghĩa assignedCountExpr:
+  // có target riêng → đếm target, không có → đếm học viên đang học của lớp.
   const rows = (await db
     .prepare(
-      `SELECT h.*, c.name as class_name,
-        COUNT(DISTINCT hc.id) as completed_count,
-        COALESCE(
-          NULLIF(COUNT(DISTINCT ht.student_id), 0),
-          COUNT(DISTINCT e.student_id)
-        ) as student_count,
-        COUNT(DISTINCT qq.id) as question_count
-       ${from}
-       LEFT JOIN homework_completions hc ON hc.homework_id = h.id
-       LEFT JOIN homework_targets ht ON ht.homework_id = h.id
-       LEFT JOIN enrollments e ON e.class_id = h.class_id AND e.status = 'active'
-       LEFT JOIN quiz_questions qq ON qq.homework_id = h.id
-       ${where} GROUP BY h.id, c.name ORDER BY h.id DESC LIMIT ? OFFSET ?`
+      `WITH p AS (SELECT h.id ${from} ${where} ORDER BY h.id DESC LIMIT ? OFFSET ?)
+       SELECT h.*, c.name as class_name,
+        COALESCE(hc.n, 0) as completed_count,
+        COALESCE(NULLIF(ht.n, 0), en.n, 0) as student_count,
+        COALESCE(qq.n, 0) as question_count
+       FROM p JOIN homework h ON h.id = p.id JOIN classes c ON c.id = h.class_id
+       LEFT JOIN (SELECT homework_id, COUNT(*) as n FROM homework_completions
+                  WHERE homework_id IN (SELECT id FROM p) GROUP BY homework_id) hc ON hc.homework_id = h.id
+       LEFT JOIN (SELECT homework_id, COUNT(DISTINCT student_id) as n FROM homework_targets
+                  WHERE homework_id IN (SELECT id FROM p) GROUP BY homework_id) ht ON ht.homework_id = h.id
+       LEFT JOIN (SELECT class_id, COUNT(DISTINCT student_id) as n FROM enrollments
+                  WHERE status = 'active' AND class_id IN (SELECT h2.class_id FROM homework h2 JOIN p ON p.id = h2.id)
+                  GROUP BY class_id) en ON en.class_id = h.class_id
+       LEFT JOIN (SELECT homework_id, COUNT(*) as n FROM quiz_questions
+                  WHERE homework_id IN (SELECT id FROM p) GROUP BY homework_id) qq ON qq.homework_id = h.id
+       ORDER BY h.id DESC`
     )
     .all(...params, limit, offset)) as HomeworkRow[];
   return paginate(rows, total, page, limit);
@@ -211,98 +149,6 @@ export async function getHomeworkStats(
 }
 
 /**
- * Tạo bài tập cho NHIỀU lớp cùng lúc (1 lần giao cho nhiều lớp).
- * Hỗ trợ: draft/scheduled, điểm số, hạn chót, quiz, rubric, đính kèm, giao riêng.
- */
-export interface PreparedHomeworkInput {
-  class_ids: number[];
-  title: string;
-  content: string | null;
-  due_date: string | null;
-  status: HomeworkStatus;
-  publish_at: string | null;
-  max_score: number | null;
-  close_date: string | null;
-  kind: HomeworkKind;
-  rubric_id: number | null;
-  attachments: { name: string; url: string; kind: string }[];
-  target_student_ids: number[];
-  questions: unknown[];
-}
-
-/**
- * Chuẩn hóa + validate input tạo bài tập (tách khỏi route handler).
- * Ném AppError nếu input không hợp lệ.
- */
-export function prepareCreateInput(raw: Record<string, unknown>): PreparedHomeworkInput {
-  const classIds = (Array.isArray(raw.class_ids) ? raw.class_ids : [raw.class_ids])
-    .map(Number)
-    .filter((n) => Number.isInteger(n) && n > 0);
-  if (!classIds.length) throw AppError.badRequest('Vui lòng chọn ít nhất 1 lớp học');
-
-  const title = String(raw.title || '').trim();
-  if (!title) throw AppError.badRequest('Vui lòng nhập tiêu đề bài tập');
-  if (title.length > 200) throw AppError.badRequest('Tiêu đề tối đa 200 ký tự');
-
-  const due_date = raw.due_date ? String(raw.due_date) : null;
-  const close_date = raw.close_date ? String(raw.close_date) : null;
-  assertValidDates(due_date, close_date);
-
-  const status = (String(raw.status || 'published') as HomeworkStatus) || 'published';
-  if (!(HOMEWORK_STATUS as readonly string[]).includes(status))
-    throw AppError.badRequest('Trạng thái không hợp lệ');
-  const publish_at = raw.publish_at ? String(raw.publish_at) : null;
-  // P1-2: validate format hẹn đăng ngay khi tạo (như PUT) — sai format thì 400,
-  // tránh bài scheduled kẹt vĩnh viễn vì publish_at không bao giờ khớp giờ
-  if (publish_at && !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(publish_at)) {
-    throw AppError.badRequest('Hẹn đăng không hợp lệ (YYYY-MM-DDTHH:mm)');
-  }
-  if (status === 'scheduled' && !publish_at) throw AppError.badRequest('Hẹn giờ đăng cần chọn thời gian');
-
-  // P1-12: kind không hợp lệ → 400 (như status), không ép ngầm thành 'homework'
-  const kindRaw =
-    raw.kind === undefined || raw.kind === null || raw.kind === '' ? 'homework' : String(raw.kind);
-  if (!(HOMEWORK_KIND as readonly string[]).includes(kindRaw))
-    throw AppError.badRequest('Loại bài tập không hợp lệ');
-  const kind = kindRaw as HomeworkKind;
-  const questions = Array.isArray(raw.questions) ? raw.questions : [];
-  if (kind === 'quiz' && questions.length === 0) throw AppError.badRequest('Quiz cần ít nhất 1 câu hỏi');
-
-  // Quiz: max_score tự tính từ tổng điểm câu hỏi (1 thang điểm duy nhất)
-  let max_score: number | null = null;
-  if (kind === 'quiz') {
-    max_score = sumQuestionPoints(questions as { points?: number }[]);
-  } else if (raw.max_score !== null && raw.max_score !== undefined && raw.max_score !== '') {
-    max_score = Number(raw.max_score);
-    if (!Number.isFinite(max_score) || max_score < 0) throw AppError.badRequest('Điểm tối đa không hợp lệ');
-  }
-
-  const attachments =
-    raw.attachments === undefined || raw.attachments === null
-      ? []
-      : validateAttachmentInputs(raw.attachments);
-  const target_student_ids = Array.isArray(raw.target_student_ids)
-    ? (raw.target_student_ids as unknown[]).map(Number).filter((n) => Number.isInteger(n) && n > 0)
-    : [];
-
-  return {
-    class_ids: classIds,
-    title,
-    content: raw.content ? String(raw.content).slice(0, 5000) : null,
-    due_date,
-    status,
-    publish_at,
-    max_score,
-    close_date,
-    kind,
-    rubric_id: raw.rubric_id ? toValidId(raw.rubric_id) : null,
-    attachments,
-    target_student_ids,
-    questions,
-  };
-}
-
-/**
  * Insert 1 bài tập + đính kèm + targets trong transaction do caller cung cấp.
  * Dùng chung cho createHomeworkBatch và reuseHomework (P0-3b: 1 transaction duy nhất).
  */
@@ -321,6 +167,7 @@ async function insertHomeworkTx(
     close_date?: string | null;
     kind: string;
     rubric_id?: number | null;
+    max_attempts?: number | null;
     attachments: { name: string; url: string; kind: string }[];
     target_student_ids: number[];
   }
@@ -328,8 +175,8 @@ async function insertHomeworkTx(
   const r = await tx
     .prepare(
       `INSERT INTO homework (center_id, class_id, title, content, due_date, created_by,
-        status, publish_at, max_score, close_date, kind, rubric_id)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+        status, publish_at, max_score, close_date, kind, rubric_id, max_attempts)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     )
     .run(
       data.centerId,
@@ -343,15 +190,15 @@ async function insertHomeworkTx(
       data.max_score ?? null,
       data.close_date || null,
       data.kind,
-      data.rubric_id ?? null
+      data.rubric_id ?? null,
+      data.kind === 'quiz' ? (data.max_attempts ?? null) : null
     );
   const hid = Number(r.lastInsertRowid);
   const attStmt = await tx.prepare(
     'INSERT INTO homework_attachments (homework_id, name, url, kind) VALUES (?, ?, ?, ?)'
   );
   for (const a of data.attachments) {
-    if (a.name.trim() && a.url.trim())
-      await attStmt.run(hid, a.name.trim(), a.url.trim(), a.kind || 'link');
+    if (a.name.trim() && a.url.trim()) await attStmt.run(hid, a.name.trim(), a.url.trim(), a.kind || 'link');
   }
   const tgtStmt = await tx.prepare('INSERT INTO homework_targets (homework_id, student_id) VALUES (?, ?)');
   for (const sid of data.target_student_ids) await tgtStmt.run(hid, sid);
@@ -366,7 +213,42 @@ async function requireQuizPublishable(id: number): Promise<void> {
   }
 }
 
-export async function createHomeworkBatch(input: CreateHomeworkInput): Promise<HomeworkRow[]> {
+/**
+ * HW-6: file /uploads gắn vào bài phải nằm trong sổ uploads của trung tâm người gọi
+ * (superadmin: bất kỳ), hoặc đã gắn sẵn vào chính bài này (sửa bài có file cũ).
+ * Chặn gắn file của trung tâm khác/bài nộp của học viên rồi gỡ ra để xóa file đó.
+ */
+async function assertAttachableUploads(
+  attachments: HomeworkAttachmentInput[],
+  centerId: number | null,
+  homeworkId: number | null
+): Promise<void> {
+  for (const a of attachments) {
+    if (a.kind !== 'file') continue;
+    if (
+      homeworkId !== null &&
+      (await db
+        .prepare('SELECT 1 FROM homework_attachments WHERE homework_id = ? AND url = ?')
+        .get(homeworkId, a.url))
+    ) {
+      continue;
+    }
+    const up = (await db
+      .prepare('SELECT center_id FROM uploads WHERE filename = ?')
+      .get(a.url.slice('/uploads/'.length))) as { center_id: number | null } | undefined;
+    if (!up || (centerId !== null && up.center_id !== centerId)) {
+      throw AppError.badRequest(`File đính kèm "${a.name}" không hợp lệ hoặc không thuộc trung tâm này`);
+    }
+  }
+}
+
+/**
+ * Tạo bài tập cho NHIỀU lớp cùng lúc (1 lần giao cho nhiều lớp).
+ * Hỗ trợ: draft/scheduled, điểm số, hạn chót, quiz, rubric, đính kèm, giao riêng.
+ */
+export async function createHomeworkBatch(
+  input: CreateHomeworkInput & { questions?: NormalizedQuizQuestion[] }
+): Promise<HomeworkRow[]> {
   const {
     class_ids,
     title,
@@ -376,12 +258,13 @@ export async function createHomeworkBatch(input: CreateHomeworkInput): Promise<H
     centerId,
     status = 'published',
     publish_at,
-    max_score,
     close_date,
     kind = 'homework',
     rubric_id,
+    max_attempts,
     attachments = [],
     target_student_ids = [],
+    questions = [],
   } = input;
   if (!class_ids.length) throw AppError.badRequest('Vui lòng chọn ít nhất 1 lớp học');
   if (!title.trim()) throw AppError.badRequest('Vui lòng nhập tiêu đề bài tập');
@@ -390,19 +273,60 @@ export async function createHomeworkBatch(input: CreateHomeworkInput): Promise<H
   const hwStatus = status as HomeworkStatus;
   if (hwStatus === 'scheduled' && !publish_at) throw AppError.badRequest('Hẹn giờ đăng cần chọn thời gian');
   assertValidDates(due_date, close_date);
+  // HW-12: quiz có đề thì max_score = tổng điểm đề (như saveQuizQuestions)
+  const max_score = kind === 'quiz' && questions.length ? sumQuestionPoints(questions) : input.max_score;
 
   // Validate rubric_id thuộc cùng center (chống cross-tenant linkage)
   if (rubric_id) {
     const rubric = await getRubric(rubric_id, centerId);
     if (!rubric) throw AppError.badRequest('Rubric không tồn tại hoặc không thuộc trung tâm này');
   }
+  await assertAttachableUploads(attachments, centerId, null);
+
+  // HW-9: target riêng lọc THEO TỪNG LỚP (học viên đang học lớp đó). Có chọn target mà
+  // lớp không còn ai → bỏ lớp đó (không giao bài "vô chủ" cho học viên lớp khác).
+  const tids = [...new Set(target_student_ids)];
+  const plan: { class_id: number; targets: number[] }[] = [];
+  for (const cid of class_ids) {
+    if (!tids.length) {
+      plan.push({ class_id: cid, targets: [] });
+      continue;
+    }
+    const rows = (await db
+      .prepare(
+        `SELECT student_id FROM enrollments WHERE class_id = ? AND status = 'active'
+         AND student_id IN (${tids.map(() => '?').join(',')})`
+      )
+      .all(cid, ...tids)) as { student_id: number }[];
+    const targets = [...new Set(rows.map((r) => r.student_id))];
+    if (targets.length) plan.push({ class_id: cid, targets });
+  }
+  if (!plan.length) throw AppError.badRequest('Học viên được chọn không thuộc lớp nào đã chọn');
+
+  // HW-3: mỗi lớp sở hữu file riêng (như reuseHomework) — xóa/sửa bài lớp này không làm
+  // lớp khác mất file. Lớp đầu dùng file gốc, các lớp sau dùng bản copy (ghi sổ uploads để
+  // sweeper dọn nếu transaction lỗi). Copy là I/O nên làm TRƯỚC transaction.
+  const perClassAttachments: HomeworkAttachmentInput[][] = [];
+  for (let i = 0; i < plan.length; i++) {
+    if (i === 0) {
+      perClassAttachments.push(attachments);
+      continue;
+    }
+    const copied: HomeworkAttachmentInput[] = [];
+    for (const a of attachments) {
+      const url = a.kind === 'file' ? copyUploadedFileByUrl(a.url) : null;
+      if (url) await recordUpload(url, centerId, created_by);
+      copied.push({ ...a, url: url ?? a.url });
+    }
+    perClassAttachments.push(copied);
+  }
 
   const created: HomeworkRow[] = [];
   await db.transaction(async (tx) => {
-    for (const cid of class_ids) {
+    for (const [i, p] of plan.entries()) {
       const hid = await insertHomeworkTx(tx, {
         centerId,
-        class_id: cid,
+        class_id: p.class_id,
         title,
         content,
         due_date,
@@ -413,14 +337,17 @@ export async function createHomeworkBatch(input: CreateHomeworkInput): Promise<H
         close_date,
         kind,
         rubric_id,
-        attachments,
-        target_student_ids,
+        max_attempts,
+        attachments: perClassAttachments[i],
+        target_student_ids: p.targets,
       });
+      // HW-12: câu hỏi quiz ghi trong CÙNG transaction — không có quiz đã đăng mà 0 câu hỏi
+      if (kind === 'quiz' && questions.length) await insertQuizQuestionsTx(tx, hid, questions);
       created.push((await tx.prepare('SELECT * FROM homework WHERE id = ?').get(hid)) as HomeworkRow);
     }
   });
   // P0-3(d): KHÔNG emit HomeworkCreatedEvent ở đây nữa — route POST / emit sau khi
-  // câu hỏi quiz đã lưu xong, listener không bao giờ thấy quiz chưa có câu hỏi.
+  // transaction (kể cả câu hỏi quiz) commit, listener không bao giờ thấy quiz chưa có câu hỏi.
   return created;
 }
 
@@ -454,11 +381,12 @@ export async function reuseHomework(
   // file riêng, xóa bài gốc không làm bài copy mất file. Link giữ nguyên URL.
   // Copy lỗi (hiếm) → giữ URL cũ để bản nháp không mất tham chiếu (log ở helper).
   // Copy file là I/O nên làm TRƯỚC transaction (không rollback được).
-  const attachments = (src.attachments || []).map((a) => ({
-    name: a.name,
-    url: a.kind === 'file' ? (copyUploadedFileByUrl(a.url) ?? a.url) : a.url,
-    kind: a.kind,
-  }));
+  const attachments: HomeworkAttachmentInput[] = [];
+  for (const a of src.attachments || []) {
+    const copy = a.kind === 'file' ? copyUploadedFileByUrl(a.url) : null;
+    if (copy) await recordUpload(copy, centerId, createdBy); // sweeper dọn nếu transaction lỗi
+    attachments.push({ name: a.name, url: copy ?? a.url, kind: a.kind });
+  }
   const targets = (await db
     .prepare('SELECT student_id FROM homework_targets WHERE homework_id = ?')
     .all(id)) as { student_id: number }[];
@@ -466,7 +394,9 @@ export async function reuseHomework(
   let optsAll: { question_id: number; text: string; is_correct: number }[] = [];
   if (src.kind === 'quiz') {
     qs = (await db
-      .prepare('SELECT id, qtype, question, points FROM quiz_questions WHERE homework_id = ? ORDER BY position')
+      .prepare(
+        'SELECT id, qtype, question, points FROM quiz_questions WHERE homework_id = ? ORDER BY position'
+      )
       .all(id)) as { id: number; qtype: string; question: string; points: number }[];
     optsAll = (await db
       .prepare(
@@ -490,22 +420,23 @@ export async function reuseHomework(
       close_date: null,
       kind: src.kind,
       rubric_id: src.rubric_id,
+      max_attempts: src.max_attempts,
       attachments,
       target_student_ids: targets.map((t) => t.student_id),
     });
     if (src.kind === 'quiz') {
-      const qStmt = await tx.prepare(
-        'INSERT INTO quiz_questions (homework_id, position, qtype, question, points) VALUES (?, ?, ?, ?, ?)'
+      await insertQuizQuestionsTx(
+        tx,
+        hid,
+        qs.map((q) => ({
+          question: q.question,
+          points: q.points,
+          qtype: normalizeQtype(q.qtype),
+          options: optsAll
+            .filter((o) => o.question_id === q.id)
+            .map((o) => ({ text: o.text, is_correct: !!Number(o.is_correct) })),
+        }))
       );
-      const oStmt = await tx.prepare(
-        'INSERT INTO quiz_options (question_id, position, text, is_correct) VALUES (?, ?, ?, ?)'
-      );
-      for (const [qi, q] of qs.entries()) {
-        const qr = await qStmt.run(hid, qi, normalizeQtype(q.qtype), q.question, q.points);
-        const nqid = Number(qr.lastInsertRowid);
-        const opts = optsAll.filter((o) => o.question_id === q.id);
-        for (const [oi, o] of opts.entries()) await oStmt.run(nqid, oi, o.text, o.is_correct);
-      }
     }
     return hid;
   });
@@ -529,47 +460,44 @@ export async function updateHomework(
   id: number,
   data: {
     title: string;
+    /** HW-1: mọi field dưới đây undefined = GIỮ NGUYÊN giá trị trong DB (client không gửi) */
     content?: string | null;
     due_date?: string | null;
     max_score?: number | null;
     close_date?: string | null;
-    status?: 'draft' | 'scheduled' | 'published';
+    status?: HomeworkStatus;
     publish_at?: string | null;
     rubric_id?: number | null;
-    /** undefined = giữ nguyên đính kèm cũ (không breaking); mảng = đồng bộ theo danh sách mới */
+    /** C-1: chỉ áp dụng quiz; null = không giới hạn */
+    max_attempts?: number | null;
+    /** undefined = giữ nguyên đính kèm cũ; mảng = đồng bộ theo danh sách mới */
     attachments?: { name: string; url: string; kind: string }[];
   },
   centerId: number | null = null
 ): Promise<HomeworkRow> {
   if (!data.title.trim()) throw AppError.badRequest('Vui lòng nhập tiêu đề bài tập');
-  // P0-1: merge với ngày hiện tại trong DB trước khi check cặp ngày.
-  // Route truyền undefined cho field không gửi (không reset về null) → tránh
-  // lọt close_date < due_date khi client chỉ gửi 1 field.
-  const current = (await db
-    .prepare('SELECT due_date, close_date, kind, max_score FROM homework WHERE id = ?')
-    .get(id)) as {
-    due_date: string | null;
-    close_date: string | null;
-    kind: string;
-    max_score: number | null;
-  } | undefined;
+  const current = (await db.prepare('SELECT * FROM homework WHERE id = ?').get(id)) as
+    HomeworkRow | undefined;
   if (!current) throw AppError.notFound('Không tìm thấy bài tập');
-  const due_date = data.due_date !== undefined ? data.due_date : current.due_date;
-  const close_date = data.close_date !== undefined ? data.close_date : current.close_date;
-  // Validate format + logic ngày (date có thật, close_date sau due_date)
+  const keep = <T>(v: T | undefined, cur: T): T => (v !== undefined ? v : cur);
+  // P0-1: merge với ngày hiện tại trong DB trước khi check cặp ngày
+  const due_date = keep(data.due_date, current.due_date);
+  const close_date = keep(data.close_date, current.close_date);
   assertValidDates(due_date, close_date);
-  if (data.status === 'scheduled' && !data.publish_at) {
-    throw AppError.badRequest('Hẹn giờ đăng cần chọn thời gian');
-  }
-  // Validate status enum (tránh DB CHECK ném 500)
-  const status = data.status || 'published';
-  if (!['draft', 'scheduled', 'published'].includes(status)) {
+  // HW-1: không gửi status → giữ trạng thái cũ (trước đây mặc định 'published' làm
+  // sửa tiêu đề bài nháp/hẹn giờ là đăng luôn và mất lịch hẹn)
+  const status = keep(data.status, current.status);
+  if (!(HOMEWORK_STATUS as readonly string[]).includes(status)) {
     throw AppError.badRequest('Trạng thái bài tập không hợp lệ');
+  }
+  // Hẹn giờ chỉ có nghĩa khi status = scheduled (như setStatus: đăng/gỡ đăng xóa lịch hẹn)
+  const publish_at = status === 'scheduled' ? keep(data.publish_at, current.publish_at) : null;
+  if (status === 'scheduled' && !publish_at) {
+    throw AppError.badRequest('Hẹn giờ đăng cần chọn thời gian');
   }
   // P0-3(c): PUT đổi status sang published cũng phải có câu hỏi (như nút Đăng)
   if (status === 'published') await requireQuizPublishable(id);
-  // Validate max_score > 0
-  let maxScore = data.max_score ?? null;
+  let maxScore = keep(data.max_score, current.max_score);
   if (current.kind === 'quiz') {
     // P1-11: quiz có 1 thang điểm duy nhất = tổng điểm đề (đồng bộ với
     // saveQuizQuestions) — PUT không được set max_score tùy ý gây lệch tổng đề.
@@ -582,12 +510,15 @@ export async function updateHomework(
   if (maxScore !== null && (!Number.isFinite(maxScore) || maxScore <= 0)) {
     throw AppError.badRequest('Điểm tối đa phải lớn hơn 0');
   }
-  // P1-1: validate rubric_id thuộc cùng center (như lúc tạo) — chặn cross-tenant linkage
-  const rubricId = data.rubric_id ?? null;
-  if (rubricId !== null) {
+  // P1-1: rubric mới phải thuộc cùng center (như lúc tạo) — chặn cross-tenant linkage
+  const rubricId = keep(data.rubric_id, current.rubric_id);
+  if (data.rubric_id !== undefined && rubricId !== null) {
     const rubric = await getRubric(rubricId, centerId);
     if (!rubric) throw AppError.badRequest('Rubric không tồn tại hoặc không thuộc trung tâm này');
   }
+  const content = data.content !== undefined ? data.content?.trim() || null : current.content;
+  const maxAttempts =
+    current.kind === 'quiz' ? keep(parseMaxAttempts(data.max_attempts), current.max_attempts) : null;
   // Chặn hạ max_score dưới điểm cao nhất đã chấm
   if (maxScore !== null) {
     const top = (await db
@@ -597,58 +528,36 @@ export async function updateHomework(
       throw AppError.badRequest(`Không thể hạ điểm tối đa xuống dưới điểm đã chấm (${top.m})`);
     }
   }
+  // Validate đính kèm TRƯỚC khi ghi (lỗi thì không sửa nửa vời)
+  const nextAttachments = data.attachments !== undefined ? validateAttachmentInputs(data.attachments) : null;
+  if (nextAttachments) await assertAttachableUploads(nextAttachments, centerId, id);
   await db
     .prepare(
       `UPDATE homework SET title = ?, content = ?, due_date = ?,
-       max_score = ?, close_date = ?, status = ?, publish_at = ?, rubric_id = ?
+       max_score = ?, close_date = ?, status = ?, publish_at = ?, rubric_id = ?, max_attempts = ?
      WHERE id = ?`
     )
     .run(
       data.title.trim(),
-      data.content?.trim() || null,
+      content,
       due_date || null,
       maxScore,
       close_date || null,
       status,
-      data.publish_at || null,
+      publish_at || null,
       rubricId,
+      maxAttempts,
       id
     );
   // YC1: đồng bộ đính kèm khi sửa (thêm mới / xóa cái đã gỡ khỏi form)
-  if (data.attachments !== undefined) {
-    await syncAttachments(id, data.attachments);
+  if (nextAttachments) await syncAttachments(id, nextAttachments);
+  // HW-1: chuyển sang/ra khỏi published qua PUT cũng phát sự kiện như nút Đăng/Gỡ đăng (Zalo)
+  if (status === 'published' && current.status !== 'published') {
+    eventBus.emitSync(new HomeworkPublishedEvent(id, centerId));
+  } else if (status !== 'published' && current.status === 'published') {
+    eventBus.emitSync(new HomeworkUnpublishedEvent(id, centerId));
   }
   return (await db.prepare('SELECT * FROM homework WHERE id = ?').get(id)) as HomeworkRow;
-}
-
-/** Đính kèm hợp lệ gửi kèm khi tạo/sửa bài tập. */
-export interface HomeworkAttachmentInput {
-  name: string;
-  url: string;
-  kind: string;
-}
-
-/**
- * Chuẩn hóa + validate danh sách đính kèm ở trust boundary (ném 400 nếu sai).
- * - url file phải là /uploads/<tên do server sinh> → kind ép thành 'file'
- * - url còn lại phải là link http/https → kind 'link'
- */
-export function validateAttachmentInputs(raw: unknown): HomeworkAttachmentInput[] {
-  if (!Array.isArray(raw)) throw AppError.badRequest('Đính kèm không hợp lệ');
-  return raw.map((a) => {
-    const name = String((a as { name?: unknown })?.name ?? '').trim();
-    const url = String((a as { url?: unknown })?.url ?? '').trim();
-    if (!name || !url) throw AppError.badRequest('Đính kèm thiếu tên hoặc đường dẫn');
-    if (name.length > 200 || url.length > 2000) throw AppError.badRequest('Đính kèm quá dài');
-    if (url.startsWith('/uploads/')) {
-      if (!isValidUploadFilename(url.slice('/uploads/'.length))) {
-        throw AppError.badRequest('Đường dẫn file đính kèm không hợp lệ');
-      }
-      return { name, url, kind: 'file' };
-    }
-    if (!/^https?:\/\//i.test(url)) throw AppError.badRequest('Link đính kèm phải bắt đầu bằng http:// hoặc https://');
-    return { name, url, kind: 'link' };
-  });
 }
 
 /**
@@ -656,8 +565,7 @@ export function validateAttachmentInputs(raw: unknown): HomeworkAttachmentInput[
  * thêm dòng mới, xóa dòng đã gỡ. File vật lý của đính kèm loại 'file'
  * bị gỡ được xóa khỏi đĩa (best-effort, sau khi transaction commit).
  */
-async function syncAttachments(id: number, raw: unknown): Promise<void> {
-  const next = validateAttachmentInputs(raw);
+async function syncAttachments(id: number, next: HomeworkAttachmentInput[]): Promise<void> {
   const current = (await db
     .prepare('SELECT id, url FROM homework_attachments WHERE homework_id = ?')
     .all(id)) as { id: number; url: string }[];
@@ -679,7 +587,7 @@ async function syncAttachments(id: number, raw: unknown): Promise<void> {
       if (!currentUrls.has(a.url)) await insStmt.run(id, a.name, a.url, a.kind);
     }
   });
-  // Dọn file vật lý của đính kèm đã gỡ (không chặn nếu xóa lỗi)
+  // Dọn file vật lý của đính kèm đã gỡ (không chặn nếu xóa lỗi; file còn bài khác dùng thì giữ — HW-3)
   for (const u of removedUrls) await deleteUploadFileByUrl(u);
 }
 
@@ -721,20 +629,6 @@ export async function getHomeworkWithScope(
   return await homeworkRepo.findWithScope(id);
 }
 
-/** Lọc target students hợp lệ (thuộc các lớp được chọn và đang học). */
-export async function filterValidTargets(classIds: number[], targetStudentIds: unknown[]): Promise<number[]> {
-  const tids = (targetStudentIds as unknown[]).map(Number).filter((n) => Number.isInteger(n) && n > 0);
-  if (!tids.length || !classIds.length) return [];
-  const placeholders = classIds.map(() => '?').join(',');
-  const rows = (await db
-    .prepare(
-      `SELECT DISTINCT student_id FROM enrollments
-       WHERE class_id IN (${placeholders}) AND student_id IN (${tids.map(() => '?').join(',')}) AND status = 'active'`
-    )
-    .all(...classIds, ...tids)) as { student_id: number }[];
-  return rows.map((r) => r.student_id);
-}
-
 /** Danh sách bài nộp của 1 bài tập (staff xem) — có phân trang. */
 export async function getHomeworkSubmissions(
   id: number,
@@ -753,168 +647,4 @@ export async function getHomeworkSubmissions(
     )
     .all(id, limit, offset);
   return paginate(rows, total, page, limit);
-}
-
-/* --------------------------------- Chấm điểm --------------------------------- */
-
-/**
- * Học viên phải đang học lớp của bài tập (hoặc nằm trong danh sách giao riêng)
- * mới được chấm điểm — chống điểm "mồ côi". Dùng chung cho chấm tay bài thường
- * (gradeHomework) và chấm tự luận quiz (gradeQuizEssay trong quiz.service).
- */
-export async function assertGradableStudent(homeworkId: number, classId: number, studentId: number): Promise<void> {
-  const enrolled = await db
-    .prepare(`SELECT 1 FROM enrollments WHERE student_id = ? AND class_id = ? AND status = 'active'`)
-    .get(studentId, classId);
-  if (!enrolled) {
-    const targeted = await db
-      .prepare('SELECT 1 FROM homework_targets WHERE homework_id = ? AND student_id = ?')
-      .get(homeworkId, studentId);
-    if (!targeted) throw AppError.badRequest('Học viên không thuộc lớp của bài tập này');
-  }
-}
-
-/** Chấm điểm bài tập thường (tay hoặc theo rubric).
- * - Bọc transaction: điểm + đánh dấu hoàn thành là 1 đơn vị nguyên tử.
- * - Kiểm tra học viên thuộc lớp của bài tập (chống điểm "mồ côi"). */
-export async function gradeHomework(
-  homeworkId: number,
-  studentId: number,
-  score: number | null,
-  feedback: string | null,
-  gradedBy: number | null
-): Promise<void> {
-  const hw = (await db.prepare('SELECT class_id, max_score FROM homework WHERE id = ?').get(homeworkId)) as
-    { class_id: number; max_score: number | null } | undefined;
-  if (!hw) throw AppError.notFound('Không tìm thấy bài tập');
-  // Chặn điểm vượt quá điểm tối đa (gõ nhầm 15/10)
-  if (score !== null) {
-    if (score < 0) throw AppError.badRequest('Điểm không được âm');
-    if (hw.max_score != null && score > hw.max_score) {
-      throw AppError.badRequest(`Điểm không được vượt quá ${hw.max_score}`);
-    }
-  }
-  await assertGradableStudent(homeworkId, hw.class_id, studentId);
-  await db.transaction(async (tx) => {
-    await tx
-      .prepare(
-        `INSERT INTO homework_scores (homework_id, student_id, score, feedback, graded_by)
-       VALUES (?, ?, ?, ?, ?)
-       ON CONFLICT(homework_id, student_id)
-       DO UPDATE SET score = ?, feedback = ?, graded_at = datetime('now'), graded_by = ?`
-      )
-      .run(homeworkId, studentId, score, feedback, gradedBy, score, feedback, gradedBy);
-    if (score !== null) {
-      await tx
-        .prepare(
-          `INSERT INTO homework_completions (homework_id, student_id, completed_by)
-         VALUES (?, ?, 'teacher') ON CONFLICT(homework_id, student_id) DO NOTHING`
-        )
-        .run(homeworkId, studentId);
-    }
-  });
-  eventBus.emitSync(new HomeworkGradedEvent(homeworkId, studentId, score, gradedBy));
-}
-
-/** Bảng điểm của 1 bài tập: từng học viên + điểm + trạng thái. */
-export interface HomeworkScoreRow {
-  student_id: number;
-  student_name: string;
-  score: number | null;
-  feedback: string | null;
-  graded_at: string | null;
-  completed: number;
-  quiz_score: number | null;
-}
-
-export async function getHomeworkScores(homeworkId: number): Promise<HomeworkScoreRow[]> {
-  return (await db
-    .prepare(
-      `SELECT s.id as student_id, s.name as student_name,
-        hs.score, hs.feedback, hs.graded_at,
-        CASE WHEN hc.id IS NOT NULL THEN 1 ELSE 0 END as completed,
-        (SELECT score FROM quiz_attempts qa
-         WHERE qa.homework_id = ? AND qa.student_id = s.id
-         ORDER BY qa.submitted_at DESC LIMIT 1) as quiz_score
-       FROM enrollments e
-       JOIN students s ON s.id = e.student_id
-       LEFT JOIN homework_scores hs ON hs.homework_id = ? AND hs.student_id = s.id
-       LEFT JOIN homework_completions hc ON hc.homework_id = ? AND hc.student_id = s.id
-       WHERE e.class_id = (SELECT class_id FROM homework WHERE id = ?)
-         AND e.status = 'active'
-         AND (NOT EXISTS (SELECT 1 FROM homework_targets ht WHERE ht.homework_id = ?)
-              OR EXISTS (SELECT 1 FROM homework_targets ht WHERE ht.homework_id = ? AND ht.student_id = s.id))
-       ORDER BY s.name`
-    )
-    .all(homeworkId, homeworkId, homeworkId, homeworkId, homeworkId, homeworkId)) as HomeworkScoreRow[];
-}
-
-/** Điểm của 1 học viên cho 1 bài (parent view). */
-export async function getStudentScore(
-  homeworkId: number,
-  studentId: number
-): Promise<{ score: number | null; feedback: string | null; max_score: number | null } | null> {
-  const hw = (await db.prepare('SELECT max_score FROM homework WHERE id = ?').get(homeworkId)) as
-    { max_score: number | null } | undefined;
-  if (!hw) return null;
-  const s = (await db
-    .prepare('SELECT score, feedback FROM homework_scores WHERE homework_id = ? AND student_id = ?')
-    .get(homeworkId, studentId)) as { score: number | null; feedback: string | null } | undefined;
-  return { score: s?.score ?? null, feedback: s?.feedback ?? null, max_score: hw.max_score };
-}
-
-/* --------------------------------- Analytics --------------------------------- */
-
-/** Phân tích tổng quan bài tập: hoàn thành, điểm TB theo lớp. */
-export async function getHomeworkAnalytics(ctx: ScopeCtx): Promise<{
-  byClass: {
-    class_id: number;
-    class_name: string;
-    total: number;
-    avg_completion: number;
-    avg_score: number | null;
-  }[];
-  recent: { id: number; title: string; class_name: string; completion_rate: number }[];
-}> {
-  const params: unknown[] = [];
-  const conds = scopeConds(ctx, params);
-  const from = `FROM homework h JOIN classes c ON c.id = h.class_id`;
-  const where = `WHERE ${conds.join(' AND ')} AND h.status = 'published'`;
-
-  // Mẫu số: số học viên được giao (target riêng) hoặc cả lớp
-  const denominator = assignedCountExpr('h', 'h');
-
-  const byClass = (await db
-    .prepare(
-      `SELECT c.id as class_id, c.name as class_name,
-        COUNT(DISTINCT h.id) as total,
-        COALESCE(AVG(
-          (SELECT COUNT(*) FROM homework_completions hc WHERE hc.homework_id = h.id) * 1.0 /
-          NULLIF(${denominator}, 0)
-        ), 0) as avg_completion,
-        (SELECT AVG(hs.score) FROM homework_scores hs
-         JOIN homework h2 ON h2.id = hs.homework_id
-         WHERE h2.class_id = c.id AND hs.score IS NOT NULL) as avg_score
-       ${from} ${where} GROUP BY c.id, c.name ORDER BY c.name`
-    )
-    .all(...params)) as {
-    class_id: number;
-    class_name: string;
-    total: number;
-    avg_completion: number;
-    avg_score: number | null;
-  }[];
-
-  const recent = (await db
-    .prepare(
-      `SELECT h.id, h.title, c.name as class_name,
-        COALESCE(
-          (SELECT COUNT(*) FROM homework_completions hc WHERE hc.homework_id = h.id) * 100.0 /
-          NULLIF(${denominator}, 0), 0
-        ) as completion_rate
-       ${from} ${where} ORDER BY h.id DESC LIMIT 10`
-    )
-    .all(...params)) as { id: number; title: string; class_name: string; completion_rate: number }[];
-
-  return { byClass, recent };
 }

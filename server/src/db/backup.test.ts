@@ -4,9 +4,10 @@
  * - File backup tồn tại và có dung lượng > 0
  * - Xoay vòng giữ đúng N bản mới nhất
  */
-// LƯU Ý: Chạy test với DATABASE_URL trỏ tới test DB:
-//   DATABASE_URL=postgres://educenter:educenter123@localhost:5432/educenter_test node --test ...
-// (pg-compat đọc DATABASE_URL lúc load module — không set trong file vì ES module hoist imports)
+// PHẢI đặt trước mọi import db — pg-compat đọc DATABASE_URL lúc load module (DATA-8:
+// không để `db` rơi về DATABASE_URL thật trong server/.env khi chạy lẻ file này).
+process.env.DATABASE_URL =
+  process.env.TEST_DATABASE_URL || 'postgres://educenter:educenter123@localhost:5432/educenter_test';
 
 import { describe, it, before, after } from 'node:test';
 import assert from 'node:assert/strict';
@@ -36,6 +37,8 @@ describe('backupDatabase (PostgreSQL pg_dump)', () => {
     assert.ok(fs.existsSync(r1.path), 'file backup phải tồn tại');
     assert.ok(r1.sizeBytes > 0, 'backup phải có dung lượng');
     assert.ok(r1.path.endsWith('.dump'), 'định dạng pg_dump custom');
+    // OPS-4: dump chứa PII -> không ai khác (group/other) đọc được
+    assert.equal(fs.statSync(r1.path).mode & 0o077, 0, 'file backup phải 0600');
 
     // xoay vòng: keep=2 -> bản cũ nhất bị xóa
     const sleep = (ms: number) => Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);

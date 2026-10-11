@@ -1,7 +1,7 @@
 /** Unit test cho db/date-utils.ts — hàm thuần, không cần DB */
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { toISODate, parseISODate, addDays, ourDayOfWeek, formatSchedule } from './date-utils';
+import { toISODate, parseISODate, addDays, ourDayOfWeek, formatSchedule, utcToVnText } from './date-utils';
 
 describe('date-utils', () => {
   it('toISODate trả về YYYY-MM-DD', () => {
@@ -37,5 +37,12 @@ describe('date-utils', () => {
 
   it('formatSchedule chịu được JSON hỏng', () => {
     assert.doesNotThrow(() => formatSchedule('không phải json'));
+  });
+
+  it('utcToVnText: UTC SQLite -> giờ VN, qua ngày/tháng; date-only giữ nguyên', () => {
+    assert.equal(utcToVnText('2026-08-31 22:00:00'), '2026-09-01 05:00:00');
+    assert.equal(utcToVnText('2026-10-10T01:02'), '2026-10-10 08:02:00');
+    assert.equal(utcToVnText('2026-10-10'), '2026-10-10');
+    assert.equal(utcToVnText(null), null);
   });
 });

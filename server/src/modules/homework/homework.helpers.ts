@@ -3,6 +3,7 @@
  * Mọi logic dùng ở 2+ nơi đều tập trung ở đây.
  */
 import { AppError } from '../../shared/errors';
+import type { ScopeCtx } from '../../shared/scope';
 
 /** Giờ hiện tại VN định dạng YYYY-MM-DDTHH:mm (khớp input datetime-local). */
 export function nowVNMinute(): string {
@@ -66,7 +67,11 @@ export function assertUniqueOptionTexts(
   options: { text?: unknown }[] | undefined | null,
   message: string
 ): void {
-  const texts = (options ?? []).map((o) => String(o?.text ?? '').trim().toLowerCase());
+  const texts = (options ?? []).map((o) =>
+    String(o?.text ?? '')
+      .trim()
+      .toLowerCase()
+  );
   if (new Set(texts).size !== texts.length) {
     throw AppError.badRequest(message);
   }
@@ -182,4 +187,20 @@ function isRealDate(s: string): boolean {
   if (mo < 1 || mo > 12 || d < 1 || d > 31) return false;
   const dt = new Date(Date.UTC(y, mo - 1, d));
   return dt.getUTCFullYear() === y && dt.getUTCMonth() === mo - 1 && dt.getUTCDate() === d;
+}
+
+/** Điều kiện scope (trung tâm + scope own) cho query bài tập alias h JOIN classes c. */
+export function scopeConds(ctx: ScopeCtx, params: unknown[]): string[] {
+  const conds = ['1=1'];
+  if (ctx.centerId !== null) {
+    conds.push('(h.center_id = ? OR (h.center_id IS NULL AND c.center_id = ?))');
+    params.push(ctx.centerId, ctx.centerId);
+  }
+  if (ctx.ownOnly) {
+    // Scope 'own' (giáo viên hoặc custom role scope own): chỉ lớp của mình dạy.
+    // teacherId null → c.teacher_id = NULL không khớp dòng nào (fail-closed).
+    conds.push('c.teacher_id = ?');
+    params.push(ctx.teacherId);
+  }
+  return conds;
 }

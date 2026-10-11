@@ -3,6 +3,7 @@ import { assertStrongPassword, BCRYPT_ROUNDS } from '../../shared/password';
 import { db } from '../../db';
 import { PLANS, listCenters, getCenter, type Center } from '../../utils/plans';
 import { AppError } from '../../shared/errors';
+import { validate, v } from '../../shared/validate';
 import { audit, type AuditActor } from '../../shared/audit';
 
 export interface CreateCenterInput {
@@ -62,6 +63,8 @@ export async function createCenterWithAdmin(
   const usernameTaken = await db.prepare('SELECT id FROM users WHERE username = ?').get(adminUsername);
   if (usernameTaken) throw AppError.badRequest('Tên đăng nhập admin đã tồn tại');
 
+  // Hash ngoài transaction và async: không giữ connection/chặn event loop trong lúc bcrypt chạy
+  const hash = await bcrypt.hash(adminPassword, BCRYPT_ROUNDS);
   const centerId = await db.transaction(async (tx) => {
     const r = await tx
       .prepare(
@@ -76,10 +79,11 @@ export async function createCenterWithAdmin(
         input.plan_expires_at?.trim() || null
       );
     const centerId = Number(r.lastInsertRowid);
-    const hash = bcrypt.hashSync(adminPassword, BCRYPT_ROUNDS);
     await tx
       .prepare(
-        "INSERT INTO users (username, password_hash, role, name, center_id) VALUES (?, ?, 'admin', ?, ?)"
+        // N-5: superadmin đặt mật khẩu hộ -> admin trung tâm phải đổi ở lần đăng nhập đầu
+        `INSERT INTO users (username, password_hash, role, name, center_id, must_change_password)
+         VALUES (?, ?, 'admin', ?, ?, true)`
       )
       .run(adminUsername, hash, `Quản trị ${name}`, centerId);
     return centerId;
@@ -94,6 +98,43 @@ export async function createCenterWithAdmin(
     meta: { plan },
   });
   return { center_id: centerId };
+}
+
+/** Cập nhật trung tâm (chỉ superadmin — route kiểm). Chỉ đổi các trường có trong body. */
+export async function updateCenter(id: number, body: Record<string, unknown>): Promise<void> {
+  if (!(await getCenter(id))) throw AppError.notFound('Không tìm thấy trung tâm');
+  const sets: string[] = [];
+  const params: unknown[] = [];
+  if (body.name !== undefined) {
+    const name = String(body.name).trim();
+    if (!name) throw AppError.badRequest('Tên trung tâm không được để trống');
+    sets.push('name = ?');
+    params.push(name);
+  }
+  if (body.phone !== undefined) {
+    sets.push('phone = ?');
+    params.push(body.phone ? String(body.phone).trim() : null);
+  }
+  if (body.address !== undefined) {
+    sets.push('address = ?');
+    params.push(body.address ? String(body.address).trim() : null);
+  }
+  if (body.plan !== undefined) {
+    const plan = String(body.plan);
+    if (!PLANS[plan]) {
+      throw AppError.badRequest(`Gói cước không hợp lệ. Chọn một trong: ${Object.keys(PLANS).join(', ')}`);
+    }
+    sets.push('plan = ?');
+    params.push(plan);
+  }
+  if (body.plan_expires_at !== undefined) {
+    const expRaw = body.plan_expires_at ? String(body.plan_expires_at).trim() : null;
+    if (expRaw) validate({ d: expRaw }, { d: v.date({ label: 'Hạn gói' }) }); // validate ngày thật
+    sets.push('plan_expires_at = ?');
+    params.push(expRaw);
+  }
+  if (sets.length > 0)
+    await db.prepare(`UPDATE centers SET ${sets.join(', ')} WHERE id = ?`).run(...params, id);
 }
 
 export { getCenter };

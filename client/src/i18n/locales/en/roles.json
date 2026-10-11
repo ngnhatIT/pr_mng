@@ -105,5 +105,9 @@
     "updated": "Role updated"
   },
   "turnOffAll": "Turn all off",
-  "turnOnAll": "Turn all on"
+  "turnOnAll": "Turn all on",
+  "discard": {
+    "title": "Discard unsaved permission changes?",
+    "message": "There are {{count}} unsaved permission changes. Switching role will discard them."
+  }
 }

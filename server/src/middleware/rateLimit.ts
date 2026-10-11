@@ -3,6 +3,8 @@ import jwt from 'jsonwebtoken';
 import type { AuthRequest, AuthUser } from './auth';
 import { JWT_VERIFY_OPTS } from './auth';
 import { env } from '../config/env';
+import { normalizePhone } from '../services/zalo';
+import { deviceCookieId } from './cookieAuth';
 
 /**
  * Rate-limit đơn giản theo IP cho các API công khai (in-memory).
@@ -26,9 +28,14 @@ setInterval(
   5 * 60 * 1000
 ).unref();
 
+let publicNs = 0;
+
 export function publicRateLimit(maxPerWindow = 30, windowMs = 60 * 1000) {
+  // CORR-3: mỗi lần gọi (mỗi route) có namespace riêng — landing gọi 4 GET + form + client-errors
+  // không còn chung 1 bộ đếm/IP (khách sau CGNAT nhà mạng bị 429 ngay lúc tải trang).
+  const ns = ++publicNs;
   return (req: Request, res: Response, next: NextFunction): void => {
-    const ip = trustedClientIp(req);
+    const ip = `${ns}:${trustedClientIp(req)}`;
     const now = Date.now();
     let b = buckets.get(ip);
     if (!b || now > b.reset) {
@@ -38,7 +45,9 @@ export function publicRateLimit(maxPerWindow = 30, windowMs = 60 * 1000) {
     b.count += 1;
     // B2: chia quota theo số worker (mỗi worker có Map riêng)
     if (b.count > effectiveMax(maxPerWindow)) {
-      res.status(429).json({ error: 'Bạn thao tác quá nhanh, vui lòng thử lại sau ít phút.', code: 'RATE_LIMITED' });
+      res
+        .status(429)
+        .json({ error: 'Bạn thao tác quá nhanh, vui lòng thử lại sau ít phút.', code: 'RATE_LIMITED' });
       return;
     }
     next();
@@ -167,10 +176,15 @@ export const apiRateLimit = createRateLimit({
   message: 'Bạn gửi quá nhiều yêu cầu, vui lòng thử lại sau ít phút.',
 });
 
-/** 60 requests / 15 phút / tài khoản (IP nếu chưa đăng nhập) — cho các thao tác ghi (POST/PUT/PATCH/DELETE). */
+/**
+ * 600 requests / 15 phút / tài khoản (IP nếu chưa đăng nhập) — trần chung cho thao tác ghi
+ * (POST/PUT/PATCH/DELETE). Chấm bài/điểm danh là 1 request mỗi học viên (2 lớp x 35 HV x 2 câu
+ * tự luận = 140 POST) nên trần 60 cũ chặn nghiệp vụ thường ngày. Endpoint nhạy cảm có limiter
+ * riêng chặt hơn: login/register/forgot (loginRateLimit), public, costlyOp, upload.
+ */
 export const writeRateLimit = createRateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 60,
+  max: 600,
   message: 'Bạn thao tác ghi quá nhanh, vui lòng thử lại sau ít phút.',
 });
 
@@ -205,18 +219,38 @@ export const uploadRateLimit = createRateLimit({
   message: 'Bạn tải file lên quá nhanh, vui lòng thử lại sau ít phút.',
 });
 
+/**
+ * C-3: callback VNPay (IPN/return) — VNPay gửi IPN của MỌI trung tâm từ vài IP, không được dùng chung
+ * trần 300/15ph/IP của apiRateLimit (mùa đóng học phí bị 429 -> phụ huynh thấy "chờ" cả giờ).
+ * Chữ ký HMAC mới là lớp bảo vệ chính; limiter này chỉ chặn spam thô.
+ */
+export const vnpayCallbackRateLimit = createRateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 5000,
+  keyFn: (req) => `vnp:${trustedClientIp(req)}`,
+});
+
 /* ------------------------- Login rate limit ------------------------- */
 
 // key: `${ip}:${path}` → các timestamp request trong window hiện tại
 const loginHits = new Map<string, number[]>();
-// D5: key `login:<username>` → timestamp theo tài khoản (lớp 2)
+// D5: key `login:<username|phone>` → timestamp theo tài khoản (lớp 2)
 const loginAccountHits = new Map<string, number[]>();
 
-/** Ghi 1 hit vào bucket sliding-window; false = đã vượt max (không ghi thêm). */
-function takeLoginSlot(hits: Map<string, number[]>, key: string, windowMs: number, max: number): boolean {
+function recentHits(hits: Map<string, number[]>, key: string, windowMs: number, now: number): number[] {
+  return (hits.get(key) || []).filter((t) => now - t < windowMs);
+}
+
+/** Ghi 1 hit vào bucket sliding-window; trả timestamp đã ghi, null = đã vượt max (không ghi thêm). */
+function takeLoginSlot(
+  hits: Map<string, number[]>,
+  key: string,
+  windowMs: number,
+  max: number
+): number | null {
   const now = Date.now();
-  const recent = (hits.get(key) || []).filter((t) => now - t < windowMs);
-  if (recent.length >= max) return false;
+  const recent = recentHits(hits, key, windowMs, now);
+  if (recent.length >= max) return null;
   recent.push(now);
   hits.set(key, recent);
   // Dọn dẹp định kỳ để không rò rỉ bộ nhớ
@@ -227,37 +261,93 @@ function takeLoginSlot(hits: Map<string, number[]>, key: string, windowMs: numbe
       else hits.set(k, fresh);
     }
   }
-  return true;
+  return now;
 }
 
 function tooManyAttempts(res: Response): void {
-  res.status(429).json({ error: 'Thử quá nhiều lần, vui lòng đợi một phút rồi thử lại', code: 'RATE_LIMITED' });
+  res
+    .status(429)
+    .json({ error: 'Thử quá nhiều lần, vui lòng đợi một phút rồi thử lại', code: 'RATE_LIMITED' });
 }
 
 /**
- * Chống brute-force cho login/register (2 lớp):
- * - Lớp 1 (giữ nguyên): tối đa 10 request / 60 giây cho mỗi IP trên mỗi endpoint
+ * Key tài khoản cho lớp 2: SĐT chuẩn hóa bằng đúng normalizePhone của service
+ * ('0901…', '+84901…', '84901…' là 1 tài khoản -> 1 bucket); username lowercase + trim.
+ */
+export function loginAccountKey(body: unknown): string {
+  const b = body as { username?: unknown; phone?: unknown } | undefined;
+  if (typeof b?.phone === 'string' && b.phone.trim())
+    return normalizePhone(b.phone) ?? b.phone.trim().toLowerCase();
+  if (typeof b?.username === 'string') return b.username.trim().toLowerCase();
+  return '';
+}
+
+/** Loại tài khoản theo body: phone -> phụ huynh, username -> nhân sự (khớp setDeviceCookie ở login). */
+export function loginAccountKind(body: unknown): 'staff' | 'parent' {
+  const b = body as { phone?: unknown } | undefined;
+  return typeof b?.phone === 'string' && b.phone.trim() ? 'parent' : 'staff';
+}
+
+/**
+ * Chống brute-force cho login/register/forgot (2 lớp):
+ * - Lớp 1: tối đa 10 request / 60 giây cho mỗi IP trên mỗi endpoint
  *   (chia cho số worker qua RATE_LIMIT_DIVISOR — B2).
- * - D5 — lớp 2: 20 request / 15 phút cho mỗi tài khoản (username/phone normalize
- *   lowercase + trim), chống dò mật khẩu 1 user cụ thể từ nhiều IP.
+ * - D5 — lớp 2: 20 lần / 15 phút cho mỗi tài khoản, chống dò mật khẩu 1 user từ nhiều IP.
+ *   Đăng nhập THÀNH CÔNG được hoàn lại hit (chính chủ không tự tiêu quota); forgot/register
+ *   đếm mọi lần.
+ * - S-4: thiết bị có device cookie hợp lệ của tài khoản (đã từng đăng nhập thành công) dùng
+ *   bucket RIÊNG `login-dev:…:<nonce>` (mỗi thiết bị 1 bucket) — kẻ tấn công sai liên tục chỉ khóa bucket ẩn danh, không khóa chính chủ.
  * Quá giới hạn → 429.
+ * ponytail: bucket in-memory theo worker (RATE_LIMIT_DIVISOR) — chuyển Redis khi scale nhiều máy.
  */
 export function loginRateLimit(req: Request, res: Response, next: NextFunction): void {
   const ip = trustedClientIp(req);
   // Normalize path: /api/auth/login và /api/v1/auth/login dùng chung key (chống bypass qua legacy alias)
   const normalizedPath = req.path.replace(/^\/api\/v1\//, '/api/');
-  if (!takeLoginSlot(loginHits, `${ip}:${normalizedPath}`, env.LOGIN_RATE_WINDOW_MS, effectiveMax(env.LOGIN_RATE_LIMIT))) {
-    tooManyAttempts(res);
-    return;
-  }
-  const body = req.body as { username?: unknown; phone?: unknown } | undefined;
-  const loginName = String(body?.username ?? body?.phone ?? '').trim().toLowerCase();
   if (
-    loginName &&
-    !takeLoginSlot(loginAccountHits, `login:${loginName}`, env.LOGIN_ACCOUNT_WINDOW_MS, effectiveMax(env.LOGIN_ACCOUNT_RATE_LIMIT))
+    takeLoginSlot(
+      loginHits,
+      `${ip}:${normalizedPath}`,
+      env.LOGIN_RATE_WINDOW_MS,
+      effectiveMax(env.LOGIN_RATE_LIMIT)
+    ) === null
   ) {
     tooManyAttempts(res);
     return;
   }
+  const loginName = loginAccountKey(req.body);
+  if (loginName) {
+    const kind = loginAccountKind(req.body);
+    // J-A6: bucket riêng TỪNG thiết bị (nonce) — cookie lộ không rút cạn được bucket thiết bị khác
+    const dev = deviceCookieId(req, kind, loginName);
+    const key = dev ? `login-dev:${kind}:${loginName}:${dev}` : `login:${loginName}`;
+    // Ghi hit TRƯỚC khi xử lý (burst song song không lọt qua), hoàn lại nếu đăng nhập thành công
+    const at = takeLoginSlot(
+      loginAccountHits,
+      key,
+      env.LOGIN_ACCOUNT_WINDOW_MS,
+      effectiveMax(env.LOGIN_ACCOUNT_RATE_LIMIT)
+    );
+    if (at === null) {
+      tooManyAttempts(res);
+      return;
+    }
+    if (/\/login$/.test(req.path)) {
+      res.on('finish', () => {
+        if (res.statusCode >= 400) return;
+        const times = loginAccountHits.get(key);
+        const i = times?.indexOf(at) ?? -1;
+        if (i >= 0) times!.splice(i, 1);
+      });
+    }
+  }
   next();
 }
+
+/** Đăng ký phụ huynh: 5 tài khoản / giờ / IP (luôn theo IP — token hợp lệ không đổi được bucket). */
+export const registerRateLimit = createRateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 5,
+  message: 'Bạn đăng ký quá nhiều tài khoản, vui lòng thử lại sau.',
+  keyFn: (req) => `reg:${trustedClientIp(req)}`,
+});

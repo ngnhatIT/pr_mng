@@ -3,6 +3,8 @@ import crypto from 'crypto';
 import path from 'path';
 import fs from 'fs';
 import { AppError } from './errors';
+import { env } from '../config/env';
+import { db } from '../db';
 
 /**
  * Cấu hình upload file dùng chung (bài nộp của học viên).
@@ -10,9 +12,9 @@ import { AppError } from './errors';
  * - Giới hạn 10MB, chỉ nhận ảnh/PDF/Word/MP3/MP4
  */
 
-// Thư mục upload: server/uploads (tính từ dist/modules/<module>/)
+// OPS-4: thư mục upload cấu hình qua UPLOAD_DIR (mặc định <repo>/uploads)
 export function getUploadDir(): string {
-  const dir = path.resolve(__dirname, '..', '..', '..', 'uploads');
+  const dir = env.UPLOAD_DIR;
   fs.mkdirSync(dir, { recursive: true });
   return dir;
 }
@@ -119,6 +121,8 @@ export function assertSafeUpload(file: { path: string; originalname: string; mim
 
 export const uploadSingle = multer({
   storage,
+  // HW-11: trình duyệt gửi tên file UTF-8 không kèm filename* — multer mặc định latin1 làm vỡ tiếng Việt
+  defParamCharset: 'utf8',
   limits: { fileSize: 10 * 1024 * 1024 },
   fileFilter: (_req, file, cb) => {
     if (!ALLOWED_EXT.test(file.originalname)) {
@@ -150,11 +154,12 @@ export function isValidUploadFilename(filename: string): boolean {
  * để bản copy sở hữu file riêng: 2 bản ghi không trỏ chung 1 file vật lý,
  * xóa bài gốc không làm bài copy mất file. Trả về URL mới, null nếu copy thất bại.
  */
-export function copyUploadedFileByUrl(url: string | null | undefined, dir: string = getUploadDir()): string | null {
-  if (!url || !url.startsWith('/uploads/')) return null;
-  const filename = path.basename(url);
-  // Chống path traversal: chỉ copy trong upload dir
-  if (!/^[a-zA-Z0-9._-]+$/.test(filename)) return null;
+export function copyUploadedFileByUrl(
+  url: string | null | undefined,
+  dir: string = getUploadDir()
+): string | null {
+  const filename = uploadFilenameOf(url);
+  if (!filename) return null;
   try {
     const ext = path.extname(filename).toLowerCase();
     const dest = `hw_${crypto.randomUUID()}${ext}`;
@@ -165,18 +170,69 @@ export function copyUploadedFileByUrl(url: string | null | undefined, dir: strin
   }
 }
 
+/** Tên file an toàn (chỉ ký tự đơn giản, chống path traversal) từ URL /uploads/..., null nếu không hợp lệ. */
+function uploadFilenameOf(url: string | null | undefined): string | null {
+  if (!url || !url.startsWith('/uploads/')) return null;
+  const filename = path.basename(url);
+  return /^[a-zA-Z0-9._-]+$/.test(filename) ? filename : null;
+}
+
+/** File còn được bản ghi nào tham chiếu không (đính kèm bài tập / bài nộp). */
+export async function isUploadReferenced(url: string): Promise<boolean> {
+  const row = await db
+    .prepare(
+      `SELECT 1 FROM homework_attachments WHERE url = ?
+       UNION ALL SELECT 1 FROM homework_submissions WHERE file_url = ? LIMIT 1`
+    )
+    .get(url, url);
+  return !!row;
+}
+
+/** Ghi sổ uploads (HW-6): ai tải, trung tâm nào — để DELETE/gắn đính kèm kiểm quyền và sweeper dọn rác. */
+export async function recordUpload(
+  url: string,
+  centerId: number | null,
+  uploadedBy: number | null
+): Promise<void> {
+  const filename = uploadFilenameOf(url);
+  if (!filename) return;
+  await db
+    .prepare(
+      'INSERT INTO uploads (filename, center_id, uploaded_by) VALUES (?, ?, ?) ON CONFLICT (filename) DO NOTHING'
+    )
+    .run(filename, centerId, uploadedBy);
+}
+
 /**
- * Xóa file vật lý theo URL lưu trong DB (vd: '/uploads/hw_xxx.pdf').
- * Dùng khi xóa bản ghi (homework, submission, student...) để không để lại file mồ côi.
+ * Xóa file vật lý theo URL lưu trong DB (vd: '/uploads/hw_xxx.pdf') + dòng sổ uploads.
+ * Gọi SAU khi đã xóa bản ghi tham chiếu. HW-3: file còn bản ghi khác tham chiếu
+ * (bài giao nhiều lớp dữ liệu cũ, bài nộp) thì KHÔNG xóa — mọi caller đi qua đây.
  */
 export async function deleteUploadFileByUrl(url: string | null | undefined): Promise<void> {
-  if (!url || !url.startsWith('/uploads/')) return;
-  const filename = path.basename(url);
-  // Chống path traversal: chỉ cho phép tên file đơn giản
-  if (!/^[a-zA-Z0-9._-]+$/.test(filename)) return;
+  const filename = uploadFilenameOf(url);
+  if (!filename) return;
+  if (await isUploadReferenced(`/uploads/${filename}`)) return;
+  await db.prepare('DELETE FROM uploads WHERE filename = ?').run(filename);
   try {
     await fs.promises.unlink(path.join(getUploadDir(), filename));
   } catch {
     // File đã mất hoặc không xóa được — không chặn xóa DB
   }
+}
+
+/**
+ * HW-16: dọn file đã tải lên (sổ uploads) quá maxAgeHours mà chưa gắn vào bài nào
+ * (modal bị đóng ngang, mất mạng...). Cron mỗi giờ gọi. Trả về số file đã dọn.
+ */
+export async function sweepOrphanUploads(maxAgeHours = 24): Promise<number> {
+  const rows = (await db
+    .prepare(
+      `SELECT u.filename FROM uploads u
+       WHERE u.created_at < to_char(NOW() - make_interval(hours => ?), 'YYYY-MM-DD HH24:MI:SS')
+         AND NOT EXISTS (SELECT 1 FROM homework_attachments ha WHERE ha.url = '/uploads/' || u.filename)
+         AND NOT EXISTS (SELECT 1 FROM homework_submissions hs WHERE hs.file_url = '/uploads/' || u.filename)`
+    )
+    .all(maxAgeHours)) as { filename: string }[];
+  for (const r of rows) await deleteUploadFileByUrl(`/uploads/${r.filename}`);
+  return rows.length;
 }

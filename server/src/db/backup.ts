@@ -31,7 +31,8 @@ function pad(n: number): string {
 
 export async function backupDatabase(backupDir: string, keep = 7): Promise<BackupResult> {
   const databaseUrl = env.DATABASE_URL;
-  fs.mkdirSync(backupDir, { recursive: true });
+  // OPS-4: dump chứa toàn bộ PII + hash mật khẩu -> thư mục chỉ chủ sở hữu đọc được (0700).
+  fs.mkdirSync(backupDir, { recursive: true, mode: 0o700 });
   const now = new Date();
   const stamp =
     `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}` +
@@ -43,18 +44,14 @@ export async function backupDatabase(backupDir: string, keep = 7): Promise<Backu
   const tmpPath = `${filePath}.tmp`;
 
   // pg_dump custom format (-Fc): nén, restore linh hoạt từng bảng
-  // Parse URL để tránh lộ password trong process list (dùng PGPASSWORD env)
+  // DATA-23: truyền NGUYÊN connection string qua --dbname (giữ ?sslmode=, ?host=/socket...),
+  // chỉ tách password sang PGPASSWORD để không lộ trong process list.
   const dbUrl = new URL(databaseUrl);
-  const pgEnv = {
-    ...process.env,
-    PGHOST: dbUrl.hostname,
-    PGPORT: dbUrl.port || '5432',
-    PGDATABASE: dbUrl.pathname.slice(1),
-    PGUSER: decodeURIComponent(dbUrl.username),
-    PGPASSWORD: decodeURIComponent(dbUrl.password),
-  };
+  const password = decodeURIComponent(dbUrl.password);
+  dbUrl.password = '';
+  const pgEnv = password ? { ...process.env, PGPASSWORD: password } : process.env;
   try {
-    await execFileAsync('pg_dump', ['-Fc', '-f', tmpPath], {
+    await execFileAsync('pg_dump', ['-Fc', '-f', tmpPath, `--dbname=${dbUrl.toString()}`], {
       timeout: 10 * 60 * 1000,
       maxBuffer: 256 * 1024 * 1024,
       env: pgEnv,
@@ -85,6 +82,9 @@ export async function backupDatabase(backupDir: string, keep = 7): Promise<Backu
     fs.unlinkSync(tmpPath);
     throw new Error(`Backup thất bại: file dump không đọc được (${String(err)})`, { cause: err });
   }
+
+  // OPS-4: pg_dump tạo file theo umask (thường 0644) -> siết 0600 trước khi lộ tên chính thức.
+  fs.chmodSync(tmpPath, 0o600);
 
   // Rename nguyên tử: từ đây file tên chính thức mới tồn tại và đã hoàn chỉnh.
   fs.renameSync(tmpPath, filePath);

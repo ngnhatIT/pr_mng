@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { paymentsApi, PaymentConfigData } from './tuition.api';
-import { useToast } from '../../shared/ui/toast';
-import { Field, useFieldErrors } from '../../shared/components/Form';
+import { useToast, toastApiError } from '../../shared/ui/toast';
+import { useUnsavedGuard } from '../../shared/hooks/useUnsavedGuard';
+import { Field, MoneyInput, useFieldErrors } from '../../shared/components/Form';
 import { PageHeader } from '../../shared/components/PageHeader';
 import { EmptyState } from '../../shared/components/EmptyState';
 import { Skeleton } from '../../shared/components/Skeleton';
@@ -20,9 +21,35 @@ const BANKS = [
   { code: 'vpbank', label: 'VPBank' },
 ];
 
+// ADM-9: chỉ gửi các key form này sửa; hash secret chỉ gửi khi người dùng gõ giá trị mới (không rỗng),
+// không bao giờ gửi lại mask/chuỗi rỗng (sẽ ghi đè secret thật).
+const EDITABLE_KEYS = [
+  'pay_bank_code',
+  'pay_bank_account_no',
+  'pay_bank_account_name',
+  'pay_vnp_tmncode',
+  'pay_vnp_enabled',
+  'referral_reward_referrer',
+  'referral_reward_referred',
+] as const;
+
+export function buildPaymentConfigPayload(
+  form: PaymentConfigData,
+  secretInput: string
+): Partial<PaymentConfigData> {
+  const payload: Partial<PaymentConfigData> = {};
+  for (const k of EDITABLE_KEYS) payload[k] = form[k];
+  if (secretInput.trim()) payload.pay_vnp_hashsecret = secretInput.trim();
+  return payload;
+}
+
 export function PaymentConfig() {
   const { t } = useTranslation(['tuition', 'common']);
+  // form.pay_vnp_hashsecret chỉ giữ mask từ server; secret mới gõ nằm ở secretInput
   const [form, setForm] = useState<PaymentConfigData | null>(null);
+  // Bản đã lưu trên server, để biết form có thay đổi chưa lưu (UX-4: hỏi trước khi reload/đóng tab)
+  const [saved, setSaved] = useState<PaymentConfigData | null>(null);
+  const [secretInput, setSecretInput] = useState('');
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const toast = useToast();
@@ -32,8 +59,10 @@ export function PaymentConfig() {
     try {
       const data = await paymentsApi.getConfig();
       setForm(data);
+      setSaved(data);
+      setSecretInput('');
     } catch (err) {
-      toast(err instanceof Error ? err.message : t('config.loadError'), 'error');
+      toastApiError(toast, err, t('config.loadError'));
     } finally {
       setLoading(false);
     }
@@ -42,6 +71,8 @@ export function PaymentConfig() {
   useEffect(() => {
     void load();
   }, [load]);
+
+  useUnsavedGuard(!!form && (JSON.stringify(form) !== JSON.stringify(saved) || secretInput !== ''));
 
   const set = (k: keyof PaymentConfigData) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
     setForm((f) => (f ? { ...f, [k]: e.target.value } : f));
@@ -54,22 +85,17 @@ export function PaymentConfig() {
     if (form.pay_vnp_enabled === '1') {
       const errs: { pay_vnp_tmncode?: string; pay_vnp_hashsecret?: string } = {};
       if (!form.pay_vnp_tmncode.trim()) errs.pay_vnp_tmncode = t('config.vnpay.errors.tmnRequired');
-      if (!form.pay_vnp_hashsecret.trim()) errs.pay_vnp_hashsecret = t('config.vnpay.errors.secretRequired');
+      if (!form.pay_vnp_hashsecret && !secretInput.trim())
+        errs.pay_vnp_hashsecret = t('config.vnpay.errors.secretRequired');
       if (!show(errs)) return;
     }
     setBusy(true);
     try {
-      // CRITICAL: không bao giờ gửi secret dạng mask ('••••••••' hoặc 'abcd••••••••wxyz')
-      // lên server, giữ nguyên secret cũ khi người dùng không đổi.
-      const payload: Partial<PaymentConfigData> = { ...form };
-      if (payload.pay_vnp_hashsecret?.includes('•')) {
-        delete payload.pay_vnp_hashsecret;
-      }
-      await paymentsApi.saveConfig(payload);
+      await paymentsApi.saveConfig(buildPaymentConfigPayload(form, secretInput));
       toast(t('config.saved'), 'success');
       void load();
     } catch (err) {
-      toast(err instanceof Error ? err.message : t('states.saveError', { ns: 'common' }), 'error');
+      toastApiError(toast, err, t('states.saveError', { ns: 'common' }));
     } finally {
       setBusy(false);
     }
@@ -178,21 +204,17 @@ export function PaymentConfig() {
               <input
                 className="text-input mono"
                 type="password"
-                value={form.pay_vnp_hashsecret}
+                value={secretInput}
                 onChange={(e) => {
-                  set('pay_vnp_hashsecret')(e);
+                  setSecretInput(e.target.value);
                   clear('pay_vnp_hashsecret');
                 }}
                 ref={refFor('pay_vnp_hashsecret')}
-                onFocus={(e) => {
-                  // Xoá mask khi focus để người dùng nhập secret mới sạch sẽ
-                  if (e.target.value.includes('•')) {
-                    setForm((f) => (f ? { ...f, pay_vnp_hashsecret: '' } : f));
-                  }
-                }}
+                autoComplete="new-password"
+                // Mask secret đã lưu chỉ hiện ở placeholder; để trống = giữ nguyên
                 placeholder={
-                  form.pay_vnp_hashsecret.includes('•')
-                    ? t('config.vnpay.savedPlaceholder')
+                  form.pay_vnp_hashsecret
+                    ? t('config.vnpay.savedPlaceholder', { mask: form.pay_vnp_hashsecret })
                     : t('config.vnpay.newSecretPlaceholder')
                 }
               />
@@ -222,21 +244,17 @@ export function PaymentConfig() {
           <p className="card-desc">{t('config.referral.desc')}</p>
           <div className="form-grid">
             <Field label={t('config.referral.forReferrer')}>
-              <input
+              <MoneyInput
                 className="text-input"
-                type="number"
-                min={0}
                 value={form.referral_reward_referrer}
-                onChange={set('referral_reward_referrer')}
+                onChange={(v) => setForm((f) => (f ? { ...f, referral_reward_referrer: v } : f))}
               />
             </Field>
             <Field label={t('config.referral.forReferred')}>
-              <input
+              <MoneyInput
                 className="text-input"
-                type="number"
-                min={0}
                 value={form.referral_reward_referred}
-                onChange={set('referral_reward_referred')}
+                onChange={(v) => setForm((f) => (f ? { ...f, referral_reward_referred: v } : f))}
               />
             </Field>
           </div>

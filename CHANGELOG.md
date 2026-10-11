@@ -1,12 +1,167 @@
 # Changelog — EduCenterPro
 
+## 2026-10-11 — Review fixes, vòng 4 (v25)
+
+Migration **v25** `must_change_password_and_payroll_snapshot`: `users/parents.must_change_password`,
+`payroll_closures.snapshot` (JSONB), thêm mốc lương `1970-01-01 = 0` cho giáo viên thiếu mốc. Xem DEPLOYMENT.md "Chuyển lên v25".
+
+### Breaking / hành động khi nâng cấp
+
+- Mật khẩu tạm phải đổi ngay: sau khi admin đặt lại mật khẩu, tạo tài khoản giáo viên hoặc superadmin tạo admin trung tâm,
+  mọi API (trừ `GET /auth/me`, `POST /auth/change-password`, `POST /parent/change-password`) trả
+  `403 PASSWORD_CHANGE_REQUIRED`. `user`/`parent` trong login, refresh và `/auth/me` có `must_change_password`.
+- Lương các buổi TRƯỚC ngày hiệu lực của đơn giá đầu tiên tính 0đ (trước đây tính theo đơn giá hiện hành).
+
+### Tính đúng đắn
+
+- Đơn giá lương đầu tiên không áp ngược vào các tháng cũ: `PUT /payroll/rules` luôn ghi mốc `1970-01-01` (đơn giá trước
+  đó, chưa có thì 0).
+- Chốt tháng lương chụp bảng lương; tháng đã chốt luôn trả số đã chụp. Sửa đơn giá, điểm danh, xóa học viên/lớp sau đó
+  không đổi được lương tháng đó.
+- Danh sách bài của con (`GET /parent/children/:id/overview`, `homework[]`) có thêm `attempts_used` (số lượt quiz đã làm)
+  bên cạnh `max_attempts`.
+- v23 gắn lại `payments.credit_id` cho cả note có hậu tố `(đã hoàn lại credits)` (rollback v22 rồi nâng lại không mất liên kết).
+
+### Bảo mật
+
+- Người được ủy quyền `roles.manage` không còn sửa hay xóa được role đang chứa quyền mà mình không có. Trước đây họ có thể
+  tước quyền của kế toán.
+- Mật khẩu tạm do người khác đặt chỉ dùng để đổi mật khẩu. Người xử lý yêu cầu không dùng tiếp được tài khoản đích.
+
+### Vận hành
+
+- DDL lúc khởi động chỉ chạy index/cột còn thiếu (tra `pg_indexes`/`information_schema`) và chạy dưới `lock_timeout`.
+  Nhờ vậy `pm2 reload` không còn giữ khóa SHARE trên khoảng 40 bảng và không còn chặn ghi khi đang có transaction dài.
+
+### Kiến trúc
+
+- `db/schema.ts` (1977 dòng) tách thành `schema.tables.ts`, `schema.docs.ts`, `schema.triggers.ts`, `schema.validate.ts`.
+  `schema.ts` re-export các file này nên importer không đổi.
+- `homework.service.ts` (1030 dòng → 650) tách thành `homework.types.ts`, `homework.input.ts` (validate input) và
+  `homework.grading.ts` (chấm điểm, bảng điểm, phân tích). Nội dung chỉ di chuyển, `homework.service.ts` re-export.
+
+### Kiểm thử
+
+- Test mới: đơn giá đầu tiên với tháng đã chốt, bản chụp lương (gồm bản chốt cũ chưa có snapshot), DDL boot khi bảng đang bị
+  giữ lock, sửa/xóa role vượt quyền, luồng mật khẩu tạm (staff + phụ huynh), cờ trên tài khoản giáo viên, `attempts_used`.
+
+## 2026-10-11 — Review fixes, vòng 2 (v23) + nâng cấp UI/UX
+
+Migration **v23**: `payments.credit_id`, `credits.source_invoice_id`/`voided_at`, bảng `salary_rate_history`,
+index `payment_txns` (pending, invoice_id), bỏ 16 index trùng (down tạo lại).
+v23 còn **sửa dữ liệu tiền**: thu hồi credit thưởng của hóa đơn đã hoàn hết (rollback không trả lại), gắn
+`payments.credit_id` từ note chuẩn `Áp dụng credits #N` (cùng trung tâm). Xem DEPLOYMENT.md "Chuyển lên v23" (có query
+xem trước). Migration **v24**: `homework.max_attempts` (giới hạn lượt làm quiz, 409 `MAX_ATTEMPTS`), bảng
+`payroll_closures` (chốt tháng lương, 409 `PAYROLL_CLOSED`). Migration chạy với `lock_timeout` (`MIGRATION_LOCK_TIMEOUT`, mặc định 10s).
+
+### Breaking / hành động khi nâng cấp
+
+- `requirePermission` mặc định scope `center`; role tùy chỉnh chỉ có scope `own` sẽ bị 403 ở các route không hỗ trợ own.
+- Ghi thu thủ công chỉ nhận phương thức: Tiền mặt, Chuyển khoản, Quẹt thẻ, Ví điện tử, Khác (400 với giá trị khác).
+- Token không có `tv` bị coi là đã thu hồi (người dùng phải đăng nhập lại một lần).
+- `METRICS_TOKEN` (tùy chọn, ≥32 ký tự) để scrape `/metrics`; mỗi mẫu có nhãn `worker`.
+- Rollback: `server/scripts/migrate-down.ts --to <version> --yes` (xem DEPLOYMENT.md "Nâng cấp phiên bản").
+
+### Bảo mật
+
+- Gán role/đặt quyền không vượt quyền người gọi; reset mật khẩu không nhắm tài khoản cấp cao hơn; claim reset atomic.
+- Khóa đăng nhập theo thiết bị (cookie HMAC, nonce + hạn 90 ngày, đổi mỗi lần đăng nhập, bucket riêng từng thiết bị):
+  thiết bị đã đăng nhập không bị khóa lây khi tài khoản bị dò mật khẩu.
+- Xử lý yêu cầu đặt lại mật khẩu: người xử lý phải có mọi quyền của tài khoản đích (chặn chiếm tài khoản cùng hạng có
+  custom role mạnh hơn); yêu cầu pending trùng không bị ghi thêm.
+- Rate limit riêng cho VNPay IPN/return, upload phụ huynh, `/api/health`.
+- Quiz: ẩn đúng/sai từng câu tới `close_date`.
+
+### Tính đúng đắn
+
+- Hoàn tiền khôi phục credit qua `payments.credit_id`, giới hạn trong trung tâm; thu hồi thưởng giới thiệu trong cùng transaction.
+- Lương tính theo đơn giá hiệu lực tại ngày buổi dạy (`PUT /payroll/rules` nhận `effective_from`).
+- Không xóa học viên khi còn giao dịch VNPay đang chờ.
+- Sửa lỗi boot DB v21 → v22 (index tạo trước khi cột tồn tại).
+
+### Hiệu năng / kiến trúc
+
+- pg-compat: chỉ ghi chạm payments/invoices (hoặc DELETE) mới mở transaction gắn actor; dịch SQL một lần.
+- Báo cáo công nợ/dashboard tính đã thu theo LATERAL từng hóa đơn thay vì cộng toàn bảng.
+- SQL chuyển hết khỏi route sang service; ESLint cấm import `db` trong `*.routes.ts` (trừ metrics).
+
+### UI/UX
+
+- Modal: focus vào ô nhập đầu tiên, không đóng khi bấm thanh cuộn, Esc an toàn khi gõ IME, bottom sheet trên mobile.
+- Hỏi trước khi bỏ thay đổi chưa lưu (Esc/nền/X, reload/đóng tab và chuyển trang trong app qua data router).
+- Danh sách: bỏ qua phản hồi cũ, lỗi tải có nút Thử lại, trang/tìm kiếm/bộ lọc lưu trên URL.
+- Toast lỗi hiện đúng thông báo của server; ô tiền có phân cách hàng nghìn; áp credit chọn từ danh sách.
+- "Tổng nợ" lấy tổng từ server; in biên lai chỉ in biên lai.
+- Bản dịch tải theo nhu cầu (entry 183 KB → 50 KB); react-router 7 (npm audit: 0 lỗ hổng).
+
+### Kiểm thử & CI
+
+- Server 537 test, client 101 test (thêm happy-dom cho Modal/hooks/blocker); test nâng cấp DB cũ qua boot thật.
+- CI: sửa build job (`NODE_ENV` chỉ ở bước smoke), thêm `npm audit --audit-level=high`.
+
+## 2026-10-11 — Review fixes, vòng 1 (v22)
+
+Sửa theo `docs/code-review-2026-10-10.md` (mục "Ưu tiên sửa"); migration **v22** `tenant_isolation_and_integrity`.
+
+### Breaking / hành động khi nâng cấp
+
+Xem quy trình đầy đủ (backup, VALIDATE, rollback) ở `docs/DEPLOYMENT.md` mục "Nâng cấp phiên bản".
+
+- **`JWT_SECRET`** bắt buộc với mọi `NODE_ENV` trừ `development`/`test`, tối thiểu **32 ký tự** — thiếu/ngắn thì server không khởi động
+  (trước đây staging/`NODE_ENV` rỗng âm thầm dùng secret công khai trong repo).
+- **`APP_BASE_URL`** bắt buộc ở production (URL `https://...`, không dấu `/` cuối) — dùng cho VNPay returnUrl.
+- **VNPay env đổi tên:** `VNPAY_URL`, `VNPAY_TMN_CODE`, `VNPAY_HASH_SECRET`, `VNPAY_RETURN_URL` đã **bỏ**; thay bằng
+  `VNPAY_PAY_URL` (cổng thanh toán) và `VNPAY_API_URL` (querydr cho job đối soát), mặc định sandbox, phải là `https://`.
+  TMN code/hash secret nhập per-center ở trang cấu hình thanh toán; returnUrl suy ra từ `APP_BASE_URL`.
+- **Bỏ `ZALO_OA_ID`/`ZALO_ACCESS_TOKEN` khỏi env** (không được dùng): cấu hình Zalo chỉ per-center trong app.
+- **`UPLOAD_DIR`** (mới, mặc định `<repo>/uploads`): đưa vào backup/offsite sync — `pg_dump` không chứa file upload.
+- **Không còn "trung tâm mặc định":** `reqCenterId` fail-closed — user không phải superadmin mà chưa gán trung tâm bị
+  `403 NO_CENTER`. Ràng buộc `chk_users_center` (v22) ở trạng thái `NOT VALID`: phải sửa các user `center_id IS NULL` rồi
+  `ALTER TABLE users VALIDATE CONSTRAINT chk_users_center;` (hourly check log ERROR `user_without_center` tới khi xong).
+- **Superadmin:** thêm `?center_id=<id>` để thao tác như một trung tâm; thao tác ghi dữ liệu tenant bắt buộc chỉ rõ trung tâm
+  (query/body `center_id`, thiếu → `400 CENTER_REQUIRED`) — không còn ngầm ghi vào trung tâm id nhỏ nhất.
+- **API công khai** (`/public/*`): Host không khớp subdomain nào và hệ thống có nhiều trung tâm → `404` (trước đây rơi về trung tâm đầu tiên).
+- **Rollback:** `server/scripts/migrate-down.ts --to <version> [--yes]` (code cũ từ chối chạy trên DB có version mới hơn).
+- Node 22 là phiên bản CI/khuyến nghị.
+
+### Bảo mật & cô lập tenant
+
+- Chặn admin trung tâm tự cấp scope `all`/`system.*` qua custom role rồi reset mật khẩu xuyên trung tâm; scope bị hạ về `center`
+  với user không phải superadmin; thay đổi role/permission được ghi audit.
+- `reset_requests` và `referrals` gắn `center_id` (v22) — hết lộ username/SĐT xuyên trung tâm; referral khớp theo trung tâm.
+- Liên kết con của phụ huynh (mã HV + ngày sinh) giới hạn số lần thử sai (`parent_link_failures`).
+- Mã học viên unique theo trung tâm (`UNIQUE (center_id, code)`); mã role unique theo trung tâm / hệ thống (partial index).
+- Service worker: không cache `/api`, `/uploads`, request có `Authorization`; cache đặt tên theo build, HTML network-first.
+
+### Đúng đắn nghiệp vụ
+
+- **Idempotency** viết lại: giữ chỗ nguyên tử (`processing`), khóa theo user + method + path + hash body; áp dụng cho
+  tạo hóa đơn, thu tiền, hoàn tiền. Sửa lỗi `pg-compat` tự thêm `RETURNING id` vào `idempotency_keys`/`quiz_essay_scores`
+  (key không bao giờ được lưu; chấm tự luận rubric lỗi 500).
+- **Thanh toán/VNPay:** ký trên giá trị đúng chuẩn 2.1.0; trả dư / hóa đơn đã mất → giao dịch `needs_review` + cảnh báo, không bỏ tiền;
+  job đối soát đếm `query_attempts`; hoàn tiền tách phần tiền mặt / credit rõ ràng.
+- **Nhắc học phí Zalo:** sửa truy vấn hỏng (`ps.id`); `PUT /zalo/config` không ghi đè secret thật bằng chuỗi đã che.
+- **Buổi học:** xóa = hủy mềm (`sessions.status='cancelled'`), lưu giáo viên thực dạy (`sessions.teacher_id`) cho bảng lương.
+- **Homework/Upload:** file đính kèm đi qua sổ `uploads` (theo trung tâm, nút "Tải file lên" cho giáo viên); chỉ gắn được file
+  thuộc trung tâm của người gọi hoặc đã gắn sẵn vào chính bài đó; chấm tự luận quiz theo rubric (`quiz_essay_scores`).
+- **UI:** reload/tab mới không còn bị đăng xuất (refresh khi khởi động); giáo viên lưu được điểm danh; chi tiết hóa đơn hiện đúng "Đã thu";
+  biên lai không còn `NaNđ`; file đính kèm của giáo viên tải được.
+
+### Hạ tầng, test, vận hành
+
+- Test chạy tuần tự (`--test-concurrency=1`, `TEST_OUT` riêng), glob gồm `middleware/` và `jobs/`; test fixture/`schema.test`/`upgrade.test` cập nhật cho v22.
+- CI: smoke test boot thật (Postgres service, đúng cổng/env), `npm audit`, typecheck `scripts/`, prettier; Node 22.
+- Backup: `pg_dump` nhận connection string nguyên vẹn (giữ `?sslmode=`), mật khẩu qua `PGPASSWORD`; thư mục backup `0700`, file dump `0600`.
+- Docs: `DEPLOYMENT.md` thêm "Nâng cấp phiên bản" + rollback + PM2 logrotate/startup; sửa `API.md`/`ARCHITECTURE.md`/`CONTRIBUTING.md`/`README.md`
+  (endpoint, idempotency, mẫu route, cách chạy test); `ops/GO-LIVE.md` làm mới; gộp env mẫu về `server/.env.example`.
+
 ## 2026-10-09 — Vòng "chuẩn quốc tế" (audit → fix liên tục)
 
 - **Performance**: migration v7 thêm 18 index cho FK nóng; `getCenterSettings` batch 1 query;
   dashboard 7 query chạy song song; bảng lương viết lại 1 query `GROUP BY`.
 - **Service-layer**: chuyển transaction khỏi routes (centers, roles, leads); `convertLeadToStudent` atomic.
 - **API consistency**: Swagger bổ sung roles/parent refresh-logout/VNPay/metrics, sửa 17 path homework
-  + path enrollments; roles envelope về raw array; `201` cho mọi endpoint tạo resource.
+  - path enrollments; roles envelope về raw array; `201` cho mọi endpoint tạo resource.
 - **Accessibility (WCAG AA)**: fix contrast `--text-faint`/placeholder, `prefers-reduced-motion`,
   `aria-label` cho search inputs, `<html lang>` động, Escape đóng drawer mobile.
 - **Docs**: viết lại `API.md` (auth flow, RBAC, endpoint refund), `DEPLOYMENT.md` (env đầy đủ),
@@ -21,7 +176,7 @@
 
 ## 2026-10-09 — Refresh token rotation
 
-- Access token 1h; refresh token opaque 48-byte, 30 ngày, lưu DB dạng SHA-256 hash.
+- Access token 15 phút (`ACCESS_TOKEN_TTL`; bản đầu là 1h); refresh token opaque 48-byte, 30 ngày, lưu DB dạng SHA-256 hash.
 - Rotation + reuse detection (dùng lại token cũ → thu hồi cả chuỗi).
 - `POST /auth/refresh`, `/auth/logout`, `/parent/refresh`, `/parent/logout`; client tự refresh khi 401.
 

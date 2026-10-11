@@ -53,10 +53,11 @@ const VALID_QUESTIONS = [
 async function resetDb(): Promise<void> {
   await resetTestDb();
 
-  // User cố định id=1 cho các fixture created_by/graded_by (FK bắt buộc user có thật)
+  // User cố định id=1 cho các fixture created_by/graded_by (FK bắt buộc user có thật).
+  // v22 chk_users_center: chỉ superadmin được không có center — khớp ngữ cảnh centerId: null của file này.
   await db
     .prepare(
-      "INSERT INTO users (id, username, password_hash, role, name) VALUES (1, 'tester', 'x', 'staff', 'Tester')"
+      "INSERT INTO users (id, username, password_hash, role, name) VALUES (1, 'tester', 'x', 'superadmin', 'Tester')"
     )
     .run();
 
@@ -352,7 +353,7 @@ describe('quiz.service - tạo đề và validate', () => {
             ],
           },
         ]),
-      /chưa chọn đáp án đúng/
+      /cần đúng 1 đáp án đúng/
     );
   });
 
@@ -382,7 +383,7 @@ describe('quiz.service - tạo đề và validate', () => {
         centerId: null,
         kind: 'quiz',
       });
-    }, /chưa chọn đáp án đúng/);
+    }, /cần đúng 1 đáp án đúng/);
     assert.equal(await count('homework'), before);
   });
 });
@@ -436,6 +437,46 @@ describe('quiz.service - nộp bài và chấm điểm', () => {
     const s = await homeworkService.getStudentScore(id, student1Id);
     assert.equal(s?.score, 5);
     assert.equal(await count('quiz_attempts', `WHERE homework_id = ${id} AND student_id = ${student1Id}`), 2);
+  });
+
+  it('C-1/J-A2: max_attempts — nộp song song không vượt giới hạn, lượt thừa 409 MAX_ATTEMPTS; sửa/validate', async () => {
+    const [hw] = await homeworkService.createHomeworkBatch({
+      class_ids: [classId],
+      title: 'Quiz 2 lượt',
+      created_by: 1,
+      centerId: null,
+      kind: 'quiz',
+      max_attempts: 2,
+    });
+    await quizService.saveQuizQuestions(hw.id, VALID_QUESTIONS);
+    const [q1] = await getQuizIds(hw.id);
+    const ans = [{ question_id: q1.qid, option_id: q1.correctOpt }];
+    const rs = await Promise.allSettled([1, 2, 3].map(() => quizService.submitQuiz(hw.id, student1Id, ans)));
+    assert.equal(rs.filter((r) => r.status === 'fulfilled').length, 2);
+    const rej = rs.find((r) => r.status === 'rejected') as PromiseRejectedResult;
+    assert.equal((rej.reason as { statusCode: number }).statusCode, 409);
+    assert.equal((rej.reason as { code: string }).code, 'MAX_ATTEMPTS');
+    assert.equal(await count('quiz_attempts', `WHERE homework_id = ${hw.id}`), 2);
+    // Giáo viên nới giới hạn -> làm tiếp được; null = không giới hạn
+    await homeworkService.updateHomework(hw.id, { title: 'Quiz 2 lượt', max_attempts: 3 });
+    await quizService.submitQuiz(hw.id, student1Id, ans);
+    await homeworkService.updateHomework(hw.id, { title: 'Quiz 2 lượt', max_attempts: null });
+    await quizService.submitQuiz(hw.id, student1Id, ans);
+    // Không gửi max_attempts -> giữ nguyên; giá trị sai -> 400
+    await homeworkService.updateHomework(hw.id, { title: 'Đổi tên' });
+    assert.equal((await homeworkService.getHomeworkDetail(hw.id))?.max_attempts, null);
+    assert.throws(() => homeworkService.parseMaxAttempts(0), /1-100/);
+    assert.throws(() => homeworkService.parseMaxAttempts(1.5), /1-100/);
+    assert.equal(
+      homeworkService.prepareCreateInput({
+        class_ids: [1],
+        title: 'x',
+        kind: 'quiz',
+        questions: VALID_QUESTIONS,
+        max_attempts: '3',
+      }).max_attempts,
+      3
+    );
   });
 
   it('quá hạn chót (close_date) → không nộp được', async () => {
@@ -755,9 +796,10 @@ describe('homework.service - update và reuse', () => {
     assert.equal(row.close_date, '2026-12-10');
     // P0-1: field không gửi thì giữ nguyên trong DB, không reset về null
     await homeworkService.updateHomework(hw.id, { title: 'Date test' });
-    const kept = (await db
-      .prepare('SELECT due_date, close_date FROM homework WHERE id = ?')
-      .get(hw.id)) as { due_date: string; close_date: string };
+    const kept = (await db.prepare('SELECT due_date, close_date FROM homework WHERE id = ?').get(hw.id)) as {
+      due_date: string;
+      close_date: string;
+    };
     assert.equal(kept.due_date, '2026-12-01');
     assert.equal(kept.close_date, '2026-12-10');
   });
@@ -899,10 +941,7 @@ describe('validate điểm câu hỏi (P1-7)', () => {
 
   it('validateQuizQuestions: điểm âm/0/quá 1000/không phải số → 400', () => {
     for (const bad of [-1, 0, 1001, 99999, 'abc', NaN]) {
-      assert.throws(
-        () => quizService.validateQuizQuestions([qWith(bad)]),
-        /Điểm câu 1 phải lớn hơn 0/
-      );
+      assert.throws(() => quizService.validateQuizQuestions([qWith(bad)]), /Điểm câu 1 phải lớn hơn 0/);
     }
     // Thiếu điểm → mặc định 1, vẫn qua
     quizService.validateQuizQuestions([qWith(undefined)]);
@@ -1163,10 +1202,7 @@ describe('homework.service - publish quiz phải có câu hỏi (P0-3)', () => {
 
   it('setHomeworkStatus từ chối đăng quiz 0 câu hỏi', async () => {
     const id = await createEmptyQuiz();
-    await assert.rejects(
-      () => homeworkService.setHomeworkStatus(id, 'published', null),
-      /chưa có câu hỏi/
-    );
+    await assert.rejects(() => homeworkService.setHomeworkStatus(id, 'published', null), /chưa có câu hỏi/);
     // Thêm câu hỏi rồi đăng được
     await quizService.saveQuizQuestions(id, VALID_QUESTIONS);
     await homeworkService.setHomeworkStatus(id, 'published', null);
@@ -1374,7 +1410,9 @@ describe('homework.service - listHomework JOIN/GROUP BY (P1-4)', () => {
       target_student_ids: [student1Id],
     });
     await db
-      .prepare("INSERT INTO homework_completions (homework_id, student_id, completed_by) VALUES (?, ?, 'teacher')")
+      .prepare(
+        "INSERT INTO homework_completions (homework_id, student_id, completed_by) VALUES (?, ?, 'teacher')"
+      )
       .run(hw1.id, student1Id);
     // Quiz 2 câu, giao cả lớp (không target)
     const [hw2] = await homeworkService.createHomeworkBatch({
@@ -1457,11 +1495,16 @@ describe('homework.service - listHomework JOIN/GROUP BY (P1-4)', () => {
       { question_id: ids[0].qid, option_id: ids[0].correctOpt },
       { question_id: ids[1].qid, option_id: ids[1].wrongOpt },
     ]);
+    // C-1: chưa có close_date (làm lại mãi) → không báo đúng/sai từng câu
+    const hidden = await quizService.getStudentAttempts(hw.id, student1Id);
+    assert.equal(hidden.length, 1);
+    assert.equal(hidden[0].answers.length, 2);
+    assert.ok(hidden[0].answers.every((a) => a.correct === null));
+    // Qua hạn chót → lộ đúng/sai
+    await db.prepare("UPDATE homework SET close_date = '2000-01-01' WHERE id = ?").run(hw.id);
     const attempts = await quizService.getStudentAttempts(hw.id, student1Id);
-    assert.equal(attempts.length, 1);
-    assert.equal(attempts[0].answers.length, 2);
     assert.deepEqual(
-      attempts[0].answers.map((a) => Boolean(a.correct)),
+      attempts[0].answers.map((a) => a.correct),
       [true, false]
     );
     const review = await quizService.getAttemptReview(attempts[0].id, student1Id);
@@ -1476,9 +1519,7 @@ describe('questionBank.service - sửa câu hỏi', () => {
   });
 
   it('updateBankQuestion thay câu hỏi + toàn bộ đáp án trong 1 lần', async () => {
-    const { addBankQuestion, updateBankQuestion, listBankQuestions } = await import(
-      './questionBank.service'
-    );
+    const { addBankQuestion, updateBankQuestion, listBankQuestions } = await import('./questionBank.service');
     const bq = await addBankQuestion(null, 1, {
       question: 'Câu cũ',
       points: 1,
@@ -1525,5 +1566,221 @@ describe('questionBank.service - sửa câu hỏi', () => {
         }),
       /Không tìm thấy câu hỏi/
     );
+  });
+});
+
+/* ------------------------- Review 2026-10-10 (server-homework) ------------------------- */
+
+describe('review 2026-10-10: tạo bài nhiều lớp (HW-9, HW-12) + validate (HW-17, HW-19)', () => {
+  beforeEach(async () => {
+    await resetDb();
+  });
+
+  it('HW-9: target riêng lọc theo TỪNG lớp; lớp không còn ai được chọn thì bỏ qua', async () => {
+    const cb = await db.prepare("INSERT INTO classes (name) VALUES ('Lớp B')").run();
+    const classB = Number(cb.lastInsertRowid);
+    const s3 = await db.prepare("INSERT INTO students (code, name) VALUES ('ST003', 'Học viên 3')").run();
+    const student3 = Number(s3.lastInsertRowid);
+    await db.prepare('INSERT INTO enrollments (student_id, class_id) VALUES (?, ?)').run(student3, classB);
+    // Chọn HV1 (lớp Test) + HV3 (lớp B) → mỗi lớp chỉ nhận target của lớp mình
+    const created = await homeworkService.createHomeworkBatch({
+      class_ids: [classId, classB],
+      title: 'Giao riêng 2 lớp',
+      created_by: 1,
+      centerId: null,
+      target_student_ids: [student1Id, student3],
+    });
+    assert.equal(created.length, 2);
+    const targetsOf = async (hid: number) =>
+      (
+        (await db.prepare('SELECT student_id FROM homework_targets WHERE homework_id = ?').all(hid)) as {
+          student_id: number;
+        }[]
+      ).map((r) => r.student_id);
+    assert.deepEqual(await targetsOf(created.find((h) => h.class_id === classId)!.id), [student1Id]);
+    assert.deepEqual(await targetsOf(created.find((h) => h.class_id === classB)!.id), [student3]);
+    // Chỉ chọn HV lớp Test → lớp B bị bỏ qua (không giao bài vô chủ)
+    const only = await homeworkService.createHomeworkBatch({
+      class_ids: [classId, classB],
+      title: 'Chỉ lớp Test',
+      created_by: 1,
+      centerId: null,
+      target_student_ids: [student2Id],
+    });
+    assert.deepEqual(
+      only.map((h) => h.class_id),
+      [classId]
+    );
+  });
+
+  it('HW-12: quiz tạo kèm câu hỏi trong cùng transaction, max_score = tổng điểm đề', async () => {
+    const [hw] = await homeworkService.createHomeworkBatch({
+      class_ids: [classId],
+      title: 'Quiz atomic',
+      created_by: 1,
+      centerId: null,
+      kind: 'quiz',
+      questions: quizService.validateQuizQuestions(VALID_QUESTIONS),
+    });
+    assert.equal(await quizService.countQuizQuestions(hw.id), 2);
+    assert.equal(Number(hw.max_score), 5);
+  });
+
+  it('HW-17: lưu câu hỏi vào bài thường → 400, max_score không đổi', async () => {
+    const [hw] = await homeworkService.createHomeworkBatch({
+      class_ids: [classId],
+      title: 'Bài thường',
+      created_by: 1,
+      centerId: null,
+      max_score: 10,
+    });
+    await assert.rejects(quizService.saveQuizQuestions(hw.id, VALID_QUESTIONS), /Chỉ bài loại quiz/);
+    assert.equal(await count('quiz_questions'), 0);
+  });
+
+  it('HW-19: tạo bài max_score = 0 → 400', () => {
+    assert.throws(
+      () => homeworkService.prepareCreateInput({ class_ids: [classId], title: 'X', max_score: 0 }),
+      /lớn hơn 0/
+    );
+  });
+});
+
+describe('review 2026-10-10: updateHomework giữ giá trị khi không gửi (HW-1)', () => {
+  beforeEach(async () => {
+    await resetDb();
+  });
+
+  it('không gửi status/publish_at → bài hẹn giờ giữ lịch; chuyển sang published thì emit homework.published', async () => {
+    const [hw] = await homeworkService.createHomeworkBatch({
+      class_ids: [classId],
+      title: 'Hẹn giờ',
+      created_by: 1,
+      centerId: null,
+      status: 'scheduled',
+      publish_at: '2099-01-01T08:00',
+      rubric_id: null,
+    });
+    const kept = await homeworkService.updateHomework(hw.id, { title: 'Hẹn giờ (sửa)' });
+    assert.equal(kept.status, 'scheduled');
+    assert.equal(kept.publish_at, '2099-01-01T08:00');
+    let published = 0;
+    const off = eventBus.on('homework.published', () => {
+      published++;
+    });
+    try {
+      const pub = await homeworkService.updateHomework(hw.id, {
+        title: 'Hẹn giờ (sửa)',
+        status: 'published',
+      });
+      assert.equal(pub.status, 'published');
+      assert.equal(pub.publish_at, null);
+      // Sửa tiếp khi đã published: không emit lại
+      await homeworkService.updateHomework(hw.id, { title: 'Lần 3' });
+    } finally {
+      off();
+    }
+    assert.equal(published, 1);
+  });
+});
+
+describe('review 2026-10-10: rubric (HW-10, HW-21)', () => {
+  beforeEach(async () => {
+    await resetDb();
+    await db.prepare("INSERT INTO centers (id, name) VALUES (1, 'C1')").run();
+  });
+
+  it('HW-10: trung tâm không xóa được rubric global; superadmin xóa được', async () => {
+    const { deleteRubric } = await import('./rubric.service');
+    const r = await createRubric(null, 1, {
+      name: 'IELTS Writing',
+      criteria: [{ name: 'Task', max_score: 9 }],
+    });
+    await assert.rejects(deleteRubric(r.id, 1), /Không tìm thấy rubric/);
+    assert.equal(await count('rubrics'), 1);
+    await deleteRubric(r.id, null);
+    assert.equal(await count('rubrics'), 0);
+  });
+
+  it('HW-21: điểm tiêu chí không phải số / âm / quá lớn → 400 (không ép về 0)', async () => {
+    for (const bad of ['abc', -1, 0, 1e308]) {
+      await assert.rejects(
+        createRubric(1, 1, { name: 'R', criteria: [{ name: 'C', max_score: bad as number }] }),
+        /Điểm tối đa tiêu chí 1/
+      );
+    }
+    assert.equal(await count('rubrics'), 0);
+  });
+});
+
+describe('review 2026-10-10: parent overview (COR-4, FE-4)', () => {
+  beforeEach(async () => {
+    await resetDb();
+  });
+
+  it('COR-4: > 20 bài đã hoàn thành vẫn thấy bài chưa làm (đứng đầu); FE-4: kèm attachments', async () => {
+    const [pending] = await homeworkService.createHomeworkBatch({
+      class_ids: [classId],
+      title: 'Bài chưa làm',
+      created_by: 1,
+      centerId: null,
+      attachments: [{ name: 'Tài liệu', url: 'https://example.com/a.pdf', kind: 'link' }],
+    });
+    for (let i = 0; i < 21; i++) {
+      const [hw] = await homeworkService.createHomeworkBatch({
+        class_ids: [classId],
+        title: `Đã làm ${i}`,
+        created_by: 1,
+        centerId: null,
+      });
+      await db
+        .prepare(
+          "INSERT INTO homework_completions (homework_id, student_id, completed_by) VALUES (?, ?, 'parent')"
+        )
+        .run(hw.id, student1Id);
+    }
+    const ov = await parentService.getChildOverview(parent1Id, student1Id);
+    const list = ov.homework as {
+      id: number;
+      completed: number;
+      attachments: { name: string; url: string; kind: string }[];
+    }[];
+    assert.equal(list.length, 20);
+    assert.equal(list[0].id, pending.id);
+    assert.equal(Number(list[0].completed), 0);
+    assert.deepEqual(list[0].attachments, [
+      { name: 'Tài liệu', url: 'https://example.com/a.pdf', kind: 'link' },
+    ]);
+    assert.deepEqual(list[1].attachments, []);
+  });
+
+  it('B3-2: danh sách bài của con kèm max_attempts + attempts_used (client biết còn làm lại được không)', async () => {
+    const [quiz] = await homeworkService.createHomeworkBatch({
+      class_ids: [classId],
+      title: 'Quiz 2 lượt',
+      created_by: 1,
+      centerId: null,
+      kind: 'quiz',
+      max_attempts: 2,
+      questions: [
+        {
+          question: 'Q',
+          points: 1,
+          qtype: 'single',
+          options: [
+            { text: 'A', is_correct: true },
+            { text: 'B', is_correct: false },
+          ],
+        },
+      ],
+    });
+    await db
+      .prepare('INSERT INTO quiz_attempts (homework_id, student_id, score, max_score) VALUES (?, ?, 1, 1)')
+      .run(quiz.id, student1Id);
+    const ov = await parentService.getChildOverview(parent1Id, student1Id);
+    const row = (ov.homework as { id: number; max_attempts: number | null; attempts_used: number }[]).find(
+      (h) => h.id === quiz.id
+    );
+    assert.deepEqual({ max: row?.max_attempts, used: row?.attempts_used }, { max: 2, used: 1 });
   });
 });

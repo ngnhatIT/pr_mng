@@ -70,13 +70,19 @@ describe('assertSafeUpload', () => {
 
   it('file giả mạo → throw 400 + xóa file khỏi đĩa', () => {
     const f = makeFile('evil.pdf', buf(0x4d, 0x5a, 0x90, 0x00), 'application/pdf'); // MZ = exe
-    assert.throws(() => assertSafeUpload(f), (e: unknown) => (e as { statusCode?: number }).statusCode === 400);
+    assert.throws(
+      () => assertSafeUpload(f),
+      (e: unknown) => (e as { statusCode?: number }).statusCode === 400
+    );
     assert.ok(!fs.existsSync(f.path));
   });
 
   it('mimetype không khớp đuôi file → throw 400', () => {
     const f = makeFile('b.png', buf(0x89, 0x50, 0x4e, 0x47), 'application/pdf');
-    assert.throws(() => assertSafeUpload(f), (e: unknown) => (e as { statusCode?: number }).statusCode === 400);
+    assert.throws(
+      () => assertSafeUpload(f),
+      (e: unknown) => (e as { statusCode?: number }).statusCode === 400
+    );
     assert.ok(!fs.existsSync(f.path));
   });
 });

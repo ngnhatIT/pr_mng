@@ -2,18 +2,8 @@
 <html lang="vi">
   <head>
     <meta charset="UTF-8" />
-    <script>
-      // Chống FOUC: set theme trước first paint, đồng bộ logic với ThemeProvider.
-      (function () {
-        try {
-          var t = localStorage.getItem('educenter-theme');
-          if (t !== 'light' && t !== 'dark') {
-            t = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-          }
-          document.documentElement.dataset.theme = t;
-        } catch (e) {}
-      })();
-    </script>
+    <!-- Script thường (blocking, chạy trước first paint); không inline để CSP bỏ được 'unsafe-inline' -->
+    <script src="/theme-init.js"></script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <!-- theme-color theo theme (khớp --bg light/dark) để thanh trạng thái mobile đồng bộ -->
     <meta name="theme-color" media="(prefers-color-scheme: light)" content="#f4f6fb" />
@@ -22,12 +12,10 @@
     <meta property="og:type" content="website" />
     <meta property="og:title" content="EduCenter Pro - Quản lý trung tâm ngoại ngữ" />
     <meta property="og:description" content="Quản lý học viên, điểm danh, học phí, cổng phụ huynh và giáo viên — tất cả trong một nền tảng." />
-    <meta property="og:image" content="/landing-hero.jpg" />
     <meta property="og:locale" content="vi_VN" />
-    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:card" content="summary" />
     <meta name="twitter:title" content="EduCenter Pro - Quản lý trung tâm ngoại ngữ" />
     <meta name="twitter:description" content="Quản lý học viên, điểm danh, học phí, cổng phụ huynh và giáo viên — tất cả trong một nền tảng." />
-    <meta name="twitter:image" content="/landing-hero.jpg" />
     <link rel="manifest" href="/manifest.json" />
     <link rel="icon" type="image/svg+xml" href="/icon.svg" />
     <link rel="apple-touch-icon" href="/icon.svg" />

@@ -1,5 +1,14 @@
 import { describe, it, expect } from 'vitest';
-import { formatVND, formatDate, formatDateTime, formatScheduleText, getDayNames, isPastCloseDate, todayVN } from './types';
+import {
+  formatVND,
+  formatDate,
+  formatDateTime,
+  formatScheduleText,
+  getDayNames,
+  isPastCloseDate,
+  remainingOf,
+  todayVN,
+} from './types';
 
 describe('formatVND', () => {
   it('tiếng Việt: 1.000.000đ', () => {
@@ -74,13 +83,25 @@ describe('isPastCloseDate - đã qua hạn chót theo giờ VN', () => {
     expect(isPastCloseDate(undefined)).toBe(false);
   });
   it('ngày hôm qua theo giờ VN là đã qua hạn', () => {
-    const y = new Date(Date.now() - 24 * 3600_000).toLocaleDateString('en-CA', { timeZone: 'Asia/Ho_Chi_Minh' });
+    const y = new Date(Date.now() - 24 * 3600_000).toLocaleDateString('en-CA', {
+      timeZone: 'Asia/Ho_Chi_Minh',
+    });
     expect(isPastCloseDate(y)).toBe(true);
   });
   it('hôm nay và ngày mai chưa qua hạn', () => {
     const t = todayVN();
-    const tm = new Date(Date.now() + 24 * 3600_000).toLocaleDateString('en-CA', { timeZone: 'Asia/Ho_Chi_Minh' });
+    const tm = new Date(Date.now() + 24 * 3600_000).toLocaleDateString('en-CA', {
+      timeZone: 'Asia/Ho_Chi_Minh',
+    });
     expect(isPastCloseDate(t)).toBe(false);
     expect(isPastCloseDate(tm)).toBe(false);
+  });
+});
+
+describe('remainingOf', () => {
+  it('amount − paid, paid thiếu/null = 0', () => {
+    expect(remainingOf({ amount: 2_000_000, paid: 500_000 })).toBe(1_500_000);
+    expect(remainingOf({ amount: 2_000_000 })).toBe(2_000_000);
+    expect(remainingOf({ amount: 2_000_000, paid: null })).toBe(2_000_000);
   });
 });

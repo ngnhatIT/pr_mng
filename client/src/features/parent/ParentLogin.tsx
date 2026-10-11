@@ -30,10 +30,15 @@ export function ParentLogin() {
     setBusy(true);
     try {
       const data = await parentApi.login(phone, password);
-      setAuth(data.token, { ...data.parent, role: 'parent', username: data.parent.phone });
+      setAuth(data.token, {
+        ...data.parent,
+        role: 'parent',
+        username: data.parent.phone,
+        ...(data.must_change_password ? { must_change_password: true } : {}),
+      });
       // Quay lại deep-link đã lưu (khi bị 401 hoặc vào trang cần login).
       const next = takePostLoginRedirect();
-      navigate(next && next.startsWith('/parent') ? next : '/parent', { replace: true });
+      void navigate(next && next.startsWith('/parent') ? next : '/parent', { replace: true });
     } catch (err) {
       // Lỗi đăng nhập (sai SĐT/mật khẩu) hiện inline dưới ô mật khẩu, focus để nhập lại
       show({ password: err instanceof Error ? err.message : t('auth.loginError') });

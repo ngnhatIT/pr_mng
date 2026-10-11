@@ -1,6 +1,7 @@
 import { db } from './connection';
+import type { Tx } from './pg-compat';
 import { env } from '../config/env';
-import { toISODate, addDays, ourDayOfWeek, parseISODate, ScheduleEntry, ClassRow } from './date-utils';
+import { toISODate, addDays, ScheduleEntry, ClassRow } from './date-utils';
 
 /**
  * Helper nghiệp vụ dùng chung: settings, sinh buổi học, tính trạng thái hóa đơn.
@@ -145,33 +146,70 @@ export async function getCenterSettings(
 
 /* --------------------- Sinh buổi học từ lịch của lớp --------------------- */
 
-export async function generateSessionsForClass(classId: number): Promise<void> {
-  const cls = (await db.prepare('SELECT * FROM classes WHERE id = ?').get(classId)) as ClassRow | undefined;
-  if (!cls) return;
+/** Lớp không có ngày kết thúc: sinh trước bấy nhiêu ngày; job hằng ngày nối thêm (extendActiveClassSessions). */
+export const SESSION_HORIZON_DAYS = 90;
+
+type Q = Pick<Tx, 'prepare'>;
+
+/** Các thứ (2..8) hợp lệ trong lịch JSON của lớp — số nguyên đã kiểm, an toàn để nối vào SQL. */
+export function scheduleDays(scheduleJson: string | null | undefined): number[] {
   let schedule: ScheduleEntry[];
   try {
-    schedule = JSON.parse(cls.schedule || '[]');
+    schedule = JSON.parse(scheduleJson || '[]');
   } catch {
     schedule = [];
   }
-  if (schedule.length === 0) return;
-  const days = new Set(schedule.map((s) => s.day));
-  const start = cls.start_date ? parseISODate(cls.start_date) : addDays(new Date(), -90);
-  const end = cls.end_date ? parseISODate(cls.end_date) : addDays(new Date(), 60);
-  if (start > end) return;
-  await db.transaction(async (tx) => {
-    // INSERT ... ON CONFLICT DO NOTHING thay vì SELECT-then-INSERT:
-    // 2 request đồng thời (2 GET danh sách buổi học) không còn 409.
-    // DB cũ thiếu UNIQUE(class_id, date) thì mệnh đề này vô hiệu một cách an toàn
-    // (insert như thường, không lỗi) — xem debt migration UNIQUE cho DB cũ.
-    const txInsert = tx.prepare(
-      'INSERT INTO sessions (class_id, date, topic) VALUES (?, ?, ?) ON CONFLICT DO NOTHING'
-    );
-    for (let d = new Date(start); d <= end; d = addDays(d, 1)) {
-      if (!days.has(ourDayOfWeek(d))) continue;
-      await txInsert.run(classId, toISODate(d), '');
-    }
-  });
+  if (!Array.isArray(schedule)) return [];
+  const days = schedule.map((s) => Number(s?.day)).filter((d) => Number.isInteger(d) && d >= 2 && d <= 8);
+  return [...new Set(days)];
+}
+
+/**
+ * Sinh buổi học theo lịch của lớp bằng 1 câu INSERT ... SELECT generate_series (thay vòng lặp N INSERT).
+ * Khoảng: [max(start_date ?? hôm nay, opts.from), end_date ?? hôm nay + SESSION_HORIZON_DAYS].
+ * ON CONFLICT DO NOTHING: buổi đã có (kể cả đã hủy status='cancelled') giữ nguyên, không bị "hồi sinh".
+ * KHÔNG gọi khi đọc (GET) — chỉ khi tạo/sửa lớp và job nối lịch hằng ngày.
+ */
+export async function generateSessionsForClass(
+  classId: number,
+  opts: { from?: string; q?: Q } = {}
+): Promise<number> {
+  const q = opts.q ?? db;
+  const cls = (await q
+    .prepare('SELECT id, schedule, start_date, end_date, teacher_id FROM classes WHERE id = ?')
+    .get(classId)) as
+    Pick<ClassRow, 'id' | 'schedule' | 'start_date' | 'end_date' | 'teacher_id'> | undefined;
+  if (!cls) return 0;
+  const days = scheduleDays(cls.schedule);
+  if (days.length === 0) return 0;
+  let from = cls.start_date || toISODate(new Date());
+  if (opts.from && opts.from > from) from = opts.from;
+  const to = cls.end_date || toISODate(addDays(new Date(), SESSION_HORIZON_DAYS));
+  if (from > to) return 0;
+  // Quy ước thứ của app: 2=T2..8=CN = ISODOW (1=T2..7=CN) + 1
+  const r = await q
+    .prepare(
+      `INSERT INTO sessions (class_id, date, topic, teacher_id)
+       SELECT ?, to_char(d, 'YYYY-MM-DD'), '', ?
+       FROM generate_series(?::date, ?::date, interval '1 day') AS d
+       WHERE EXTRACT(ISODOW FROM d)::int + 1 IN (${days.join(',')})
+       ON CONFLICT (class_id, date) DO NOTHING`
+    )
+    .run(classId, cls.teacher_id, from, to);
+  return r.changes ?? 0;
+}
+
+/** Job hằng ngày: nối lịch cho mọi lớp đang hoạt động tới hôm nay + SESSION_HORIZON_DAYS. */
+export async function extendActiveClassSessions(): Promise<number> {
+  const today = toISODate(new Date());
+  const rows = (await db
+    .prepare(
+      "SELECT id FROM classes WHERE status = 'active' AND (end_date IS NULL OR end_date = '' OR end_date >= ?)"
+    )
+    .all(today)) as { id: number }[];
+  let total = 0;
+  for (const r of rows) total += await generateSessionsForClass(r.id, { from: today });
+  return total;
 }
 
 /* ------------------------- Cập nhật trạng thái hóa đơn ------------------------- */
@@ -187,7 +225,10 @@ export async function recalcInvoiceStatus(invoiceId: number): Promise<string> {
     )
     .get(invoiceId)) as { paid: number };
   const status = row.paid >= inv.amount - 0.01 ? 'paid' : row.paid > 0 ? 'partial' : 'unpaid';
-  await db.prepare('UPDATE invoices SET status = ? WHERE id = ?').run(status, invoiceId);
+  // DATA-19: chỉ UPDATE khi đổi trạng thái (tránh bump version + ghi invoice_history vô ích)
+  await db
+    .prepare('UPDATE invoices SET status = ? WHERE id = ? AND status <> ?')
+    .run(status, invoiceId, status);
   return status;
 }
 

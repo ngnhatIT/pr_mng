@@ -1,4 +1,5 @@
 import { db } from '../../db';
+import type { Tx } from '../../db';
 import { AppError } from '../../shared/errors';
 import { escapeLike } from '../../shared/like';
 import { findByIdOr404 } from '../../shared/repository';
@@ -31,11 +32,26 @@ export interface StudentRow {
 
 /* --------------------------------- Service --------------------------------- */
 
+/**
+ * Tùy chọn scope cho đọc học viên:
+ * - ownOnly: permission scope 'own' -> chỉ học viên đang học (enrollment active) lớp do teacherId dạy;
+ *   teacherId null -> không thấy ai (fail-closed, không bao giờ fallback thấy cả trung tâm).
+ * - canViewInvoices: có quyền invoices.view mới trả hóa đơn/thanh toán trong chi tiết.
+ */
+export interface StudentReadOpts {
+  ownOnly?: boolean;
+  teacherId?: number | null;
+  canViewInvoices?: boolean;
+}
+
+const OWN_STUDENT_IDS = `SELECT e.student_id FROM enrollments e JOIN classes c ON c.id = e.class_id
+  WHERE e.status = 'active' AND c.teacher_id = ?`;
+
 export async function listStudents(
   centerId: number | null,
   query: { search?: string; status?: string },
   pageOpts: PageOptions = {},
-  opts?: { teacherId?: number | null }
+  opts: StudentReadOpts = {}
 ): Promise<Paginated<unknown>> {
   const conds: string[] = [];
   const params: unknown[] = [];
@@ -43,14 +59,13 @@ export async function listStudents(
     conds.push('center_id = ?');
     params.push(centerId);
   }
-  // Teacher chỉ xem học viên các lớp mình dạy (scope 'own')
-  if (opts?.teacherId) {
-    conds.push(`id IN (
-      SELECT DISTINCT e.student_id FROM enrollments e
-      JOIN classes c ON c.id = e.class_id
-      WHERE c.teacher_id = ?
-    )`);
-    params.push(opts.teacherId);
+  if (opts.ownOnly) {
+    if (opts.teacherId) {
+      conds.push(`id IN (${OWN_STUDENT_IDS})`);
+      params.push(opts.teacherId);
+    } else {
+      conds.push('1 = 0');
+    }
   }
   const { search = '', status = '' } = query;
   if (search) {
@@ -76,17 +91,16 @@ export async function listStudents(
 export async function getStudentDetail(
   centerId: number | null,
   id: number,
-  opts?: { teacherId?: number | null }
+  opts: StudentReadOpts = {}
 ): Promise<Record<string, unknown>> {
   const student = await findByIdOr404<StudentRow>('students', id, centerId, 'Không tìm thấy học viên');
-  // Teacher chỉ xem chi tiết học viên các lớp mình dạy
-  if (opts?.teacherId) {
-    const teaches = (await db
-      .prepare(
-        `SELECT 1 FROM enrollments e JOIN classes c ON c.id = e.class_id
-         WHERE e.student_id = ? AND c.teacher_id = ? LIMIT 1`
-      )
-      .get(id, opts.teacherId)) as { '1'?: number } | undefined;
+  // Scope 'own': chỉ xem học viên đang học lớp mình dạy (teacher_id null -> chặn)
+  if (opts.ownOnly) {
+    const teaches = opts.teacherId
+      ? await db
+          .prepare(`SELECT 1 FROM (${OWN_STUDENT_IDS}) x WHERE x.student_id = ? LIMIT 1`)
+          .get(opts.teacherId, id)
+      : undefined;
     if (!teaches) {
       throw AppError.forbidden('Không có quyền xem học viên này');
     }
@@ -98,6 +112,8 @@ export async function getStudentDetail(
        WHERE e.student_id = ? ORDER BY e.id DESC`
     )
     .all(id);
+  // Tài chính chỉ trả khi có invoices.view (giáo viên không có quyền này)
+  if (!opts.canViewInvoices) return { student, classes };
   const invoices = await db
     .prepare(
       `SELECT i.*, c.name as class_name,
@@ -109,33 +125,60 @@ export async function getStudentDetail(
   return { student, classes, invoices };
 }
 
-export async function createStudent(
-  centerId: number | null,
-  isSuperadmin: boolean,
-  input: StudentInput
-): Promise<unknown> {
-  if (centerId === null && !isSuperadmin) throw AppError.badRequest('Thiếu thông tin trung tâm');
+/**
+ * Sinh mã học viên tự động theo trung tâm: HV + số thứ tự (max hiện có + 1, tối thiểu 4 chữ số).
+ * Khóa advisory theo center tới hết transaction -> 2 request đồng thời không sinh trùng.
+ * Dùng chung cho tạo học viên, chuyển học thử và chuyển lead (PHẢI gọi trong transaction, rồi INSERT ngay).
+ */
+export async function nextStudentCode(tx: Pick<Tx, 'prepare'>, centerId: number): Promise<string> {
+  await tx.prepare('SELECT pg_advisory_xact_lock(hashtext(?))').get(`student-code:${centerId}`);
+  const row = (await tx
+    .prepare(
+      `SELECT COALESCE(MAX(substr(code, 3)::bigint), 0) as n FROM students
+       WHERE center_id = ? AND code ~ '^HV[0-9]{1,9}$'`
+    )
+    .get(centerId)) as { n: string | number };
+  return `HV${String(Number(row.n) + 1).padStart(4, '0')}`;
+}
+
+export async function createStudent(centerId: number, input: StudentInput): Promise<unknown> {
   const finalStatus =
     input.status && (STUDENT_STATUS as readonly string[]).includes(input.status) ? input.status : 'studying';
-  const finalCode = input.code || `HV${Date.now().toString().slice(-6)}`;
-  const exists = await db.prepare('SELECT 1 FROM students WHERE code = ?').get(finalCode);
-  if (exists) throw AppError.conflict('Mã học viên đã tồn tại');
-  const r = await db
-    .prepare(
-      'INSERT INTO students (code, name, phone, email, dob, address, status, note, center_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
-    )
-    .run(
-      finalCode,
-      input.name.trim(),
-      input.phone || null,
-      input.email || null,
-      input.dob || null,
-      input.address || null,
-      finalStatus,
-      input.note || null,
-      centerId
-    );
-  return await db.prepare('SELECT * FROM students WHERE id = ?').get(Number(r.lastInsertRowid));
+  const id = await db.transaction(async (tx) => {
+    let code = input.code?.trim();
+    if (code) {
+      // Mã nhập tay: chỉ kiểm tra trong trung tâm (UNIQUE(center_id, code)), không lộ mã của tenant khác
+      const exists = await tx
+        .prepare('SELECT 1 FROM students WHERE center_id = ? AND code = ?')
+        .get(centerId, code);
+      if (exists) throw AppError.conflict('Mã học viên đã tồn tại');
+    } else {
+      code = await nextStudentCode(tx, centerId);
+    }
+    try {
+      const r = await tx
+        .prepare(
+          'INSERT INTO students (code, name, phone, email, dob, address, status, note, center_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
+        )
+        .run(
+          code,
+          input.name.trim(),
+          input.phone || null,
+          input.email || null,
+          input.dob || null,
+          input.address || null,
+          finalStatus,
+          input.note || null,
+          centerId
+        );
+      return Number(r.lastInsertRowid);
+    } catch (err) {
+      // Race 2 request cùng nhập 1 mã tay: UNIQUE(center_id, code) chặn -> 409 thay vì 500
+      if ((err as { code?: string }).code === '23505') throw AppError.conflict('Mã học viên đã tồn tại');
+      throw err;
+    }
+  });
+  return await db.prepare('SELECT * FROM students WHERE id = ?').get(id);
 }
 
 export async function updateStudent(
@@ -210,6 +253,18 @@ export async function deleteStudent(centerId: number | null, id: number, actor?:
   if ((Number(paidRow?.c) || 0) > 0) {
     throw AppError.badRequest('Không thể xóa: học viên đã có thanh toán được xác nhận. Giữ lại để đối soát.');
   }
+  // Giống deleteInvoice (PAY-3): còn giao dịch VNPay chờ/cần đối soát -> cascade sẽ mất dấu tiền đã trừ
+  const vnp = await db
+    .prepare(
+      `SELECT 1 FROM payment_txns t JOIN invoices i ON i.id = t.invoice_id
+       WHERE i.student_id = ? AND t.status IN ('pending', 'needs_review') LIMIT 1`
+    )
+    .get(id);
+  if (vnp) {
+    throw AppError.badRequest(
+      'Không thể xóa: học viên có giao dịch VNPay đang chờ xử lý. Vui lòng thử lại sau.'
+    );
+  }
   // Lấy file bài nộp trước khi xóa (tránh file mồ côi)
   const submissionFiles = (await db
     .prepare('SELECT file_url FROM homework_submissions WHERE student_id = ? AND file_url IS NOT NULL')
@@ -217,10 +272,10 @@ export async function deleteStudent(centerId: number | null, id: number, actor?:
   await db.transaction(async (tx) => {
     await tx.prepare('DELETE FROM attendance WHERE student_id = ?').run(id);
     await tx.prepare('DELETE FROM enrollments WHERE student_id = ?').run(id);
-    const invs = (await tx.prepare('SELECT id FROM invoices WHERE student_id = ?').all(id)) as {
-      id: number;
-    }[];
-    for (const inv of invs) await tx.prepare('DELETE FROM payments WHERE invoice_id = ?').run(inv.id);
+    // PERF-4: 1 câu thay vì 1 DELETE mỗi hóa đơn
+    await tx
+      .prepare('DELETE FROM payments WHERE invoice_id IN (SELECT id FROM invoices WHERE student_id = ?)')
+      .run(id);
     await tx.prepare('DELETE FROM invoices WHERE student_id = ?').run(id);
     await tx.prepare('DELETE FROM parent_students WHERE student_id = ?').run(id);
     await tx.prepare('DELETE FROM leave_requests WHERE student_id = ?').run(id);
@@ -230,7 +285,7 @@ export async function deleteStudent(centerId: number | null, id: number, actor?:
   // Xóa file vật lý sau khi DB đã xóa thành công
   for (const f of submissionFiles) await deleteUploadFileByUrl(f.file_url);
   await audit({
-    centerId,
+    centerId: st.center_id,
     actor,
     action: 'delete',
     entity: 'students',

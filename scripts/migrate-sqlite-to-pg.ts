@@ -13,10 +13,32 @@
  * - Giữ nguyên id các bảng (để FK không gãy), sau đó reset sequence (IDENTITY).
  * - Cuối cùng đối chiếu số dòng từng bảng SQLite vs PostgreSQL.
  *
- * Yêu cầu: npm install --save-dev better-sqlite3 (chỉ dùng cho script này).
+ * - Cột thời điểm (`*_at`): SQLite cũ lưu UTC (datetime('now')), PG lưu giờ VN
+ *   (Asia/Ho_Chi_Minh) -> đổi +7h khi copy (DATA-15). Cột chỉ có ngày giữ nguyên.
+ * - Không TRUNCATE CASCADE (từng xóa sạch roles/role_permissions/user_roles/refresh_tokens
+ *   — DATA-22): DELETE từng bảng theo thứ tự ngược FK, roles hệ thống được giữ.
+ * - schema_migrations của PG KHÔNG bị ghi đè (version SQLite khác nghĩa version PG).
+ *
+ * Yêu cầu (KHÔNG có sẵn trong repo — cài riêng trước khi chạy):
+ *   npm i -D better-sqlite3 @types/better-sqlite3
  */
-import Database from 'better-sqlite3';
 import { Pool, types } from 'pg';
+import { utcToVnText } from '../server/src/db/date-utils';
+
+async function openSqlite(path: string): Promise<{
+  prepare(sql: string): { all(): unknown[] };
+  close(): void;
+}> {
+  try {
+    // Import động: better-sqlite3 không nằm trong dependencies của repo.
+    const mod = 'better-sqlite3';
+    const { default: Database } = await import(mod);
+    return new Database(path, { readonly: true });
+  } catch (e) {
+    console.error('[migrate] Thiếu better-sqlite3. Cài trước: npm i -D better-sqlite3 @types/better-sqlite3');
+    throw e;
+  }
+}
 
 // BIGINT -> number (đồng nhất với pg-compat.ts)
 types.setTypeParser(20, (v) => (v === null ? null : Number(v)));
@@ -41,8 +63,9 @@ if (!SQLITE_PATH || !PG_URL) {
  */
 const TABLE_ORDER = [
   'centers',
-  'users',
+  // teachers trước users: users.teacher_id FK -> teachers
   'teachers',
+  'users',
   'center_settings',
   'settings',
   'students',
@@ -84,12 +107,11 @@ const TABLE_ORDER = [
   // immutable history sau cùng
   'payment_history',
   'invoice_history',
-  'schema_migrations',
 ];
 
 async function main(): Promise<void> {
   console.log(`[migrate] SQLite (read-only): ${SQLITE_PATH}`);
-  const sqlite = new Database(SQLITE_PATH, { readonly: true });
+  const sqlite = await openSqlite(SQLITE_PATH as string);
   const pg = new Pool({ connectionString: PG_URL, max: 5 });
 
   // Kiểm tra PG đã có schema chưa (bảng centers phải tồn tại)
@@ -108,19 +130,23 @@ async function main(): Promise<void> {
   try {
     await client.query('BEGIN');
 
-    // Xóa dữ liệu PG cũ 1 lần cho toàn bộ bảng sẽ migrate (để chạy lại an toàn).
-    // TRUNCATE ... CASCADE tự xử lý thứ tự FK: DELETE từng bảng theo TABLE_ORDER
-    // (cha trước con sau) sẽ vi phạm FK khi xóa bảng cha mà bảng con còn tham chiếu.
-    // Chỉ truncate bảng tồn tại ở cả 2 phía để không làm hỏng schema PG thiếu bảng.
+    // Trigger audit sẽ tự sinh payment_history/invoice_history khi DELETE/INSERT ->
+    // trùng với lịch sử copy từ SQLite. Tắt trong transaction (DDL PG có transaction,
+    // lỗi thì ROLLBACK tự bật lại); bật lại trước COMMIT.
+    await client.query('ALTER TABLE payments DISABLE TRIGGER trg_payments_audit');
+    await client.query('ALTER TABLE invoices DISABLE TRIGGER trg_invoices_audit');
+
+    // Xóa dữ liệu PG cũ cho các bảng sẽ migrate (để chạy lại an toàn): DELETE con trước
+    // cha sau. KHÔNG TRUNCATE ... CASCADE — nó xóa trọn mọi bảng tham chiếu (roles,
+    // role_permissions, user_roles, refresh_tokens) mà script không nạp lại.
+    // Chỉ xóa bảng tồn tại ở cả 2 phía để không làm hỏng schema PG thiếu bảng.
     const pgTables = new Set(
       (
         await client.query(`SELECT tablename FROM pg_tables WHERE schemaname = 'public'`)
       ).rows.map((r: { tablename: string }) => r.tablename)
     );
     const toClear = TABLE_ORDER.filter((t) => sqliteTables.has(t) && pgTables.has(t));
-    if (toClear.length > 0) {
-      await client.query(`TRUNCATE ${toClear.map((t) => `"${t}"`).join(', ')} CASCADE`);
-    }
+    for (const t of [...toClear].reverse()) await client.query(`DELETE FROM "${t}"`);
 
     for (const table of TABLE_ORDER) {
       if (!sqliteTables.has(table)) continue;
@@ -130,6 +156,7 @@ async function main(): Promise<void> {
         continue;
       }
       const cols = Object.keys(rows[0]);
+      const tsCols = new Set(cols.filter((c) => c.endsWith('_at')));
       const placeholders = cols.map((_, i) => `$${i + 1}`).join(', ');
       const colList = cols.map((c) => `"${c}"`).join(', ');
 
@@ -139,7 +166,7 @@ async function main(): Promise<void> {
         const values: unknown[] = [];
         const valueRows = batch.map((row) => {
           const ph = cols.map((c) => {
-            values.push(row[c]);
+            values.push(tsCols.has(c) ? utcToVnText(row[c]) : row[c]);
             return `$${values.length}`;
           });
           return `(${ph.join(', ')})`;
@@ -171,6 +198,8 @@ async function main(): Promise<void> {
       process.exit(1);
     }
 
+    await client.query('ALTER TABLE payments ENABLE TRIGGER trg_payments_audit');
+    await client.query('ALTER TABLE invoices ENABLE TRIGGER trg_invoices_audit');
     await client.query('COMMIT');
     console.log('[migrate] COMMIT thành công.');
   } catch (e) {

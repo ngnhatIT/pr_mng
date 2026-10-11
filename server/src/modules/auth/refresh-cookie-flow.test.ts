@@ -8,7 +8,8 @@
  * Cần PostgreSQL (CI). Dùng node:http thuần, không thêm supertest.
  */
 // PHẢI đặt trước mọi import db — pg-compat đọc DATABASE_URL lúc load module
-process.env.DATABASE_URL = process.env.TEST_DATABASE_URL || 'postgres://educenter:educenter123@localhost:5432/educenter_test';
+process.env.DATABASE_URL =
+  process.env.TEST_DATABASE_URL || 'postgres://educenter:educenter123@localhost:5432/educenter_test';
 
 import { describe, it, before, beforeEach, after } from 'node:test';
 import assert from 'node:assert/strict';
@@ -42,7 +43,9 @@ function request(
         method,
         path,
         headers: {
-          ...(payload ? { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(payload) } : {}),
+          ...(payload
+            ? { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(payload) }
+            : {}),
           ...headers,
         },
       },
@@ -85,7 +88,9 @@ describe('D4: refresh token qua HttpOnly cookie', () => {
     await resetTestDb();
     await db.prepare("INSERT INTO centers (id, name) VALUES (1, 'TT')").run();
     await db
-      .prepare("INSERT INTO users (id, username, password_hash, role, name, center_id) VALUES (1,'admin',?,'admin','Admin',1)")
+      .prepare(
+        "INSERT INTO users (id, username, password_hash, role, name, center_id) VALUES (1,'admin',?,'admin','Admin',1)"
+      )
       .run(bcrypt.hashSync('Matkhau123', 4));
   });
   after(async () => {
@@ -94,7 +99,12 @@ describe('D4: refresh token qua HttpOnly cookie', () => {
   });
 
   it('login -> access trong body, refresh chỉ trong HttpOnly cookie', async () => {
-    const res = await request('POST', '/api/v1/auth/login', {}, { username: 'admin', password: 'Matkhau123' });
+    const res = await request(
+      'POST',
+      '/api/v1/auth/login',
+      {},
+      { username: 'admin', password: 'Matkhau123' }
+    );
     assert.equal(res.status, 200);
     const body = res.body as { token?: string; refresh_token?: string };
     assert.ok(body.token, 'body phải có access token');
@@ -108,7 +118,12 @@ describe('D4: refresh token qua HttpOnly cookie', () => {
   });
 
   it('refresh bằng cookie -> cặp mới + cookie xoay; logout -> cookie bị xóa', async () => {
-    const login = await request('POST', '/api/v1/auth/login', {}, { username: 'admin', password: 'Matkhau123' });
+    const login = await request(
+      'POST',
+      '/api/v1/auth/login',
+      {},
+      { username: 'admin', password: 'Matkhau123' }
+    );
     const cookie1 = refreshCookieValue(login.headers['set-cookie']);
     assert.ok(cookie1);
 

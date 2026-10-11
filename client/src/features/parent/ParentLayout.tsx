@@ -28,7 +28,7 @@ export function ParentLayout() {
 
   const logout = () => {
     void doLogout();
-    navigate('/parent/login');
+    void navigate('/parent/login');
   };
 
   return (

@@ -18,11 +18,15 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: npm
       - run: npm ci
       - run: npm run lint
       - run: npm run format:check
+      # CI-4: chặn dependency runtime có lỗ hổng high/critical
+      - run: npm audit --omit=dev --audit-level=high
+      # scripts/ và server/scripts/ nằm ngoài tsconfig build — typecheck riêng (OPS-7)
+      - run: npx tsc -p server/tsconfig.scripts.json
 
   test:
     name: Unit tests (server)
@@ -48,28 +52,61 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: npm
       - run: npm ci
       - run: npm test -w server
-      - run: npm test -w client
+        env:
+          TEST_FLAGS: --experimental-test-coverage
+      # B3-5: chạy test client kèm báo cáo coverage (text-summary, chỉ báo cáo — không gate)
+      - run: npm run test:coverage -w client
       - run: python3 -c "import yaml; yaml.safe_load(open('server/src/docs/openapi.yaml')); print('openapi.yaml valid')"
 
   build:
-    name: Build (server + client)
+    name: Build (server + client) + smoke test
     runs-on: ubuntu-latest
-    needs: [lint, test]
+    # Không phụ thuộc lint/test: build + boot thật vẫn chạy (và báo lỗi riêng) kể cả khi
+    # lint/format đang đỏ.
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: educenter
+          POSTGRES_PASSWORD: educenter_ci_test
+          POSTGRES_DB: educenter_smoke
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: npm
       - run: npm ci
       - run: npm run build
-      - name: Smoke test build artifact
+      # B-8: ngân sách bundle client (entry / first-load / tổng JS) — sửa ngưỡng trong script nếu cần
+      - run: node client/scripts/check-bundle-size.mjs
+      - name: Smoke test build artifact (boot + /api/live)
+        # CI-1: env production CHỈ ở bước này — đặt ở job làm `npm ci` bỏ devDependencies (tsc, vite).
+        env:
+          DATABASE_URL: postgres://educenter:educenter_ci_test@localhost:5432/educenter_smoke
+          # Boot đúng chế độ production (validate env như thật). Secret dùng một lần cho CI (>= 32 ký tự).
+          NODE_ENV: production
+          JWT_SECRET: ci-smoke-test-secret-0123456789abcdef
+          PORT: 3001
+          APP_BASE_URL: http://localhost:3001
+          CORS_ORIGIN: http://localhost:3001
+          SEED_DEMO: 'false'
         run: |
-          timeout 30 node server/dist/index.js &
-          sleep 5
-          curl -f http://localhost:3001/api/live || (echo "Smoke test failed" && exit 1)
-          kill %1
+          node server/dist/index.js > smoke.log 2>&1 &
+          for i in $(seq 1 30); do
+            curl -fs "http://localhost:${PORT}/api/live" && ok=1 && break
+            sleep 1
+          done
+          kill %1 || true
+          if [ -z "$ok" ]; then cat smoke.log; echo "Smoke test failed"; exit 1; fi

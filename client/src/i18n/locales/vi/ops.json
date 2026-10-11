@@ -101,7 +101,10 @@
       "updateFail": "Không cập nhật được lead, vui lòng thử lại"
     },
     "countTitle_one": "{{count}} lead",
-    "countTitle_other": "{{count}} lead"
+    "countTitle_other": "{{count}} lead",
+    "markLost": "Đánh dấu mất",
+    "markLostAria": "Đánh dấu {{name}} là mất",
+    "colMore": "Đang hiện {{shown}}/{{total}}, tìm kiếm để thu hẹp"
   },
   "leaves": {
     "allStatuses": "Tất cả trạng thái",
@@ -288,10 +291,7 @@
     "quickStatus": "Chuyển trạng thái nhanh",
     "status": {
       "contacted": "Đã liên hệ",
-      "enrolled": "Đã đăng ký",
-      "lost": "Mất",
       "new": "Mới",
-      "trialed": "Đã học thử",
       "converted": "Đã chuyển đổi"
     },
     "title": "Học thử",
@@ -364,7 +364,7 @@
       "templateUpcoming": "ID mẫu ZNS sắp đến hạn",
       "testPhone": "VD: 0912345678",
       "tokenNew": "Dán access token của OA",
-      "tokenSaved": "•••••••• (đã lưu - nhập mới để thay đổi)"
+      "tokenSaved": "{{mask}} (đã lưu - để trống để giữ, nhập mới để thay đổi)"
     },
     "reminderStatus": {
       "demo": "Demo",

@@ -29,9 +29,7 @@ export function installMockDb(routes: MockRoute[]): () => void {
   const realTransaction = db.transaction;
 
   const findRoute = (sql: string): MockRoute => {
-    const r = routes.find((x) =>
-      typeof x.match === 'string' ? sql.includes(x.match) : x.match.test(sql)
-    );
+    const r = routes.find((x) => (typeof x.match === 'string' ? sql.includes(x.match) : x.match.test(sql)));
     if (!r) throw new Error(`[mock-db] SQL chưa được mock: ${sql}`);
     return r;
   };
@@ -40,8 +38,7 @@ export function installMockDb(routes: MockRoute[]): () => void {
     return {
       get: async (...p: unknown[]) => route.get?.(p),
       all: async (...p: unknown[]) => route.all?.(p) ?? [],
-      run: async (...p: unknown[]) =>
-        route.run?.(p) ?? { changes: 0, lastInsertRowid: undefined },
+      run: async (...p: unknown[]) => route.run?.(p) ?? { changes: 0, lastInsertRowid: undefined },
     };
   };
 

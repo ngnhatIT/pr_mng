@@ -1,18 +1,22 @@
 import { describe, it, expect } from 'vitest';
-import { remainingOf, paymentMethodLabel } from './InvoiceDetail';
+import { paidOf } from './InvoiceDetail';
+import { paymentMethodLabel } from './tuition.api';
 
 const fakeT = (key: string) => `[${key}]`;
 
-describe('remainingOf - còn nợ = tổng trừ đã thu', () => {
-  it('trừ đúng khi đã thu một phần', () => {
-    expect(remainingOf({ amount: 2000000, paid: 500000 })).toBe(1500000);
+describe('paidOf - số đã thu của hóa đơn (ADM-3)', () => {
+  it('ưu tiên paid server trả về', () => {
+    expect(paidOf({ paid: 500000 }, [{ amount: 1, status: 'confirmed' }])).toBe(500000);
   });
-  it('paid null/undefined coi như 0', () => {
-    expect(remainingOf({ amount: 2000000, paid: null })).toBe(2000000);
-    expect(remainingOf({ amount: 2000000 })).toBe(2000000);
-  });
-  it('thu đủ thì còn nợ bằng 0', () => {
-    expect(remainingOf({ amount: 1000000, paid: 1000000 })).toBe(0);
+  it('thiếu paid thì cộng thanh toán đã xác nhận, trừ dòng hoàn tiền (âm), bỏ pending/rejected', () => {
+    const payments = [
+      { amount: 1000000, status: 'confirmed' as const },
+      { amount: -200000, status: 'confirmed' as const },
+      { amount: 700000, status: 'pending' as const },
+      { amount: 300000, status: 'rejected' as const },
+    ];
+    expect(paidOf({}, payments)).toBe(800000);
+    expect(paidOf({ paid: null }, [])).toBe(0);
   });
 });
 
@@ -23,6 +27,10 @@ describe('paymentMethodLabel - map chuỗi legacy DB sang i18n', () => {
   it('chuỗi legacy "Tiền mặt" map đúng key pay.methods.cash', () => {
     expect(paymentMethodLabel('Tiền mặt', fakeT)).toBe('[pay.methods.cash]');
     expect(paymentMethodLabel('Chuyển khoản', fakeT)).toBe('[pay.methods.transfer]');
+  });
+  it('dòng hoàn tiền/credit được dịch (ADM-19)', () => {
+    expect(paymentMethodLabel('refund', fakeT)).toBe('[pay.methods.refund]');
+    expect(paymentMethodLabel('credit', fakeT)).toBe('[pay.methods.credit]');
   });
   it('chuỗi lạ (vnpay, QR...) giữ nguyên để không mất thông tin', () => {
     expect(paymentMethodLabel('vnpay', fakeT)).toBe('vnpay');

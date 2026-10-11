@@ -5,9 +5,19 @@ import { Modal } from '../../shared/components/Modal';
 import { Skeleton } from '../../shared/components/Skeleton';
 import { EmptyState } from '../../shared/components/EmptyState';
 import { useFieldErrors } from '../../shared/components/Form';
-import { useToast } from '../../shared/ui/toast';
+import { toastApiError, useToast } from '../../shared/ui/toast';
 import { Icon } from '../../shared/components/icons';
 import { formatDateTime } from '../../shared/types';
+
+/** Ô điểm "questionId:criterionId" → điểm đã chấm trên server (chỉ câu `onlyQid` nếu truyền). */
+function scoreInputs(d: EssayGradingData, onlyQid?: number): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const q of d.questions) {
+    if (onlyQid !== undefined && q.question_id !== onlyQid) continue;
+    for (const s of q.scores) out[`${q.question_id}:${s.criterion_id}`] = String(s.score);
+  }
+  return out;
+}
 
 /**
  * YC2: giáo viên chấm từng câu tự luận của quiz theo tiêu chí rubric.
@@ -50,10 +60,7 @@ export function EssayGradeModal({
       setData(d);
       setFeedback(d.feedback ?? '');
       // Điền sẵn điểm đã chấm để giáo viên sửa tiếp
-      const pre: Record<string, string> = {};
-      for (const q of d.questions)
-        for (const s of q.scores) pre[`${q.question_id}:${s.criterion_id}`] = String(s.score);
-      setInputs(pre);
+      setInputs(scoreInputs(d));
     } catch {
       setError(true);
     } finally {
@@ -90,9 +97,17 @@ export function EssayGradeModal({
     try {
       const r = await homeworkApi.gradeQuizEssay(homeworkId, studentId, qid, criteria, feedback.trim());
       toast(t('essay.saved', { total: r.total }), 'success');
-      await load(); // tải lại để tổng + trạng thái "đã chấm" cập nhật
+      // Tải lại ngầm (không skeleton) để cập nhật tổng điểm; chỉ ghi đè ô điểm của câu vừa lưu,
+      // giữ nguyên điểm đang gõ dở ở các câu khác. Lỗi tải lại: bỏ qua (đã lưu thành công).
+      try {
+        const d = await homeworkApi.getEssayGrading(homeworkId, studentId);
+        setData(d);
+        setInputs((p) => ({ ...p, ...scoreInputs(d, qid) }));
+      } catch {
+        /* giữ dữ liệu hiện tại */
+      }
     } catch (err) {
-      toast(err instanceof Error ? err.message : t('essay.saveFail'), 'error');
+      toastApiError(toast, err, t('essay.saveFail'));
     } finally {
       setBusyQid(null);
     }
@@ -102,8 +117,15 @@ export function EssayGradeModal({
   const isQuestionDone = (qid: number) =>
     !!data && data.rubric.criteria.every((c) => (inputs[`${qid}:${c.id}`] ?? '').trim() !== '');
 
+  // Có ô điểm/nhận xét khác với bản đã lưu trên server -> hỏi trước khi đóng
+  const saved = data ? scoreInputs(data) : {};
+  const dirty =
+    !!data &&
+    (feedback.trim() !== (data.feedback ?? '').trim() ||
+      Object.keys({ ...saved, ...inputs }).some((k) => (inputs[k] ?? '').trim() !== (saved[k] ?? '')));
+
   return (
-    <Modal title={t('essay.title', { title })} onClose={onClose} wide>
+    <Modal title={t('essay.title', { title })} onClose={onClose} wide dirty={dirty}>
       {loading ? (
         <div aria-hidden="true" style={{ display: 'grid', gap: 8 }}>
           {[0, 1, 2].map((i) => (

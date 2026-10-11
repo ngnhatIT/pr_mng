@@ -1,42 +1,32 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { peopleApi } from './people.api';
-import { useToast } from '../../shared/ui/toast';
+import { useToast, toastApiError } from '../../shared/ui/toast';
+import { useLoad } from '../../shared/hooks/useLoad';
 import { Modal } from '../../shared/components/Modal';
-import { Field, useFieldErrors } from '../../shared/components/Form';
+import { Field, MoneyInput, moneyDigits, useFieldErrors } from '../../shared/components/Form';
 import { PageHeader } from '../../shared/components/PageHeader';
-import { EmptyState } from '../../shared/components/EmptyState';
+import { EmptyState, LoadError } from '../../shared/components/EmptyState';
 import { TableSkeleton } from '../../shared/components/Skeleton';
 import { Icon } from '../../shared/components/icons';
-import { PayrollRow, formatVND } from '../../shared/types';
+import { PayrollRow, formatVND, todayVN } from '../../shared/types';
+import { useMyPermissions } from '../system/roles.api';
 import './Payroll.css';
 
 export function Payroll() {
   const { t } = useTranslation(['people', 'common']);
-  const now = new Date();
-  const defaultMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-  const [month, setMonth] = useState(defaultMonth);
-  const [rows, setRows] = useState<PayrollRow[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [month, setMonth] = useState(() => todayVN().slice(0, 7));
   const [editing, setEditing] = useState<PayrollRow | null>(null);
   const toast = useToast();
+  const canManage = useMyPermissions().has('payroll.manage');
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    try {
-      const data = await peopleApi.payroll(month);
-      setRows(data);
-    } catch (err) {
-      toast(err instanceof Error ? err.message : t('payroll.loadError'), 'error');
-    } finally {
-      setLoading(false);
-    }
-  }, [month, toast, t]);
-
+  // UX-5: đổi tháng nhanh thì response tháng cũ về muộn bị bỏ qua; lỗi tải hiện LoadError thay vì "trống"
+  const { data, loading, error, reload: load } = useLoad(() => peopleApi.payroll(month), [month]);
+  const rows: PayrollRow[] = data ?? [];
   useEffect(() => {
-    void load();
-  }, [load]);
+    if (error) toastApiError(toast, error, t('payroll.loadError'));
+  }, [error, toast]);
 
   const total = rows.reduce((s, r) => s + r.total, 0);
 
@@ -65,8 +55,10 @@ export function Payroll() {
         </Field>
       </div>
 
-      {loading ? (
+      {loading && !data ? (
         <TableSkeleton cols={5} />
+      ) : error && !data ? (
+        <LoadError onRetry={load} />
       ) : rows.length === 0 ? (
         <EmptyState
           icon="banknote"
@@ -80,7 +72,7 @@ export function Payroll() {
           }
         />
       ) : (
-        <div className="table-wrap sticky">
+        <div className="table-wrap sticky" aria-busy={loading || undefined}>
           <table className="table">
             <thead>
               <tr>
@@ -110,12 +102,14 @@ export function Payroll() {
                     <strong>{formatVND(r.total)}</strong>
                   </td>
                   <td className="td-right">
-                    <span className="row-actions">
-                      <button type="button" className="btn btn-sm btn-ghost" onClick={() => setEditing(r)}>
-                        <Icon name="pencil" size={15} />
-                        {t('payroll.rate')}
-                      </button>
-                    </span>
+                    {canManage && (
+                      <span className="row-actions">
+                        <button type="button" className="btn btn-sm btn-ghost" onClick={() => setEditing(r)}>
+                          <Icon name="pencil" size={15} />
+                          {t('payroll.rate')}
+                        </button>
+                      </span>
+                    )}
                   </td>
                 </tr>
               ))}
@@ -130,7 +124,7 @@ export function Payroll() {
           onClose={() => setEditing(null)}
           onDone={() => {
             setEditing(null);
-            void load();
+            load();
           }}
         />
       )}
@@ -140,7 +134,8 @@ export function Payroll() {
 
 function RateModal({ row, onClose, onDone }: { row: PayrollRow; onClose: () => void; onDone: () => void }) {
   const { t } = useTranslation(['people', 'common']);
-  const [amount, setAmount] = useState(String(row.per_session));
+  const [initial] = useState(() => moneyDigits(row.per_session));
+  const [amount, setAmount] = useState(initial);
   const [busy, setBusy] = useState(false);
   const toast = useToast();
   // Lỗi inline dưới field + focus field lỗi (skill 8.2); dữ liệu giữ nguyên khi lỗi
@@ -150,7 +145,7 @@ function RateModal({ row, onClose, onDone }: { row: PayrollRow; onClose: () => v
     e.preventDefault();
     const amt = Number(amount);
     const errs: { amount?: string } = {};
-    if (!amount.trim() || !Number.isFinite(amt) || amt < 0) errs.amount = t('rate.errors.amountInvalid');
+    if (!amount || !Number.isFinite(amt) || amt < 0) errs.amount = t('rate.errors.amountInvalid');
     if (!show(errs)) return;
     setBusy(true);
     try {
@@ -158,24 +153,22 @@ function RateModal({ row, onClose, onDone }: { row: PayrollRow; onClose: () => v
       toast(t('rate.updated', { name: row.teacher_name }), 'success');
       onDone();
     } catch (err) {
-      toast(err instanceof Error ? err.message : t('rate.updateError'), 'error');
+      toastApiError(toast, err, t('rate.updateError'));
     } finally {
       setBusy(false);
     }
   };
 
   return (
-    <Modal title={t('rate.title', { name: row.teacher_name })} onClose={onClose}>
+    <Modal title={t('rate.title', { name: row.teacher_name })} onClose={onClose} dirty={amount !== initial}>
       <form onSubmit={submit}>
         <Field label={t('rate.unit')} error={errors.amount}>
-          <input
+          <MoneyInput
             ref={refFor('amount')}
             className="text-input"
-            type="number"
-            min={0}
             value={amount}
-            onChange={(e) => {
-              setAmount(e.target.value);
+            onChange={(v) => {
+              setAmount(v);
               clear('amount');
             }}
           />

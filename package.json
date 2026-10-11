@@ -2,8 +2,6 @@
   "description": "EduCenter Pro - Phan mem quan ly trung tam ngoai ngu / lop hoc / gym (MVP)",
   "devDependencies": {
     "@eslint/js": "^10.0.1",
-    "@typescript-eslint/eslint-plugin": "^8.71.1",
-    "@typescript-eslint/parser": "^8.71.1",
     "concurrently": "^9.0.1",
     "eslint": "^10.12.0",
     "eslint-config-prettier": "^10.1.8",

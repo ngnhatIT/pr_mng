@@ -9,11 +9,14 @@ import type { Db } from './connection';
  * - center_id: mọi query multi-tenant đều lọc theo center
  * - FK columns: JOIN không index = full table scan
  * - status/date: filter dashboard và scheduler
+ *
+ * Tên index composite PHẢI khác tên index 1 cột mà migration v7/v9 đã tạo
+ * (vd idx_invoices_student) — IF NOT EXISTS so theo TÊN, trùng tên = no-op (DATA-16).
  */
 export async function createIndexes(db: Db): Promise<void> {
   await db.exec(`
 -- ===== Multi-tenant scope (hầu hết query đều có center_id) =====
-CREATE INDEX IF NOT EXISTS idx_students_center ON students(center_id, status);
+CREATE INDEX IF NOT EXISTS idx_students_center_status ON students(center_id, status);
 CREATE INDEX IF NOT EXISTS idx_teachers_center ON teachers(center_id);
 CREATE INDEX IF NOT EXISTS idx_classes_center ON classes(center_id);
 CREATE INDEX IF NOT EXISTS idx_classes_teacher ON classes(teacher_id);
@@ -31,7 +34,7 @@ CREATE INDEX IF NOT EXISTS idx_leaves_class ON leave_requests(class_id);
 CREATE INDEX IF NOT EXISTS idx_leaves_decider ON leave_requests(decided_by);
 
 -- ===== Homework module (hot) =====
-CREATE INDEX IF NOT EXISTS idx_homework_class ON homework(class_id, status);
+CREATE INDEX IF NOT EXISTS idx_homework_class_status ON homework(class_id, status);
 CREATE INDEX IF NOT EXISTS idx_homework_center_status ON homework(center_id, status);
 CREATE INDEX IF NOT EXISTS idx_homework_creator ON homework(created_by);
 CREATE INDEX IF NOT EXISTS idx_homework_rubric ON homework(rubric_id);
@@ -43,9 +46,7 @@ CREATE INDEX IF NOT EXISTS idx_hw_targets_hw ON homework_targets(homework_id);
 CREATE INDEX IF NOT EXISTS idx_hw_targets_student ON homework_targets(student_id);
 CREATE INDEX IF NOT EXISTS idx_hw_scores ON homework_scores(homework_id, student_id);
 CREATE INDEX IF NOT EXISTS idx_hw_scores_grader ON homework_scores(graded_by);
-CREATE INDEX IF NOT EXISTS idx_hw_submissions ON homework_submissions(homework_id, student_id);
-CREATE INDEX IF NOT EXISTS idx_quiz_questions_hw ON quiz_questions(homework_id, position);
-CREATE INDEX IF NOT EXISTS idx_quiz_options_q ON quiz_options(question_id);
+CREATE INDEX IF NOT EXISTS idx_quiz_questions_hw_pos ON quiz_questions(homework_id, position);
 CREATE INDEX IF NOT EXISTS idx_quiz_attempts ON quiz_attempts(homework_id, student_id);
 CREATE INDEX IF NOT EXISTS idx_quiz_answers_attempt ON quiz_answers(attempt_id);
 CREATE INDEX IF NOT EXISTS idx_quiz_answers_question ON quiz_answers(question_id);
@@ -60,19 +61,21 @@ CREATE INDEX IF NOT EXISTS idx_qbank_creator ON question_bank(created_by);
 CREATE INDEX IF NOT EXISTS idx_qbank_options ON question_bank_options(question_id);
 
 -- ===== Enrollments & attendance (hot) =====
-CREATE INDEX IF NOT EXISTS idx_enrollments_class ON enrollments(class_id, status);
+CREATE INDEX IF NOT EXISTS idx_enrollments_class_status ON enrollments(class_id, status);
 CREATE INDEX IF NOT EXISTS idx_enrollments_student ON enrollments(student_id, status);
 CREATE INDEX IF NOT EXISTS idx_sessions_class_date ON sessions(class_id, date);
 CREATE INDEX IF NOT EXISTS idx_attendance_session ON attendance(session_id);
-CREATE INDEX IF NOT EXISTS idx_attendance_student ON attendance(student_id, status);
+CREATE INDEX IF NOT EXISTS idx_attendance_student_status ON attendance(student_id, status);
 
 -- ===== Finance =====
-CREATE INDEX IF NOT EXISTS idx_invoices_student ON invoices(student_id, status);
+CREATE INDEX IF NOT EXISTS idx_invoices_student_status ON invoices(student_id, status);
 CREATE INDEX IF NOT EXISTS idx_invoices_due ON invoices(due_date, status);
-CREATE INDEX IF NOT EXISTS idx_payments_invoice ON payments(invoice_id, status);
+CREATE INDEX IF NOT EXISTS idx_payments_invoice_status ON payments(invoice_id, status);
 -- Doanh thu theo tháng lọc range trên paid_at — không có index này thì range vẫn full scan
 CREATE INDEX IF NOT EXISTS idx_payments_paid_at ON payments(paid_at);
--- GHI CHÚ: payment_txns.ref là PRIMARY KEY nên đã có index — không tạo thêm.
+-- payment_txns: ref là PK; v23 thêm idx_txns_pending (đối soát) + idx_txns_invoice (FK CASCADE)
+CREATE INDEX IF NOT EXISTS idx_txns_pending ON payment_txns(created_at) WHERE status = 'pending';
+CREATE INDEX IF NOT EXISTS idx_txns_invoice ON payment_txns(invoice_id);
 CREATE INDEX IF NOT EXISTS idx_credits_parent ON credits(parent_id);
 
 -- ===== Parent portal =====
@@ -96,11 +99,12 @@ CREATE INDEX IF NOT EXISTS idx_teacher_checkins_session ON teacher_checkins(sess
 CREATE INDEX IF NOT EXISTS idx_trial_center ON trial_registrations(center_id, status);
 CREATE INDEX IF NOT EXISTS idx_trial_class ON trial_registrations(class_id);
 CREATE INDEX IF NOT EXISTS idx_leads_center ON leads(center_id, status);
-CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);
 CREATE INDEX IF NOT EXISTS idx_users_center ON users(center_id);
 CREATE INDEX IF NOT EXISTS idx_users_teacher ON users(teacher_id);
 
--- Mỗi phụ huynh 1 đánh giá / trung tâm (bổ sung cho migration v3)
-CREATE UNIQUE INDEX IF NOT EXISTS parent_reviews_unique ON reviews(parent_id, center_id) WHERE parent_id IS NOT NULL;
+-- DATA-16: dọn index thừa. parent_reviews_unique (partial) đã bị v14 thay bằng
+-- parent_reviews_unique_full; idx_users_username / idx_refresh_token_hash /
+-- idx_salary_rules_teacher trùng UNIQUE/PK sẵn có. Không tồn tại -> no-op, không khóa bảng.
+DROP INDEX IF EXISTS parent_reviews_unique, idx_users_username, idx_refresh_token_hash, idx_salary_rules_teacher;
 `);
 }

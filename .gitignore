@@ -4,12 +4,15 @@ dist/
 *.db-*
 server/dist/
 server/uploads/
+# File upload (ảnh/bài nộp học viên = PII) — mặc định UPLOAD_DIR=<repo>/uploads
+/uploads/
 .env
 .env.local
 .DS_Store
 *.log
 coverage/
 test-dist/
+test-dist-*/
 # Backup dumps chứa PII — KHÔNG BAO GIỜ commit
 backups/
 *.dump

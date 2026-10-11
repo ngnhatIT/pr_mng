@@ -19,10 +19,13 @@ export interface ConsistencyIssue {
     | 'overpaid_invoice'
     | 'orphan_payment'
     | 'invalid_payment_amount'
-    | 'invalid_invoice_amount';
+    | 'invalid_invoice_amount'
+    | 'user_without_center'
+    | 'credit_payment_unlinked';
   detail: string;
   invoice_id?: number;
   payment_id?: number;
+  user_id?: number;
 }
 
 export async function checkFinancialConsistency(db: Db): Promise<ConsistencyIssue[]> {
@@ -89,6 +92,35 @@ export async function checkFinancialConsistency(db: Db): Promise<ConsistencyIssu
         payment_id: p.id,
       });
     }
+  }
+
+  // 6. OPS-1: user không phải superadmin mà center_id NULL (dòng cũ trước v22; chk_users_center chỉ NOT VALID
+  //    cho tới khi vận hành sửa xong và VALIDATE — xem docs/DEPLOYMENT.md "Nâng cấp phiên bản").
+  const noCenter = (await db
+    .prepare("SELECT id, username, role FROM users WHERE role <> 'superadmin' AND center_id IS NULL")
+    .all()) as { id: number; username: string; role: string }[];
+  for (const u of noCenter) {
+    issues.push({
+      code: 'user_without_center',
+      detail: `User #${u.id} (${u.username}, ${u.role}) chưa gán trung tâm — đăng nhập sẽ bị 403 NO_CENTER`,
+      user_id: u.id,
+    });
+  }
+
+  // 7. J-A5: payment 'credit' đã duyệt nhưng không gắn credit_id (note lạ trước S-1, v23 cố tình không nối)
+  //    -> hoàn tiền sẽ không trả lại credit; kế toán xem tay.
+  const unlinked = (await db
+    .prepare(
+      "SELECT id, invoice_id, note FROM payments WHERE method = 'credit' AND status = 'confirmed' AND credit_id IS NULL"
+    )
+    .all()) as { id: number; invoice_id: number; note: string | null }[];
+  for (const p of unlinked) {
+    issues.push({
+      code: 'credit_payment_unlinked',
+      detail: `Payment #${p.id} (HĐ #${p.invoice_id}) trừ bằng credit nhưng không gắn credit nào (note: ${p.note ?? ''})`,
+      payment_id: p.id,
+      invoice_id: p.invoice_id,
+    });
   }
 
   return issues;

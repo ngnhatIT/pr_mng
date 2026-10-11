@@ -4,9 +4,7 @@ import { requirePermission } from '../authorization/authorization.middleware';
 import { asyncHandler } from '../../shared/http';
 import { validate, v, paramId } from '../../shared/validate';
 import { actorFromReq } from '../../shared/audit';
-import { listCentersWithCounts, createCenterWithAdmin, getCenter } from './centers.service';
-import { db } from '../../db';
-import { PLANS } from '../../utils/plans';
+import { listCentersWithCounts, createCenterWithAdmin, getCenter, updateCenter } from './centers.service';
 
 const router = Router();
 router.use(requirePermission('system.manage'));
@@ -77,54 +75,7 @@ router.put(
   superadminOnly,
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const id = paramId(req.params);
-    const center = await getCenter(id);
-    if (!center) {
-      res.status(404).json({ error: 'Không tìm thấy trung tâm', code: 'NOT_FOUND' });
-      return;
-    }
-    const body = req.body as Record<string, unknown> | undefined;
-    const sets: string[] = [];
-    const params: unknown[] = [];
-    if (body?.name !== undefined) {
-      const name = String(body.name).trim();
-      if (!name) {
-        res.status(400).json({ error: 'Tên trung tâm không được để trống', code: 'BAD_REQUEST' });
-        return;
-      }
-      sets.push('name = ?');
-      params.push(name);
-    }
-    if (body?.phone !== undefined) {
-      sets.push('phone = ?');
-      params.push(body.phone ? String(body.phone).trim() : null);
-    }
-    if (body?.address !== undefined) {
-      sets.push('address = ?');
-      params.push(body.address ? String(body.address).trim() : null);
-    }
-    if (body?.plan !== undefined) {
-      const plan = String(body.plan);
-      if (!PLANS[plan]) {
-        res
-          .status(400)
-          .json({ error: `Gói cước không hợp lệ. Chọn một trong: ${Object.keys(PLANS).join(', ')}` });
-        return;
-      }
-      sets.push('plan = ?');
-      params.push(plan);
-    }
-    if (body?.plan_expires_at !== undefined) {
-      sets.push('plan_expires_at = ?');
-      const expRaw = body.plan_expires_at ? String(body.plan_expires_at).trim() : null;
-      // Validate ngày thật
-      if (expRaw) {
-        validate({ d: expRaw }, { d: v.date({ label: 'Hạn gói' }) });
-      }
-      params.push(expRaw);
-    }
-    if (sets.length > 0) {
-      await db.prepare(`UPDATE centers SET ${sets.join(', ')} WHERE id = ?`).run(...params, id);
-    }
+    await updateCenter(id, (req.body ?? {}) as Record<string, unknown>);
     res.json(await getCenter(id));
   })
 );

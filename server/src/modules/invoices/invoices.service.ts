@@ -1,5 +1,5 @@
-import { db, recalcInvoiceStatus } from '../../db';
-import { afterInvoicePaid, applyCreditToInvoice } from '../../services/referrals';
+import { db } from '../../db';
+import { afterInvoicePaid, applyCreditToInvoice } from '../referrals/rewards.service';
 import { AppError } from '../../shared/errors';
 import { escapeLike } from '../../shared/like';
 import { parsePagination, paginate, type PageOptions, type Paginated } from '../../shared/pagination';
@@ -33,6 +33,12 @@ export interface PaymentInput {
   paid_at?: string | null;
 }
 
+/**
+ * S-1: hình thức nhân viên được ghi tay. 'credit' | 'refund' | 'vnpay' | 'bank_transfer' là giá trị
+ * hệ thống (áp credits, hoàn tiền, cổng online, phụ huynh báo CK) — ghi tay sẽ làm sai luồng hoàn tiền.
+ */
+export const STAFF_PAYMENT_METHODS = ['Tiền mặt', 'Chuyển khoản', 'Quẹt thẻ', 'Ví điện tử', 'Khác'] as const;
+
 export interface DebtRow {
   id: number;
   code: string;
@@ -60,17 +66,19 @@ async function assertInvoiceScope(centerId: number | null, invoiceId: number): P
 }
 
 function assertPositiveAmount(amount: unknown): number {
-  const amt = Number(amount);
+  // VND không có xu lẻ — làm tròn TRƯỚC khi kiểm tra dương (INV-3: 0.4 -> 0 phải bị chặn)
+  const amt = Math.round(Number(amount));
   if (!Number.isFinite(amt) || amt <= 0) throw AppError.badRequest('Số tiền phải lớn hơn 0');
-  // VND không có xu lẻ — làm tròn mọi số tiền ở biên vào
-  return Math.round(amt);
+  return amt;
 }
 
 /* --------------------------------- Service --------------------------------- */
 
-// Tổng đã thu (status='confirmed') theo từng hóa đơn — JOIN subquery GROUP BY 1 lần
-// thay vì correlated subquery chạy mỗi dòng hóa đơn. Dùng chung cho mọi query công nợ.
-const confirmedPaidJoin = `LEFT JOIN (SELECT invoice_id, SUM(amount) as paid FROM payments WHERE status = 'confirmed' GROUP BY invoice_id) pp ON pp.invoice_id = i.id`;
+// Tổng đã thu (status='confirmed') của từng hóa đơn i — PERF-2: LATERAL chỉ chạy cho các hóa đơn
+// còn lại sau WHERE (dùng idx_payments_invoice_status), không gom cả bảng payments mọi trung tâm.
+// Dùng chung cho mọi query công nợ (cả dashboard).
+export const confirmedPaidJoin = `LEFT JOIN LATERAL (SELECT SUM(amount) as paid FROM payments
+  WHERE invoice_id = i.id AND status = 'confirmed') pp ON true`;
 
 export async function listInvoices(
   centerId: number | null,
@@ -100,10 +108,11 @@ export async function listInvoices(
   const rows = (await db
     .prepare(
       `SELECT i.*, s.name as student_name, s.code as student_code, c.name as class_name,
-         COALESCE(p.paid, 0) as paid
-       ${from}
-       LEFT JOIN (SELECT invoice_id, SUM(amount) as paid FROM payments WHERE status = 'confirmed' GROUP BY invoice_id) p ON p.invoice_id = i.id
-       ORDER BY i.id DESC LIMIT ? OFFSET ?`
+         COALESCE(pp.paid, 0) as paid
+       FROM (SELECT i.id ${from} ORDER BY i.id DESC LIMIT ? OFFSET ?) page
+       JOIN invoices i ON i.id = page.id JOIN students s ON s.id = i.student_id LEFT JOIN classes c ON c.id = i.class_id
+       ${confirmedPaidJoin}
+       ORDER BY i.id DESC`
     )
     .all(...params, limit, offset)) as unknown[];
   return paginate(rows, total, page, limit);
@@ -159,14 +168,14 @@ export async function getDebtSummary(
   const row = (await db
     .prepare(
       `SELECT
-         COALESCE(SUM(i.amount - COALESCE(pp.paid, 0)), 0) as totalDebt,
-         COUNT(DISTINCT s.id) as debtorCount
+         COALESCE(SUM(i.amount - COALESCE(pp.paid, 0)), 0) as "totalDebt",
+         COUNT(DISTINCT s.id) as "debtorCount"
        FROM invoices i JOIN students s ON s.id = i.student_id
        ${confirmedPaidJoin}
        WHERE ${conds.join(' AND ')}`
     )
     .get(...params)) as { totalDebt: number; debtorCount: number };
-  return { totalDebt: row.totalDebt || 0, debtorCount: row.debtorCount || 0 };
+  return { totalDebt: Number(row.totalDebt) || 0, debtorCount: Number(row.debtorCount) || 0 };
 }
 
 export async function getInvoiceDetail(
@@ -176,9 +185,12 @@ export async function getInvoiceDetail(
   await assertInvoiceScope(centerId, id);
   const inv = await db
     .prepare(
-      `SELECT i.*, s.name as student_name, s.code as student_code, c.name as class_name
+      `SELECT i.*, s.name as student_name, s.code as student_code, c.name as class_name,
+         COALESCE(pp.paid, 0) as paid
        FROM invoices i JOIN students s ON s.id = i.student_id
-       LEFT JOIN classes c ON c.id = i.class_id WHERE i.id = ?`
+       LEFT JOIN classes c ON c.id = i.class_id
+       ${confirmedPaidJoin}
+       WHERE i.id = ?`
     )
     .get(id);
   const payments = await db
@@ -199,6 +211,13 @@ export async function createInvoice(
     .get(Number(input.student_id))) as { id: number; center_id: number | null } | undefined;
   if (!student || (centerId !== null && student.center_id !== centerId)) {
     throw AppError.notFound('Không tìm thấy học viên');
+  }
+  // INV-2: lớp phải cùng trung tâm với học viên (chống lộ tên lớp tenant khác qua JOIN)
+  if (input.class_id) {
+    const cls = (await db
+      .prepare('SELECT center_id FROM classes WHERE id = ?')
+      .get(Number(input.class_id))) as { center_id: number | null } | undefined;
+    if (!cls || cls.center_id !== student.center_id) throw AppError.notFound('Không tìm thấy lớp học');
   }
   const r = await db
     .prepare(
@@ -233,25 +252,35 @@ export async function updateInvoice(
 ): Promise<unknown> {
   await assertInvoiceScope(centerId, id);
   const amt = assertPositiveAmount(input.amount);
-  const current = (await db.prepare('SELECT amount FROM invoices WHERE id = ?').get(id)) as
-    { amount: number } | undefined;
-  if (current && Math.round(current.amount) !== amt) {
-    // Chặn sửa số tiền khi đã có thanh toán được xác nhận (tránh xóa nợ / tạo nợ ảo)
+  // INV-1: check + update trong 1 transaction, lock hóa đơn (cùng lock với recordPayment/IPN/approve)
+  const current = await db.transaction(async (tx) => {
+    const cur = (await tx.prepare('SELECT amount, status FROM invoices WHERE id = ? FOR UPDATE').get(id)) as
+      { amount: number; status: string } | undefined;
+    if (!cur) throw AppError.notFound('Không tìm thấy phiếu thu');
+    const paid = Number(
+      (
+        (await tx
+          .prepare(
+            "SELECT COALESCE(SUM(amount),0) as paid FROM payments WHERE invoice_id = ? AND status = 'confirmed'"
+          )
+          .get(id)) as { paid: number }
+      ).paid
+    );
     const confirmed = (
-      (await db
+      (await tx
         .prepare("SELECT COUNT(*) as c FROM payments WHERE invoice_id = ? AND status = 'confirmed'")
-        .get(id)) as {
-        c: number;
-      }
+        .get(id)) as { c: number }
     ).c;
-    if (confirmed > 0) {
+    // Chặn sửa số tiền khi đã có thanh toán được xác nhận (tránh xóa nợ / tạo nợ ảo)
+    if (Math.round(cur.amount) !== amt && Number(confirmed) > 0) {
       throw AppError.badRequest('Không thể sửa số tiền của phiếu thu đã có thanh toán được xác nhận');
     }
-  }
-  await db
-    .prepare('UPDATE invoices SET amount = ?, due_date = ?, note = ? WHERE id = ?')
-    .run(amt, input.due_date || null, input.note || null, id);
-  await recalcInvoiceStatus(id);
+    const status = paid >= amt - 0.01 ? 'paid' : paid > 0 ? 'partial' : 'unpaid';
+    await tx
+      .prepare('UPDATE invoices SET amount = ?, due_date = ?, note = ?, status = ? WHERE id = ?')
+      .run(amt, input.due_date || null, input.note || null, status, id);
+    return cur;
+  });
   await audit({
     centerId,
     actor,
@@ -285,17 +314,16 @@ export async function deleteInvoice(centerId: number | null, id: number, actor?:
     if (confirmed > 0) {
       throw AppError.badRequest('Không thể xóa phiếu thu đã có thanh toán được xác nhận');
     }
-    // Hoàn lại credits đã áp dụng (payments method='credit' lưu credit_id trong note)
-    const creditPays = (await tx
-      .prepare("SELECT amount, note FROM payments WHERE invoice_id = ? AND method = 'credit'")
-      .all(id)) as { amount: number; note: string | null }[];
-    for (const p of creditPays) {
-      const m = /credits #(\d+)/.exec(p.note || '');
-      if (m) {
-        await tx
-          .prepare('UPDATE credits SET used_amount = GREATEST(used_amount - ?, 0) WHERE id = ?')
-          .run(Math.round(Number(p.amount)), Number(m[1]));
-      }
+    // PAY-3: còn giao dịch VNPay đang chờ/cần xử lý -> chặn xóa (cascade sẽ làm mất dấu tiền VNPay đã trừ)
+    const vnp = await tx
+      .prepare(
+        "SELECT 1 FROM payment_txns WHERE invoice_id = ? AND status IN ('pending', 'needs_review') LIMIT 1"
+      )
+      .get(id);
+    if (vnp) {
+      throw AppError.badRequest(
+        'Phiếu thu đang có giao dịch VNPay chờ xử lý, chưa thể xóa. Vui lòng thử lại sau.'
+      );
     }
     await tx.prepare('DELETE FROM payments WHERE invoice_id = ?').run(id);
     await tx.prepare('DELETE FROM invoices WHERE id = ?').run(id);
@@ -321,6 +349,10 @@ export async function recordPayment(
 ): Promise<{ status: string }> {
   await assertInvoiceScope(centerId, id);
   const amt = assertPositiveAmount(input.amount);
+  const method = input.method || 'Tiền mặt';
+  if (!(STAFF_PAYMENT_METHODS as readonly string[]).includes(method)) {
+    throw AppError.badRequest('Hình thức thu không hợp lệ', 'VALIDATION_ENUM');
+  }
   const status = await db.transaction(async (tx) => {
     const inv = (await tx.prepare('SELECT id, amount FROM invoices WHERE id = ? FOR UPDATE').get(id)) as
       { id: number; amount: number } | undefined;
@@ -341,7 +373,7 @@ export async function recordPayment(
     }
     await tx
       .prepare('INSERT INTO payments (invoice_id, amount, paid_at, method, note) VALUES (?, ?, ?, ?, ?)')
-      .run(id, amt, input.paid_at || nowVNSql(), input.method || 'Tiền mặt', input.note || null);
+      .run(id, amt, input.paid_at || nowVNSql(), method, input.note || null);
     // Recalc tx-scoped: thấy INSERT vừa rồi, không cần connection riêng
     const newStatus = paidSoFar + amt >= inv.amount - 0.01 ? 'paid' : 'partial';
     await tx.prepare('UPDATE invoices SET status = ? WHERE id = ?').run(newStatus, id);
@@ -354,10 +386,31 @@ export async function recordPayment(
     action: 'payment',
     entity: 'invoices',
     entityId: id,
-    summary: `Thu ${formatVND(amt)} cho HD${id} (${input.method || 'Tiền mặt'})`,
-    meta: { amount: amt, method: input.method },
+    summary: `Thu ${formatVND(amt)} cho HD${id} (${method})`,
+    meta: { amount: amt, method },
   });
   return { status };
+}
+
+/** O-2: credits còn dùng được cho hóa đơn (của phụ huynh đã liên kết học viên, cùng trung tâm, chưa thu hồi). */
+export async function listInvoiceCredits(
+  centerId: number | null,
+  id: number
+): Promise<{ id: number; available: number; reason: string | null; parent_name: string }[]> {
+  await assertInvoiceScope(centerId, id);
+  const rows = (await db
+    .prepare(
+      `SELECT c.id, c.amount - c.used_amount AS available, c.reason, p.name AS parent_name
+       FROM invoices i
+       JOIN students s ON s.id = i.student_id
+       JOIN parent_students ps ON ps.student_id = i.student_id
+       JOIN credits c ON c.parent_id = ps.parent_id
+       JOIN parents p ON p.id = c.parent_id
+       WHERE i.id = ? AND c.center_id = s.center_id AND c.voided_at IS NULL AND c.amount > c.used_amount
+       ORDER BY c.id`
+    )
+    .all(id)) as { id: number; available: number; reason: string | null; parent_name: string }[];
+  return rows.map((r) => ({ ...r, available: Number(r.available) }));
 }
 
 /** Áp dụng credits của phụ huynh để trừ tiền hóa đơn. */

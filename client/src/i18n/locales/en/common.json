@@ -1,4 +1,5 @@
 {
+  "clear": "Clear",
   "api": {
     "timeout": "Request timed out, please try again",
     "network": "Cannot reach the server, please check your connection and try again",
@@ -69,6 +70,8 @@
     "vi": "Tiếng Việt"
   },
   "nav": {
+    "actingCenter": "Working center",
+    "allCenters": "All centers (view only)",
     "logout": "Log out",
     "openMenu": "Open menu",
     "sections": {
@@ -166,8 +169,14 @@
     "fail": "Couldn't change the password, please try again",
     "mismatch": "New passwords do not match",
     "tooShort": "Password must be at least 8 characters",
-    "logoutAll": "Log out all devices",
+    "logoutAll": "Log out other devices",
     "logoutAllConfirm": "Log out from all other devices?",
-    "logoutAllSuccess": "Logged out from all devices"
+    "logoutAllSuccess": "Logged out from all other devices",
+    "forcedNotice": "Your account is using a temporary password. Please set a new password to continue."
+  },
+  "discard": {
+    "title": "Discard unsaved changes?",
+    "message": "You have entered data that hasn't been saved. Close and discard these changes?",
+    "confirm": "Discard"
   }
 }

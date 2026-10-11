@@ -6,13 +6,14 @@
  * - Trigger tự chạm updated_at
  * - Data dictionary bao phủ 100% bảng
  */
-// LƯU Ý: Chạy test với DATABASE_URL trỏ tới test DB:
-//   DATABASE_URL=postgres://educenter:educenter123@localhost:5432/educenter_test node --test ...
-// (pg-compat đọc DATABASE_URL lúc load module — không set trong file vì ES module hoist imports)
+// PHẢI đặt trước mọi import db — pg-compat đọc DATABASE_URL lúc load module (DATA-8:
+// không để `db` rơi về DATABASE_URL thật trong server/.env khi chạy lẻ file này).
+process.env.DATABASE_URL =
+  process.env.TEST_DATABASE_URL || 'postgres://educenter:educenter123@localhost:5432/educenter_test';
 
 import { describe, it, before, beforeEach, after } from 'node:test';
 import assert from 'node:assert/strict';
-import { db } from './pg-compat';
+import { db, requestActor, __test as pgCompat } from './pg-compat';
 import { validateSchema, TABLE_DOCS } from './schema';
 import { LATEST_MIGRATION_VERSION } from './migrations';
 import { setupTestDb, resetTestDb, teardownTestDb } from './test-utils';
@@ -37,6 +38,26 @@ describe('schema enterprise (PostgreSQL)', () => {
 
   it('validateSchema() đạt — đủ bảng, đủ FK, đủ trigger, đủ view, không mồ côi', async () => {
     await validateSchema(db); // ném Error nếu lệch chuẩn
+  });
+
+  it('index composite thật sự được tạo, index thừa bị dọn (DATA-16)', async () => {
+    const r = await db.query(`SELECT indexname FROM pg_indexes WHERE schemaname = 'public'`);
+    const names = new Set((r.rows as { indexname: string }[]).map((x) => x.indexname));
+    for (const n of [
+      'idx_invoices_student_status',
+      'idx_payments_invoice_status',
+      'idx_students_center_status',
+    ]) {
+      assert.ok(names.has(n), `thiếu ${n}`);
+    }
+    for (const n of [
+      'parent_reviews_unique',
+      'idx_users_username',
+      'idx_refresh_token_hash',
+      'idx_salary_rules_teacher',
+    ]) {
+      assert.ok(!names.has(n), `${n} không được tồn tại`);
+    }
   });
 
   it('data dictionary bao phủ 100% bảng trong DB', async () => {
@@ -322,5 +343,94 @@ describe('schema enterprise (PostgreSQL)', () => {
       updated_at: string;
     };
     assert.notEqual(row.updated_at, '2000-01-01 00:00:00');
+  });
+  it('audit ghi actor kèm vai trò (DATA-18) qua đường actor của poolQuery', async () => {
+    const centerId = Number(
+      (await db.prepare("INSERT INTO centers (name) VALUES ('TTA')").run()).lastInsertRowid
+    );
+    const stId = Number(
+      (
+        await db
+          .prepare('INSERT INTO students (code, name, center_id) VALUES (?,?,?)')
+          .run('HVA', 'A', centerId)
+      ).lastInsertRowid
+    );
+    const inId = Number(
+      (
+        await db
+          .prepare('INSERT INTO invoices (student_id, amount, center_id) VALUES (?,?,?)')
+          .run(stId, 1000, centerId)
+      ).lastInsertRowid
+    );
+    const pId = await requestActor.run('7:parent', async () => {
+      const r = await db.prepare('INSERT INTO payments (invoice_id, amount) VALUES (?,?)').run(inId, 1000);
+      // SELECT trong request đi đường nhanh (DATA-12) nhưng vẫn đọc đúng dữ liệu
+      assert.ok(await db.prepare('SELECT 1 FROM payments WHERE id = ?').get(r.lastInsertRowid));
+      return Number(r.lastInsertRowid);
+    });
+    const h = (await db
+      .prepare('SELECT changed_by, changed_by_role FROM payment_history WHERE payment_id = ?')
+      .get(pId)) as { changed_by: number; changed_by_role: string };
+    assert.deepEqual(h, { changed_by: 7, changed_by_role: 'parent' });
+  });
+
+  it('isReadOnlySql: chỉ SELECT thuần mới đi đường nhanh/được retry (DATA-12, DATA-17)', () => {
+    assert.equal(pgCompat.isReadOnlySql('  SELECT * FROM t'), true);
+    assert.equal(pgCompat.isReadOnlySql('SELECT * FROM t WHERE id = $1 FOR UPDATE'), false);
+    assert.equal(pgCompat.isReadOnlySql('INSERT INTO t VALUES (1)'), false);
+    assert.equal(pgCompat.isReadOnlySql('WITH x AS (DELETE FROM t RETURNING *) SELECT * FROM x'), false);
+    assert.equal(pgCompat.isReadOnlySql('WITH x AS (SELECT 1) SELECT * FROM x'), true);
+  });
+
+  it('needsActor (PERF-1): chỉ câu ghi chạm payments/invoices hoặc DELETE mới đi đường actor', () => {
+    assert.equal(pgCompat.needsActor('UPDATE payments SET status = $1'), true);
+    assert.equal(pgCompat.needsActor('INSERT INTO invoices (student_id) VALUES ($1)'), true);
+    assert.equal(pgCompat.needsActor('DELETE FROM students WHERE id = $1'), true); // CASCADE -> invoices
+    assert.equal(pgCompat.needsActor('INSERT INTO audit_logs (action) VALUES ($1)'), false);
+    assert.equal(pgCompat.needsActor('UPDATE payment_txns SET status = $1'), false);
+  });
+
+  it('PERF-1: UPDATE invoices + DELETE cascade trong request vẫn ghi actor vào history', async () => {
+    const centerId = Number(
+      (await db.prepare("INSERT INTO centers (name) VALUES ('TTP')").run()).lastInsertRowid
+    );
+    const stId = Number(
+      (
+        await db
+          .prepare('INSERT INTO students (code, name, center_id) VALUES (?,?,?)')
+          .run('HVP', 'P', centerId)
+      ).lastInsertRowid
+    );
+    const inId = Number(
+      (
+        await db
+          .prepare('INSERT INTO invoices (student_id, amount, center_id) VALUES (?,?,?)')
+          .run(stId, 1000, centerId)
+      ).lastInsertRowid
+    );
+    await requestActor.run('9:admin', async () => {
+      await db.prepare("UPDATE invoices SET note = 'x' WHERE id = ?").run(inId);
+      // Câu ghi không chạm bảng audit: đường nhanh, vẫn chạy đúng
+      await db.prepare("UPDATE students SET name = 'P2' WHERE id = ?").run(stId);
+      await db.prepare('DELETE FROM students WHERE id = ?').run(stId); // CASCADE xóa invoice
+    });
+    const h = (await db
+      .prepare(
+        'SELECT action, changed_by, changed_by_role FROM invoice_history WHERE invoice_id = ? ORDER BY id'
+      )
+      .all(inId)) as { action: string; changed_by: number | null; changed_by_role: string | null }[];
+    assert.deepEqual(
+      h.map((x) => [x.action, x.changed_by, x.changed_by_role]),
+      [
+        ['insert', null, null],
+        ['update', 9, 'admin'],
+        ['delete', 9, 'admin'],
+      ]
+    );
+    // SET LOCAL không rò: ngoài request, connection trả về pool không còn actor
+    const s = (await db.query("SELECT current_setting('app.user_id', true) AS v")).rows[0] as {
+      v: string | null;
+    };
+    assert.ok(!s.v);
   });
 });

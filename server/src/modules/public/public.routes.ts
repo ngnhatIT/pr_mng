@@ -1,17 +1,27 @@
 import { Router, Request, Response } from 'express';
-import { db, formatSchedule } from '../../db';
 import { publicRateLimit } from '../../middleware/rateLimit';
 import { resolvePublicCenter, hasFeature, effectivePlan, Center } from '../../utils/plans';
 import { normalizePhone } from '../../services/zalo';
 import { asyncHandler } from '../../shared/http';
 import { v, validate } from '../../shared/validate';
+import {
+  listPublicClasses,
+  listPublicTeachers,
+  getPublicReviews,
+  createPublicLead,
+  createPublicTrial,
+} from './public.service';
 
 const router = Router();
 
 /** Chặn các trang landing nếu trung tâm chưa có tính năng 'landing' */
 async function landingCenter(req: Request, res: Response): Promise<Center | undefined> {
   const center = await resolvePublicCenter(req);
-  if (!center || !hasFeature(center, 'landing')) {
+  if (!center) {
+    res.status(404).json({ error: 'Không xác định được trung tâm', code: 'NOT_FOUND' });
+    return undefined;
+  }
+  if (!hasFeature(center, 'landing')) {
     res.status(403).json({ error: 'Trung tâm chưa kích hoạt trang công khai', code: 'FORBIDDEN' });
     return undefined;
   }
@@ -44,36 +54,7 @@ router.get(
   asyncHandler(async (req: Request, res: Response) => {
     const center = await landingCenter(req, res);
     if (!center) return;
-    const rows = (await db
-      .prepare(
-        `SELECT c.id, c.name, t.name as teacher_name, c.schedule, c.tuition_fee, r.name as room_name,
-         (SELECT COUNT(*) FROM enrollments e WHERE e.class_id = c.id AND e.status = 'active') as student_count
-       FROM classes c
-       LEFT JOIN teachers t ON t.id = c.teacher_id
-       LEFT JOIN rooms r ON r.id = c.room_id
-       WHERE c.center_id = ? AND c.status = 'active'
-       ORDER BY c.name ASC`
-      )
-      .all(center.id)) as {
-      id: number;
-      name: string;
-      teacher_name: string | null;
-      schedule: string;
-      tuition_fee: number;
-      room_name: string | null;
-      student_count: number;
-    }[];
-    res.json(
-      rows.map((r) => ({
-        id: r.id,
-        name: r.name,
-        teacher_name: r.teacher_name,
-        schedule_text: formatSchedule(r.schedule),
-        tuition_fee: r.tuition_fee,
-        student_count: r.student_count,
-        room_name: r.room_name,
-      }))
-    );
+    res.json(await listPublicClasses(center.id));
   })
 );
 
@@ -84,10 +65,7 @@ router.get(
   asyncHandler(async (req: Request, res: Response) => {
     const center = await landingCenter(req, res);
     if (!center) return;
-    const rows = await db
-      .prepare('SELECT id, name, subject FROM teachers WHERE center_id = ? ORDER BY name ASC')
-      .all(center.id);
-    res.json(rows);
+    res.json(await listPublicTeachers(center.id));
   })
 );
 
@@ -98,25 +76,7 @@ router.get(
   asyncHandler(async (req: Request, res: Response) => {
     const center = await landingCenter(req, res);
     if (!center) return;
-    const items = await db
-      .prepare(
-        `SELECT r.id, r.rating, r.comment, p.name as parent_name, r.created_at
-       FROM reviews r
-       LEFT JOIN parents p ON p.id = r.parent_id
-       WHERE r.center_id = ? AND r.status = 'approved'
-       ORDER BY r.id DESC LIMIT 20`
-      )
-      .all(center.id);
-    const agg = (await db
-      .prepare(
-        "SELECT COALESCE(AVG(rating), 0) as avg, COUNT(*) as total FROM reviews WHERE center_id = ? AND status = 'approved'"
-      )
-      .get(center.id)) as { avg: number; total: number };
-    res.json({
-      avg: Math.round(Number(agg.avg) * 10) / 10,
-      total: agg.total,
-      items,
-    });
+    res.json(await getPublicReviews(center.id));
   })
 );
 
@@ -127,11 +87,9 @@ router.post(
   '/leads',
   publicRateLimit(20),
   asyncHandler(async (req: Request, res: Response) => {
-    const center = await resolvePublicCenter(req);
-    if (!center) {
-      res.status(404).json({ error: 'Không xác định được trung tâm', code: 'NOT_FOUND' });
-      return;
-    }
+    // Form công khai cũng chịu gate 'landing' như các GET (gói basic không có trang công khai)
+    const center = await landingCenter(req, res);
+    if (!center) return;
     const body = req.body as Record<string, unknown> | undefined;
     const name = String(body?.name ?? '').trim();
     const phone = normalizePhone(body?.phone as string | undefined);
@@ -144,16 +102,15 @@ router.post(
       return;
     }
     if (!phone) {
-      res.status(400).json({ error: 'Số điện thoại không hợp lệ (cần 10 số, bắt đầu bằng 0)', code: 'VALIDATION_INVALID' });
+      res.status(400).json({
+        error: 'Số điện thoại không hợp lệ (cần 10 số, bắt đầu bằng 0)',
+        code: 'VALIDATION_INVALID',
+      });
       return;
     }
     const source = body?.source ? String(body.source).trim().slice(0, 50) : null;
     const note = body?.note ? String(body.note).trim().slice(0, 1000) : null;
-    await db
-      .prepare(
-        "INSERT INTO leads (center_id, name, phone, source, status, note) VALUES (?, ?, ?, ?, 'new', ?)"
-      )
-      .run(center.id, name, phone, source, note);
+    await createPublicLead(center.id, { name, phone, source, note });
     res.status(201).json({ ok: true });
   })
 );
@@ -163,13 +120,13 @@ router.post(
   '/trials',
   publicRateLimit(20),
   asyncHandler(async (req: Request, res: Response) => {
-    const center = await resolvePublicCenter(req);
-    if (!center) {
-      res.status(404).json({ error: 'Không xác định được trung tâm', code: 'NOT_FOUND' });
-      return;
-    }
+    // Form công khai cũng chịu gate 'landing' như các GET (gói basic không có trang công khai)
+    const center = await landingCenter(req, res);
+    if (!center) return;
     const body = req.body as Record<string, unknown> | undefined;
-    const name = String(body?.name ?? '').trim().slice(0, 100);
+    const name = String(body?.name ?? '')
+      .trim()
+      .slice(0, 100);
     const phone = normalizePhone(body?.phone as string | undefined);
     const note = body?.note ? String(body.note).trim().slice(0, 1000) : null;
     if (!name) {
@@ -177,7 +134,10 @@ router.post(
       return;
     }
     if (!phone) {
-      res.status(400).json({ error: 'Số điện thoại không hợp lệ (cần 10 số, bắt đầu bằng 0)', code: 'VALIDATION_INVALID' });
+      res.status(400).json({
+        error: 'Số điện thoại không hợp lệ (cần 10 số, bắt đầu bằng 0)',
+        code: 'VALIDATION_INVALID',
+      });
       return;
     }
     let classId: number | null = null;
@@ -187,26 +147,8 @@ router.post(
         res.status(400).json({ error: 'Lớp học không hợp lệ', code: 'VALIDATION_INVALID' });
         return;
       }
-      const cls = await db
-        .prepare('SELECT id FROM classes WHERE id = ? AND center_id = ?')
-        .get(classId, center.id);
-      if (!cls) {
-        res.status(400).json({ error: 'Lớp học không tồn tại', code: 'BAD_REQUEST' });
-        return;
-      }
     }
     const referralCode = body?.referral_code ? String(body.referral_code).trim().slice(0, 32) : '';
-    let referrer: { id: number; phone: string | null } | undefined;
-    if (referralCode) {
-      referrer = (await db
-        .prepare('SELECT id, phone FROM parents WHERE referral_code = ? AND center_id = ?')
-        .get(referralCode, center.id)) as { id: number; phone: string | null } | undefined;
-      // Chặn tự giới thiệu chính mình: SĐT đăng ký trùng SĐT của referrer
-      if (referrer && normalizePhone(referrer.phone) === phone) {
-        res.status(400).json({ error: 'Không thể dùng mã giới thiệu của chính mình', code: 'BAD_REQUEST' });
-        return;
-      }
-    }
     const desiredDateRaw = body?.desired_date ? String(body.desired_date).trim() : null;
     // Validate ngày thật (tránh "2026-13-99" lọt vào DB)
     let desiredDate: string | null = null;
@@ -214,26 +156,7 @@ router.post(
       const parsed = validate({ d: desiredDateRaw }, { d: v.date({ label: 'Ngày mong muốn' }) });
       desiredDate = parsed.d ?? null;
     }
-    await db
-      .prepare(
-        "INSERT INTO trial_registrations (center_id, name, phone, class_id, desired_date, note, referral_code, status) VALUES (?, ?, ?, ?, ?, ?, ?, 'new')"
-      )
-      .run(center.id, name, phone, classId, desiredDate, note, referralCode || null);
-    if (referrer) {
-      // Không tạo referral pending trùng SĐT (tránh rows rác tích tụ)
-      const existing = await db
-        .prepare(
-          "SELECT 1 FROM referrals WHERE referrer_parent_id = ? AND referred_phone = ? AND status = 'pending'"
-        )
-        .get(referrer.id, phone);
-      if (!existing) {
-        await db
-          .prepare(
-            "INSERT INTO referrals (referrer_parent_id, referred_phone, referred_student_id, status) VALUES (?, ?, NULL, 'pending')"
-          )
-          .run(referrer.id, phone);
-      }
-    }
+    await createPublicTrial(center.id, { name, phone, note, classId, desiredDate, referralCode });
     res.status(201).json({ ok: true });
   })
 );

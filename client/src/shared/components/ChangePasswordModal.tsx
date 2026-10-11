@@ -1,16 +1,19 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { ConfirmDialog, Modal } from './Modal';
 import { Field, useFieldErrors } from './Form';
 import { useToast } from '../ui/toast';
-import { api } from '../api/client';
+import { api, authPath, getUser, logout, setAuth, tryRefresh, updateUser } from '../api/client';
 
 interface Props {
   onClose: () => void;
+  /** Bắt buộc đổi (must_change_password): không đóng được, chỉ có Đổi mật khẩu hoặc Đăng xuất. */
+  forced?: boolean;
 }
 
-/** Form đổi mật khẩu (gọi POST /auth/change-password, thu hồi mọi session khác). */
-export function ChangePasswordModal({ onClose }: Props) {
+/** Form đổi mật khẩu (POST /auth|/parent/change-password, thu hồi mọi session khác). */
+export function ChangePasswordModal({ onClose, forced }: Props) {
   const { t } = useTranslation('common');
   const toast = useToast();
   const [oldPassword, setOldPassword] = useState('');
@@ -20,6 +23,7 @@ export function ChangePasswordModal({ onClose }: Props) {
   const [error, setError] = useState('');
   // Lỗi validation hiện ngay dưới field + focus field lỗi (skill 8.2)
   const { errors, refFor, show, clear } = useFieldErrors<'old' | 'new' | 'confirm'>();
+  const navigate = useNavigate();
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -30,18 +34,24 @@ export function ChangePasswordModal({ onClose }: Props) {
     if (!show(errs)) return;
     setBusy(true);
     try {
-      await api('/auth/change-password', {
+      await api(authPath('change-password'), {
         method: 'POST',
         body: JSON.stringify({
           old_password: oldPassword,
           new_password: newPassword,
         }),
       });
+      updateUser({ must_change_password: false });
+      // Lấy access token/user mới từ server (token cũ có thể còn mang cờ bắt đổi mật khẩu). Best-effort.
+      await tryRefresh();
       toast(t('changePassword.success'), 'success');
       onClose();
     } catch (err) {
-      // Lỗi server (thường là sai mật khẩu hiện tại): hiện ngay dưới field đó
-      show({ old: err instanceof Error ? err.message : t('changePassword.fail') });
+      // Lỗi server hiện ngay dưới field liên quan: lỗi về mật khẩu mới (yếu/trùng cũ) dưới ô mới,
+      // còn lại (thường là sai mật khẩu hiện tại) dưới ô hiện tại (FE-6).
+      const msg = err instanceof Error ? err.message : t('changePassword.fail');
+      const code = (err as { code?: string }).code;
+      show(code === 'WEAK_PASSWORD' || code === 'SAME_PASSWORD' ? { new: msg } : { old: msg });
     } finally {
       setBusy(false);
     }
@@ -53,7 +63,10 @@ export function ChangePasswordModal({ onClose }: Props) {
     setConfirmingLogout(false);
     setBusy(true);
     try {
-      await api('/auth/logout-all', { method: 'POST' });
+      // SEC-2: server giữ phiên hiện tại, thu hồi mọi phiên khác + access token cũ và trả token mới.
+      const data = await api<{ ok: boolean; token?: string }>(authPath('logout-all'), { method: 'POST' });
+      const user = getUser();
+      if (data.token && user) setAuth(data.token, user);
       toast(t('changePassword.logoutAllSuccess'), 'success');
       onClose();
     } catch (err) {
@@ -65,8 +78,9 @@ export function ChangePasswordModal({ onClose }: Props) {
 
   return (
     <>
-      <Modal title={t('changePassword.title')} onClose={onClose}>
+      <Modal title={t('changePassword.title')} onClose={forced ? () => {} : onClose} hideClose={forced}>
         <form onSubmit={submit} className="form-grid">
+          {forced && <p className="muted">{t('changePassword.forcedNotice')}</p>}
           {error && (
             <div className="error-box" role="alert">
               {error}
@@ -117,17 +131,33 @@ export function ChangePasswordModal({ onClose }: Props) {
           </Field>
           {/* Dùng modal-actions chuẩn (form-actions không có CSS) */}
           <div className="modal-actions">
-            <button type="button" className="btn" onClick={onClose} disabled={busy}>
-              {t('actions.cancel')}
-            </button>
-            <button
-              type="button"
-              className="btn btn-danger"
-              onClick={() => setConfirmingLogout(true)}
-              disabled={busy}
-            >
-              {t('changePassword.logoutAll')}
-            </button>
+            {forced ? (
+              <button
+                type="button"
+                className="btn"
+                disabled={busy}
+                onClick={() => {
+                  const loginPath = getUser()?.role === 'parent' ? '/parent/login' : '/login';
+                  void logout().then(() => navigate(loginPath, { replace: true }));
+                }}
+              >
+                {t('nav.logout')}
+              </button>
+            ) : (
+              <>
+                <button type="button" className="btn" onClick={onClose} disabled={busy}>
+                  {t('actions.cancel')}
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-danger"
+                  onClick={() => setConfirmingLogout(true)}
+                  disabled={busy}
+                >
+                  {t('changePassword.logoutAll')}
+                </button>
+              </>
+            )}
             <button type="submit" className="btn btn-primary" disabled={busy}>
               {busy && <span className="spinner" aria-hidden="true" />}
               {busy ? t('actions.saving') : t('changePassword.submit')}
@@ -137,8 +167,8 @@ export function ChangePasswordModal({ onClose }: Props) {
       </Modal>
       {confirmingLogout && (
         <ConfirmDialog
-          title={t('changePassword.logoutAll', 'Đăng xuất mọi thiết bị')}
-          message={t('changePassword.logoutAllConfirm', 'Đăng xuất khỏi tất cả thiết bị khác?')}
+          title={t('changePassword.logoutAll')}
+          message={t('changePassword.logoutAllConfirm')}
           onClose={() => setConfirmingLogout(false)}
           onConfirm={logoutAll}
           danger

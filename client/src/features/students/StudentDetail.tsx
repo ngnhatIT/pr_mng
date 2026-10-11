@@ -1,45 +1,30 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { http } from '../../shared/api/client';
-import { studentsApi } from './students.api';
+import { studentsApi, type StudentDetail as Detail } from './students.api';
 import { classesApi, type ClassItem } from '../classes/classes.api';
-import { useToast } from '../../shared/ui/toast';
-import { Student, InvoiceItem, Grade, formatVND, formatDate } from '../../shared/types';
+import { useMyPermissions } from '../system/roles.api';
+import { fetchAllPages } from '../../shared/components/Pagination';
+import { useToast, toastApiError } from '../../shared/ui/toast';
+import { useLoad } from '../../shared/hooks/useLoad';
+import { Grade, formatVND, formatDate } from '../../shared/types';
 import { Modal, ConfirmDialog } from '../../shared/components/Modal';
 import { Field, useFieldErrors } from '../../shared/components/Form';
-import { EmptyState } from '../../shared/components/EmptyState';
+import { EmptyState, LoadError } from '../../shared/components/EmptyState';
 import { Skeleton, TableSkeleton } from '../../shared/components/Skeleton';
 import { Icon } from '../../shared/components/icons';
 import './Students.css';
 import { EmptyCell } from '../../shared/components/EmptyCell';
 
-interface Detail {
-  student: Student;
-  classes: { id: number; name: string; enroll_status: string; enrolled_at: string }[];
-  invoices: InvoiceItem[];
-}
-
 export function StudentDetail() {
   const { t } = useTranslation(['students', 'common']);
   const { id } = useParams<{ id: string }>();
-  const [data, setData] = useState<Detail | null>(null);
-  const [loading, setLoading] = useState(true);
-  const toast = useToast();
+  // UX-5: đổi :id nhanh thì response học viên cũ về muộn bị bỏ qua
+  const { data, loading, error: loadErr, reload } = useLoad<Detail>(() => studentsApi.get(Number(id)), [id]);
+  // ADM-22: phân biệt 404 với lỗi tải (mạng/timeout) để hiện nút Thử lại
+  const error = loadErr ? ((loadErr as { code?: string }).code === 'NOT_FOUND' ? 'notFound' : 'load') : null;
 
-  useEffect(() => {
-    void (async () => {
-      try {
-        const d = await http.get<Detail>(`/students/${id}`);
-        setData(d);
-      } catch (err) {
-        toast(err instanceof Error ? err.message : t('detail.loadError'), 'error');
-      } finally {
-        setLoading(false);
-      }
-    })();
-  }, [id, toast, t]);
-
+  // Đang tải (kể cả đổi :id / thử lại) -> skeleton, không hiện dữ liệu học viên cũ
   if (loading)
     return (
       <div className="page">
@@ -63,7 +48,22 @@ export function StudentDetail() {
         </section>
       </div>
     );
-  if (!data)
+  if (error === 'load')
+    return (
+      <div className="page">
+        <EmptyState
+          icon="alert"
+          title={t('detail.loadError')}
+          action={
+            <button type="button" className="btn btn-primary btn-inline" onClick={reload}>
+              <Icon name="rotate" size={14} />
+              {t('actions.retry', { ns: 'common' })}
+            </button>
+          }
+        />
+      </div>
+    );
+  if (error || !data)
     return (
       <div className="page">
         <EmptyState
@@ -201,37 +201,31 @@ export function StudentDetail() {
 
 function GradesSection({ studentId }: { studentId: number }) {
   const { t } = useTranslation(['students', 'common']);
-  const [grades, setGrades] = useState<Grade[]>([]);
-  const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [deleting, setDeleting] = useState<Grade | null>(null);
   const toast = useToast();
+  const canManage = useMyPermissions().has('grades.manage');
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    try {
-      const res = await studentsApi.listGrades(studentId, { limit: 100 });
-      setGrades(res.data);
-    } catch (err) {
-      toast(err instanceof Error ? err.message : t('detail.grades.loadError'), 'error');
-    } finally {
-      setLoading(false);
-    }
-  }, [studentId, toast, t]);
-
+  const {
+    data,
+    loading,
+    error,
+    reload: load,
+  } = useLoad<Grade[]>(() => fetchAllPages((p) => studentsApi.listGrades(studentId, p)), [studentId]);
+  const grades = data ?? [];
   useEffect(() => {
-    void load();
-  }, [load]);
+    if (error) toastApiError(toast, error, t('detail.grades.loadError'));
+  }, [error, toast]);
 
   const remove = async () => {
     if (!deleting) return;
     try {
-      await http.del(`/grades/${deleting.id}`);
+      await studentsApi.deleteGrade(deleting.id);
       toast(t('detail.grades.deleted'), 'success');
       setDeleting(null);
-      void load();
+      load();
     } catch (err) {
-      toast(err instanceof Error ? err.message : t('states.deleteError', { ns: 'common' }), 'error');
+      toastApiError(toast, err, t('states.deleteError', { ns: 'common' }));
     }
   };
 
@@ -239,17 +233,21 @@ function GradesSection({ studentId }: { studentId: number }) {
     <section className="card">
       <div className="section-head">
         <h3>{t('detail.grades.title')}</h3>
-        <button className="btn btn-sm btn-primary btn-inline" onClick={() => setShowForm(true)}>
-          <Icon name="plus" size={13} />
-          {t('detail.grades.add')}
-        </button>
+        {canManage && (
+          <button className="btn btn-sm btn-primary btn-inline" onClick={() => setShowForm(true)}>
+            <Icon name="plus" size={13} />
+            {t('detail.grades.add')}
+          </button>
+        )}
       </div>
-      {loading ? (
+      {loading && !data ? (
         <TableSkeleton cols={6} />
+      ) : error && !data ? (
+        <LoadError onRetry={load} title={t('detail.grades.loadError')} />
       ) : grades.length === 0 ? (
         <EmptyState icon="cap" title={t('detail.grades.emptyTitle')} desc={t('detail.grades.emptyDesc')} />
       ) : (
-        <div className="table-wrap sticky">
+        <div className="table-wrap sticky" aria-busy={loading || undefined}>
           <table className="table">
             <thead>
               <tr>
@@ -276,16 +274,18 @@ function GradesSection({ studentId }: { studentId: number }) {
                   <td>{g.comment || <EmptyCell />}</td>
                   <td>{formatDate(g.created_at)}</td>
                   <td className="td-right">
-                    <span className="row-actions">
-                      <button
-                        type="button"
-                        className="btn btn-sm btn-danger-ghost"
-                        onClick={() => setDeleting(g)}
-                      >
-                        <Icon name="trash" size={15} />
-                        {t('actions.delete', { ns: 'common' })}
-                      </button>
-                    </span>
+                    {canManage && (
+                      <span className="row-actions">
+                        <button
+                          type="button"
+                          className="btn btn-sm btn-danger-ghost"
+                          onClick={() => setDeleting(g)}
+                        >
+                          <Icon name="trash" size={15} />
+                          {t('actions.delete', { ns: 'common' })}
+                        </button>
+                      </span>
+                    )}
                   </td>
                 </tr>
               ))}
@@ -299,7 +299,7 @@ function GradesSection({ studentId }: { studentId: number }) {
           onClose={() => setShowForm(false)}
           onDone={() => {
             setShowForm(false);
-            void load();
+            load();
           }}
         />
       )}
@@ -342,12 +342,11 @@ function StudentGradeFormModal({
   const { errors, refFor, show, clear } = useFieldErrors<'score'>();
 
   useEffect(() => {
-    // HIGH-2: GET /classes trả envelope {data, pagination}, phải lấy .data trước khi filter
-    classesApi
-      .list("", { limit: 100 })
-      .then((r) => setClasses(r.data.filter((x) => x.status === 'active')))
-      .catch((err: Error) => toast(err.message, 'error'));
-  }, [toast]);
+    // ADM-6: server chặn 100/trang -> tải đủ mọi trang
+    fetchAllPages((p) => classesApi.list('', p))
+      .then((all) => setClasses(all.filter((x) => x.status === 'active')))
+      .catch((err: unknown) => toastApiError(toast, err, t('states.loadError', { ns: 'common' })));
+  }, [toast, t]);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -360,7 +359,7 @@ function StudentGradeFormModal({
     if (!show(errs)) return;
     setBusy(true);
     try {
-      await http.post('/grades', {
+      await studentsApi.createGrade({
         student_id: studentId,
         class_id: classId ? Number(classId) : null,
         title,
@@ -371,14 +370,18 @@ function StudentGradeFormModal({
       toast(t('detail.grades.saved'), 'success');
       onDone();
     } catch (err) {
-      toast(err instanceof Error ? err.message : t('detail.grades.saveError'), 'error');
+      toastApiError(toast, err, t('detail.grades.saveError'));
     } finally {
       setBusy(false);
     }
   };
 
   return (
-    <Modal title={t('detail.grades.formTitle')} onClose={onClose}>
+    <Modal
+      title={t('detail.grades.formTitle')}
+      onClose={onClose}
+      dirty={!!(classId || title || score || comment) || maxScore !== '10'}
+    >
       <form onSubmit={submit}>
         <div className="form-grid">
           <Field label={t('detail.grades.form.class')}>
@@ -392,7 +395,14 @@ function StudentGradeFormModal({
             </select>
           </Field>
           <Field label={t('detail.grades.form.examName')}>
-            <input className="text-input" value={title} onChange={(e) => setTitle(e.target.value)} required />
+            {/* B-6: Lớp ở trước là tùy chọn -> focus thẳng tên bài kiểm tra */}
+            <input
+              className="text-input"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              required
+              autoFocus
+            />
           </Field>
           <Field label={t('detail.grades.form.score')} error={errors.score}>
             <input

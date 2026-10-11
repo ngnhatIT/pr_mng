@@ -182,10 +182,7 @@
     "correctAnswer": "Correct answer",
     "criterion": "Criterion",
     "criterionScore": "{{score}} pts",
-    "defaultCriteria": [
-      "Pronunciation",
-      "Vocabulary"
-    ],
+    "defaultCriteria": ["Pronunciation", "Vocabulary"],
     "discardMessage": "You have entered data that is not saved yet. Close and discard these changes?",
     "discardTitle": "Discard unsaved changes?",
     "deselectAll": "Deselect",
@@ -302,9 +299,21 @@
       "quizInvalid": "{{count}} question(s) are invalid (missing content, options, correct answer or points)",
       "rubricNameRequired": "Enter a rubric name",
       "rubricCriteriaRequired": "Need at least 1 criterion with a name and score > 0",
-      "pointsInvalid": "Each question must be worth more than 0 and at most 1000 points"
+      "pointsInvalid": "Each question must be worth more than 0 and at most 1000 points",
+      "attBadResponse": "Invalid server response",
+      "attNetwork": "Network error while uploading, please try again",
+      "attTimeout": "Upload took too long, please try again",
+      "maxAttemptsInvalid": "Attempts must be a whole number from 1 to 100"
     },
-    "rubricQuizHint": "Rubric used to manually grade the quiz essay questions."
+    "rubricQuizHint": "Rubric used to manually grade the quiz essay questions.",
+    "attLoadFailed": "Could not load the existing attachments. Saving will keep them unchanged.",
+    "quizLoadFailed": "Could not load the quiz questions, so editing them is locked. Other changes can still be saved.",
+    "removeQuestion": "Remove question {{n}}",
+    "removeOption": "Remove option {{letter}}",
+    "removeCriterion": "Remove criterion {{n}}",
+    "maxAttempts": "Max attempts",
+    "maxAttemptsHint": "Students see the total score after each attempt; leave empty for unlimited (makes guessing the answer key easy)",
+    "maxAttemptsPh": "Unlimited"
   },
   "grade": {
     "empty": "No students to grade",

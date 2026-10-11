@@ -1,6 +1,13 @@
 import { Router, Response } from 'express';
 import { AuthRequest, parentAuth } from '../../middleware/auth';
-import { loginRateLimit } from '../../middleware/rateLimit';
+import {
+  loginRateLimit,
+  registerRateLimit,
+  uploadRateLimit,
+  loginAccountKey,
+} from '../../middleware/rateLimit';
+import { resolvePublicCenter } from '../../utils/plans';
+import { withCenterName } from '../auth/auth.routes';
 import { asyncHandler } from '../../shared/http';
 import { AppError } from '../../shared/errors';
 import { uploadSingle, assertSafeUpload, cleanupUploadedFile } from '../../shared/upload';
@@ -9,12 +16,18 @@ import { env } from '../../config/env';
 import { audit } from '../../shared/audit';
 import * as parentService from './parent.service';
 import { assertStrongPassword } from '../../shared/password';
-import { rotateRefreshToken, revokeRefreshToken, revokeAllForOwner, revokeAllForOwnerExcept } from '../auth/refresh.service';
+import {
+  rotateRefreshToken,
+  revokeRefreshToken,
+  revokeAllForOwnerExcept,
+  logoutOtherSessions,
+} from '../auth/refresh.service';
 import {
   setRefreshCookie,
   clearRefreshCookie,
   getRefreshCookie,
   requireSameOrigin,
+  setDeviceCookie,
 } from '../../middleware/cookieAuth';
 
 /** Path cookie refresh cho phụ huynh: tách khỏi staff để 2 phiên không đè nhau. */
@@ -38,20 +51,33 @@ function reqStudentId(req: AuthRequest): number {
 
 router.post(
   '/register',
+  registerRateLimit,
   loginRateLimit,
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const input = validate(req.body, {
       phone: v.string({ required: true, label: 'Số điện thoại' }),
       password: v.string({ required: true, min: 8, label: 'Mật khẩu' }),
       name: v.string({ required: true, max: 100, label: 'Họ tên' }),
-      center_id: v.number({ required: true, label: 'Trung tâm' }),
+      center_id: v.number({ label: 'Trung tâm' }),
     });
+    // SEC-4: trung tâm lấy theo Host (subdomain), không tin center_id client gửi — chặn tự đăng ký
+    // vào tenant bất kỳ. Client (ParentRegister) gửi center.id từ /public/center (cùng resolver) nên khớp.
+    const center = await resolvePublicCenter(req);
+    if (!center) throw AppError.notFound('Không xác định được trung tâm');
+    if (input.center_id !== undefined && input.center_id !== center.id) {
+      throw AppError.badRequest('Trung tâm đăng ký không khớp với trang hiện tại');
+    }
     // Chặn mật khẩu phổ biến (validate() chỉ check độ dài)
     assertStrongPassword(input.password);
-    const result = await parentService.registerParent(input);
+    const result = await parentService.registerParent({ ...input, center_id: center.id });
     // D4: refresh token chỉ đi qua HttpOnly cookie, KHÔNG trả trong body nữa
     setRefreshCookie(res, result.refresh_token, COOKIE_PATH);
-    res.status(201).json({ token: result.token, expires_in: result.expires_in, parent: result.parent });
+    setDeviceCookie(res, 'parent', loginAccountKey(req.body), COOKIE_PATH); // S-4
+    res.status(201).json({
+      token: result.token,
+      expires_in: result.expires_in,
+      parent: await withCenterName(result.parent),
+    });
   })
 );
 
@@ -64,10 +90,19 @@ router.post(
       password: v.string({ required: true, label: 'Mật khẩu' }),
       center_id: v.number({ required: false, label: 'Trung tâm' }),
     });
-    const result = await parentService.loginParent(input);
+    // Không chỉ định trung tâm -> theo Host (subdomain) nếu xác định được
+    const result = await parentService.loginParent({
+      ...input,
+      center_id: input.center_id ?? (await resolvePublicCenter(req))?.id,
+    });
     // D4: refresh token chỉ đi qua HttpOnly cookie, KHÔNG trả trong body nữa
     setRefreshCookie(res, result.refresh_token, COOKIE_PATH);
-    res.json({ token: result.token, expires_in: result.expires_in, parent: result.parent });
+    setDeviceCookie(res, 'parent', loginAccountKey(req.body), COOKIE_PATH); // S-4
+    res.json({
+      token: result.token,
+      expires_in: result.expires_in,
+      parent: await withCenterName(result.parent),
+    });
   })
 );
 
@@ -82,9 +117,12 @@ router.post(
       res.status(400).json({ error: 'Thiếu refresh token', code: 'VALIDATION_REQUIRED' });
       return;
     }
-    const pair = await rotateRefreshToken(refreshToken, { ip: req.ip, userAgent: req.get('user-agent') ?? undefined });
+    const pair = await rotateRefreshToken(refreshToken, {
+      ip: req.ip,
+      userAgent: req.get('user-agent') ?? undefined,
+    });
     setRefreshCookie(res, pair.refresh_token, COOKIE_PATH);
-    res.json({ token: pair.token, expires_in: pair.expires_in });
+    res.json({ token: pair.token, expires_in: pair.expires_in, user: await withCenterName(pair.user) });
   })
 );
 
@@ -116,7 +154,10 @@ router.put(
   '/consent',
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const { consent } = (req.body ?? {}) as { consent?: string };
-    res.json({ ok: true, zalo_consent: await parentService.setZaloConsent(ctx(req).parentId, consent ?? '') });
+    res.json({
+      ok: true,
+      zalo_consent: await parentService.setZaloConsent(ctx(req).parentId, consent ?? ''),
+    });
   })
 );
 
@@ -150,13 +191,12 @@ router.post(
   })
 );
 
-/** Đăng xuất mọi thiết bị của phụ huynh. */
+/** Đăng xuất mọi thiết bị KHÁC của phụ huynh; trả access token mới để phiên hiện tại dùng tiếp. */
 router.post(
   '/logout-all',
   asyncHandler(async (req: AuthRequest, res: Response) => {
-    const { parentId } = ctx(req);
-    await revokeAllForOwner('parent', parentId);
-    res.json({ ok: true });
+    const token = await logoutOtherSessions(req.user!, getRefreshCookie(req));
+    res.json({ ok: true, token });
   })
 );
 
@@ -362,11 +402,7 @@ router.post(
             (ans.option_ids as unknown[]).some((id) => !Number.isInteger(id)))
         )
           return true;
-        if (
-          ans.answer_text !== undefined &&
-          ans.answer_text !== null &&
-          typeof ans.answer_text !== 'string'
-        )
+        if (ans.answer_text !== undefined && ans.answer_text !== null && typeof ans.answer_text !== 'string')
           return true;
         return false;
       })
@@ -408,40 +444,45 @@ router.get(
 /** Phụ huynh/học viên nộp bài (ảnh/file + ghi chú) */
 router.post(
   '/homework/:homeworkId/submit',
+  uploadRateLimit, // C-4: chặn trước khi multer ghi tới 10MB xuống đĩa
   uploadSingle,
   asyncHandler(async (req: AuthRequest, res: Response) => {
-    // E2: fileFilter của multer chỉ check đuôi file (chạy trước khi ghi đĩa) —
-    // kiểm tra magic bytes + mimetype tại đây, file giả mạo → xóa + 400.
-    if (req.file) assertSafeUpload(req.file);
-    const { parentId, centerId } = ctx(req);
-    const homeworkId = paramId(req.params, 'homeworkId');
-    const studentId = Number(req.body.student_id);
-    if (!studentId) {
-      cleanupUploadedFile(req.file);
-      throw AppError.badRequest('Thiếu student_id');
-    }
-    const note = String(req.body.note || '').slice(0, 1000);
+    // HW-20: multer đã ghi file TRƯỚC handler — mọi validate (kể cả ctx/paramId) nằm trong
+    // try để lỗi nào cũng dọn file vừa ghi, không để mồ côi trên đĩa.
+    let result: { id: number; inserted: boolean };
+    let ids: { parentId: number; centerId: number | null; homeworkId: number; studentId: number };
     try {
-      const result = await parentService.submitHomework(parentId, studentId, homeworkId, {
+      // E2: fileFilter của multer chỉ check đuôi file (chạy trước khi ghi đĩa) —
+      // kiểm tra magic bytes + mimetype tại đây, file giả mạo → xóa + 400.
+      if (req.file) assertSafeUpload(req.file);
+      const { parentId, centerId } = ctx(req);
+      const homeworkId = paramId(req.params, 'homeworkId');
+      const studentId = Number(req.body.student_id);
+      if (!Number.isInteger(studentId) || studentId <= 0) throw AppError.badRequest('Thiếu student_id');
+      ids = { parentId, centerId, homeworkId, studentId };
+      const note = String(req.body.note || '').slice(0, 1000);
+      result = await parentService.submitHomework(parentId, studentId, homeworkId, {
         file_url: req.file ? `/uploads/${req.file.filename}` : null,
         file_name: req.file ? req.file.originalname : null,
         note: note || null,
-      });
-      // Nộp trùng (idempotent): file vừa upload không dùng tới → xóa để khỏi mồ côi
-      if (!result.inserted) cleanupUploadedFile(req.file);
-      await audit({
-        centerId,
-        actor: { id: parentId, role: 'parent' },
-        action: 'create',
-        entity: 'homework_submissions',
-        entityId: result.id,
-        summary: `Phụ huynh #${parentId} nộp bài #${homeworkId} cho HV#${studentId}${result.inserted ? '' : ' (trùng, giữ bản cũ)'}`,
-        meta: { student_id: studentId, homework_id: homeworkId, inserted: result.inserted },
       });
     } catch (err) {
       cleanupUploadedFile(req.file);
       throw err;
     }
+    // Nộp trùng (idempotent): file vừa upload không dùng tới → xóa để khỏi mồ côi.
+    // Đã ghi DB thành công thì KHÔNG xóa file nữa (audit lỗi cũng không làm mất bài nộp).
+    if (!result.inserted) cleanupUploadedFile(req.file);
+    const { parentId, centerId, homeworkId, studentId } = ids;
+    await audit({
+      centerId,
+      actor: { id: parentId, role: 'parent' },
+      action: 'create',
+      entity: 'homework_submissions',
+      entityId: result.id,
+      summary: `Phụ huynh #${parentId} nộp bài #${homeworkId} cho HV#${studentId}${result.inserted ? '' : ' (trùng, giữ bản cũ)'}`,
+      meta: { student_id: studentId, homework_id: homeworkId, inserted: result.inserted },
+    });
     res.status(201).json({ ok: true });
   })
 );

@@ -2,21 +2,10 @@
  * API layer cho feature Học phí (invoices + payments).
  */
 import { http, type Paginated, type PageParams } from '../../shared/api/client';
+import type { InvoiceItem, PendingPayment, DebtRow, RemindResult } from '../../shared/types';
 
-export interface InvoiceItem {
-  id: number;
-  student_id: number;
-  student_name: string;
-  student_code: string;
-  class_id: number | null;
-  class_name: string | null;
-  amount: number;
-  discount: number;
-  status: 'unpaid' | 'partial' | 'paid';
-  due_date: string | null;
-  note: string | null;
-  paid: number;
-}
+// ADM-18: dùng type chung ở shared/types (trước đây khai báo trùng ở đây và đã lệch nhau)
+export type { InvoiceItem, PendingPayment, DebtRow, RemindResult };
 
 export interface PaymentItem {
   id: number;
@@ -29,19 +18,8 @@ export interface PaymentItem {
 }
 
 export interface InvoiceDetailData {
-  invoice: InvoiceItem & { created_at: string };
+  invoice: InvoiceItem;
   payments: PaymentItem[];
-}
-
-export interface PendingPayment {
-  id: number;
-  invoice_id: number;
-  amount: number;
-  paid_at: string;
-  method: string;
-  note: string | null;
-  student_name: string;
-  student_code: string;
 }
 
 export interface PaymentConfigData {
@@ -55,22 +33,27 @@ export interface PaymentConfigData {
   referral_reward_referred: string;
 }
 
-export interface DebtRow {
-  id: number;
-  code: string;
-  name: string;
-  phone: string | null;
-  total: number;
-  paid: number;
-  debt: number;
-  /** "id:due_date,id:due_date..." các hóa đơn chưa thanh toán đủ */
-  invoice_dues?: string;
+const METHOD_I18N_KEY: Record<string, string> = {
+  'Tiền mặt': 'cash',
+  'Chuyển khoản': 'transfer',
+  'Quẹt thẻ': 'card',
+  'Ví điện tử': 'ewallet',
+  refund: 'refund',
+  credit: 'credit',
+};
+
+/** Hiển thị phương thức thanh toán: chuỗi legacy/mã hệ thống -> label i18n, chuỗi lạ (vnpay, QR...) giữ nguyên. */
+export function paymentMethodLabel(method: string | null, t: (key: string) => string): string | null {
+  if (!method) return null;
+  const code = METHOD_I18N_KEY[method];
+  return code ? t(`pay.methods.${code}`) : method;
 }
 
-export interface RemindResult {
-  demo?: boolean;
-  status: string;
-  message: string;
+export interface AvailableCredit {
+  id: number;
+  available: number;
+  reason: string | null;
+  parent_name: string;
 }
 
 export const invoicesApi = {
@@ -92,7 +75,6 @@ export const invoicesApi = {
     student_id: number;
     class_id?: number | null;
     amount: number;
-    discount?: number;
     due_date?: string | null;
     note?: string | null;
   }) => http.post<InvoiceItem>('/invoices', data),
@@ -112,6 +94,8 @@ export const invoicesApi = {
       data,
       idempotencyKey
     ),
+  /** O-2: credits còn dùng được cho hóa đơn (phụ huynh của học viên, cùng trung tâm) */
+  listCredits: (invoiceId: number) => http.get<AvailableCredit[]>(`/invoices/${invoiceId}/credits`),
   applyCredit: (invoiceId: number, creditId: number) =>
     http.post<{ ok: boolean; applied: number; status: string }>(`/invoices/${invoiceId}/apply-credit`, {
       credit_id: creditId,

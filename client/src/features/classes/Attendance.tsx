@@ -1,9 +1,10 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useSearchParams, useLocation, Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { classesApi, sessionsApi, ClassItem, SessionItem, AttendanceRow } from './classes.api';
-import { rolesApi } from '../system/roles.api';
-import { useToast } from '../../shared/ui/toast';
+import { useMyPermissions } from '../system/roles.api';
+import { useUnsavedGuard } from '../../shared/hooks/useUnsavedGuard';
+import { toastApiError, useToast } from '../../shared/ui/toast';
 import { Modal, ConfirmDialog } from '../../shared/components/Modal';
 import { Field, useFieldErrors } from '../../shared/components/Form';
 import { PageHeader } from '../../shared/components/PageHeader';
@@ -11,7 +12,8 @@ import { EmptyState } from '../../shared/components/EmptyState';
 import { Skeleton } from '../../shared/components/Skeleton';
 import { Icon } from '../../shared/components/icons';
 import './Attendance.css';
-import { formatDate } from '../../shared/types';
+import { formatDate, todayVN } from '../../shared/types';
+import { fetchAllPages } from '../../shared/components/Pagination';
 
 type Status = 'present' | 'absent' | 'late';
 
@@ -34,17 +36,22 @@ export function Attendance() {
   const [saveError, setSaveError] = useState('');
   const [showNewSession, setShowNewSession] = useState(false);
   const [showConfirmUnmarked, setShowConfirmUnmarked] = useState(false);
-  const [canManageSessions, setCanManageSessions] = useState(false);
   const [checkinCode, setCheckinCode] = useState<string | null>(null);
   const [makingCode, setMakingCode] = useState(false);
+  // ADM-11: có thay đổi chưa lưu (điểm danh/ghi chú/chủ đề) -> hỏi trước khi đổi lớp/buổi
+  const [dirty, setDirty] = useState(false);
+  const [pendingSwitch, setPendingSwitch] = useState<(() => void) | null>(null);
+  useUnsavedGuard(dirty); // reload/đóng tab khi đã điểm danh mà chưa lưu
+  const [loadedTopic, setLoadedTopic] = useState('');
+  // ADM-11: buổi đang chọn, để bỏ qua response của buổi cũ về muộn (mạng chậm, về sai thứ tự)
+  const sessionRef = useRef(sessionId);
   const toast = useToast();
 
   useEffect(() => {
-    // MEDIUM-4: dropdown lớp phải thấy hết lớp, không chỉ 20 lớp đầu (default limit)
-    classesApi
-      .list("", { limit: 200 })
-      .then((r) => setClasses(r.data.filter((x) => x.status === 'active')))
-      .catch((err: Error) => toast(err.message, 'error'));
+    // ADM-6: server chặn limit tối đa 100 -> tải đủ mọi trang để dropdown thấy hết lớp
+    fetchAllPages((p) => classesApi.list('', p))
+      .then((all) => setClasses(all.filter((x) => x.status === 'active')))
+      .catch((err: unknown) => toastApiError(toast, err, t('states.loadError', { ns: 'common' })));
   }, [toast]);
 
   const loadSessions = useCallback(
@@ -57,7 +64,7 @@ export function Attendance() {
         const s = await sessionsApi.listByClass(cid);
         setSessions(s);
       } catch (err) {
-        toast(err instanceof Error ? err.message : t('attendance.toast.sessionsError'), 'error');
+        toastApiError(toast, err, t('attendance.toast.sessionsError'));
       }
     },
     [toast, t]
@@ -68,13 +75,8 @@ export function Attendance() {
   }, [classId, loadSessions]);
 
   // Ẩn nút quản trị buổi học khi role không có sessions.manage (teacher chỉ được điểm danh).
-  // Fail-closed theo pattern ZaloReminders: không kiểm tra được quyền thì không hiện nút.
-  useEffect(() => {
-    rolesApi
-      .mine()
-      .then((r) => setCanManageSessions(r.some((p) => p.code === 'sessions.manage')))
-      .catch(() => setCanManageSessions(false));
-  }, []);
+  // Fail-closed: đang tải/lỗi -> Set rỗng -> không hiện nút (quyền cache chung với Layout).
+  const canManageSessions = useMyPermissions().has('sessions.manage');
 
   const loadAttendance = useCallback(
     async (sid: string) => {
@@ -85,12 +87,16 @@ export function Attendance() {
       setLoading(true);
       try {
         const data = await sessionsApi.getAttendance(sid);
+        if (sessionRef.current !== sid) return; // response của buổi cũ: bỏ qua
         setRows(data.students);
         setTopic(data.session.topic || '');
+        setLoadedTopic(data.session.topic || '');
+        setDirty(false);
       } catch (err) {
-        toast(err instanceof Error ? err.message : t('attendance.toast.attendanceError'), 'error');
+        if (sessionRef.current !== sid) return;
+        toastApiError(toast, err, t('attendance.toast.attendanceError'));
       } finally {
-        setLoading(false);
+        if (sessionRef.current === sid) setLoading(false);
       }
     },
     [toast, t]
@@ -100,7 +106,15 @@ export function Attendance() {
     if (sessionId) void loadAttendance(sessionId);
   }, [sessionId, loadAttendance]);
 
+  // Có thay đổi chưa lưu thì hỏi xác nhận trước khi chuyển (ADM-11)
+  const guardSwitch = (fn: () => void) => {
+    if (dirty) setPendingSwitch(() => fn);
+    else fn();
+  };
+
   const pickClass = (cid: string) => {
+    sessionRef.current = '';
+    setDirty(false);
     setClassId(cid);
     setSessionId('');
     setRows([]);
@@ -113,6 +127,9 @@ export function Attendance() {
   };
 
   const pickSession = (sid: string) => {
+    sessionRef.current = sid;
+    setDirty(false);
+    setRows([]); // không để điểm danh buổi cũ hiện (và bị lưu) dưới tên buổi mới trong lúc đang tải
     setSessionId(sid);
     setRowSearch('');
     const p = new URLSearchParams(searchParams);
@@ -122,28 +139,38 @@ export function Attendance() {
   };
 
   const setStatus = (studentId: number, status: Status) => {
+    setDirty(true);
     setRows((prev) => prev.map((r) => (r.id === studentId ? { ...r, status } : r)));
   };
   const setNote = (studentId: number, note: string) => {
+    setDirty(true);
     setRows((prev) => prev.map((r) => (r.id === studentId ? { ...r, note } : r)));
   };
   const markAll = (status: Status) => {
+    setDirty(true);
     setRows((prev) => prev.map((r) => ({ ...r, status })));
   };
 
   // Học viên chưa tick = chưa điểm danh (null), không mặc định "có mặt" để tránh ghi sai
   const save = async () => {
     if (!sessionId) return;
+    const sid = sessionId;
     setSaving(true);
     setSaveError(''); // điểm danh đã chọn giữ nguyên, lỗi hiện ngay trong savebar
     try {
-      await sessionsApi.updateTopic(sessionId, topic);
+      // ADM-1: lưu điểm danh TRƯỚC (attendance.take); chủ đề cần sessions.manage nên chỉ gọi khi có quyền
+      // và chủ đề thực sự đổi -> giáo viên không bị 403 chặn mất điểm danh.
       await sessionsApi.saveAttendance(
-        sessionId,
+        sid,
         rows
           .filter((r) => r.status != null)
           .map((r) => ({ student_id: r.id, status: r.status as Status, note: r.note || '' }))
       );
+      if (canManageSessions && topic !== loadedTopic) {
+        await sessionsApi.updateTopic(sid, topic);
+        setLoadedTopic(topic);
+      }
+      setDirty(false);
       toast(t('attendance.toast.saved'), 'success');
       void loadSessions(classId);
     } catch (err) {
@@ -183,7 +210,7 @@ export function Attendance() {
       const r = await sessionsApi.generateCheckinCode(sessionId);
       setCheckinCode(r.code);
     } catch (err) {
-      toast(err instanceof Error ? err.message : t('attendance.checkin.createError'), 'error');
+      toastApiError(toast, err, t('attendance.checkin.createError'));
     } finally {
       setMakingCode(false);
     }
@@ -197,7 +224,10 @@ export function Attendance() {
         <select
           className="text-input"
           value={classId}
-          onChange={(e) => pickClass(e.target.value)}
+          onChange={(e) => {
+            const v = e.target.value;
+            guardSwitch(() => pickClass(v));
+          }}
           aria-label={t('attendance.selectClass')}
         >
           <option value="">{t('attendance.selectClass')}</option>
@@ -210,7 +240,10 @@ export function Attendance() {
         <select
           className="text-input"
           value={sessionId}
-          onChange={(e) => pickSession(e.target.value)}
+          onChange={(e) => {
+            const v = e.target.value;
+            guardSwitch(() => pickSession(v));
+          }}
           disabled={!classId}
           aria-label={t('attendance.selectSession')}
         >
@@ -264,8 +297,13 @@ export function Attendance() {
               <input
                 className="text-input"
                 value={topic}
-                onChange={(e) => setTopic(e.target.value)}
+                onChange={(e) => {
+                  setTopic(e.target.value);
+                  setDirty(true);
+                }}
                 placeholder={t('attendance.topic.placeholder')}
+                // Giáo viên (không có sessions.manage) không sửa được chủ đề buổi
+                readOnly={!canManageSessions}
               />
             </Field>
             <div className="toolbar toolbar-tight">
@@ -354,9 +392,7 @@ export function Attendance() {
               )}
               <div className="att-savebar">
                 <span className="att-summary">
-                  <span>
-                    {t('attendance.summary.marked', { marked: markedCount, total: rows.length })}
-                  </span>
+                  <span>{t('attendance.summary.marked', { marked: markedCount, total: rows.length })}</span>
                   {lateCount > 0 && (
                     <span className="sum-late">
                       <span className="num">{lateCount}</span> {t('attendance.summary.late')}
@@ -391,11 +427,7 @@ export function Attendance() {
           )}
         </>
       ) : (
-        <EmptyState
-          icon="clipboard"
-          title={t('attendance.startTitle')}
-          desc={t('attendance.startDesc')}
-        />
+        <EmptyState icon="clipboard" title={t('attendance.startTitle')} desc={t('attendance.startDesc')} />
       )}
 
       {showNewSession && classId && (
@@ -404,7 +436,21 @@ export function Attendance() {
           onClose={() => setShowNewSession(false)}
           onCreated={(id) => {
             setShowNewSession(false);
-            void loadSessions(classId).then(() => pickSession(String(id)));
+            void loadSessions(classId).then(() => guardSwitch(() => pickSession(String(id))));
+          }}
+        />
+      )}
+
+      {pendingSwitch && (
+        <ConfirmDialog
+          title={t('attendance.discard.title')}
+          message={t('attendance.discard.message')}
+          danger
+          onClose={() => setPendingSwitch(null)}
+          onConfirm={() => {
+            const fn = pendingSwitch;
+            setPendingSwitch(null);
+            fn();
           }}
         />
       )}
@@ -434,11 +480,7 @@ function NewSessionModal({
   onCreated: (id: number) => void;
 }) {
   const { t } = useTranslation(['classes', 'common']);
-  const today = new Date();
-  const iso = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(
-    today.getDate()
-  ).padStart(2, '0')}`;
-  const [date, setDate] = useState(iso);
+  const [date, setDate] = useState(todayVN);
   const [topic, setTopic] = useState('');
   const [busy, setBusy] = useState(false);
   const toast = useToast();
@@ -462,7 +504,11 @@ function NewSessionModal({
   };
 
   return (
-    <Modal title={t('attendance.newSession.title')} onClose={onClose}>
+    <Modal
+      title={t('attendance.newSession.title')}
+      onClose={onClose}
+      dirty={topic !== '' || date !== todayVN()}
+    >
       <form onSubmit={submit}>
         <div className="form-grid">
           <Field label={t('attendance.newSession.date')} error={errors.date}>

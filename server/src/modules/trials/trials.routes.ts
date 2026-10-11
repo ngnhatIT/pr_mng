@@ -1,10 +1,10 @@
 import { Router, Response } from 'express';
-import { db } from '../../db';
 import { AuthRequest, reqCenterId } from '../../middleware/auth';
 import { requirePermission } from '../authorization/authorization.middleware';
 import { asyncHandler } from '../../shared/http';
 import { paramId } from '../../shared/validate';
-import { listTrials, TRIAL_STATUS, convertTrial } from './trials.service';
+import { listTrials, TRIAL_STATUS, convertTrial, updateTrialStatus } from './trials.service';
+import { actorFromReq } from '../../shared/audit';
 
 const router = Router();
 
@@ -46,14 +46,7 @@ router.put(
       });
       return;
     }
-    const trial = (await db.prepare('SELECT id, center_id FROM trial_registrations WHERE id = ?').get(id)) as
-      { id: number; center_id: number | null } | undefined;
-    if (!trial || (cid !== null && trial.center_id !== cid)) {
-      res.status(404).json({ error: 'Không tìm thấy đăng ký học thử', code: 'NOT_FOUND' });
-      return;
-    }
-    await db.prepare('UPDATE trial_registrations SET status = ? WHERE id = ?').run(status, id);
-    res.json(await db.prepare('SELECT * FROM trial_registrations WHERE id = ?').get(id));
+    res.json(await updateTrialStatus(cid, id, status, actorFromReq(req)));
   })
 );
 

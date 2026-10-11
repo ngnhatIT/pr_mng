@@ -1,13 +1,15 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { systemApi } from './system.api';
-import { useToast } from '../../shared/ui/toast';
+import { toastApiError, useToast } from '../../shared/ui/toast';
 import { Modal } from '../../shared/components/Modal';
 import { Field } from '../../shared/components/Form';
 import { PageHeader } from '../../shared/components/PageHeader';
-import { EmptyState } from '../../shared/components/EmptyState';
+import { EmptyState, LoadError } from '../../shared/components/EmptyState';
 import { TableSkeleton } from '../../shared/components/Skeleton';
-import { Pagination, type PaginationMeta } from '../../shared/components/Pagination';
+import { Pagination } from '../../shared/components/Pagination';
+import { useLoad } from '../../shared/hooks/useLoad';
+import { useUrlState } from '../../shared/hooks/useUrlState';
 import { CenterItem, formatDate } from '../../shared/types';
 import { Icon } from '../../shared/components/icons';
 import './SystemAdmin.css';
@@ -17,28 +19,16 @@ const CENTERS_PER_PAGE = 20;
 
 export function System() {
   const { t } = useTranslation(['ops', 'common']);
-  const [centers, setCenters] = useState<CenterItem[]>([]);
-  const [loading, setLoading] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
   const [editing, setEditing] = useState<CenterItem | null>(null);
-  const [page, setPage] = useState(1);
+  const [q, setQ] = useUrlState({ page: '1' });
   const toast = useToast();
-
-  const load = useCallback(async () => {
-    setLoading(true);
-    try {
-      const data = await systemApi.listCenters();
-      setCenters(data);
-    } catch (err) {
-      toast(err instanceof Error ? err.message : t('system.toast.loadFail'), 'error');
-    } finally {
-      setLoading(false);
-    }
-  }, [toast, t]);
-
+  const { data: centers, loading, error, reload } = useLoad(() => systemApi.listCenters(), []);
   useEffect(() => {
-    void load();
-  }, [load]);
+    if (error) toastApiError(toast, error, t('system.toast.loadFail'));
+  }, [error, toast, t]);
+  const totalPages = Math.max(1, Math.ceil((centers?.length ?? 0) / CENTERS_PER_PAGE));
+  const page = Math.min(Number(q.page) || 1, totalPages);
 
   return (
     <div className="page">
@@ -53,9 +43,11 @@ export function System() {
         }
       />
 
-      {loading ? (
+      {loading && !centers ? (
         <TableSkeleton cols={6} />
-      ) : centers.length === 0 ? (
+      ) : error && !centers ? (
+        <LoadError onRetry={reload} />
+      ) : !centers || centers.length === 0 ? (
         <EmptyState
           icon="building"
           title={t('system.empty.title')}
@@ -68,7 +60,7 @@ export function System() {
           }
         />
       ) : (
-        <div className="table-wrap sticky">
+        <div className="table-wrap sticky" aria-busy={loading || undefined}>
           <table className="table">
             <thead>
               <tr>
@@ -112,23 +104,19 @@ export function System() {
         </div>
       )}
 
-      {(() => {
-        const totalPages = Math.max(1, Math.ceil(centers.length / CENTERS_PER_PAGE));
-        const pagination: PaginationMeta = {
-          page: Math.min(page, totalPages),
-          limit: CENTERS_PER_PAGE,
-          total: centers.length,
-          totalPages,
-        };
-        return <Pagination pagination={pagination} onChange={(p) => setPage(p)} />;
-      })()}
+      {centers && (
+        <Pagination
+          pagination={{ page, limit: CENTERS_PER_PAGE, total: centers.length, totalPages }}
+          onChange={(p) => setQ({ page: String(p) })}
+        />
+      )}
 
       {showCreate && (
         <CreateCenterModal
           onClose={() => setShowCreate(false)}
           onDone={() => {
             setShowCreate(false);
-            void load();
+            reload();
           }}
         />
       )}
@@ -138,7 +126,7 @@ export function System() {
           onClose={() => setEditing(null)}
           onDone={() => {
             setEditing(null);
-            void load();
+            reload();
           }}
         />
       )}
@@ -158,6 +146,9 @@ function CreateCenterModal({ onClose, onDone }: { onClose: () => void; onDone: (
   const [adminPassword, setAdminPassword] = useState('');
   const [busy, setBusy] = useState(false);
   const toast = useToast();
+  const dirty =
+    !!(name || subdomain || phone || address || expires || adminUsername || adminPassword) ||
+    plan !== 'standard';
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -177,7 +168,7 @@ function CreateCenterModal({ onClose, onDone }: { onClose: () => void; onDone: (
       toast(t('system.toast.created'), 'success');
       onDone();
     } catch (err) {
-      toast(err instanceof Error ? err.message : t('system.toast.createFail'), 'error');
+      toastApiError(toast, err, t('system.toast.createFail'));
     } finally {
       setBusy(false);
     }
@@ -186,7 +177,7 @@ function CreateCenterModal({ onClose, onDone }: { onClose: () => void; onDone: (
   const planOptions = ['basic', 'standard', 'premium'] as const;
 
   return (
-    <Modal title={t('system.createForm.title')} onClose={onClose} wide>
+    <Modal title={t('system.createForm.title')} onClose={onClose} wide dirty={dirty}>
       <form onSubmit={submit}>
         <div className="center-form-section">
           <h3>{t('system.createForm.sectionInfo')}</h3>
@@ -298,7 +289,7 @@ function EditPlanModal({
       toast(t('system.toast.planUpdated'), 'success');
       onDone();
     } catch (err) {
-      toast(err instanceof Error ? err.message : t('system.toast.updateFail'), 'error');
+      toastApiError(toast, err, t('system.toast.updateFail'));
     } finally {
       setBusy(false);
     }
@@ -307,7 +298,11 @@ function EditPlanModal({
   const planOptions = ['basic', 'standard', 'premium'] as const;
 
   return (
-    <Modal title={t('system.editPlanTitle', { name: center.name })} onClose={onClose}>
+    <Modal
+      title={t('system.editPlanTitle', { name: center.name })}
+      onClose={onClose}
+      dirty={plan !== center.plan || expires !== (center.plan_expires_at?.slice(0, 10) || '')}
+    >
       <form onSubmit={submit}>
         <div className="form-grid">
           <Field label={t('system.createForm.plan')}>

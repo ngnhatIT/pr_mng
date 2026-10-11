@@ -101,7 +101,10 @@
       "saved": "Lead saved",
       "updateFail": "Could not update the lead, please try again"
     },
-    "countTitle": "{{count}} leads"
+    "countTitle": "{{count}} leads",
+    "markLost": "Mark as lost",
+    "markLostAria": "Mark {{name}} as lost",
+    "colMore": "Showing {{shown}} of {{total}}, search to narrow down"
   },
   "leaves": {
     "allStatuses": "All statuses",
@@ -288,10 +291,7 @@
     "quickStatus": "Quick status change",
     "status": {
       "contacted": "Contacted",
-      "enrolled": "Enrolled",
-      "lost": "Lost",
       "new": "New",
-      "trialed": "Tried",
       "converted": "Converted"
     },
     "title": "Trial lessons",
@@ -364,7 +364,7 @@
       "templateUpcoming": "Upcoming ZNS template ID",
       "testPhone": "E.g. 0912345678",
       "tokenNew": "Paste the OA access token",
-      "tokenSaved": "•••••••• (saved - enter a new one to change)"
+      "tokenSaved": "{{mask}} (saved - leave blank to keep, enter a new one to change)"
     },
     "reminderStatus": {
       "demo": "Demo",

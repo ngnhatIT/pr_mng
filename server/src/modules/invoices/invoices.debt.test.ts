@@ -1,9 +1,9 @@
 /**
- * Unit test cho FIX chịu tải: công nợ chuyển từ correlated subquery
- * (chạy mỗi dòng hóa đơn) sang LEFT JOIN subquery GROUP BY 1 lần.
+ * Unit test cho FIX chịu tải: công nợ tính "đã thu" bằng LEFT JOIN LATERAL theo từng hóa đơn
+ * còn lại sau WHERE (PERF-2) — không gom GROUP BY cả bảng payments của mọi trung tâm.
  *
  * Không cần PostgreSQL thật: mock db.prepare để bắt SQL, kiểm tra
- * (1) SQL mới dùng JOIN+GROUP BY và không còn correlated subquery,
+ * (1) SQL mới dùng LATERAL theo hóa đơn, không gom cả bảng payments,
  * (2) semantics/shape trả về giữ nguyên qua mock dữ liệu.
  */
 // PHẢI đặt trước mọi import db — pg-compat đọc DATABASE_URL lúc load module.
@@ -42,27 +42,30 @@ after(() => {
   db.prepare = origPrepare;
 });
 
-const JOIN = 'LEFT JOIN (SELECT invoice_id, SUM(amount) as paid FROM payments WHERE status = \'confirmed\' GROUP BY invoice_id) pp ON pp.invoice_id = i.id';
+const JOIN = invoicesService.confirmedPaidJoin;
 
-describe('getDebtReport — JOIN thay correlated subquery', () => {
-  it('SQL dùng JOIN+GROUP BY, không còn correlated subquery', async () => {
+describe('getDebtReport — LATERAL theo hóa đơn (PERF-2)', () => {
+  it('SQL dùng LATERAL theo hóa đơn, không gom cả bảng payments', async () => {
     await invoicesService.getDebtReport(1, { page: 1, limit: 10 });
     const main = captured[captured.length - 1];
-    assert.ok(main.includes(JOIN), 'thiếu LEFT JOIN subquery GROUP BY');
-    assert.ok(
-      !main.includes('WHERE p.invoice_id = i.id'),
-      'vẫn còn correlated subquery trong câu chính'
-    );
+    assert.ok(main.includes(JOIN), 'thiếu LEFT JOIN LATERAL');
+    assert.ok(!main.includes('GROUP BY invoice_id'), 'không được gom cả bảng payments');
+    assert.ok(!main.includes('WHERE p.invoice_id = i.id'), 'vẫn còn correlated subquery trong câu chính');
     // JOIN phải đứng trước WHERE trong mệnh đề FROM
-    assert.ok(
-      main.indexOf('LEFT JOIN') < main.indexOf('WHERE'),
-      'LEFT JOIN phải đứng trước WHERE'
-    );
+    assert.ok(main.indexOf('LEFT JOIN') < main.indexOf('WHERE'), 'LEFT JOIN phải đứng trước WHERE');
   });
 
   it('giữ nguyên shape: debt = total - paid, kèm invoice_dues', async () => {
     mockAll = [
-      { id: 1, code: 'ST001', name: 'An', phone: '090', total: 2000000, paid: 500000, invoice_dues: '3:2026-10-01' },
+      {
+        id: 1,
+        code: 'ST001',
+        name: 'An',
+        phone: '090',
+        total: 2000000,
+        paid: 500000,
+        invoice_dues: '3:2026-10-01',
+      },
     ];
     const report = await invoicesService.getDebtReport(1, { page: 1, limit: 10 });
     assert.equal(report.data.length, 1);
@@ -72,15 +75,12 @@ describe('getDebtReport — JOIN thay correlated subquery', () => {
   });
 });
 
-describe('getDebtSummary — JOIN thay correlated subquery', () => {
-  it('SQL dùng JOIN+GROUP BY, không còn correlated subquery', async () => {
+describe('getDebtSummary — LATERAL theo hóa đơn (PERF-2)', () => {
+  it('SQL dùng LATERAL theo hóa đơn, không gom cả bảng payments', async () => {
     await invoicesService.getDebtSummary(1);
     assert.equal(captured.length, 1);
-    assert.ok(captured[0].includes(JOIN), 'thiếu LEFT JOIN subquery GROUP BY');
-    assert.ok(
-      !captured[0].includes('WHERE p.invoice_id = i.id'),
-      'vẫn còn correlated subquery'
-    );
+    assert.ok(captured[0].includes(JOIN), 'thiếu LEFT JOIN LATERAL');
+    assert.ok(!captured[0].includes('WHERE p.invoice_id = i.id'), 'vẫn còn correlated subquery');
     assert.ok(
       captured[0].indexOf('LEFT JOIN') < captured[0].lastIndexOf('WHERE i.status'),
       'LEFT JOIN phải đứng trước WHERE chính'

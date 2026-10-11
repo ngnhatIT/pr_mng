@@ -65,7 +65,7 @@ export function PaymentResult() {
           <Icon name={success ? 'check' : pending ? 'clock' : 'x'} size={38} />
         </div>
         <span className={`badge ${success ? 'badge-paid' : pending ? 'badge-upcoming' : 'badge-overdue'}`}>
-          {success ? t('payment.paidBadge') : t('payment.pendingBadge')}
+          {success ? t('payment.paidBadge') : pending ? t('payment.pendingBadge') : t('payment.failBadge')}
         </span>
         <h1 className="parent-title" style={{ marginTop: 12 }}>
           {success ? t('payment.successTitle') : pending ? t('payment.pendingTitle') : t('payment.failTitle')}

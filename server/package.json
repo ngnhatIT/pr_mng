@@ -8,9 +8,7 @@
     "jsonwebtoken": "^9.0.3",
     "multer": "^2.4.0",
     "node-cron": "^4.6.0",
-    "pg": "^8.23.1",
-    "swagger-ui-express": "^5.0.1",
-    "yamljs": "^0.3.0"
+    "pg": "^8.23.1"
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",
@@ -23,8 +21,10 @@
     "@types/pg": "^8.23.1",
     "@types/swagger-ui-express": "^4.1.8",
     "@types/yamljs": "^0.2.34",
+    "swagger-ui-express": "^5.0.1",
     "tsx": "^4.19.2",
-    "typescript": "^5.7.2"
+    "typescript": "^5.7.2",
+    "yamljs": "^0.3.0"
   },
   "name": "educenter-pro-server",
   "private": true,
@@ -32,7 +32,7 @@
     "build": "tsc && mkdir -p dist/docs && cp src/docs/openapi.yaml dist/docs/openapi.yaml",
     "dev": "tsx watch src/index.ts",
     "start": "node dist/index.js",
-    "test": "npx tsc --project tsconfig.test.json --outDir ./test-dist && TESTDB=\"${TEST_DATABASE_URL:-postgres://educenter:educenter123@localhost:5432/educenter_test}\" && DATABASE_URL=\"$TESTDB\" TEST_DATABASE_URL=\"$TESTDB\" node --test test-dist/db/*.test.js test-dist/modules/*/*.test.js test-dist/services/*.test.js test-dist/shared/*.test.js"
+    "test": "OUT=\"${TEST_OUT:-test-dist}\" && rm -rf \"$OUT\" && npx tsc --project tsconfig.test.json --outDir \"./$OUT\" && TESTDB=\"${TEST_DATABASE_URL:-postgres://educenter:educenter123@localhost:5432/educenter_test}\" && DATABASE_URL=\"$TESTDB\" TEST_DATABASE_URL=\"$TESTDB\" NODE_ENV=test node --test --test-concurrency=1 ${TEST_FLAGS:-} $(find \"$OUT\" -name '*.test.js' | sort)"
   },
   "type": "commonjs",
   "version": "1.0.0",

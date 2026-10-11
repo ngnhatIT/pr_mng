@@ -43,8 +43,36 @@ function ErrorFallback({ onRetry, requestId }: { name?: string; onRetry: () => v
   );
 }
 
+const CHUNK_ERROR_RE =
+  /Failed to fetch dynamically imported module|error loading dynamically imported module|Importing a module script failed|ChunkLoadError|Loading chunk/i;
+const CHUNK_RELOAD_KEY = 'edu_chunk_reload';
+
 /**
- * ErrorBoundary 3 tầng: bọc root App + từng layout route (/app, /parent, /teacher).
+ * FE-2: lỗi tải chunk lazy (thường do vừa deploy, hash cũ không còn) -> React.lazy cache promise lỗi nên
+ * Retry vô ích. Reload trang 1 lần để lấy index.html + chunk mới. Guard bằng sessionStorage (timestamp)
+ * để không reload lặp vô hạn nếu server thực sự hỏng. Trả true nếu đã kích hoạt reload.
+ */
+export function reloadOnceOnChunkError(
+  error: unknown,
+  storage: Pick<Storage, 'getItem' | 'setItem'> = sessionStorage,
+  reload: () => void = () => window.location.reload(),
+  now = Date.now()
+): boolean {
+  const msg = error instanceof Error ? `${error.name} ${error.message}` : String(error);
+  if (!CHUNK_ERROR_RE.test(msg)) return false;
+  try {
+    const last = Number(storage.getItem(CHUNK_RELOAD_KEY) || 0);
+    if (now - last < 60_000) return false; // vừa reload xong mà vẫn lỗi -> hiện fallback
+    storage.setItem(CHUNK_RELOAD_KEY, String(now));
+  } catch {
+    return false;
+  }
+  reload();
+  return true;
+}
+
+/**
+ * ErrorBoundary nhiều tầng: bọc root App + từng layout route (/app, /parent, /teacher) + từng trang (PageOutlet).
  * Crash 1 trang không còn trắng toàn app. Log lỗi về console + best-effort gửi server.
  */
 export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
@@ -55,6 +83,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
   }
 
   componentDidCatch(error: Error, info: { componentStack?: string }) {
+    if (reloadOnceOnChunkError(error)) return;
     const label = this.props.name ?? 'app';
     // Cố ý dùng console: đây là log lỗi crash duy nhất phía client (no-console cấm log debug thường).
     // eslint-disable-next-line no-console

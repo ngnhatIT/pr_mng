@@ -1,18 +1,20 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { parentApi, VietQRInfo } from './parent.api';
-import { useToast } from '../../shared/ui/toast';
+import { toastApiError, useToast } from '../../shared/ui/toast';
+import { useLoad } from '../../shared/hooks/useLoad';
 import { Modal } from '../../shared/components/Modal';
 import { Icon, IconName } from '../../shared/components/icons';
 import './parent.css';
-import { EmptyState } from '../../shared/components/EmptyState';
+import { EmptyState, LoadError } from '../../shared/components/EmptyState';
 import { QuizTaker } from './QuizTaker';
 import { SubmitModal } from './SubmitModal';
 import { MySubmissionsModal } from './MySubmissionsModal';
 import { Skeleton } from '../../shared/components/Skeleton';
 import { renderMarkdown } from '../../shared/components/RichTextarea';
 import { EmptyCell } from '../../shared/components/EmptyCell';
+import { useSecureFileUrl } from '../../shared/components/SecureFile';
 import {
   ChildOverview,
   ChildOverviewInvoice,
@@ -37,8 +39,6 @@ export function ChildDetail() {
     { id: 'grades', label: t('child.tabs.grades'), icon: 'cap' },
     { id: 'homework', label: t('child.tabs.homework'), icon: 'file' },
   ];
-  const [data, setData] = useState<ChildOverview | null>(null);
-  const [loading, setLoading] = useState(true);
   // Deep-link ?tab=tuition từ nút "Đóng học phí" ở ParentHome; không có param thì giữ tab mặc định
   const [searchParams] = useSearchParams();
   const tabParam = searchParams.get('tab');
@@ -49,23 +49,20 @@ export function ChildDetail() {
   );
   const toast = useToast();
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    try {
-      const d = await parentApi.childOverview(id || '');
-      setData(d);
-    } catch (err) {
-      toast(err instanceof Error ? err.message : t('child.loadError'), 'error');
-    } finally {
-      setLoading(false);
-    }
-  }, [id, toast]);
-
+  const {
+    data: loaded,
+    loading,
+    error,
+    reload: load,
+  } = useLoad(() => parentApi.childOverview(id || ''), [id]);
+  // Dữ liệu con khác (vừa đổi id) không được hiện cho con này
+  const data = loaded && String(loaded.student.id) === id ? loaded : null;
   useEffect(() => {
-    void load();
-  }, [load]);
+    if (error) toastApiError(toast, error, t('child.loadError'));
+  }, [error, toast, t]);
 
-  if (loading)
+  // Chỉ hiện skeleton lần tải đầu (hoặc khi đổi sang con khác); refetch sau thao tác giữ nguyên trang
+  if (loading && !data)
     return (
       <div className="parent-page">
         <div className="parent-child-head" aria-hidden="true">
@@ -89,6 +86,14 @@ export function ChildDetail() {
             <Skeleton width="75%" height={14} />
           </div>
         </section>
+      </div>
+    );
+  // Lỗi mạng/5xx: hiện "Thử lại"; con không thuộc phụ huynh / id sai: hiện "không tìm thấy" như cũ
+  const errCode = (error as { code?: string } | null)?.code ?? '';
+  if (!data && error && !['NOT_FOUND', 'FORBIDDEN', 'VALIDATION_ID'].includes(errCode))
+    return (
+      <div className="parent-page">
+        <LoadError onRetry={load} />
       </div>
     );
   if (!data)
@@ -138,9 +143,9 @@ export function ChildDetail() {
 
       {tab === 'schedule' && <ScheduleTab data={data} />}
       {tab === 'attendance' && <AttendanceTab data={data} />}
-      {tab === 'tuition' && <TuitionTab data={data} onPaid={() => void load()} />}
+      {tab === 'tuition' && <TuitionTab data={data} onPaid={load} />}
       {tab === 'grades' && <GradesTab data={data} />}
-      {tab === 'homework' && <HomeworkTab data={data} onChanged={() => void load()} />}
+      {tab === 'homework' && <HomeworkTab data={data} onChanged={load} />}
     </div>
   );
 }
@@ -216,7 +221,8 @@ function AttendanceTab({ data }: { data: ChildOverview }) {
           </div>
         ))}
         <div className="stat-card stat-card-highlight">
-          <div className="stat-value">{(a.rate * 100).toFixed(0)}%</div>
+          {/* Server trả sẵn phần trăm (vd 85.7), không nhân 100 */}
+          <div className="stat-value">{a.rate.toFixed(0)}%</div>
           <div className="stat-label">{t('child.attendance.rate')}</div>
         </div>
       </div>
@@ -317,11 +323,11 @@ function PayModal({
     setPayError('');
     try {
       const data = await parentApi.vnpay(invoice.id);
-      window.open(data.pay_url, '_blank', 'noopener');
-      toast(t('child.pay.vnpayOpened'), 'info');
+      // Chuyển trang ngay trong tab: window.open sau await bị chặn popup trên iOS Safari / Zalo webview.
+      // Return URL của VNPay đưa về PaymentResult. Giữ trạng thái busy tới khi trang chuyển.
+      window.location.assign(data.pay_url);
     } catch (err) {
       setPayError(err instanceof Error ? err.message : t('child.pay.vnpayError'));
-    } finally {
       setBusyAction(null);
     }
   };
@@ -520,7 +526,7 @@ function HomeworkTab({ data, onChanged }: { data: ChildOverview; onChanged: () =
       }
       onChanged();
     } catch (err) {
-      toast(err instanceof Error ? err.message : t('child.homework.actionError'), 'error');
+      toastApiError(toast, err, t('child.homework.actionError'));
     } finally {
       setBusy(null);
     }
@@ -547,6 +553,12 @@ function HomeworkTab({ data, onChanged }: { data: ChildOverview; onChanged: () =
     const isQuiz = h.kind === 'quiz';
     // FIX 6: qua hạn chót cứng thì khóa nộp/làm, báo rõ (server cũng chặn theo close_date)
     const isClosed = !isDone && isPastCloseDate(h.close_date);
+    // B3-2: quiz đã làm nhưng còn lượt (không giới hạn, hoặc server trả attempts_used) -> làm lại ngay từ thẻ.
+    // Server chưa trả attempts_used thì vẫn làm lại được qua "Xem lại kết quả".
+    const retakesLeft =
+      h.max_attempts == null ? null : h.attempts_used != null ? h.max_attempts - h.attempts_used : 0;
+    const canRetake =
+      isQuiz && isDone && !isPastCloseDate(h.close_date) && (retakesLeft === null || retakesLeft > 0);
     return (
       <div key={h.id} className={`hw-item ${isDone ? 'hw-item-done' : ''}`}>
         {!isQuiz && (
@@ -564,7 +576,7 @@ function HomeworkTab({ data, onChanged }: { data: ChildOverview; onChanged: () =
           <div className="hw-title">
             {isQuiz && (
               <span className="badge badge-quiz" style={{ marginRight: 6 }}>
-                Quiz
+                {t('child.homework.quizBadge')}
               </span>
             )}
             {h.title}
@@ -577,6 +589,15 @@ function HomeworkTab({ data, onChanged }: { data: ChildOverview; onChanged: () =
               dangerouslySetInnerHTML={{ __html: renderMarkdown(h.content) }}
             />
           )}
+          {h.attachments && h.attachments.length > 0 && (
+            <ul className="hw-attachments" aria-label={t('child.homework.attachments')}>
+              {h.attachments.map((a, i) => (
+                <li key={`${a.url}-${i}`}>
+                  <AttachmentLink name={a.name} url={a.url} />
+                </li>
+              ))}
+            </ul>
+          )}
           {h.feedback && (
             <div className="hw-feedback">
               <Icon name="info" size={16} />
@@ -587,6 +608,12 @@ function HomeworkTab({ data, onChanged }: { data: ChildOverview; onChanged: () =
             {isQuiz && !isDone && !isClosed && (
               <button className="btn btn-sm btn-primary" onClick={() => setTakingQuiz(h)}>
                 {t('child.homework.takeQuiz')}
+              </button>
+            )}
+            {canRetake && (
+              <button className="btn btn-sm btn-primary" onClick={() => setTakingQuiz(h)}>
+                <Icon name="rotate" size={15} />
+                {retakesLeft === null ? t('quiz.retry') : t('quiz.retakeN', { count: retakesLeft })}
               </button>
             )}
             {isQuiz && isDone && (
@@ -681,7 +708,11 @@ function HomeworkTab({ data, onChanged }: { data: ChildOverview; onChanged: () =
           studentId={studentId}
           reviewOnly
           onClose={() => setReviewingQuiz(null)}
-          onDone={() => setReviewingQuiz(null)}
+          // Từ màn xem lại có thể "Làm lại" (B3-2) -> tải lại để thẻ cập nhật điểm/số lượt còn
+          onDone={() => {
+            setReviewingQuiz(null);
+            onChanged();
+          }}
         />
       )}
       {submitting && (
@@ -703,5 +734,34 @@ function HomeworkTab({ data, onChanged }: { data: ChildOverview; onChanged: () =
         />
       )}
     </section>
+  );
+}
+
+/**
+ * Đính kèm giáo viên gửi kèm bài tập. File /uploads cần JWT → tải qua useSecureFileUrl (blob URL);
+ * link ngoài chỉ nhận http/https và mở tab mới với noopener noreferrer.
+ */
+function AttachmentLink({ name, url }: { name: string; url: string }) {
+  const isUpload = url.startsWith('/uploads/') || url.startsWith('/api/v1/uploads/');
+  const blobUrl = useSecureFileUrl(isUpload ? url : null);
+  const href = isUpload ? blobUrl : /^https?:\/\//i.test(url) ? url : '';
+  if (!href) {
+    return (
+      <span className="muted-sm">
+        <Icon name="paperclip" size={14} /> {name}
+      </span>
+    );
+  }
+  return (
+    <a
+      className="link file-link"
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      download={isUpload ? name : undefined}
+    >
+      <Icon name={isUpload ? 'file' : 'paperclip'} size={14} />
+      {name}
+    </a>
   );
 }

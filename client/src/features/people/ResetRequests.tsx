@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { api } from '../../shared/api/client';
-import { useToast } from '../../shared/ui/toast';
+import { useToast, toastApiError } from '../../shared/ui/toast';
 import { Modal, ConfirmDialog } from '../../shared/components/Modal';
 import { EmptyState } from '../../shared/components/EmptyState';
 import { TableSkeleton } from '../../shared/components/Skeleton';
 import { Icon } from '../../shared/components/icons';
+import { formatDateTime } from '../../shared/types';
 
 interface ResetRequest {
   id: number;
@@ -62,18 +63,35 @@ export function ResetRequestsSection() {
       setProcessing(null);
       void load();
     } catch (err) {
-      toast(err instanceof Error ? err.message : t('reset.processError'), 'error');
+      toastApiError(toast, err, t('reset.processError'));
     } finally {
       setBusy(false);
     }
   };
 
-  if (error) return null;
+  // ADM-12: modal mật khẩu tạm phải sống qua lần tải lại (skeleton/lỗi) — server đã đổi mật khẩu rồi,
+  // mất modal là admin không còn cách nào xem lại mật khẩu tạm.
+  const tempModal = tempPassword && (
+    <Modal title={t('reset.doneTitle')} onClose={() => setTempPassword(null)}>
+      <p className="muted">{t('reset.doneDesc', { name: tempPassword.name })}</p>
+      <p className="temp-password">
+        <code>{tempPassword.pass}</code>
+      </p>
+      <div className="modal-actions">
+        <button type="button" className="btn btn-primary" onClick={() => setTempPassword(null)}>
+          {t('actions.close', { ns: 'common' })}
+        </button>
+      </div>
+    </Modal>
+  );
+
+  if (error) return tempModal || null;
   if (loading || rows === null) {
     return (
       <section className="reset-requests" aria-labelledby="reset-requests-title">
         <h2 id="reset-requests-title">{t('reset.title')}</h2>
         <TableSkeleton cols={4} />
+        {tempModal}
       </section>
     );
   }
@@ -104,13 +122,9 @@ export function ResetRequestsSection() {
                 <tr key={r.id}>
                   <td>{r.identifier}</td>
                   <td>{r.kind === 'staff' ? t('reset.kindStaff') : t('reset.kindParent')}</td>
-                  <td>{r.created_at.slice(0, 16).replace('T', ' ')}</td>
+                  <td>{formatDateTime(r.created_at)}</td>
                   <td>
-                    <button
-                      type="button"
-                      className="btn btn-sm btn-inline"
-                      onClick={() => setProcessing(r)}
-                    >
+                    <button type="button" className="btn btn-sm btn-inline" onClick={() => setProcessing(r)}>
                       <Icon name="key" size={14} />
                       {t('reset.process')}
                     </button>
@@ -130,19 +144,7 @@ export function ResetRequestsSection() {
           onConfirm={process}
         />
       )}
-      {tempPassword && (
-        <Modal title={t('reset.doneTitle')} onClose={() => setTempPassword(null)}>
-          <p className="muted">{t('reset.doneDesc', { name: tempPassword.name })}</p>
-          <p className="temp-password">
-            <code>{tempPassword.pass}</code>
-          </p>
-          <div className="modal-actions">
-            <button type="button" className="btn btn-primary" onClick={() => setTempPassword(null)}>
-              {t('actions.close', { ns: 'common' })}
-            </button>
-          </div>
-        </Modal>
-      )}
+      {tempModal}
     </section>
   );
 }

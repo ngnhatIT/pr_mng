@@ -29,7 +29,7 @@ export function TeacherLayout() {
 
   const logout = () => {
     void doLogout();
-    navigate('/login');
+    void navigate('/login');
   };
 
   return (

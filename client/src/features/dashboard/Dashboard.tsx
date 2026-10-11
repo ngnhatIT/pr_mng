@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { dashboardApi } from './dashboard.api';
 import { DebtRow } from '../tuition/tuition.api';
-import { useToast } from '../../shared/ui/toast';
+import { useToast, toastApiError } from '../../shared/ui/toast';
 import { DashboardData, formatVND } from '../../shared/types';
 import { getUser } from '../../shared/api/client';
 import { PageHeader } from '../../shared/components/PageHeader';
@@ -40,7 +40,8 @@ export function Dashboard() {
   // Tài khoản bị giới hạn quyền tài chính (topDebts 403): ẩn hero công nợ
   // thay vì hiện "0đ" gây hiểu nhầm — cùng cách widget "Công nợ cao nhất" xử lý
   const [financeDenied, setFinanceDenied] = useState(false);
-  const [loading, setLoading] = useState(true);  const toast = useToast();
+  const [loading, setLoading] = useState(true);
+  const toast = useToast();
   const user = getUser();
 
   const quickActions: { to: string; label: string; desc: string; icon: IconName }[] = [
@@ -81,7 +82,7 @@ export function Dashboard() {
         setFinanceDenied(code === 'FORBIDDEN');
       }
     } catch (err) {
-      toast(err instanceof Error ? err.message : t('loadError'), 'error');
+      toastApiError(toast, err, t('loadError'));
     } finally {
       setLoading(false);
     }

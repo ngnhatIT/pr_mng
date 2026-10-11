@@ -22,7 +22,6 @@ import {
   setHomeworkStatus,
   getClassScope,
   getHomeworkWithScope,
-  filterValidTargets,
   getHomeworkSubmissions,
 } from './homework.service';
 import { scopeOf, ownScoped } from '../../shared/scope';
@@ -94,7 +93,7 @@ async function getScopedHomework(req: AuthRequest, id: number, permission: strin
 /** Danh sách bài tập (filter: lớp, tìm kiếm, hạn, trạng thái, loại) */
 router.get(
   '/',
-  requirePermission('homework.view'),
+  requirePermission('homework.view', 'own'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const {
       class_id = '',
@@ -127,7 +126,7 @@ router.get(
 /** Thống kê nhanh */
 router.get(
   '/stats',
-  requirePermission('homework.view'),
+  requirePermission('homework.view', 'own'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const ctx = scopeOf(req);
     ctx.ownOnly = await ownScoped(req, 'homework.view');
@@ -138,7 +137,7 @@ router.get(
 /** Phân tích: hoàn thành & điểm TB theo lớp */
 router.get(
   '/analytics',
-  requirePermission('homework.view'),
+  requirePermission('homework.view', 'own'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const ctx = scopeOf(req);
     ctx.ownOnly = await ownScoped(req, 'homework.view');
@@ -149,17 +148,15 @@ router.get(
 /** Giao bài tập (1 lần cho nhiều lớp) */
 router.post(
   '/',
-  requirePermission('homework.create'),
+  requirePermission('homework.create', 'own'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const input = prepareCreateInput(req.body as Record<string, unknown>);
     // Validate câu hỏi quiz TRƯỚC khi tạo bài: câu hỏi lỗi thì 400, không tạo bài rỗng
-    if (input.kind === 'quiz') {
-      validateQuizQuestions(input.questions as QuizQuestionInput[]);
-    }
+    const questions =
+      input.kind === 'quiz' ? validateQuizQuestions(input.questions as QuizQuestionInput[]) : [];
     const validIds = await getScopedClasses(req, input.class_ids, 'homework.create');
     if (!validIds.length) throw AppError.notFound('Không tìm thấy lớp học hợp lệ');
-    // Lọc target students thuộc các lớp được chọn
-    const targetIds = await filterValidTargets(validIds, input.target_student_ids);
+    // HW-9/HW-12: target lọc theo từng lớp + câu hỏi quiz ghi cùng transaction (trong service)
     const created = await createHomeworkBatch({
       class_ids: validIds,
       title: input.title,
@@ -173,17 +170,12 @@ router.post(
       close_date: input.close_date,
       kind: input.kind,
       rubric_id: input.rubric_id,
+      max_attempts: input.max_attempts,
       attachments: input.attachments,
-      target_student_ids: targetIds,
+      target_student_ids: input.target_student_ids,
+      questions,
     });
-    // Lưu câu hỏi quiz
-    if (input.kind === 'quiz' && input.questions.length) {
-      for (const hw of created) {
-        await saveQuizQuestions(hw.id, input.questions as never);
-      }
-    }
-    // P0-3(d): emit SAU KHI câu hỏi quiz đã lưu xong (trước đây createHomeworkBatch
-    // emit trước, listener có thể thấy quiz chưa có câu hỏi)
+    // P0-3(d): emit SAU KHI transaction (kể cả câu hỏi quiz) đã commit
     for (const hw of created) {
       eventBus.emitSync(new HomeworkCreatedEvent(hw.id, reqCenterId(req), input.status, input.kind));
       if (input.status === 'published') {
@@ -198,8 +190,13 @@ router.post(
       action: 'create',
       entity: 'homework',
       entityId: created[0].id,
-      summary: `Tạo bài tập "${input.title}" (${statusLabel}) cho ${validIds.length} lớp`,
-      meta: { title: input.title, class_ids: validIds, status: input.status, kind: input.kind },
+      summary: `Tạo bài tập "${input.title}" (${statusLabel}) cho ${created.length} lớp`,
+      meta: {
+        title: input.title,
+        class_ids: created.map((h) => h.class_id),
+        status: input.status,
+        kind: input.kind,
+      },
     });
     // Zalo notification: tự động qua HomeworkPublishedEvent → ZaloListener
     res.status(201).json({ created, count: created.length });
@@ -209,7 +206,7 @@ router.post(
 /** Chi tiết bài tập (kèm đính kèm) */
 router.get(
   '/:id',
-  requirePermission('homework.view'),
+  requirePermission('homework.view', 'own'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const id = paramId(req.params);
     await requireHomework(req, id, 'homework.view');
@@ -220,7 +217,7 @@ router.get(
 /** Tái sử dụng bài tập (copy thành nháp mới) */
 router.post(
   '/:id/reuse',
-  requirePermission('homework.create'),
+  requirePermission('homework.create', 'own'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const id = paramId(req.params);
     await requireHomework(req, id, 'homework.create');
@@ -242,7 +239,7 @@ router.post(
 /** Xuất bản ngay (từ nháp/hẹn giờ) */
 router.post(
   '/:id/publish',
-  requirePermission('homework.create'),
+  requirePermission('homework.create', 'own'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const id = paramId(req.params);
     const hw = await requireHomework(req, id, 'homework.create');
@@ -263,7 +260,7 @@ router.post(
 /** Gỡ đăng (published → draft) — đăng nhầm có thể thu hồi */
 router.post(
   '/:id/unpublish',
-  requirePermission('homework.create'),
+  requirePermission('homework.create', 'own'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const id = paramId(req.params);
     const hw = await requireHomework(req, id, 'homework.create');
@@ -284,7 +281,7 @@ router.post(
 /** Bảng điểm của bài tập */
 router.get(
   '/:id/scores',
-  requirePermission('homework.grade'),
+  requirePermission('homework.grade', 'own'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const id = paramId(req.params);
     await requireHomework(req, id, 'homework.grade');
@@ -295,7 +292,7 @@ router.get(
 /** Chấm điểm 1 học viên */
 router.post(
   '/:id/scores',
-  requirePermission('homework.grade'),
+  requirePermission('homework.grade', 'own'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const id = paramId(req.params);
     const hw = await requireHomework(req, id, 'homework.grade');
@@ -332,7 +329,7 @@ router.post(
 /** Lịch sử làm quiz */
 router.get(
   '/:id/quiz/attempts',
-  requirePermission('homework.grade'),
+  requirePermission('homework.grade', 'own'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const id = paramId(req.params);
     await requireHomework(req, id, 'homework.grade');
@@ -343,7 +340,7 @@ router.get(
 /** YC2: thông tin chấm tự luận của quiz — câu essay nào + rubric nào (để màn chấm hiện/ẩn nút) */
 router.get(
   '/:id/quiz/essay',
-  requirePermission('homework.grade'),
+  requirePermission('homework.grade', 'own'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const id = paramId(req.params);
     await requireHomework(req, id, 'homework.grade');
@@ -354,7 +351,7 @@ router.get(
 /** YC2: dữ liệu form chấm tự luận của 1 học viên — bài làm + điểm đã chấm + tổng */
 router.get(
   '/:id/quiz/essay/:studentId',
-  requirePermission('homework.grade'),
+  requirePermission('homework.grade', 'own'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const id = paramId(req.params);
     await requireHomework(req, id, 'homework.grade');
@@ -365,7 +362,7 @@ router.get(
 /** YC2: chấm 1 câu tự luận theo tiêu chí rubric (idempotent — chấm lại ghi đè) */
 router.post(
   '/:id/quiz/essay/grade',
-  requirePermission('homework.grade'),
+  requirePermission('homework.grade', 'own'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const id = paramId(req.params);
     const hw = await requireHomework(req, id, 'homework.grade');
@@ -404,7 +401,7 @@ router.post(
 /** Lấy đề quiz đầy đủ kèm đáp án đúng (staff — để sửa đề) */
 router.get(
   '/:id/quiz/edit',
-  requirePermission('homework.create'),
+  requirePermission('homework.create', 'own'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const id = paramId(req.params);
     await requireHomework(req, id, 'homework.create');
@@ -415,7 +412,7 @@ router.get(
 /** Lưu bộ câu hỏi quiz */
 router.put(
   '/:id/quiz',
-  requirePermission('homework.create'),
+  requirePermission('homework.create', 'own'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const id = paramId(req.params);
     const hw = await requireHomework(req, id, 'homework.create');
@@ -441,16 +438,26 @@ router.put(
 
 router.get(
   '/bank/questions',
-  requirePermission('homework.view'),
+  requirePermission('homework.view', 'own'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
-    const { search = '', tag = '', subject = '', difficulty = '', page, limit } = req.query as Record<
-      string,
-      string
-    >;
-    const result = await listBankQuestions(reqCenterId(req), search, tag, {
-      page: page ? Number(page) : undefined,
-      limit: limit ? Number(limit) : undefined,
-    }, { subject, difficulty });
+    const {
+      search = '',
+      tag = '',
+      subject = '',
+      difficulty = '',
+      page,
+      limit,
+    } = req.query as Record<string, string>;
+    const result = await listBankQuestions(
+      reqCenterId(req),
+      search,
+      tag,
+      {
+        page: page ? Number(page) : undefined,
+        limit: limit ? Number(limit) : undefined,
+      },
+      { subject, difficulty }
+    );
     res.json({
       ...result,
       tags: await listBankTags(reqCenterId(req)),
@@ -461,7 +468,7 @@ router.get(
 
 router.post(
   '/bank/questions',
-  requirePermission('homework.create'),
+  requirePermission('homework.create', 'own'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const { tag, subject, difficulty, qtype, question, points, options } = req.body as {
       tag: string;
@@ -500,7 +507,7 @@ router.post(
 
 router.put(
   '/bank/questions/:bid',
-  requirePermission('homework.create'),
+  requirePermission('homework.create', 'own'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const bid = paramId(req.params, 'bid');
     const { tag, subject, difficulty, qtype, question, points, options } = req.body as {
@@ -558,7 +565,7 @@ router.delete(
 /** Import câu hỏi từ ngân hàng vào quiz */
 router.post(
   '/:id/quiz/import',
-  requirePermission('homework.create'),
+  requirePermission('homework.create', 'own'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const id = paramId(req.params);
     const hw = await requireHomework(req, id, 'homework.create');
@@ -585,7 +592,7 @@ router.post(
 /** Staff xem bài nộp của 1 bài tập */
 router.get(
   '/:id/submissions',
-  requirePermission('homework.grade'),
+  requirePermission('homework.grade', 'own'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const id = paramId(req.params);
     await requireHomework(req, id, 'homework.grade');
@@ -603,7 +610,7 @@ router.get(
 
 router.get(
   '/rubrics/list',
-  requirePermission('homework.view'),
+  requirePermission('homework.view', 'own'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     res.json(await listRubrics(reqCenterId(req)));
   })
@@ -611,7 +618,7 @@ router.get(
 
 router.post(
   '/rubrics/list',
-  requirePermission('homework.create'),
+  requirePermission('homework.create', 'own'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const { name, criteria } = req.body as { name: string; criteria: { name: string; max_score: number }[] };
     if (!Array.isArray(criteria)) {
@@ -656,7 +663,7 @@ router.delete(
 /** Sửa bài tập */
 router.put(
   '/:id',
-  requirePermission('homework.create'),
+  requirePermission('homework.create', 'own'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const id = paramId(req.params);
     await requireHomework(req, id, 'homework.create');
@@ -670,6 +677,7 @@ router.put(
       status: v.string({ label: 'Trạng thái' }),
       publish_at: v.string({ label: 'Hẹn đăng' }),
       rubric_id: v.number({ label: 'Rubric' }),
+      max_attempts: v.number({ integer: true, min: 1, max: 100, label: 'Số lượt làm tối đa' }),
     });
     if (body.due_date && !/^\d{4}-\d{2}-\d{2}$/.test(body.due_date)) {
       throw AppError.badRequest('Hạn nộp không hợp lệ (YYYY-MM-DD)');
@@ -680,22 +688,25 @@ router.put(
     if (body.publish_at && !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(body.publish_at)) {
       throw AppError.badRequest('Hẹn đăng không hợp lệ (YYYY-MM-DDTHH:mm)');
     }
+    // HW-1: field KHÔNG gửi → undefined (giữ nguyên trong DB); gửi null/'' → xóa giá trị
+    const raw = (req.body ?? {}) as Record<string, unknown>;
+    const sent = <T>(key: string, val: T | undefined): T | null | undefined =>
+      Object.prototype.hasOwnProperty.call(raw, key) ? (val ?? null) : undefined;
     const updated = await updateHomework(
       id,
       {
         title: body.title,
-        content: body.content,
-        // undefined = không gửi → giữ nguyên trong DB (P0-1)
-        due_date: body.due_date,
-        max_score: body.max_score != null ? Number(body.max_score) : null,
-        close_date: body.close_date,
+        content: sent('content', body.content),
+        due_date: sent('due_date', body.due_date),
+        max_score: sent('max_score', body.max_score),
+        close_date: sent('close_date', body.close_date),
         status: body.status as 'draft' | 'scheduled' | 'published' | undefined,
-        publish_at: body.publish_at || null,
-        rubric_id: body.rubric_id != null ? Number(body.rubric_id) : null,
+        publish_at: sent('publish_at', body.publish_at),
+        rubric_id: sent('rubric_id', body.rubric_id),
+        max_attempts: sent('max_attempts', body.max_attempts),
         // YC1: attachments gửi kèm → đồng bộ (thêm/xóa); không gửi → giữ nguyên (không breaking)
         attachments: (req.body as { attachments?: unknown }).attachments as
-          | { name: string; url: string; kind: string }[]
-          | undefined,
+          { name: string; url: string; kind: string }[] | undefined,
       },
       reqCenterId(req) // P1-1: validate rubric_id thuộc center
     );
@@ -716,7 +727,7 @@ router.put(
 /** Xóa bài tập */
 router.delete(
   '/:id',
-  requirePermission('homework.delete'),
+  requirePermission('homework.delete', 'own'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const id = paramId(req.params);
     const hw = await requireHomework(req, id, 'homework.delete');

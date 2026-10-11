@@ -23,20 +23,24 @@ server/src/
 │   └── env.ts          # MỌI biến môi trường tập trung ở đây, validate lúc khởi động
 ├── db/                 # Tầng dữ liệu
 │   ├── pg-compat.ts    # Pool PostgreSQL + lớp tương thích API (prepare/get/all/run/exec/transaction)
-│   ├── schema.ts       # CREATE TABLE (idempotent)
-│   ├── migrations.ts   # Thêm cột cho DB cũ (idempotent)
+│   ├── schema.ts       # Quy ước schema + SCHEMA_VERSION + re-export các file schema.*.ts
+│   ├── schema.tables.ts    # createSchema: CREATE TABLE/INDEX (idempotent)
+│   ├── schema.docs.ts      # TABLE_DOCS — data dictionary (schema.test.ts kiểm)
+│   ├── schema.triggers.ts  # trigger maintain, bảng lịch sử tiền, view
+│   ├── schema.validate.ts  # validateSchema
+│   ├── migrations.ts   # Migration có version (schema_migrations, advisory lock) + bootDdlDb (DDL boot có lock_timeout)
+│   ├── indexes.ts      # Index hot path (idempotent)
 │   ├── date-utils.ts   # Hàm thuần: ngày tháng, lịch học (+ date-utils.test.ts)
 │   ├── helpers.ts      # Helper nghiệp vụ dùng chung (settings, sinh buổi học...)
 │   ├── seed.ts         # Dữ liệu demo lần đầu
-│   └── index.ts        # Barrel: chạy schema → migrations → seed, re-export
+│   └── index.ts        # initDatabase (dưới advisory lock toàn cục) + re-export
 ├── modules/<domain>/   # Mỗi domain 1 thư mục
-│   ├── index.ts              # Barrel export
+│   ├── index.ts              # (chỉ auth, zalo có barrel — module khác import trực tiếp file)
 │   ├── <domain>.routes.ts    # CHỈ HTTP: validate input → gọi service → res.json
 │   └── <domain>.service.ts   # MỌI query SQL + nghiệp vụ (pure functions, dễ test)
 ├── services/           # Service dùng chung nhiều domain (zalo, vnpay, notify... + vnpay.test.ts)
-├── jobs/               # Tác vụ nền: reminderScheduler (Zalo), backup, consistency
+├── jobs/               # Tác vụ nền: nhắc Zalo, backup, consistency, đối soát VNPay, sinh buổi học, dọn upload
 ├── middleware/         # auth, requireFeature (gói cước), rateLimit, idempotency
-├──          # auth, rateLimit
 ├── shared/             # Dùng chung toàn server
 │   ├── errors.ts       # AppError (badRequest/forbidden/notFound/...)
 │   ├── http.ts         # asyncHandler + errorHandler + notFoundHandler
@@ -47,9 +51,10 @@ server/src/
 ```
 
 **Unit test:** `*.test.ts` đặt cạnh file nguồn, chạy bằng `cd server && npm test`
-(dùng `node:test` có sẵn, 0 dependency). Hiện có **162 tests** server (unit + integration
-trên PostgreSQL thật: validate, AppError, VNPay, RBAC, refund, trial/lead convert race,
-idempotency, consistency...) + 12 tests client (vitest).
+(dùng `node:test` có sẵn, 0 dependency; chạy tuần tự `--test-concurrency=1` vì mọi file dùng chung
+DB test). Vài trăm test server (unit + integration trên PostgreSQL thật: validate, AppError, VNPay,
+RBAC, refund, trial/lead convert race, idempotency, consistency...) + test client (vitest).
+DB test phải có tên kết thúc `_test` — `setupTestDb()` từ chối DROP trên DB khác.
 
 ### Audit log
 
@@ -82,12 +87,13 @@ Xem tại `/app/nhat-ky` (chỉ admin) hoặc `GET /api/audit-logs`.
 
 ```
 mkdir server/src/modules/<ten>
-# <ten>.routes.ts: import { asyncHandler } from '../../shared/http'
-#                 import { db } from '../../db'
-#                 import { ... } from '../../middleware/auth'
+# <ten>.routes.ts: handler mỏng — import { asyncHandler } from '../../shared/http'
+#                 import { requirePermission, reqCenterId } from '../../middleware/auth'
+#                 gọi hàm trong <ten>.service.ts (SQL nằm ở service/repo, KHÔNG import db trong route)
 ```
 
-Rồi mount trong `app.ts`: `app.use('/api/<ten>', ...staff, <ten>Routes);`
+Rồi mount trong `app.ts` trên router versioned: `v1.use('/<ten>', ...staff, <ten>Routes);`
+(`staff = [requireAuth, denyParents]`). `/api/*` chỉ là alias legacy (có header `Deprecation`), không mount riêng.
 
 ## Frontend (`client/src/`)
 
@@ -121,9 +127,10 @@ client/src/
 2. Mọi gọi API qua `http` từ `shared/api/client` — không fetch trực tiếp.
 3. Component dùng lại ≥2 nơi → chuyển vào `shared/components/`.
 4. Mỗi trang: `PageHeader` + `Skeleton` lúc tải + `EmptyState` khi trống.
+5. Modal/form dirty, tải dữ liệu (`useLoad`), trạng thái trên URL (`useUrlState`/`useUrlSearch`), toast lỗi, ô tiền, i18n lazy, ngân sách bundle: xem **[FRONTEND.md](FRONTEND.md)**.
 
 ## Kiểm thử
 
 - **UT:** logic thuần ở `server/src/shared`, `server/src/config`, `server/src/services`
-- **IT:** script gọi API thật theo luồng (`/tmp/it/run_it.js` mẫu)
+- **Test:** `*.test.ts` cạnh code (node:test) chạy trên PostgreSQL thật — `cd server && npm test` (serial, DB `*_test` qua `TEST_DATABASE_URL`; xem `docs/CONTRIBUTING.md`)
 - **Build:** `npm run build` (tsc server + tsc client + vite) phải xanh trước khi đóng gói

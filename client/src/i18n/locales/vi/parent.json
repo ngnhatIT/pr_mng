@@ -1,6 +1,6 @@
 {
   "auth": {
-    "confirmPassword": "Nhập lại mật khẩu *",
+    "confirmPassword": "Nhập lại mật khẩu",
     "confirmPlaceholder": "Nhập lại mật khẩu",
     "fullName": "Họ tên *",
     "hasAccount": "Đã có tài khoản?",
@@ -27,7 +27,7 @@
     "registering": "Đang đăng ký...",
     "welcome": "Xin chào, {{name}}!",
     "centerRequired": "Không xác định được trung tâm. Vui lòng thử lại.",
-    "registerAtCenter": "Đăng ký tại {name}",
+    "registerAtCenter": "Đăng ký tại {{name}}",
     "phoneEmpty": "Vui lòng nhập số điện thoại",
     "phoneInvalid": "Số điện thoại chưa đúng định dạng (10 số, bắt đầu bằng 0)",
     "passwordEmpty": "Vui lòng nhập mật khẩu",
@@ -76,7 +76,9 @@
       "viewSubmissions": "Bài đã nộp",
       "emptyDesc": "Bài tập về nhà sẽ hiện ở đây khi giáo viên giao.",
       "closeLabel": "Hạn chót nộp: {{date}}",
-      "reviewQuiz": "Xem lại kết quả"
+      "reviewQuiz": "Xem lại kết quả",
+      "quizBadge": "Quiz",
+      "attachments": "Tài liệu đính kèm"
     },
     "loadError": "Không tải được thông tin",
     "notFoundDesc": "Không tìm thấy thông tin học viên.",
@@ -156,14 +158,14 @@
   },
   "leaves": {
     "allClasses": "- Tất cả các lớp -",
-    "child": "Con *",
+    "child": "Con",
     "childRequired": "Vui lòng chọn con",
     "class": "Lớp",
     "create": "Tạo đơn mới",
     "emptyDesc": "Nhấn nút Tạo đơn mới để gửi đơn xin nghỉ phép cho con.",
     "emptyTitle": "Chưa có đơn xin nghỉ phép nào",
     "formTitle": "Tạo đơn xin nghỉ phép",
-    "fromDate": "Từ ngày *",
+    "fromDate": "Từ ngày",
     "loadError": "Không tải được đơn xin nghỉ phép",
     "reason": "Lý do",
     "selectChild": "- Chọn con -",
@@ -171,7 +173,7 @@
     "sent": "Đã gửi đơn xin nghỉ phép",
     "submit": "Gửi đơn",
     "title": "Xin nghỉ phép",
-    "toDate": "Đến ngày *",
+    "toDate": "Đến ngày",
     "fromRequired": "Vui lòng chọn ngày bắt đầu nghỉ",
     "toRequired": "Vui lòng chọn ngày kết thúc nghỉ",
     "dateRangeInvalid": "Ngày kết thúc phải từ ngày bắt đầu trở đi"
@@ -187,7 +189,8 @@
     "pendingChecking": "Đang kiểm tra trạng thái giao dịch...",
     "pendingTimeout": "Giao dịch vẫn đang xử lý. Bạn có thể quay lại kiểm tra sau, không cần thanh toán lại.",
     "successDesc": "Học phí đã được thanh toán. Cảm ơn bạn!",
-    "successTitle": "Thanh toán thành công!"
+    "successTitle": "Thanh toán thành công!",
+    "failBadge": "Không thành công"
   },
   "profile": {
     "leaves": "Đơn xin nghỉ phép",
@@ -211,6 +214,9 @@
     "bestScore": "Cao nhất:",
     "bestScoreLine": "{{best}}/{{max}}đ",
     "confirmSubmit": "Nộp bài? Bạn vẫn có thể làm lại để cải thiện điểm.",
+    "confirmSubmitLast": "Nộp bài? Đây là lượt làm cuối cùng, nộp xong sẽ không làm lại được.",
+    "confirmSubmitN_one": "Nộp bài? Sau lượt này bạn còn {{count}} lượt làm lại.",
+    "confirmSubmitN_other": "Nộp bài? Sau lượt này bạn còn {{count}} lượt làm lại.",
     "confirmTitle": "Nộp bài kiểm tra?",
     "dueDate": "- Hạn: {{date}}",
     "excellent": "Xuất sắc!",
@@ -235,7 +241,14 @@
     "unanswered": "Còn {{count}} câu chưa trả lời",
     "viewAnswers": "Xem đáp án",
     "youChose": "(bạn chọn)",
+    "attemptsLeft_one": "Còn {{count}} lượt",
+    "attemptsLeft_other": "Còn {{count}} lượt",
+    "noAttemptsLeft": "Đã hết lượt làm bài",
+    "noAttemptsLeftDesc_one": "Quiz này cho làm tối đa {{count}} lượt.",
+    "noAttemptsLeftDesc_other": "Quiz này cho làm tối đa {{count}} lượt.",
     "retry": "Làm lại",
+    "retakeN_one": "Làm lại (còn {{count}} lượt)",
+    "retakeN_other": "Làm lại (còn {{count}} lượt)",
     "noQuestionsDesc": "Đề chưa có câu hỏi nào. Vui lòng thử lại sau hoặc liên hệ trung tâm.",
     "closeDate": "- Hạn chót nộp: {{date}}",
     "attemptLine": "{{score}}/{{max}}đ",
@@ -246,7 +259,9 @@
     "pendingGrade": "Chờ chấm",
     "essayAnswer": "Bài làm của con",
     "unansweredEssay": "Còn {{count}} câu chưa trả lời (kể cả tự luận)",
-    "essayGraded": "Tự luận {{score}}/{{max}}đ"
+    "essayGraded": "Tự luận {{score}}/{{max}}đ",
+    "leaveTitle": "Bỏ bài đang làm?",
+    "leaveMessage": "Các câu trả lời chưa nộp sẽ bị mất. Bạn có chắc muốn đóng?"
   },
   "referral": {
     "copied": "Đã sao chép",

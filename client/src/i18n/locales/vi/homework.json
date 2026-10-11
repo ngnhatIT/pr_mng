@@ -182,10 +182,7 @@
     "correctAnswer": "Đáp án đúng",
     "criterion": "Tiêu chí",
     "criterionScore": "{{score}}đ",
-    "defaultCriteria": [
-      "Phát âm",
-      "Từ vựng"
-    ],
+    "defaultCriteria": ["Phát âm", "Từ vựng"],
     "discardMessage": "Bạn đã nhập dữ liệu nhưng chưa lưu. Đóng và bỏ các thay đổi này?",
     "discardTitle": "Bỏ các thay đổi chưa lưu?",
     "deselectAll": "Bỏ chọn",
@@ -302,9 +299,21 @@
       "quizInvalid": "Còn {{count}} câu hỏi chưa hợp lệ (thiếu nội dung, đáp án, đáp án đúng hoặc điểm)",
       "rubricNameRequired": "Nhập tên thang điểm",
       "rubricCriteriaRequired": "Cần ít nhất 1 tiêu chí có tên và điểm > 0",
-      "pointsInvalid": "Điểm mỗi câu phải lớn hơn 0 và tối đa 1000"
+      "pointsInvalid": "Điểm mỗi câu phải lớn hơn 0 và tối đa 1000",
+      "attBadResponse": "Phản hồi máy chủ không hợp lệ",
+      "attNetwork": "Lỗi mạng khi tải file, vui lòng thử lại",
+      "attTimeout": "Tải file quá lâu, vui lòng thử lại",
+      "maxAttemptsInvalid": "Số lượt phải là số nguyên từ 1 đến 100"
     },
-    "rubricQuizHint": "Rubric dùng để chấm tay các câu tự luận của quiz."
+    "rubricQuizHint": "Rubric dùng để chấm tay các câu tự luận của quiz.",
+    "attLoadFailed": "Không tải được danh sách đính kèm hiện có. Khi lưu, đính kèm cũ được giữ nguyên.",
+    "quizLoadFailed": "Không tải được đề quiz nên tạm khóa sửa đề. Các thông tin khác vẫn lưu được.",
+    "removeQuestion": "Xóa câu {{n}}",
+    "removeOption": "Xóa đáp án {{letter}}",
+    "removeCriterion": "Xóa tiêu chí {{n}}",
+    "maxAttempts": "Số lượt làm tối đa",
+    "maxAttemptsHint": "Mỗi lượt học viên thấy tổng điểm; để trống = không giới hạn (dễ dò ra đáp án)",
+    "maxAttemptsPh": "Không giới hạn"
   },
   "grade": {
     "empty": "Chưa có học viên để chấm",

@@ -415,7 +415,8 @@ a:hover .submission-thumb {
 }
 
 /* ---------- HomeworkFormModal: thay inline styles ---------- */
-.hw-mb-8 {  margin-bottom: 8px;
+.hw-mb-8 {
+  margin-bottom: 8px;
 }
 .hw-mb-12 {
   margin-bottom: 12px;

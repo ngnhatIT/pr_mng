@@ -5,11 +5,12 @@
  * Cột trái: danh sách vai trò (tìm kiếm + chọn). Cột phải: ma trận quyền nhóm theo
  * module, mỗi quyền chọn phạm vi qua segmented control. System role chỉ xem.
  */
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useToast } from '../../shared/ui/toast';
+import { toastApiError, useToast } from '../../shared/ui/toast';
+import { useUnsavedGuard } from '../../shared/hooks/useUnsavedGuard';
 import { PageHeader } from '../../shared/components/PageHeader';
-import { EmptyState } from '../../shared/components/EmptyState';
+import { EmptyState, LoadError } from '../../shared/components/EmptyState';
 import { Skeleton } from '../../shared/components/Skeleton';
 import { Modal, ConfirmDialog } from '../../shared/components/Modal';
 import { Icon } from '../../shared/components/icons';
@@ -36,10 +37,12 @@ function draftFromDetail(detail: RoleDetail, catalog: Permission[]): Draft {
 }
 
 function RoleForm({
+  title,
   initial,
   onClose,
   onSubmit,
 }: {
+  title: string;
   initial?: { name: string; description: string };
   onClose: () => void;
   onSubmit: (input: { code?: string; name: string; description?: string }) => Promise<void>;
@@ -77,55 +80,59 @@ function RoleForm({
       await onSubmit({ code: clean, name: name.trim(), description: description.trim() || undefined });
       onClose();
     } catch (err) {
-      toast(err instanceof Error ? err.message : t('form.saveFail'), 'error');
+      toastApiError(toast, err, t('form.saveFail'));
     } finally {
       setSaving(false);
     }
   };
 
+  const dirty = name !== (initial?.name ?? '') || code !== '' || description !== (initial?.description ?? '');
+
   return (
-    <div className="form-grid">
-      {!initial && (
+    <Modal title={title} onClose={onClose} dirty={dirty}>
+      <div className="form-grid">
+        {!initial && (
+          <label className="form-field">
+            <span>{t('form.code')}</span>
+            <input
+              className="text-input"
+              value={code}
+              onChange={(e) => setCode(e.target.value)}
+              placeholder={t('form.codePh')}
+            />
+          </label>
+        )}
         <label className="form-field">
-          <span>{t('form.code')}</span>
+          <span>{t('form.name')}</span>
           <input
             className="text-input"
-            value={code}
-            onChange={(e) => setCode(e.target.value)}
-            placeholder={t('form.codePh')}
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder={t('form.namePh')}
+            autoFocus
           />
         </label>
-      )}
-      <label className="form-field">
-        <span>{t('form.name')}</span>
-        <input
-          className="text-input"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          placeholder={t('form.namePh')}
-          autoFocus
-        />
-      </label>
-      <label className="form-field">
-        <span>{t('form.desc')}</span>
-        <textarea
-          className="text-input"
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
-          placeholder={t('form.descPh')}
-          rows={3}
-        />
-      </label>
-      <div className="form-actions">
-        <button className="btn btn-ghost" onClick={onClose} disabled={saving}>
-          {t('actions.cancel', { ns: 'common' })}
-        </button>
-        <button className="btn btn-primary" onClick={save} disabled={saving}>
-          {saving && <span className="spinner" aria-hidden="true" />}
-          {saving ? t('saving') : initial ? t('form.save') : t('form.create')}
-        </button>
+        <label className="form-field">
+          <span>{t('form.desc')}</span>
+          <textarea
+            className="text-input"
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            placeholder={t('form.descPh')}
+            rows={3}
+          />
+        </label>
+        <div className="form-actions">
+          <button className="btn btn-ghost" onClick={onClose} disabled={saving}>
+            {t('actions.cancel', { ns: 'common' })}
+          </button>
+          <button className="btn btn-primary" onClick={save} disabled={saving}>
+            {saving && <span className="spinner" aria-hidden="true" />}
+            {saving ? t('saving') : initial ? t('form.save') : t('form.create')}
+          </button>
+        </div>
       </div>
-    </div>
+    </Modal>
   );
 }
 
@@ -142,9 +149,13 @@ export function Roles() {
   const [saving, setSaving] = useState(false);
   const [search, setSearch] = useState('');
   const [forbidden, setForbidden] = useState(false);
+  const [loadFailed, setLoadFailed] = useState(false);
   const [showCreate, setShowCreate] = useState(false);
   const [showEdit, setShowEdit] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  // CORR-8: role đang chờ chuyển sang khi còn thay đổi quyền chưa lưu; id detail mới nhất để bỏ response cũ
+  const [pendingRoleId, setPendingRoleId] = useState<number | null>(null);
+  const detailReq = useRef<number | null>(null);
 
   const SCOPE_SHORT: Record<string, string> = {
     '': t('scopeShort.off'),
@@ -158,6 +169,7 @@ export function Roles() {
       const [r, c] = await Promise.all([rolesApi.list(), rolesApi.permissions()]);
       setRoles(r);
       setCatalog(c.rows);
+      setLoadFailed(false);
       setSelectedId((prev) => {
         if (prev && r.some((x) => x.id === prev)) return prev;
         return r[0]?.id ?? null;
@@ -166,7 +178,10 @@ export function Roles() {
       const e = err as Error & { code?: string };
       // Match theo error code, không match message (message đổi theo ngôn ngữ)
       if (e?.code === 'FORBIDDEN' || e?.code === 'PERMISSION_DENIED') setForbidden(true);
-      else toast(e instanceof Error ? e.message : t('toast.loadRolesFail'), 'error');
+      else {
+        setLoadFailed(true);
+        toastApiError(toast, e, t('toast.loadRolesFail'));
+      }
     } finally {
       setLoading(false);
     }
@@ -178,15 +193,18 @@ export function Roles() {
 
   const loadDetail = useCallback(
     async (id: number) => {
+      detailReq.current = id;
       setDetailLoading(true);
       try {
         const d = await rolesApi.detail(id);
+        if (detailReq.current !== id) return; // đã chọn role khác: bỏ response cũ về muộn
         setDetail(d);
       } catch (err) {
-        toast(err instanceof Error ? err.message : t('toast.loadDetailFail'), 'error');
+        if (detailReq.current !== id) return;
+        toastApiError(toast, err, t('toast.loadDetailFail'));
         setDetail(null);
       } finally {
-        setDetailLoading(false);
+        if (detailReq.current === id) setDetailLoading(false);
       }
     },
     [toast, t]
@@ -213,6 +231,9 @@ export function Roles() {
     const base = draftFromDetail(detail, catalog);
     return Object.keys(base).some((k) => base[k] !== draft[k]);
   }, [detail, draft, catalog]);
+
+  // UX-4: còn quyền chưa lưu thì hỏi trước khi reload/đóng tab/bấm link khác
+  useUnsavedGuard(dirty);
 
   const changedCount = useMemo(() => {
     if (!detail || detail.is_system) return 0;
@@ -262,7 +283,7 @@ export function Roles() {
       await loadDetail(detail.id);
       await loadRoles();
     } catch (err) {
-      toast(err instanceof Error ? err.message : t('toast.savePermsFail'), 'error');
+      toastApiError(toast, err, t('toast.savePermsFail'));
     } finally {
       setSaving(false);
     }
@@ -282,7 +303,7 @@ export function Roles() {
       setDetail(null);
       await loadRoles();
     } catch (err) {
-      toast(err instanceof Error ? err.message : t('toast.deleteFail'), 'error');
+      toastApiError(toast, err, t('toast.deleteFail'));
     }
   };
 
@@ -299,6 +320,20 @@ export function Roles() {
       <div className="page">
         <PageHeader title={t('title')} desc={t('desc')} />
         <Skeleton height={420} />
+      </div>
+    );
+  }
+
+  if (loadFailed && roles.length === 0) {
+    return (
+      <div className="page">
+        <PageHeader title={t('title')} desc={t('desc')} />
+        <LoadError
+          onRetry={() => {
+            setLoading(true);
+            void loadRoles();
+          }}
+        />
       </div>
     );
   }
@@ -364,7 +399,11 @@ export function Roles() {
                 <button
                   key={r.id}
                   className={`role-card${r.id === selectedId ? ' active' : ''}`}
-                  onClick={() => setSelectedId(r.id)}
+                  onClick={() => {
+                    if (r.id === selectedId) return;
+                    if (dirty) setPendingRoleId(r.id);
+                    else setSelectedId(r.id);
+                  }}
                 >
                   <div className="role-card-top">
                     <span className="role-card-name">{r.name}</span>
@@ -541,28 +580,39 @@ export function Roles() {
       </div>
 
       {showCreate && (
-        <Modal title={t('modal.createTitle')} onClose={() => setShowCreate(false)}>
-          <RoleForm
-            onClose={() => setShowCreate(false)}
-            onSubmit={async (input) => {
-              await rolesApi.create({ code: input.code!, name: input.name, description: input.description });
-              toast(t('toast.created'), 'success');
-              await loadRoles();
-            }}
-          />
-        </Modal>
+        <RoleForm
+          title={t('modal.createTitle')}
+          onClose={() => setShowCreate(false)}
+          onSubmit={async (input) => {
+            await rolesApi.create({ code: input.code!, name: input.name, description: input.description });
+            toast(t('toast.created'), 'success');
+            await loadRoles();
+          }}
+        />
       )}
 
       {showEdit && detail && (
-        <Modal title={t('modal.editTitle')} onClose={() => setShowEdit(false)}>
-          <RoleForm
-            initial={{ name: detail.name, description: detail.description || '' }}
-            onClose={() => setShowEdit(false)}
-            onSubmit={async (input) => {
-              await doUpdateRole({ name: input.name, description: input.description || '' });
-            }}
-          />
-        </Modal>
+        <RoleForm
+          title={t('modal.editTitle')}
+          initial={{ name: detail.name, description: detail.description || '' }}
+          onClose={() => setShowEdit(false)}
+          onSubmit={async (input) => {
+            await doUpdateRole({ name: input.name, description: input.description || '' });
+          }}
+        />
+      )}
+
+      {pendingRoleId !== null && (
+        <ConfirmDialog
+          title={t('discard.title')}
+          message={t('discard.message', { count: changedCount })}
+          danger
+          onClose={() => setPendingRoleId(null)}
+          onConfirm={() => {
+            setSelectedId(pendingRoleId);
+            setPendingRoleId(null);
+          }}
+        />
       )}
 
       {confirmDelete && detail && (

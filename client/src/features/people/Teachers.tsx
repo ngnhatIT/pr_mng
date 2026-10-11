@@ -1,14 +1,18 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { peopleApi, TeacherForm } from './people.api';
-import { useToast } from '../../shared/ui/toast';
+import { useToast, toastApiError } from '../../shared/ui/toast';
+import { useLoad } from '../../shared/hooks/useLoad';
+import { useUrlState } from '../../shared/hooks/useUrlState';
 import { Modal, ConfirmDialog } from '../../shared/components/Modal';
 import { Field, useFieldErrors } from '../../shared/components/Form';
+import { isValidVNPhone } from '../../shared/validation';
 import { PageHeader } from '../../shared/components/PageHeader';
-import { EmptyState } from '../../shared/components/EmptyState';
+import { EmptyState, LoadError } from '../../shared/components/EmptyState';
 import { TableSkeleton } from '../../shared/components/Skeleton';
-import { Pagination, type PaginationMeta } from '../../shared/components/Pagination';
+import { Pagination, clampPage } from '../../shared/components/Pagination';
+import { useMyPermissions } from '../system/roles.api';
 import { Icon } from '../../shared/components/icons';
 import { Teacher } from '../../shared/types';
 import './Teachers.css';
@@ -17,31 +21,25 @@ import { ResetRequestsSection } from './ResetRequests';
 
 export function Teachers() {
   const { t } = useTranslation(['people', 'common']);
-  const [teachers, setTeachers] = useState<Teacher[]>([]);
-  const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState<Teacher | null | 'new'>(null);
   const [deleting, setDeleting] = useState<Teacher | null>(null);
   const [accounting, setAccounting] = useState<Teacher | null>(null);
-  const [page, setPage] = useState(1);
-  const [pagination, setPagination] = useState<PaginationMeta | null>(null);
+  // UX-6: trang hiện tại nằm trên URL -> Back từ trang chi tiết giáo viên quay lại đúng trang
+  const [q, setQ] = useUrlState({ page: '1' });
+  const page = Number(q.page) || 1;
   const toast = useToast();
+  const perms = useMyPermissions();
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    try {
-      const res = await peopleApi.listTeachers({ page });
-      setTeachers(res.data);
-      setPagination(res.pagination);
-    } catch (err) {
-      toast(err instanceof Error ? err.message : t('toast.loadError'), 'error');
-    } finally {
-      setLoading(false);
-    }
-  }, [page, toast, t]);
-
+  const { data: res, loading, error, reload: load } = useLoad(() => peopleApi.listTeachers({ page }), [page]);
+  const teachers: Teacher[] = res?.data ?? [];
   useEffect(() => {
-    void load();
-  }, [load]);
+    if (error) toastApiError(toast, error, t('toast.loadError'));
+  }, [error, toast]);
+  useEffect(() => {
+    if (!res) return;
+    const p = clampPage(page, res.pagination.totalPages);
+    if (p !== page) setQ({ page: String(p) });
+  }, [res, page, setQ]);
 
   const save = async (form: TeacherForm, id?: number) => {
     try {
@@ -49,9 +47,9 @@ export function Teachers() {
       else await peopleApi.createTeacher(form);
       toast(t('toast.saved'), 'success');
       setEditing(null);
-      void load();
+      load();
     } catch (err) {
-      toast(err instanceof Error ? err.message : t('states.saveError', { ns: 'common' }), 'error');
+      toastApiError(toast, err, t('states.saveError', { ns: 'common' }));
     }
   };
 
@@ -61,9 +59,9 @@ export function Teachers() {
       await peopleApi.deleteTeacher(deleting.id);
       toast(t('toast.deleted'), 'success');
       setDeleting(null);
-      void load();
+      load();
     } catch (err) {
-      toast(err instanceof Error ? err.message : t('states.deleteError', { ns: 'common' }), 'error');
+      toastApiError(toast, err, t('states.deleteError', { ns: 'common' }));
     }
   };
 
@@ -73,25 +71,31 @@ export function Teachers() {
         title={t('teachers.title')}
         desc={t('desc')}
         actions={
-          <button className="btn btn-primary btn-inline" onClick={() => setEditing('new')}>
-            <Icon name="plus" size={14} />
-            {t('add')}
-          </button>
+          perms.has('teachers.create') && (
+            <button className="btn btn-primary btn-inline" onClick={() => setEditing('new')}>
+              <Icon name="plus" size={14} />
+              {t('add')}
+            </button>
+          )
         }
       />
 
-      {loading && teachers.length === 0 ? (
+      {loading && !res ? (
         <TableSkeleton cols={6} />
+      ) : error && !res ? (
+        <LoadError onRetry={load} />
       ) : teachers.length === 0 ? (
         <EmptyState
           icon="cap"
           title={t('empty.title')}
           desc={t('empty.desc')}
           action={
-            <button className="btn btn-primary btn-inline" onClick={() => setEditing('new')}>
-              <Icon name="plus" size={14} />
-              {t('add')}
-            </button>
+            perms.has('teachers.create') && (
+              <button className="btn btn-primary btn-inline" onClick={() => setEditing('new')}>
+                <Icon name="plus" size={14} />
+                {t('add')}
+              </button>
+            )
           }
         />
       ) : (
@@ -128,27 +132,37 @@ export function Teachers() {
                   <td className="num">{tch.class_count ?? 0}</td>
                   <td className="td-right">
                     <span className="row-actions">
-                      <button type="button" className="btn btn-sm btn-ghost" onClick={() => setEditing(tch)}>
-                        <Icon name="pencil" size={15} />
-                        {t('actions.edit', { ns: 'common' })}
-                      </button>
-                      <button
-                        type="button"
-                        className="icon-btn"
-                        title={t('teachers.createAccount')}
-                        aria-label={t('teachers.createAccount')}
-                        onClick={() => setAccounting(tch)}
-                      >
-                        <Icon name="key" size={15} />
-                      </button>
-                      <button
-                        type="button"
-                        className="btn btn-sm btn-danger-ghost"
-                        onClick={() => setDeleting(tch)}
-                      >
-                        <Icon name="trash" size={15} />
-                        {t('actions.delete', { ns: 'common' })}
-                      </button>
+                      {perms.has('teachers.update') && (
+                        <button
+                          type="button"
+                          className="btn btn-sm btn-ghost"
+                          onClick={() => setEditing(tch)}
+                        >
+                          <Icon name="pencil" size={15} />
+                          {t('actions.edit', { ns: 'common' })}
+                        </button>
+                      )}
+                      {perms.has('users.create') && (
+                        <button
+                          type="button"
+                          className="icon-btn"
+                          title={t('teachers.createAccount')}
+                          aria-label={t('teachers.createAccount')}
+                          onClick={() => setAccounting(tch)}
+                        >
+                          <Icon name="key" size={15} />
+                        </button>
+                      )}
+                      {perms.has('teachers.delete') && (
+                        <button
+                          type="button"
+                          className="btn btn-sm btn-danger-ghost"
+                          onClick={() => setDeleting(tch)}
+                        >
+                          <Icon name="trash" size={15} />
+                          {t('actions.delete', { ns: 'common' })}
+                        </button>
+                      )}
                     </span>
                   </td>
                 </tr>
@@ -158,7 +172,13 @@ export function Teachers() {
         </div>
       )}
 
-      {pagination && <Pagination pagination={pagination} onChange={(p) => setPage(p)} loading={loading} />}
+      {res && (
+        <Pagination
+          pagination={res.pagination}
+          onChange={(p) => setQ({ page: String(p) })}
+          loading={loading}
+        />
+      )}
 
       <ResetRequestsSection />
 
@@ -199,15 +219,20 @@ function AccountModal({ teacher, onClose }: { teacher: Teacher; onClose: () => v
       toast(t('account.created', { username, name: teacher.name }), 'success');
       onClose();
     } catch (err) {
-      toast(err instanceof Error ? err.message : t('account.createError'), 'error');
+      toastApiError(toast, err, t('account.createError'));
     } finally {
       setBusy(false);
     }
   };
 
   return (
-    <Modal title={t('account.title', { name: teacher.name })} onClose={onClose}>
-      <form onSubmit={submit}>
+    <Modal
+      title={t('account.title', { name: teacher.name })}
+      onClose={onClose}
+      dirty={!!(username || password)}
+    >
+      {/* ADM-17: chặn trình duyệt tự điền tài khoản đăng nhập của chính admin vào form tạo tài khoản */}
+      <form onSubmit={submit} autoComplete="off">
         <p className="muted">{t('account.desc')}</p>
         <div className="form-grid">
           <Field label={t('account.username')}>
@@ -215,6 +240,7 @@ function AccountModal({ teacher, onClose }: { teacher: Teacher; onClose: () => v
               className="text-input"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
+              autoComplete="off"
               required
             />
           </Field>
@@ -224,6 +250,7 @@ function AccountModal({ teacher, onClose }: { teacher: Teacher; onClose: () => v
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
+              autoComplete="new-password"
               required
             />
           </Field>
@@ -258,6 +285,7 @@ function TeacherFormModal({
     email: initial?.email || '',
     subject: initial?.subject || '',
   });
+  const [initialForm] = useState(form);
   const [busy, setBusy] = useState(false);
   // Lỗi inline dưới field + focus field lỗi đầu tiên (skill 8.2); dữ liệu giữ nguyên khi lỗi
   const { errors, refFor, show, clear } = useFieldErrors<'name' | 'phone' | 'email'>();
@@ -271,8 +299,7 @@ function TeacherFormModal({
     if (busy) return;
     const errs: { name?: string; phone?: string; email?: string } = {};
     if (!form.name.trim()) errs.name = t('form.errors.nameRequired');
-    if (form.phone.trim() && !/^\+?[0-9][0-9\s.-]{6,13}[0-9]$/.test(form.phone.trim()))
-      errs.phone = t('form.errors.phoneInvalid');
+    if (form.phone.trim() && !isValidVNPhone(form.phone)) errs.phone = t('form.errors.phoneInvalid');
     if (form.email.trim() && !/^\S+@\S+\.\S+$/.test(form.email.trim()))
       errs.email = t('form.errors.emailInvalid');
     if (!show(errs)) return;
@@ -285,7 +312,11 @@ function TeacherFormModal({
   };
 
   return (
-    <Modal title={initial ? t('form.editTitle') : t('form.addTitle')} onClose={onClose}>
+    <Modal
+      title={initial ? t('form.editTitle') : t('form.addTitle')}
+      onClose={onClose}
+      dirty={JSON.stringify(form) !== JSON.stringify(initialForm)}
+    >
       <form onSubmit={submit}>
         <div className="form-grid">
           <Field label={t('form.name')} span error={errors.name}>

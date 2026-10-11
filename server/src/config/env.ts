@@ -3,6 +3,13 @@
  * Mọi module đọc config từ đây thay vì process.env rải rác —
  * sai config thì crash ngay lúc khởi động với message rõ ràng.
  */
+import dotenv from 'dotenv';
+import path from 'path';
+
+// Nạp DUY NHẤT server/.env (src/config hoặc dist/config -> ../../.env), trước khi
+// đọc process.env. Biến môi trường thật (PM2/systemd/CI) luôn thắng file.
+// quiet: dotenv 17+ in "injected env" ra stdout — làm bẩn log JSON production.
+dotenv.config({ path: path.resolve(__dirname, '../../.env'), quiet: true });
 
 function required(name: string): string {
   const v = process.env[name];
@@ -24,6 +31,18 @@ function optionalInt(name: string, fallback: number): number {
 
 const isProd = process.env.NODE_ENV === 'production';
 
+/** COR-1: URL VNPay phải là https; production còn trỏ sandbox -> cảnh báo (tiền thật sẽ không về) */
+function vnpayUrl(name: string, fallback: string): string {
+  const v = optional(name, '') || fallback;
+  if (!/^https:\/\/[^\s]+$/.test(v))
+    throw new Error(`[CONFIG] ${name} sai format: "${v}" (phải là URL https)`);
+  if (isProd && v.includes('sandbox')) {
+    // eslint-disable-next-line no-console -- config bootstrap: logger gây circular dep với env
+    console.warn(`[CONFIG] Cảnh báo: production đang dùng VNPay SANDBOX (${name}) — đặt URL production`);
+  }
+  return v;
+}
+
 export const env = {
   NODE_ENV: process.env.NODE_ENV ?? 'development',
   IS_PROD: isProd,
@@ -36,17 +55,24 @@ export const env = {
     return u;
   })(),
 
-  /** Secret ký JWT. Production BẮT BUỘC đặt, dev dùng fallback + cảnh báo. */
+  /**
+   * Secret ký JWT (>= 32 ký tự). BẮT BUỘC trừ khi NODE_ENV là 'development' hoặc 'test' TƯỜNG MINH —
+   * staging/'prod'/NODE_ENV rỗng (PM2 thiếu --env, Docker) không còn âm thầm dùng secret công khai
+   * trong repo (ai đọc repo cũng ký được token superadmin).
+   */
   JWT_SECRET: (() => {
     const s = process.env.JWT_SECRET;
-    if (!s && isProd) throw new Error('[CONFIG] Production bắt buộc đặt JWT_SECRET');
-    // Secret ngắn làm JWT brute-force khả thi — yêu cầu tối thiểu 32 ký tự ở production
-    if (s && isProd && s.length < 32) {
+    const devLike = process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'test';
+    if (!s && !devLike) {
+      throw new Error("[CONFIG] Thiếu JWT_SECRET (chỉ được bỏ trống khi NODE_ENV='development' hoặc 'test')");
+    }
+    // Secret ngắn làm JWT brute-force khả thi
+    if (s && !devLike && s.length < 32) {
       throw new Error('[CONFIG] JWT_SECRET phải từ 32 ký tự trở lên (hiện tại ' + s.length + ')');
     }
     if (!s) {
       // eslint-disable-next-line no-console -- config bootstrap: logger gây circular dep với env
-      console.warn('[CẢNH BÁO] JWT secret mặc định — hãy đặt JWT_SECRET khi chạy production!');
+      console.warn('[CẢNH BÁO] JWT secret mặc định (chỉ dev/test) — hãy đặt JWT_SECRET!');
     }
     return s || 'educenter-dev-secret-change-me';
   })(),
@@ -102,29 +128,28 @@ export const env = {
 
   /**
    * Base URL công khai của app (dùng cho VNPay returnUrl gửi bên thứ 3).
-   * Nếu không đặt, fallback theo request (req.protocol + host).
+   * Production BẮT BUỘC; dev không đặt thì fallback theo request (req.protocol + host).
    */
   APP_BASE_URL: (() => {
     const v = optional('APP_BASE_URL', '');
+    // OPS-5: production không fallback theo Host/req.protocol (sau proxy dễ thành http:// hoặc host giả)
+    if (!v && isProd) throw new Error('[CONFIG] Production bắt buộc đặt APP_BASE_URL (vd: https://app.vn)');
     if (v && !/^https?:\/\/[^/]+$/.test(v)) {
-      throw new Error(`[CONFIG] APP_BASE_URL sai format: "${v}" (đúng: "https://app.vn", không trailing slash)`);
+      throw new Error(
+        `[CONFIG] APP_BASE_URL sai format: "${v}" (đúng: "https://app.vn", không trailing slash)`
+      );
     }
     return v;
   })(),
 
   /**
-   * VNPay / Zalo: credential thực tế lưu per-center trong DB (center_settings),
-   * KHÔNG đọc từ env. Giữ lại để tương thích nhưng đừng đặt nhầm tưởng có tác dụng.
+   * VNPay: TMN code / hash secret lưu per-center trong DB (center_settings, trang Cấu hình thanh toán),
+   * KHÔNG đọc từ env. Env chỉ chọn môi trường VNPay (sandbox mặc định / production).
    */
-  /** VNPay (legacy — cấu hình trong DB per-center) */
-  VNPAY_TMN_CODE: optional('VNPAY_TMN_CODE', ''),
-  VNPAY_HASH_SECRET: optional('VNPAY_HASH_SECRET', ''),
-  VNPAY_URL: optional('VNPAY_URL', 'https://sandbox.vnpayment.vn/paymentv2/vpcpay.html'),
-  VNPAY_RETURN_URL: optional('VNPAY_RETURN_URL', ''),
-
-  /** Zalo OA (legacy — cấu hình trong DB per-center) */
-  ZALO_OA_ID: optional('ZALO_OA_ID', ''),
-  ZALO_ACCESS_TOKEN: optional('ZALO_ACCESS_TOKEN', ''),
+  /** URL cổng thanh toán (redirect phụ huynh). Production: https://pay.vnpay.vn/vpcpay.html */
+  VNPAY_PAY_URL: vnpayUrl('VNPAY_PAY_URL', 'https://sandbox.vnpayment.vn/paymentv2/vpcpay.html'),
+  /** URL API merchant (querydr — cron đối soát đơn treo). Production: https://merchant.vnpay.vn/merchant_webapi/api/transaction */
+  VNPAY_API_URL: vnpayUrl('VNPAY_API_URL', 'https://sandbox.vnpayment.vn/merchant_webapi/api/transaction'),
 
   /**
    * Seed dữ liệu demo (tài khoản root/teacher1/0900000001 + trung tâm demo).
@@ -145,6 +170,12 @@ export const env = {
   /** Số bản backup giữ lại khi xoay vòng. */
   BACKUP_KEEP: optionalInt('BACKUP_KEEP', 7),
 
+  /**
+   * OPS-4: thư mục lưu file upload (bài nộp, đính kèm). Mặc định <repo>/uploads
+   * (src/config hoặc dist/config -> ../../../uploads). Test trỏ sang thư mục tạm.
+   */
+  UPLOAD_DIR: path.resolve(optional('UPLOAD_DIR', path.resolve(__dirname, '..', '..', '..', 'uploads'))),
+
   /** Webhook nhận cảnh báo vận hành (backup fail...). Optional. */
   ALERT_WEBHOOK_URL: optional('ALERT_WEBHOOK_URL', ''),
 
@@ -160,6 +191,16 @@ export const env = {
 
   /** Refresh token sống bao nhiêu ngày. Mặc định 30 ngày. */
   REFRESH_TOKEN_DAYS: optionalInt('REFRESH_TOKEN_DAYS', 30),
+
+  /**
+   * OPS-5: token tĩnh cho Prometheus scrape GET /api/v1/metrics (Authorization: Bearer <token>).
+   * Rỗng = tắt (chỉ JWT superadmin). Đặt thì phải >= 32 ký tự.
+   */
+  METRICS_TOKEN: (() => {
+    const v = optional('METRICS_TOKEN', '');
+    if (v && v.length < 32) throw new Error('[CONFIG] METRICS_TOKEN phải từ 32 ký tự trở lên');
+    return v;
+  })(),
 } as const;
 
 // Giữ hàm required export để module nào cần biến bắt buộc riêng thì dùng

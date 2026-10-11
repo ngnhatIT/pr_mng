@@ -94,3 +94,66 @@ describe('trials.convert - idempotency', () => {
     );
   });
 });
+
+describe('trials.convert - sĩ số & referral', () => {
+  beforeEach(async () => {
+    await resetDb();
+  });
+
+  it('lớp đã đủ sĩ số -> 400, rollback (không tạo học viên, trial vẫn new)', async () => {
+    const cls = Number(
+      (
+        await db
+          .prepare("INSERT INTO classes (name, center_id, max_students) VALUES ('Full', ?, 1)")
+          .run(centerA)
+      ).lastInsertRowid
+    );
+    const other = Number(
+      (await db.prepare("INSERT INTO students (code, name, center_id) VALUES ('X1', 'X', ?)").run(centerA))
+        .lastInsertRowid
+    );
+    await db.prepare('INSERT INTO enrollments (student_id, class_id) VALUES (?, ?)').run(other, cls);
+    await assert.rejects(
+      () => trialsService.convertTrial(centerA, trialId, cls),
+      (e: unknown) => e instanceof AppError && e.statusCode === 400
+    );
+    assert.equal(await studentCount(centerA), 1); // chỉ học viên X có sẵn
+    assert.equal(await trialStatus(trialId), 'new');
+  });
+
+  it('chỉ gắn referral của đúng mã giới thiệu trong cùng trung tâm', async () => {
+    const pB = Number(
+      (
+        await db
+          .prepare(
+            "INSERT INTO parents (center_id, phone, password_hash, name, referral_code) VALUES (?, '0900000001', 'x', 'PB', 'REFB')"
+          )
+          .run(centerB)
+      ).lastInsertRowid
+    );
+    const pA = Number(
+      (
+        await db
+          .prepare(
+            "INSERT INTO parents (center_id, phone, password_hash, name, referral_code) VALUES (?, '0900000002', 'x', 'PA', 'REFA')"
+          )
+          .run(centerA)
+      ).lastInsertRowid
+    );
+    const ins = db.prepare(
+      "INSERT INTO referrals (referrer_parent_id, referred_phone, center_id, status) VALUES (?, '0912345678', ?, 'pending')"
+    );
+    const rB = Number((await ins.run(pB, centerB)).lastInsertRowid);
+    const rA = Number((await ins.run(pA, centerA)).lastInsertRowid);
+    await db.prepare("UPDATE trial_registrations SET referral_code = 'REFA' WHERE id = ?").run(trialId);
+    const { student_id } = await trialsService.convertTrial(centerA, trialId, null);
+    const get = async (id: number) =>
+      (
+        (await db.prepare('SELECT referred_student_id FROM referrals WHERE id = ?').get(id)) as {
+          referred_student_id: number | null;
+        }
+      ).referred_student_id;
+    assert.equal(await get(rA), student_id);
+    assert.equal(await get(rB), null);
+  });
+});

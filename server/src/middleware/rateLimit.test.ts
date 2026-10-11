@@ -32,6 +32,10 @@ function mockRes() {
       this.body = b;
       return this;
     },
+    listeners: {} as Record<string, () => void>,
+    on(ev: string, fn: () => void) {
+      this.listeners[ev] = fn;
+    },
   };
 }
 
@@ -39,9 +43,13 @@ function mockRes() {
 function hit(limiter: (req: never, res: never, next: never) => void, req: never) {
   const res = mockRes();
   let nextCalled = false;
-  limiter(req, res as never, (() => {
-    nextCalled = true;
-  }) as never);
+  limiter(
+    req,
+    res as never,
+    (() => {
+      nextCalled = true;
+    }) as never
+  );
   return { status: res.statusCode, nextCalled, remaining: res.headers['X-RateLimit-Remaining'] };
 }
 
@@ -108,9 +116,13 @@ describe('createRateLimit key theo tài khoản', () => {
     hit(limiter, u);
     const res = mockRes();
     let nextCalled = false;
-    limiter(u, res as never, (() => {
-      nextCalled = true;
-    }) as never);
+    limiter(
+      u,
+      res as never,
+      (() => {
+        nextCalled = true;
+      }) as never
+    );
     assert.equal(res.statusCode, 429);
     assert.equal(nextCalled, false);
     assert.equal((res.body as { code: string }).code, 'RATE_LIMITED');
@@ -184,5 +196,78 @@ describe('D5: login rate limit theo tài khoản', () => {
       }
       assert.equal(hit(rl, loginReq('CHARLIE', ip)).status, 429);
     });
+  });
+
+  function phoneReq(phone: string, ip: string) {
+    return { body: { phone }, socket: { remoteAddress: ip }, ip, path: '/forgot-password' } as never;
+  }
+
+  it('SEC-8: SĐT nhiều định dạng (0/+84/84) chung 1 bucket tài khoản', async () => {
+    await withEnv({ LOGIN_RATE_LIMIT: 1000, LOGIN_ACCOUNT_RATE_LIMIT: 3 }, async () => {
+      const { loginRateLimit: rl } = await import('./rateLimit');
+      const ip = '198.51.100.9';
+      assert.equal(hit(rl, phoneReq('0912345678', ip)).status, 200);
+      assert.equal(hit(rl, phoneReq('+84912345678', ip)).status, 200);
+      assert.equal(hit(rl, phoneReq('84 912 345 678', ip)).status, 200);
+      assert.equal(hit(rl, phoneReq('0912.345.678', ip)).status, 429);
+    });
+  });
+
+  it('SEC-8: đăng nhập thành công được hoàn lại hit (chính chủ không tự khóa mình)', async () => {
+    await withEnv({ LOGIN_RATE_LIMIT: 1000, LOGIN_ACCOUNT_RATE_LIMIT: 1 }, async () => {
+      const { loginRateLimit: rl } = await import('./rateLimit');
+      const ip = '198.51.100.10';
+      for (let i = 0; i < 3; i++) {
+        const res = mockRes();
+        rl(loginReq('dave', ip), res as never, (() => {}) as never);
+        assert.equal(res.statusCode, 200);
+        res.listeners.finish(); // 200 -> hoàn lại
+      }
+      const fail = mockRes();
+      rl(loginReq('dave', ip), fail as never, (() => {}) as never);
+      fail.statusCode = 401;
+      fail.listeners.finish(); // sai mật khẩu -> giữ hit
+      assert.equal(hit(rl, loginReq('dave', ip)).status, 429);
+    });
+  });
+
+  it('S-4: kẻ tấn công làm cạn bucket tài khoản; chính chủ có device cookie hợp lệ vẫn đăng nhập được', async () => {
+    await withEnv({ LOGIN_RATE_LIMIT: 1000, LOGIN_ACCOUNT_RATE_LIMIT: 3 }, async () => {
+      const { loginRateLimit: rl } = await import('./rateLimit');
+      const { deviceToken } = await import('./cookieAuth');
+      const withCookie = (cookie: string) =>
+        ({ ...(loginReq('erin', '198.51.100.21') as object), headers: { cookie } }) as never;
+      // Kẻ tấn công từ IP A sai liên tục -> bucket ẩn danh của 'erin' cạn
+      for (let i = 0; i < 3; i++) assert.equal(hit(rl, loginReq('erin', '198.51.100.20')).status, 200);
+      assert.equal(hit(rl, loginReq('erin', '198.51.100.21')).status, 429, 'không cookie -> 429');
+      assert.equal(hit(rl, withCookie('ld=gia-mao')).status, 429, 'cookie giả -> vẫn bucket ẩn danh');
+      assert.equal(hit(rl, withCookie(`ld=${deviceToken('parent', 'erin')}`)).status, 429, 'sai kind -> 429');
+      const mine = deviceToken('staff', 'erin');
+      assert.equal(hit(rl, withCookie(`a=1; ld=${mine}`)).status, 200, 'thiết bị quen -> qua');
+      // J-A6: cookie hết hạn -> bucket ẩn danh; cookie bị lộ rút cạn chỉ bucket của chính nó
+      const expired = deviceToken('staff', 'erin', Date.now() - 91 * 24 * 3600 * 1000);
+      assert.equal(hit(rl, withCookie(`ld=${expired}`)).status, 429, 'cookie hết hạn -> 429');
+      const leaked = deviceToken('staff', 'erin');
+      for (let i = 0; i < 3; i++) hit(rl, withCookie(`ld=${leaked}`));
+      assert.equal(hit(rl, withCookie(`ld=${leaked}`)).status, 429, 'cookie lộ: cạn bucket của nó');
+      assert.equal(hit(rl, withCookie(`ld=${mine}`)).status, 200, 'thiết bị khác của chính chủ vẫn qua');
+      assert.notEqual(
+        deviceToken('staff', 'erin'),
+        deviceToken('staff', 'erin'),
+        'mỗi lần đăng nhập 1 cookie mới'
+      );
+    });
+  });
+});
+
+describe('CORR-3: publicRateLimit tách bucket theo route', () => {
+  it('2 route khác nhau không chia chung bộ đếm cùng IP', async () => {
+    const { publicRateLimit } = await import('./rateLimit');
+    const a = publicRateLimit(1);
+    const b = publicRateLimit(1);
+    const req = () => ({ socket: { remoteAddress: '192.0.2.50' }, ip: '192.0.2.50' }) as never;
+    assert.equal(hit(a, req()).status, 200);
+    assert.equal(hit(a, req()).status, 429);
+    assert.equal(hit(b, req()).status, 200);
   });
 });

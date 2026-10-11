@@ -66,7 +66,11 @@
       "label": "Chủ đề buổi học",
       "placeholder": "VD: Thì hiện tại đơn..."
     },
-    "desc": "Chọn lớp và buổi học, sau đó ghi nhận trạng thái từng học viên"
+    "desc": "Chọn lớp và buổi học, sau đó ghi nhận trạng thái từng học viên",
+    "discard": {
+      "title": "Bỏ điểm danh chưa lưu?",
+      "message": "Bạn đã điểm danh/ghi chú nhưng chưa lưu. Chuyển sang lớp/buổi khác sẽ mất các thay đổi này."
+    }
   },
   "classStatus": {
     "active": "Đang mở",
@@ -167,9 +171,12 @@
       "nameRequired": "Vui lòng nhập tên lớp",
       "endBeforeStart": "Ngày kết thúc phải sau ngày bắt đầu",
       "feeInvalid": "Học phí phải là số không âm",
-      "maxStudentsInvalid": "Sĩ số tối đa phải là số nguyên từ 1 trở lên"
+      "maxStudentsInvalid": "Sĩ số tối đa phải là số nguyên từ 1 trở lên",
+      "slotEndBeforeStart": "Giờ kết thúc phải sau giờ bắt đầu"
     },
-    "dayOfWeekAria": "Ngày trong tuần"
+    "dayOfWeekAria": "Ngày trong tuần",
+    "startTimeAria": "Giờ bắt đầu",
+    "endTimeAria": "Giờ kết thúc"
   },
   "rooms": {
     "add": "Thêm phòng",
@@ -221,14 +228,5 @@
     "deleted": "Đã xóa lớp học",
     "loadError": "Không tải được danh sách lớp, vui lòng thử lại",
     "saved": "Đã lưu lớp học"
-  },
-  "days": {
-    "2": "Thứ Hai",
-    "3": "Thứ Ba",
-    "4": "Thứ Tư",
-    "5": "Thứ Năm",
-    "6": "Thứ Sáu",
-    "7": "Thứ Bảy",
-    "8": "Chủ Nhật"
   }
 }

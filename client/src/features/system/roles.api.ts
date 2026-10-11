@@ -2,7 +2,8 @@
  * API layer cho Phân quyền (roles & permissions).
  * Yêu cầu quyền roles.view để xem, roles.manage để thay đổi.
  */
-import { http } from '../../shared/api/client';
+import { useEffect, useState } from 'react';
+import { getToken, http } from '../../shared/api/client';
 
 export type Scope = 'own' | 'center' | 'all';
 
@@ -67,3 +68,43 @@ export const rolesApi = {
     http.del<{ ok: boolean }>(`/roles/assign?user_id=${user_id}&role_id=${role_id}`),
   mine: () => http.get<MyPermission[]>('/roles/me/permissions'),
 };
+
+// UX-9: cache quyền theo access token -> Layout + mọi trang dùng chung 1 request (trước: mỗi lần mở trang 1 request,
+// nút "Thêm/Sửa" hiện trễ). Token đổi (đăng nhập lại / refresh 15 phút) thì tải lại; lỗi thì bỏ cache để lần sau thử lại.
+type MineCache = { token: string | null; promise: Promise<Set<string>>; value?: Set<string> };
+let mineCache: MineCache | null = null;
+
+export function loadMyPermissions(): Promise<Set<string>> {
+  const token = getToken();
+  if (!mineCache || mineCache.token !== token) {
+    const entry: MineCache = { token, promise: rolesApi.mine().then((r) => new Set(r.map((p) => p.code))) };
+    entry.promise.then(
+      (v) => (entry.value = v),
+      () => {
+        if (mineCache === entry) mineCache = null;
+      }
+    );
+    mineCache = entry;
+  }
+  return mineCache.promise;
+}
+
+/**
+ * ADM-21: quyền của user hiện tại để ẩn nút sẽ bị 403. Fail-closed: đang tải/lỗi -> Set rỗng (ẩn nút);
+ * server vẫn là nơi chặn thật, đây chỉ là UX. Đã có cache thì trả ngay từ lần render đầu (không nháy nút).
+ */
+export function useMyPermissions(): Set<string> {
+  const [perms, setPerms] = useState<Set<string>>(
+    () => (mineCache?.token === getToken() && mineCache.value) || new Set()
+  );
+  useEffect(() => {
+    let alive = true;
+    loadMyPermissions()
+      .then((s) => alive && setPerms(s))
+      .catch(() => alive && setPerms(new Set()));
+    return () => {
+      alive = false;
+    };
+  }, []);
+  return perms;
+}

@@ -60,12 +60,19 @@ export async function createRubric(
   // P1-3: thiếu field bắt buộc → 400, không để trim() trên undefined gây 500
   const name = typeof data.name === 'string' ? data.name.trim() : '';
   if (!name) throw AppError.badRequest('Vui lòng nhập tên rubric');
+  if (name.length > 200) throw AppError.badRequest('Tên rubric tối đa 200 ký tự');
   const criteria = Array.isArray(data.criteria) ? data.criteria : [];
   if (!criteria.length) throw AppError.badRequest('Rubric cần ít nhất 1 tiêu chí');
-  // Validate toàn bộ trước
-  criteria.forEach((c, i) => {
+  if (criteria.length > 50) throw AppError.badRequest('Rubric tối đa 50 tiêu chí');
+  // Validate toàn bộ trước. HW-21: điểm tiêu chí sai → 400, không ép ngầm về 0
+  const clean = criteria.map((c, i) => {
     if (typeof c?.name !== 'string' || !c.name.trim())
       throw AppError.badRequest(`Tiêu chí ${i + 1} chưa có tên`);
+    if (c.name.trim().length > 200) throw AppError.badRequest(`Tên tiêu chí ${i + 1} tối đa 200 ký tự`);
+    const max = Number(c.max_score);
+    if (!Number.isFinite(max) || max <= 0 || max > 1000)
+      throw AppError.badRequest(`Điểm tối đa tiêu chí ${i + 1} phải từ trên 0 đến 1000`);
+    return { name: c.name.trim(), max_score: max };
   });
   const rid = await db.transaction(async (tx) => {
     const ins = await tx
@@ -75,9 +82,7 @@ export async function createRubric(
     const stmt = await tx.prepare(
       'INSERT INTO rubric_criteria (rubric_id, name, max_score, position) VALUES (?, ?, ?, ?)'
     );
-    for (const [i, c] of criteria.entries()) {
-      await stmt.run(rid, c.name.trim(), Math.max(0, Number(c.max_score) || 0), i);
-    }
+    for (const [i, c] of clean.entries()) await stmt.run(rid, c.name, c.max_score, i);
     return rid;
   });
   return (await getRubric(rid))!;
@@ -88,6 +93,8 @@ export async function deleteRubric(id: number, centerId: number | null): Promise
   const r = (await db.prepare('SELECT center_id FROM rubrics WHERE id = ?').get(id)) as
     { center_id: number | null } | undefined;
   if (!r) return;
+  // HW-10: rubric global (dùng chung mọi trung tâm) chỉ superadmin được xóa — như P1-10 của bank
+  if (r.center_id === null && centerId !== null) throw AppError.notFound('Không tìm thấy rubric');
   if (centerId !== null && r.center_id !== null && r.center_id !== centerId) {
     throw AppError.notFound('Không tìm thấy rubric');
   }

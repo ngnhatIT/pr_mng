@@ -1,15 +1,18 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { studentsApi, type Student } from './students.api';
-import { useToast } from '../../shared/ui/toast';
+import { useToast, toastApiError } from '../../shared/ui/toast';
 import { Modal, ConfirmDialog } from '../../shared/components/Modal';
 import { Field, useFieldErrors } from '../../shared/components/Form';
+import { isValidVNPhone } from '../../shared/validation';
 import { PageHeader } from '../../shared/components/PageHeader';
-import { EmptyState } from '../../shared/components/EmptyState';
+import { EmptyState, LoadError } from '../../shared/components/EmptyState';
 import { TableSkeleton } from '../../shared/components/Skeleton';
-import { useDebounce } from '../../shared/hooks/useDebounce';
-import { Pagination, type PaginationMeta } from '../../shared/components/Pagination';
+import { useLoad } from '../../shared/hooks/useLoad';
+import { useUrlSearch, useUrlState } from '../../shared/hooks/useUrlState';
+import { Pagination, clampPage } from '../../shared/components/Pagination';
+import { useMyPermissions } from '../system/roles.api';
 import { Icon } from '../../shared/components/icons';
 import './Students.css';
 import { EmptyCell } from '../../shared/components/EmptyCell';
@@ -27,41 +30,36 @@ const emptyForm = {
 
 export function Students() {
   const { t } = useTranslation(['students', 'common']);
-  const [students, setStudents] = useState<Student[]>([]);
-  const [search, setSearch] = useState('');
-  const [status, setStatus] = useState('');
-  const setSearchReset = (v: string) => {
-    setSearch(v);
-    setPage(1);
-  };
-  const setStatusReset = (v: string) => {
-    setStatus(v);
-    setPage(1);
-  };
-  const [loading, setLoading] = useState(true);
+  // UX-6: trang/tìm kiếm/lọc nằm trên URL -> Back từ trang chi tiết quay lại đúng chỗ
+  const [q, setQ] = useUrlState({ search: '', status: '', page: '1' });
+  const { status } = q;
+  const page = Number(q.page) || 1;
+  // B-2: chữ đang gõ ở state cục bộ, URL nhận giá trị đã debounce (q.search) -> fetch theo q.search
+  const [search, setSearchReset] = useUrlSearch(q.search, (v) => setQ({ search: v, page: '1' }));
+  const setStatusReset = (v: string) => setQ({ status: v, page: '1' });
   const [editing, setEditing] = useState<Student | null | 'new'>(null);
   const [deleting, setDeleting] = useState<Student | null>(null);
-  const [page, setPage] = useState(1);
-  const [pagination, setPagination] = useState<PaginationMeta | null>(null);
   const toast = useToast();
+  const perms = useMyPermissions();
 
-  const debouncedSearch = useDebounce(search);
+  const debouncedSearch = q.search;
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    try {
-      const res = await studentsApi.list(debouncedSearch, status, { page });
-      setStudents(res.data);
-      setPagination(res.pagination);
-    } catch (err) {
-      toast(err instanceof Error ? err.message : t('toast.loadError'), 'error');
-    } finally {
-      setLoading(false);
-    }
-  }, [debouncedSearch, status, page, toast, t]);
+  // UX-5: bỏ response cũ về muộn; lỗi tải hiện LoadError thay vì "Chưa có học viên"
+  const {
+    data: res,
+    loading,
+    error,
+    reload,
+  } = useLoad(() => studentsApi.list(debouncedSearch, status, { page }), [debouncedSearch, status, page]);
+  const students: Student[] = res?.data ?? [];
   useEffect(() => {
-    void load();
-  }, [load, debouncedSearch]);
+    if (error) toastApiError(toast, error, t('toast.loadError'));
+  }, [error, toast]);
+  useEffect(() => {
+    if (!res) return;
+    const p = clampPage(page, res.pagination.totalPages);
+    if (p !== page) setQ({ page: String(p) });
+  }, [res, page, setQ]);
 
   const save = async (form: typeof emptyForm, id?: number) => {
     try {
@@ -69,9 +67,9 @@ export function Students() {
       else await studentsApi.create(form);
       toast(t('toast.saved'), 'success');
       setEditing(null);
-      void load();
+      reload();
     } catch (err) {
-      toast(err instanceof Error ? err.message : t('states.saveError', { ns: 'common' }), 'error');
+      toastApiError(toast, err, t('states.saveError', { ns: 'common' }));
     }
   };
 
@@ -81,9 +79,9 @@ export function Students() {
       await studentsApi.remove(deleting.id);
       toast(t('toast.deleted'), 'success');
       setDeleting(null);
-      void load();
+      reload();
     } catch (err) {
-      toast(err instanceof Error ? err.message : t('states.deleteError', { ns: 'common' }), 'error');
+      toastApiError(toast, err, t('states.deleteError', { ns: 'common' }));
     }
   };
 
@@ -95,10 +93,12 @@ export function Students() {
         title={t('title')}
         desc={t('desc')}
         actions={
-          <button className="btn btn-primary btn-inline" onClick={() => setEditing('new')}>
-            <Icon name="plus" size={14} />
-            {t('add')}
-          </button>
+          perms.has('students.create') && (
+            <button className="btn btn-primary btn-inline" onClick={() => setEditing('new')}>
+              <Icon name="plus" size={14} />
+              {t('add')}
+            </button>
+          )
         }
       />
 
@@ -143,8 +143,10 @@ export function Students() {
         </select>
       </div>
 
-      {loading && students.length === 0 ? (
+      {loading && !res ? (
         <TableSkeleton cols={5} />
+      ) : error && !res ? (
+        <LoadError onRetry={reload} />
       ) : students.length === 0 ? (
         <EmptyState
           icon="users"
@@ -156,17 +158,19 @@ export function Students() {
                 className="btn btn-secondary btn-inline"
                 onClick={() => {
                   setSearchReset('');
-                  setStatusReset('');
+                  setQ({ search: '', status: '', page: '1' });
                 }}
               >
                 <Icon name="x" size={14} />
                 {t('emptyFiltered.clear')}
               </button>
             ) : (
-              <button className="btn btn-primary btn-inline" onClick={() => setEditing('new')}>
-                <Icon name="plus" size={14} />
-                {t('add')}
-              </button>
+              perms.has('students.create') && (
+                <button className="btn btn-primary btn-inline" onClick={() => setEditing('new')}>
+                  <Icon name="plus" size={14} />
+                  {t('add')}
+                </button>
+              )
             )
           }
         />
@@ -204,18 +208,22 @@ export function Students() {
                   </td>
                   <td className="td-right">
                     <span className="row-actions">
-                      <button type="button" className="btn btn-sm btn-ghost" onClick={() => setEditing(s)}>
-                        <Icon name="pencil" size={15} />
-                        {t('actions.edit', { ns: 'common' })}
-                      </button>
-                      <button
-                        type="button"
-                        className="btn btn-sm btn-danger-ghost"
-                        onClick={() => setDeleting(s)}
-                      >
-                        <Icon name="trash" size={15} />
-                        {t('actions.delete', { ns: 'common' })}
-                      </button>
+                      {perms.has('students.update') && (
+                        <button type="button" className="btn btn-sm btn-ghost" onClick={() => setEditing(s)}>
+                          <Icon name="pencil" size={15} />
+                          {t('actions.edit', { ns: 'common' })}
+                        </button>
+                      )}
+                      {perms.has('students.delete') && (
+                        <button
+                          type="button"
+                          className="btn btn-sm btn-danger-ghost"
+                          onClick={() => setDeleting(s)}
+                        >
+                          <Icon name="trash" size={15} />
+                          {t('actions.delete', { ns: 'common' })}
+                        </button>
+                      )}
                     </span>
                   </td>
                 </tr>
@@ -225,7 +233,13 @@ export function Students() {
         </div>
       )}
 
-      {pagination && <Pagination pagination={pagination} onChange={(p) => setPage(p)} loading={loading} />}
+      {res && (
+        <Pagination
+          pagination={res.pagination}
+          onChange={(p) => setQ({ page: String(p) })}
+          loading={loading}
+        />
+      )}
 
       {editing && (
         <StudentForm
@@ -267,6 +281,7 @@ function StudentForm({
     status: initial?.status || 'studying',
     note: initial?.note || '',
   });
+  const [initialForm] = useState(form);
   const [busy, setBusy] = useState(false);
   // Lỗi inline dưới field + focus field lỗi đầu tiên (skill 8.2); dữ liệu giữ nguyên khi lỗi
   const { errors, refFor, show, clear } = useFieldErrors<'name' | 'phone' | 'email'>();
@@ -280,8 +295,7 @@ function StudentForm({
   const validate = () => {
     const errs: { name?: string; phone?: string; email?: string } = {};
     if (!form.name.trim()) errs.name = t('form.errors.nameRequired');
-    if (form.phone.trim() && !/^\+?[0-9][0-9\s.-]{6,13}[0-9]$/.test(form.phone.trim()))
-      errs.phone = t('form.errors.phoneInvalid');
+    if (form.phone.trim() && !isValidVNPhone(form.phone)) errs.phone = t('form.errors.phoneInvalid');
     if (form.email.trim() && !/^\S+@\S+\.\S+$/.test(form.email.trim()))
       errs.email = t('form.errors.emailInvalid');
     return show(errs);
@@ -300,14 +314,26 @@ function StudentForm({
   };
 
   return (
-    <Modal title={initial ? t('form.editTitle') : t('form.addTitle')} onClose={onClose} wide>
+    <Modal
+      title={initial ? t('form.editTitle') : t('form.addTitle')}
+      onClose={onClose}
+      wide
+      dirty={JSON.stringify(form) !== JSON.stringify(initialForm)}
+    >
       <form onSubmit={submit}>
         <div className="form-grid">
           <Field label={t('form.code')}>
             <input className="text-input" value={form.code} onChange={set('code')} disabled={!!initial} />
           </Field>
           <Field label={t('form.name')} error={errors.name}>
-            <input ref={refFor('name')} className="text-input" value={form.name} onChange={set('name')} />
+            {/* B-6: focus đầu vào Họ tên (Mã HV ở trước là tùy chọn, để trống tự sinh) */}
+            <input
+              ref={refFor('name')}
+              className="text-input"
+              value={form.name}
+              onChange={set('name')}
+              autoFocus
+            />
           </Field>
           <Field label={t('form.phone')} error={errors.phone}>
             <input

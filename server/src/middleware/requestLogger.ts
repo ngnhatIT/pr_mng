@@ -14,7 +14,11 @@ export function requestLogger(req: Request, res: Response, next: NextFunction): 
   const start = Date.now();
   res.on('finish', () => {
     if (req.path === '/health' || req.path === '/api/health') return;
-    const route = `${req.method} ${req.baseUrl}${req.route?.path || req.path}`;
+    // PERF-1: chỉ dùng route pattern; request không khớp route (401/404/429 ở mount, scanner) gộp
+    // về 'unmatched' — dùng req.path thô làm Map/series Prometheus phình vô hạn.
+    const route = req.route?.path
+      ? `${req.method} ${req.baseUrl}${req.route.path}`
+      : `${req.method} unmatched`;
     trackRequest(route);
     log.info('HTTP', {
       method: req.method,

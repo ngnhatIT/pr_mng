@@ -1,12 +1,14 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { leavesApi, MakeupSuggestion } from './leaves.api';
-import { useToast } from '../../shared/ui/toast';
+import { toastApiError, useToast } from '../../shared/ui/toast';
 import { Modal, ConfirmDialog } from '../../shared/components/Modal';
 import { PageHeader } from '../../shared/components/PageHeader';
-import { EmptyState } from '../../shared/components/EmptyState';
+import { EmptyState, LoadError } from '../../shared/components/EmptyState';
+import { useLoad } from '../../shared/hooks/useLoad';
+import { useUrlState } from '../../shared/hooks/useUrlState';
 import { TableSkeleton } from '../../shared/components/Skeleton';
-import { Pagination, type PaginationMeta } from '../../shared/components/Pagination';
+import { Pagination, clampPage } from '../../shared/components/Pagination';
 import { LeaveRequest, formatDate } from '../../shared/types';
 import { Icon } from '../../shared/components/icons';
 import './LeavesAdmin.css';
@@ -14,33 +16,32 @@ import { EmptyCell } from '../../shared/components/EmptyCell';
 
 export function LeavesAdmin() {
   const { t } = useTranslation(['ops', 'common']);
-  const [leaves, setLeaves] = useState<LeaveRequest[]>([]);
-  const [status, setStatus] = useState('');
-  const [loading, setLoading] = useState(false);
+  // UX-6: bộ lọc/trang trên URL
+  const [q, setQ] = useUrlState({ status: '', page: '1' });
+  const { status } = q;
+  const page = Number(q.page) || 1;
   const [approving, setApproving] = useState<LeaveRequest | null>(null);
   const [busyId, setBusyId] = useState<number | null>(null);
   const [suggestions, setSuggestions] = useState<MakeupSuggestion[] | null>(null);
   const [rejecting, setRejecting] = useState<LeaveRequest | null>(null);
-  const [page, setPage] = useState(1);
-  const [pagination, setPagination] = useState<PaginationMeta | null>(null);
   const toast = useToast();
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    try {
-      const res = await leavesApi.list(status, { page });
-      setLeaves(res.data);
-      setPagination(res.pagination);
-    } catch (err) {
-      toast(err instanceof Error ? err.message : t('leaves.toast.loadFail'), 'error');
-    } finally {
-      setLoading(false);
-    }
-  }, [status, page, toast, t]);
-
+  const {
+    data,
+    loading,
+    error,
+    reload: load,
+  } = useLoad(() => leavesApi.list(status, { page }), [status, page]);
+  const leaves: LeaveRequest[] = data?.data ?? [];
+  const pagination = data?.pagination ?? null;
   useEffect(() => {
-    void load();
-  }, [load]);
+    if (error) toastApiError(toast, error, t('leaves.toast.loadFail'));
+  }, [error, toast, t]);
+  useEffect(() => {
+    if (!data) return;
+    const p = clampPage(page, data.pagination.totalPages);
+    if (p !== page) setQ({ page: String(p) });
+  }, [data]); // chỉ kéo trang khi có kết quả mới
 
   const approve = async (l: LeaveRequest) => {
     // Chặn bấm trùng khi API đang chạy: nút hiện spinner + disabled
@@ -50,9 +51,9 @@ export function LeavesAdmin() {
       const r = await leavesApi.approve(l.id);
       setSuggestions(r.suggestions);
       setApproving(l);
-      void load();
+      load();
     } catch (err) {
-      toast(err instanceof Error ? err.message : t('leaves.toast.approveFail'), 'error');
+      toastApiError(toast, err, t('leaves.toast.approveFail'));
     } finally {
       setBusyId(null);
     }
@@ -64,9 +65,9 @@ export function LeavesAdmin() {
       await leavesApi.reject(rejecting.id);
       toast(t('leaves.toast.rejected'), 'success');
       setRejecting(null);
-      void load();
+      load();
     } catch (err) {
-      toast(err instanceof Error ? err.message : t('leaves.toast.rejectFail'), 'error');
+      toastApiError(toast, err, t('leaves.toast.rejectFail'));
     }
   };
 
@@ -78,10 +79,7 @@ export function LeavesAdmin() {
         <select
           className="text-input"
           value={status}
-          onChange={(e) => {
-            setStatus(e.target.value);
-            setPage(1);
-          }}
+          onChange={(e) => setQ({ status: e.target.value, page: '1' })}
           aria-label={t('leaves.filterLabel')}
         >
           <option value="">{t('leaves.allStatuses')}</option>
@@ -96,12 +94,14 @@ export function LeavesAdmin() {
         )}
       </div>
 
-      {loading ? (
+      {loading && !data ? (
         <TableSkeleton cols={6} />
+      ) : error && !data ? (
+        <LoadError onRetry={load} />
       ) : leaves.length === 0 ? (
         <EmptyState icon="calendar-x" title={t('leaves.empty.title')} desc={t('leaves.empty.desc')} />
       ) : (
-        <div className="table-wrap sticky">
+        <div className="table-wrap sticky" aria-busy={loading || undefined}>
           <table className="table">
             <thead>
               <tr>
@@ -160,7 +160,9 @@ export function LeavesAdmin() {
         </div>
       )}
 
-      {pagination && <Pagination pagination={pagination} onChange={(p) => setPage(p)} />}
+      {pagination && (
+        <Pagination pagination={pagination} onChange={(p) => setQ({ page: String(p) })} loading={loading} />
+      )}
 
       {approving && (
         <Modal

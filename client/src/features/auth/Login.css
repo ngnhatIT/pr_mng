@@ -41,15 +41,6 @@
   box-shadow: 0 16px 44px rgba(2, 6, 23, 0.45);
 }
 
-/* Dark mode: nền tối hơn, card theo surface của theme */
-[data-theme='dark'] .login-page {
-  background: #0a0f1e;
-}
-
-[data-theme='dark'] .login-card {
-  background: var(--bg-soft);
-}
-
 .login-title {
   font-size: 22px;
   font-weight: 800;

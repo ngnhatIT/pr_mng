@@ -77,7 +77,15 @@ export function SubmissionsModal({
 }
 
 /** Một dòng bài nộp: tải file qua Authorization header (blob URL), không gắn JWT vào URL. */
-function SubmissionRow({ s, isImage, closeDate }: { s: Submission; isImage: boolean; closeDate: string | null }) {
+function SubmissionRow({
+  s,
+  isImage,
+  closeDate,
+}: {
+  s: Submission;
+  isImage: boolean;
+  closeDate: string | null;
+}) {
   const { t } = useTranslation(['homework', 'common']);
   const fileUrl = useSecureFileUrl(s.file_url);
   // Nộp sau close_date (so sánh ngày, giờ VN) mới là trễ; thiếu dữ liệu thì không hiện

@@ -1,16 +1,19 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { zaloApi } from './notifications.api';
-import { rolesApi } from '../system/roles.api';
-import { useToast } from '../../shared/ui/toast';
+import { loadMyPermissions } from '../system/roles.api';
+import { toastApiError, useToast } from '../../shared/ui/toast';
 import { Modal } from '../../shared/components/Modal';
 import { Field } from '../../shared/components/Form';
 import { PageHeader } from '../../shared/components/PageHeader';
-import { EmptyState } from '../../shared/components/EmptyState';
+import { EmptyState, LoadError } from '../../shared/components/EmptyState';
 import { TableSkeleton, Skeleton } from '../../shared/components/Skeleton';
-import { Pagination, type PaginationMeta } from '../../shared/components/Pagination';
+import { Pagination } from '../../shared/components/Pagination';
+import { useLoad } from '../../shared/hooks/useLoad';
+import { useUrlState } from '../../shared/hooks/useUrlState';
+import { useUnsavedGuard } from '../../shared/hooks/useUnsavedGuard';
 import { Icon } from '../../shared/components/icons';
-import { ZaloConfig, ReminderItem, formatVND, formatDate } from '../../shared/types';
+import { ZaloConfig, type ReminderItem, formatVND, formatDate, formatDateTime } from '../../shared/types';
 import './Zalo.css';
 import { EmptyCell } from '../../shared/components/EmptyCell';
 
@@ -26,6 +29,27 @@ const EMPTY_CONFIG: ZaloConfig = {
   reminder_upcoming_days: '3',
 };
 
+// ADM-2/ADM-9: chỉ gửi các key form này sửa (whitelist), KHÔNG spread cả response GET — GET trả kèm
+// zalo_refresh_token/zalo_app_secret dạng mask, gửi lại là ghi đè secret thật bằng chuỗi mask.
+const EDITABLE_KEYS = [
+  'zalo_oa_id',
+  'zalo_template_overdue',
+  'zalo_template_upcoming',
+  'zalo_enabled',
+  'center_name',
+  'reminder_hour',
+  'reminder_overdue_days',
+  'reminder_upcoming_days',
+] as const;
+
+/** Payload lưu cấu hình: các key được sửa + access token CHỈ khi người dùng gõ giá trị mới (không rỗng). */
+export function buildZaloPayload(config: ZaloConfig, tokenInput: string): Partial<ZaloConfig> {
+  const payload: Partial<ZaloConfig> = {};
+  for (const k of EDITABLE_KEYS) payload[k] = config[k];
+  if (tokenInput.trim()) payload.zalo_access_token = tokenInput.trim();
+  return payload;
+}
+
 export function ZaloReminders() {
   const { t } = useTranslation(['ops', 'common']);
   const toast = useToast();
@@ -35,17 +59,20 @@ export function ZaloReminders() {
   const [canManage, setCanManage] = useState<boolean | null>(null);
   const isAdmin = canManage === true;
 
+  // config.zalo_access_token chỉ giữ mask từ server (để hiện placeholder/trạng thái); token mới gõ nằm ở tokenInput
   const [config, setConfig] = useState<ZaloConfig>(EMPTY_CONFIG);
+  // Bản đã lưu trên server: so với form để biết còn thay đổi chưa lưu (chặn rời trang)
+  const [savedConfig, setSavedConfig] = useState<ZaloConfig>(EMPTY_CONFIG);
+  const [tokenInput, setTokenInput] = useState('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [testPhone, setTestPhone] = useState('');
   const [testing, setTesting] = useState(false);
   const [running, setRunning] = useState(false);
-  const [reminders, setReminders] = useState<ReminderItem[]>([]);
-  const [loadingHistory, setLoadingHistory] = useState(true);
   const [viewing, setViewing] = useState<ReminderItem | null>(null);
-  const [historyPage, setHistoryPage] = useState(1);
+  const [q, setQ] = useUrlState({ page: '1' });
   const HISTORY_LIMIT = 20;
+  useUnsavedGuard(tokenInput.trim() !== '' || JSON.stringify(config) !== JSON.stringify(savedConfig));
 
   const loadConfig = useCallback(async () => {
     if (!isAdmin) {
@@ -53,47 +80,45 @@ export function ZaloReminders() {
       return;
     }
     try {
-      const data = await zaloApi.getConfig();
-      setConfig({ ...EMPTY_CONFIG, ...data });
+      const data = { ...EMPTY_CONFIG, ...(await zaloApi.getConfig()) };
+      setConfig(data);
+      setSavedConfig(data);
     } catch (err) {
-      toast(err instanceof Error ? err.message : t('zalo.toast.loadConfigFail'), 'error');
+      toastApiError(toast, err, t('zalo.toast.loadConfigFail'));
     } finally {
       setLoading(false);
     }
   }, [isAdmin, toast, t]);
 
-  const checkPermission = useCallback(async () => {
-    try {
-      const res = await rolesApi.mine();
-      const codes = new Set(res.map((p) => p.code));
-      setCanManage(codes.has('notifications.manage'));
-    } catch {
+  useEffect(() => {
+    let alive = true;
+    // UX-9: dùng cache quyền chung với Layout (không gọi /roles/me/permissions lần nữa)
+    loadMyPermissions().then(
+      (codes) => alive && setCanManage(codes.has('notifications.manage')),
       // fail-closed: không kiểm tra được permission thì không hiện form cấu hình
-      setCanManage(false);
-    }
+      () => alive && setCanManage(false)
+    );
+    return () => {
+      alive = false;
+    };
   }, []);
 
-  const loadHistory = useCallback(async () => {
-    setLoadingHistory(true);
-    try {
-      const data = await zaloApi.history(100);
-      setReminders(data);
-    } catch (err) {
-      toast(err instanceof Error ? err.message : t('zalo.toast.loadHistoryFail'), 'error');
-    } finally {
-      setLoadingHistory(false);
-    }
-  }, [toast, t]);
-
+  const {
+    data: reminders,
+    loading: loadingHistory,
+    error: historyError,
+    reload: loadHistory,
+  } = useLoad(() => zaloApi.history(100), []);
+  const historyPages = Math.max(1, Math.ceil((reminders?.length ?? 0) / HISTORY_LIMIT));
+  const historyPage = Math.min(Number(q.page) || 1, historyPages);
   useEffect(() => {
-    void checkPermission();
-  }, [checkPermission]);
+    if (historyError) toastApiError(toast, historyError, t('zalo.toast.loadHistoryFail'));
+  }, [historyError, toast, t]);
 
   useEffect(() => {
     if (canManage === null) return;
     void loadConfig();
-    void loadHistory();
-  }, [canManage, loadConfig, loadHistory]);
+  }, [canManage, loadConfig]);
 
   const set = (k: keyof ZaloConfig) => (v: string) => setConfig((c) => ({ ...c, [k]: v }));
 
@@ -102,17 +127,13 @@ export function ZaloReminders() {
     if (saving) return;
     setSaving(true);
     try {
-      // CRITICAL: không bao giờ gửi token dạng mask ('••••••••' hoặc 'abcd••••••••wxyz')
-      // lên server, giữ nguyên token cũ khi người dùng không đổi.
-      const payload: Partial<ZaloConfig> = { ...config };
-      if (payload.zalo_access_token?.includes('•')) {
-        delete payload.zalo_access_token;
-      }
-      const data = await zaloApi.saveConfig(payload);
-      setConfig({ ...EMPTY_CONFIG, ...data });
+      const data = { ...EMPTY_CONFIG, ...(await zaloApi.saveConfig(buildZaloPayload(config, tokenInput))) };
+      setConfig(data);
+      setSavedConfig(data);
+      setTokenInput('');
       toast(t('zalo.toast.savedConfig'), 'success');
     } catch (err) {
-      toast(err instanceof Error ? err.message : t('zalo.toast.saveFail'), 'error');
+      toastApiError(toast, err, t('zalo.toast.saveFail'));
     } finally {
       setSaving(false);
     }
@@ -127,9 +148,9 @@ export function ZaloReminders() {
     try {
       const r = await zaloApi.test(testPhone.trim());
       toast(r.message, r.status === 'failed' ? 'error' : 'success');
-      void loadHistory();
+      loadHistory();
     } catch (err) {
-      toast(err instanceof Error ? err.message : t('zalo.toast.sendFail'), 'error');
+      toastApiError(toast, err, t('zalo.toast.sendFail'));
     } finally {
       setTesting(false);
     }
@@ -140,9 +161,9 @@ export function ZaloReminders() {
     try {
       const r = await zaloApi.runOnce();
       toast(r.message, 'success');
-      void loadHistory();
+      loadHistory();
     } catch (err) {
-      toast(err instanceof Error ? err.message : t('zalo.toast.runFail'), 'error');
+      toastApiError(toast, err, t('zalo.toast.runFail'));
     } finally {
       setRunning(false);
     }
@@ -217,18 +238,15 @@ export function ZaloReminders() {
                       <input
                         className="text-input"
                         type="password"
-                        value={config.zalo_access_token}
-                        onChange={(e) => set('zalo_access_token')(e.target.value)}
-                        onFocus={(e) => {
-                          // Xoá mask khi focus để người dùng nhập token mới sạch sẽ
-                          if (e.target.value.includes('•')) {
-                            set('zalo_access_token')('');
-                          }
-                        }}
+                        // Mask token đã lưu chỉ hiện ở placeholder; để trống = giữ nguyên token cũ
+                        value={tokenInput}
+                        onChange={(e) => setTokenInput(e.target.value)}
                         placeholder={
-                          config.zalo_access_token ? t('zalo.ph.tokenSaved') : t('zalo.ph.tokenNew')
+                          config.zalo_access_token
+                            ? t('zalo.ph.tokenSaved', { mask: config.zalo_access_token })
+                            : t('zalo.ph.tokenNew')
                         }
-                        autoComplete="off"
+                        autoComplete="new-password"
                       />
                     </Field>
                   </div>
@@ -356,9 +374,11 @@ export function ZaloReminders() {
       <div className="card zalo-history">
         <h2 className="card-title">{t('zalo.history.title')}</h2>
         <p className="card-desc">{t('zalo.history.desc')}</p>
-        {loadingHistory ? (
+        {loadingHistory && !reminders ? (
           <TableSkeleton cols={7} />
-        ) : reminders.length === 0 ? (
+        ) : historyError && !reminders ? (
+          <LoadError onRetry={loadHistory} />
+        ) : !reminders || reminders.length === 0 ? (
           <EmptyState
             icon="bell"
             title={t('zalo.empty.title')}
@@ -377,7 +397,7 @@ export function ZaloReminders() {
           />
         ) : (
           <>
-            <div className="table-wrap sticky">
+            <div className="table-wrap sticky" aria-busy={loadingHistory || undefined}>
               <table className="table">
                 <thead>
                   <tr>
@@ -397,7 +417,7 @@ export function ZaloReminders() {
                     .slice((historyPage - 1) * HISTORY_LIMIT, historyPage * HISTORY_LIMIT)
                     .map((r) => (
                       <tr key={r.id}>
-                        <td className="mono">{r.created_at?.slice(0, 16).replace('T', ' ')}</td>
+                        <td className="mono">{formatDateTime(r.created_at)}</td>
                         <td>
                           {r.student_name || <EmptyCell />}
                           {r.student_code && <span className="muted mono"> ({r.student_code})</span>}
@@ -434,16 +454,15 @@ export function ZaloReminders() {
                 </tbody>
               </table>
             </div>
-            {(() => {
-              const totalPages = Math.max(1, Math.ceil(reminders.length / HISTORY_LIMIT));
-              const pagination: PaginationMeta = {
-                page: Math.min(historyPage, totalPages),
+            <Pagination
+              pagination={{
+                page: historyPage,
                 limit: HISTORY_LIMIT,
                 total: reminders.length,
-                totalPages,
-              };
-              return <Pagination pagination={pagination} onChange={(p) => setHistoryPage(p)} />;
-            })()}
+                totalPages: historyPages,
+              }}
+              onChange={(p) => setQ({ page: String(p) })}
+            />
           </>
         )}
       </div>

@@ -1,9 +1,5 @@
 import { Pool, PoolClient, types } from 'pg';
 import { AsyncLocalStorage } from 'async_hooks';
-import dotenv from 'dotenv';
-
-// Nạp .env (nếu có) trước khi đọc DATABASE_URL — dev tiện, production dùng env thật.
-dotenv.config();
 
 // PostgreSQL trả BIGINT (OID 20, ví dụ COUNT(*)) dạng string để tránh mất precision.
 // App này dùng COUNT cho pagination — ép về number cho đồng nhất với SQLite cũ.
@@ -56,6 +52,9 @@ const pool = new Pool({
   connectionTimeoutMillis: 5000,
   // Thu hồi connection nhàn rỗi sau 30s.
   idleTimeoutMillis: 30000,
+  // Connection rảnh không giữ event loop: script/test thoát được mà không cần closePool()
+  // (server vẫn sống nhờ HTTP listener; graceful shutdown vẫn gọi closePool).
+  allowExitOnIdle: true,
   // statement_timeout: kill query chạy quá 30s (chống runaway làm cạn pool).
   // timezone=Asia/Ho_Chi_Minh: NOW() trả giờ VN nhất quán mọi môi trường.
   options: '-c statement_timeout=30000 -c timezone=Asia/Ho_Chi_Minh',
@@ -202,9 +201,14 @@ type QueryFn = (text: string, params?: unknown[]) => Promise<{ rows: unknown[]; 
 
 /** Bảng không có cột id (khóa chính composite) — không RETURNING id được. */
 const NO_ID_TABLES = new Set([
+  'idempotency_keys',
+  'quiz_essay_scores',
+  'uploads',
   'center_settings',
   'settings',
   'salary_rules',
+  'salary_rate_history',
+  'payroll_closures',
   'payment_txns',
   'parent_students',
   'homework_targets',
@@ -287,41 +291,76 @@ function isTransientDbError(err: unknown): boolean {
   return /ECONNRESET|ECONNREFUSED|ETIMEDOUT|terminating connection/i.test(msg);
 }
 
-async function poolQuery(text: string, params?: unknown[]) {
-  const sql = translateSqlite(text);
+/** Câu lệnh chỉ đọc (SELECT thuần, hoặc WITH không ghi) — an toàn để retry và không cần actor audit. */
+function isReadOnlySql(sql: string): boolean {
+  if (/\bFOR\s+(UPDATE|SHARE|NO\s+KEY|KEY)\b/i.test(sql)) return false;
+  if (/^\s*SELECT\b/i.test(sql)) return true;
+  return /^\s*WITH\b/i.test(sql) && !/\b(INSERT|UPDATE|DELETE|MERGE)\b/i.test(sql);
+}
+
+/**
+ * PERF-1: chỉ trigger audit_payment/audit_invoice đọc app.user_id. Câu ghi cần actor khi chạm
+ * payments/invoices, hoặc là DELETE (FK CASCADE/SET NULL có thể lan vào invoices/payments,
+ * vd xóa học viên/lớp). Thêm trigger audit cho bảng khác -> thêm tên bảng vào đây.
+ */
+function needsActor(sql: string): boolean {
+  return /^\s*DELETE\b/i.test(sql) || /\b(payments|invoices)\b/i.test(sql);
+}
+
+/** BEGIN + set_config trong 1 round-trip (simple query). actor do server tạo ('<id>:<role>'). */
+function beginWithActor(client: PoolClient, actor: string | undefined) {
+  return client.query(
+    actor ? `BEGIN; SELECT set_config('app.user_id', ${client.escapeLiteral(actor)}, true)` : 'BEGIN'
+  );
+}
+
+/** DB-1: ROLLBACK lỗi (mất kết nối) không được che lỗi gốc; trả về true nếu client hỏng. */
+async function safeRollback(client: PoolClient): Promise<boolean> {
+  try {
+    await client.query('ROLLBACK');
+    return false;
+  } catch {
+    return true;
+  }
+}
+
+/** Chạy SQL ĐÃ dịch (pgSql) trên pool. db.query/db.exec dịch trước khi gọi; makeStatement dịch 1 lần lúc prepare. */
+async function poolQueryPg(sql: string, params?: unknown[]) {
   const actor = requestActor.getStore();
-  // Không có actor (boot, scheduler, health check, test): đường nhanh như cũ.
-  // Retry 1 lần cho lỗi transient (PG restart/failover vài giây).
-  if (!actor) {
+  const readOnly = isReadOnlySql(sql);
+  // Không có actor (boot, scheduler, health check, test), câu chỉ đọc, hoặc câu ghi không
+  // chạm bảng có trigger audit: đường nhanh, 1 round-trip.
+  if (!actor || readOnly || !needsActor(sql)) {
     try {
       return await pool.query(sql, params as unknown[]);
     } catch (err) {
-      if (!isTransientDbError(err)) throw err;
+      // DATA-17: chỉ retry SELECT. INSERT/UPDATE có thể đã COMMIT trước khi mất
+      // kết nối — chạy lại sẽ ghi trùng.
+      if (!readOnly || !isTransientDbError(err)) throw err;
       await new Promise((r) => setTimeout(r, 300));
       return await pool.query(sql, params as unknown[]);
     }
   }
-  // Có actor (request đã đăng nhập): giữ 1 connection riêng, mở transaction,
-  // gắn SET LOCAL app.user_id rồi mới chạy query — đảm bảo trigger audit đọc
-  // được actor trên ĐÚNG connection ghi. SET LOCAL tự hết hiệu lực khi
-  // COMMIT/ROLLBACK nên không rò sang request khác dùng chung pool.
+  // Có actor + ghi bảng audit: giữ 1 connection, BEGIN + SET LOCAL app.user_id (1 RT), query,
+  // COMMIT — trigger audit đọc được actor trên ĐÚNG connection ghi. SET LOCAL tự hết hiệu lực
+  // khi COMMIT/ROLLBACK nên không rò sang request khác dùng chung pool.
   const client = await pool.connect();
+  let broken = false;
   try {
-    await client.query('BEGIN');
-    try {
-      await client.query('SELECT set_config($1, $2, true)', ['app.user_id', actor]);
-    } catch {
-      // Audit là best-effort: thiếu actor thì changed_by = NULL, không chặn nghiệp vụ.
-    }
+    await beginWithActor(client, actor);
     const r = await client.query(sql, params as unknown[]);
     await client.query('COMMIT');
     return r;
   } catch (e) {
-    await client.query('ROLLBACK').catch(() => undefined);
+    broken = await safeRollback(client);
     throw e;
   } finally {
-    client.release();
+    client.release(broken);
   }
+}
+
+function poolQuery(text: string, params?: unknown[]) {
+  return poolQueryPg(translateSqlite(text), params);
 }
 
 function makeTx(client: PoolClient): Tx {
@@ -335,7 +374,7 @@ function makeTx(client: PoolClient): Tx {
 }
 
 export const db: Db = {
-  prepare: (sql) => makeStatement(poolQuery, sql),
+  prepare: (sql) => makeStatement(poolQueryPg, sql),
   // poolQuery đã tự dịch SQL — không dịch 2 lần.
   exec: async (sql) => {
     await poolQuery(sql);
@@ -343,24 +382,17 @@ export const db: Db = {
   query: poolQuery,
   async transaction<T>(fn: (tx: Tx) => Promise<T>): Promise<T> {
     const client = await pool.connect();
-    const actor = requestActor.getStore();
+    let broken = false;
     try {
-      await client.query('BEGIN');
-      if (actor) {
-        try {
-          await client.query('SELECT set_config($1, $2, true)', ['app.user_id', actor]);
-        } catch {
-          // Audit là best-effort — không chặn transaction nghiệp vụ.
-        }
-      }
+      await beginWithActor(client, requestActor.getStore());
       const result = await fn(makeTx(client));
       await client.query('COMMIT');
       return result;
     } catch (e) {
-      await client.query('ROLLBACK');
+      broken = await safeRollback(client);
       throw e;
     } finally {
-      client.release();
+      client.release(broken);
     }
   },
   async connect() {
@@ -377,6 +409,8 @@ export const db: Db = {
     };
   },
 };
+
+export const __test = { isReadOnlySql, needsActor };
 
 /** Đóng pool khi shutdown (graceful shutdown gọi hàm này). */
 export async function closePool(): Promise<void> {

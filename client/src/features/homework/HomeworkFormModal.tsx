@@ -1,81 +1,36 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import {
-  homeworkApi,
-  uploadFile,
-  UPLOAD_ACCEPT,
-  MAX_UPLOAD_BYTES,
-  type QuizQuestionForm,
-  type Rubric,
-} from './homework.api';
-import { ClassItem, classesApi } from '../classes/classes.api';
+import { homeworkApi } from './homework.api';
+import { ClassItem } from '../classes/classes.api';
 import { HomeworkItem, formatDate, todayVN, nowVN } from '../../shared/types';
-import { useToast } from '../../shared/ui/toast';
+import { toastApiError, useToast } from '../../shared/ui/toast';
 import { Modal, ConfirmDialog } from '../../shared/components/Modal';
 import { Field, useFieldErrors } from '../../shared/components/Form';
 import { Icon } from '../../shared/components/icons';
 import { RichTextarea } from '../../shared/components/RichTextarea';
+import { useUnsavedGuard } from '../../shared/hooks/useUnsavedGuard';
 import { QuestionBank } from './QuestionBank';
-import type { BankQuestion } from './homework.api';
+import { DEFAULT_MAX_ATTEMPTS, type HwErrKey } from './homeworkForm';
+import { DeadlineFields } from './DeadlineFields';
+import { QuizBuilder, useQuizBuilder } from './QuizBuilder';
+import { AttachmentsField, useAttachments } from './AttachmentsField';
+import { RubricField, useRubric } from './RubricField';
+import { ClassTargeting, useClassTargeting } from './ClassTargeting';
 
-type QType = 'single' | 'multiple' | 'truefalse' | 'essay';
+// Hàm thuần tách sang homeworkForm.ts; re-export để import cũ (test, nơi khác) vẫn chạy.
+export {
+  isValidHttpUrl,
+  isQuizQuestionInvalid,
+  quickDate,
+  validateLocalUpload,
+  pruneSelected,
+  editAttachmentsPayload,
+} from './homeworkForm';
 
-/** URL http/https hợp lệ (dùng URL constructor thay vì regex tự chế). */
-export function isValidHttpUrl(s: string): boolean {
-  try {
-    const u = new URL(s.trim());
-    return u.protocol === 'http:' || u.protocol === 'https:';
-  } catch {
-    return false;
-  }
-}
-
-/** Câu hỏi quiz chưa hợp lệ: thiếu nội dung / đáp án / đáp án đúng / điểm (server: điểm > 0 và ≤ 1000). Hàm thuần để test được. */
-export function isQuizQuestionInvalid(q: QuizQuestionForm): boolean {
-  const qtype = q.qtype ?? 'single';
-  if (!q.question.trim()) return true;
-  if (!(q.points > 0) || q.points > 1000) return true;
-  if (qtype === 'essay') return false;
-  const filled = q.options.filter((o) => o.text.trim());
-  if (qtype === 'truefalse')
-    return filled.length !== 2 || filled.filter((o) => o.is_correct).length !== 1;
-  if (filled.length < 2) return true;
-  const correctCount = filled.filter((o) => o.is_correct).length;
-  return qtype === 'single' ? correctCount !== 1 : correctCount < 1;
-}
-
-const BLANK_QTYPE_OPTIONS: { text: string; is_correct: boolean }[] = [
-  { text: '', is_correct: true },
-  { text: '', is_correct: false },
-];
-
-/** Ngày nhanh cho hạn nộp, neo theo todayVN() (lịch VN) để không lệch ngày theo múi giờ máy. */
-export function quickDate(kind: 'today' | 'tomorrow' | 'weekend' | 'nextweek'): string {
-  const [y, m, day] = todayVN().split('-').map(Number);
-  // Nửa đêm giờ máy: chỉ làm toán lịch (cộng ngày, thứ trong tuần), không đổi múi giờ khi xuất.
-  const d = new Date(y, m - 1, day);
-  if (kind === 'tomorrow') d.setDate(d.getDate() + 1);
-  if (kind === 'weekend') d.setDate(d.getDate() + ((7 - d.getDay()) % 7 || 7));
-  if (kind === 'nextweek') d.setDate(d.getDate() + 7);
-  const p = (n: number) => String(n).padStart(2, '0');
-  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
-}
-
-/** Lỗi client check trước khi gửi file: 'type' | 'size' | null. Hàm thuần để test được. */
-export function validateLocalUpload(name: string, size: number): 'type' | 'size' | null {
-  const ext = name.slice(name.lastIndexOf('.')).toLowerCase();
-  if (!UPLOAD_ACCEPT.split(',').includes(ext)) return 'type';
-  if (size > MAX_UPLOAD_BYTES) return 'size';
-  return null;
-}
-
-interface Attachment {
-  id?: number; // có id = đính kèm đã lưu (chế độ sửa), không id = mới thêm trong phiên này
-  name: string;
-  url: string;
-  kind: string;
-}
-
+/**
+ * Form tạo/sửa bài tập + quiz. Các phần lớn tách file riêng (state vẫn ở đây qua hook, truyền props xuống):
+ * ClassTargeting (lớp + đối tượng), AttachmentsField, RubricField, QuizBuilder.
+ */
 export function HomeworkFormModal({
   classes,
   initial,
@@ -91,395 +46,49 @@ export function HomeworkFormModal({
   const toast = useToast();
   // Lỗi inline dưới field + focus field lỗi đầu tiên (skill 8.2).
   // Nút submit KHÔNG disable khi thiếu dữ liệu: bấm sẽ hiện lỗi inline thay vì im lặng.
-  type HwErrKey = 'classes' | 'title' | 'maxScore' | 'dueDate' | 'closeDate' | 'publishAt' | 'students' | 'quiz' | 'rubricName' | 'rubricCriteria' | 'attachment';
-  const { errors, refFor, show, clear } = useFieldErrors<HwErrKey>();
+  const fe = useFieldErrors<HwErrKey>();
+  const { errors, refFor, show, clear } = fe;
   const [kind, setKind] = useState<'homework' | 'quiz'>(initial?.kind || 'homework');
   const [title, setTitle] = useState(initial?.title || '');
   const [content, setContent] = useState(initial?.content || '');
   const [dueDate, setDueDate] = useState(initial?.due_date?.slice(0, 10) || '');
   const [closeDate, setCloseDate] = useState(initial?.close_date?.slice(0, 10) || '');
   const [maxScore, setMaxScore] = useState(initial?.max_score?.toString() || '');
-  const [selectedClasses, setSelectedClasses] = useState<number[]>(initial ? [initial.class_id] : []);
-  const [classSearch, setClassSearch] = useState('');
-  // Đối tượng: cả lớp hoặc chọn riêng từng em
-  const [targetMode, setTargetMode] = useState<'all' | 'selected'>('all');
-  const [students, setStudents] = useState<{ id: number; name: string }[]>([]);
-  const [studentsLoading, setStudentsLoading] = useState(false);
-  const [selectedStudents, setSelectedStudents] = useState<number[]>([]);
-  const [studentSearch, setStudentSearch] = useState('');
-  // Đính kèm (YC1: hiện ở cả chế độ tạo và sửa; updateHomework đã đồng bộ)
-  const [attachments, setAttachments] = useState<Attachment[]>(initial?.attachments ?? []);
-  const [attName, setAttName] = useState('');
-  const [attUrl, setAttUrl] = useState('');
-  const attNameRef = useRef<HTMLInputElement>(null);
-  const attUrlRef = useRef<HTMLInputElement>(null);
-  // File đã upload trong phiên này nhưng chưa lưu bài (mồ côi nếu hủy modal)
-  const orphanUrls = useRef<Set<string>>(new Set());
-  // Upload file: tiến trình % + trạng thái đang tải
-  const [uploadPct, setUploadPct] = useState<number | null>(null);
-  const [uploading, setUploading] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  // Chế độ sửa: đánh dấu đã đụng vào đính kèm (cho dirty-check khi đóng modal)
-  const [attDirty, setAttDirty] = useState(false);
-  const attDirtyRef = useRef(attDirty);
-  attDirtyRef.current = attDirty;
-  // P1-2: ref từng khối câu hỏi để cuộn + focus tới câu lỗi đầu tiên
-  const qBlockRefs = useRef<(HTMLDivElement | null)[]>([]);
-  // Rubric
-  const [rubrics, setRubrics] = useState<Rubric[]>([]);
-  const [rubricId, setRubricId] = useState<string>(initial?.rubric_id?.toString() || '');
-  const [showRubricForm, setShowRubricForm] = useState(false);
-  const [newRubricName, setNewRubricName] = useState('');
+  // C-1: quiz mới mặc định 3 lượt (mỗi lượt lộ tổng điểm -> không giới hạn = dò được đáp án); '' = không giới hạn
+  const initialMaxAttempts = initial ? (initial.max_attempts?.toString() ?? '') : DEFAULT_MAX_ATTEMPTS;
+  const [maxAttempts, setMaxAttempts] = useState(initialMaxAttempts);
+  const maxAttemptsPayload = maxAttempts ? Number(maxAttempts) : null;
+  // Thứ tự hook giữ đúng thứ tự effect cũ: đề quiz -> đính kèm -> rubric -> học viên
+  const quiz = useQuizBuilder(initial, clear);
+  const att = useAttachments(initial, fe);
+  const rubric = useRubric(initial, fe);
+  const ct = useClassTargeting(initial, clear);
+  const { selectedClasses, selectedStudents, targetMode, studentsLoading, pickedStudents } = ct;
+  const { questions, quizEdited, builderLocked, quizTotal, quizInvalidCount, cleanedQuestions } = quiz;
+  const { attachments, attLoad, attDirty, attName, attUrl, cleanupOrphans } = att;
+  const { rubricId, newRubricName } = rubric;
   const templates = t('form.templates', { returnObjects: true }) as {
     name: string;
     title: string;
     content: string;
   }[];
-  const defaultCriteria = t('form.defaultCriteria', { returnObjects: true }) as string[];
-  const [newCriteria, setNewCriteria] = useState<{ name: string; max_score: string }[]>(() =>
-    defaultCriteria.map((name) => ({ name, max_score: '10' }))
-  );
-  const [rubricBusy, setRubricBusy] = useState(false);
-  // Quiz builder
-  const [questions, setQuestions] = useState<QuizQuestionForm[]>([
-    {
-      question: '',
-      points: 1,
-      qtype: 'single',
-      options: BLANK_QTYPE_OPTIONS.map((o) => ({ ...o })),
-    },
-  ]);
-  const [quizLocked, setQuizLocked] = useState(false); // đã có người làm → không sửa đề
-  // P0-1: đánh dấu đã sửa đề quiz (không bật khi tải đề cũ lúc mở modal sửa)
-  const [quizEdited, setQuizEdited] = useState(false);
-
-  // Khi sửa quiz: tải đề cũ (kèm đáp án đúng) để không vô tình xóa
-  useEffect(() => {
-    if (initial && initial.kind === 'quiz') {      homeworkApi
-        .getQuizEdit(initial.id)
-        .then((qs) => {
-          if (qs.length > 0) {
-            setQuestions(
-              qs.map((q) => ({
-                question: q.question,
-                points: q.points,
-                qtype: (q.qtype ?? 'single') as QType,
-                options: q.options.map((o) => ({ text: o.text, is_correct: !!o.is_correct })),
-              }))
-            );
-          }
-        })
-        .catch(() => {});
-      // Kiểm tra đã có lượt làm chưa
-      homeworkApi
-        .getQuizAttempts(initial.id)
-        .then((a) => setQuizLocked(a.length > 0))
-        .catch(() => {});
-    }
-  }, [initial]);
-  // Chế độ sửa: tải đính kèm hiện có của bài tập (danh sách không trả kèm attachments)
-  useEffect(() => {
-    if (!initial) return;
-    let cancelled = false;
-    homeworkApi
-      .get(initial.id)
-      .then((hw) => {
-        // Chỉ nạp khi user chưa đụng vào đính kèm (tránh fetch về sau ghi đè cái vừa thêm)
-        if (!cancelled && hw.attachments && !attDirtyRef.current) setAttachments(hw.attachments);
-      })
-      .catch(() => {});
-    return () => {
-      cancelled = true;
-    };
-  }, [initial]);
   // Xuất bản
   const [publishMode, setPublishMode] = useState<'now' | 'draft' | 'schedule'>('now');
   const [publishAt, setPublishAt] = useState('');
   const [showPreview, setShowPreview] = useState(false);
-  const [showBankPicker, setShowBankPicker] = useState(false);
-
-  const importBankQuestions = (bank: BankQuestion[]) => {
-    const mapped = bank.map((b) => ({
-      question: b.question,
-      points: b.points,
-      qtype: b.qtype as QType,
-      options: b.options.map((o) => ({ text: o.text, is_correct: o.is_correct })),
-    }));
-    editQuestions((qs) => {
-      const onlyEmpty = qs.length === 1 && !qs[0].question.trim();
-      return onlyEmpty ? mapped : [...qs, ...mapped];
-    });
-    toast(t('form.toast.bankImported', { count: mapped.length }), 'success');
-  };
   const [busy, setBusy] = useState(false);
 
-  useEffect(() => {
-    homeworkApi
-      .listRubrics()
-      .then(setRubrics)
-      .catch(() => {});
-  }, []);
-
-  // Load học viên thuộc các lớp đã chọn (cho giao riêng từng em).
-  // Dùng chi tiết từng lớp để chỉ hiện học viên đang học ở các lớp đó.
-  useEffect(() => {
-    if (targetMode !== 'selected' || !selectedClasses.length) {
-      setStudents([]);
-      setStudentsLoading(false);
-      return;
-    }
-    let cancelled = false;
-    setStudentsLoading(true);
-    Promise.all(selectedClasses.map((id) => classesApi.get(id).catch(() => null)))
-      .then((details) => {
-        if (cancelled) return;
-        const seen = new Set<number>();
-        const merged: { id: number; name: string }[] = [];
-        for (const d of details) {
-          for (const s of d?.students ?? []) {
-            if (!seen.has(s.id)) {
-              seen.add(s.id);
-              merged.push({ id: s.id, name: s.name });
-            }
-          }
-        }
-        merged.sort((a, b) => a.name.localeCompare(b.name, 'vi'));
-        setStudents(merged);
-      })
-      .catch(() => {})
-      .finally(() => {
-        if (!cancelled) setStudentsLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [targetMode, selectedClasses]);
-
-  const filteredClasses = useMemo(
-    () => classes.filter((c) => c.name.toLowerCase().includes(classSearch.toLowerCase())),
-    [classes, classSearch]
-  );
-  const filteredStudents = useMemo(
-    () => students.filter((s) => s.name.toLowerCase().includes(studentSearch.toLowerCase())),
-    [students, studentSearch]
-  );
-
-  const toggleClass = (id: number) => {
-    clear('classes');
-    setSelectedClasses((s) => (s.includes(id) ? s.filter((x) => x !== id) : [...s, id]));
-  };
-  const toggleStudent = (id: number) => {
-    clear('students');
-    setSelectedStudents((s) => (s.includes(id) ? s.filter((x) => x !== id) : [...s, id]));
-  };
-
-  const addAttachment = () => {
-    // P1-4: mọi lỗi thêm đính kèm báo inline dưới cụm đính kèm (đúng pattern useFieldErrors), không toast
-    const name = attName.trim();
-    const url = attUrl.trim();
-    if (!name) {
-      show({ ...errors, attachment: t('form.errors.attRequired') });
-      attNameRef.current?.focus();
-      return;
-    }
-    if (!url) {
-      show({ ...errors, attachment: t('form.errors.attRequired') });
-      attUrlRef.current?.focus();
-      return;
-    }
-    // P0-3: URL phải đúng định dạng http/https
-    if (!isValidHttpUrl(url)) {
-      show({ ...errors, attachment: t('form.errors.attUrlInvalid') });
-      attUrlRef.current?.focus();
-      return;
-    }
-    setAttachments((a) => [...a, { name, url, kind: 'link' }]);
-    setAttName('');
-    setAttUrl('');
-    if (initial) setAttDirty(true);
-    clear('attachment');
-  };
-
-  /** Xóa đính kèm khỏi danh sách (chưa lưu DB).
-   * File vừa upload trong phiên này mà bị gỡ → xóa ngay trên server để khỏi mồ côi.
-   * File đã lưu từ trước mà bị gỡ → server dọn khi lưu bài (syncAttachments). */
-  const removeAttachment = (i: number) => {
-    setAttachments((list) => {
-      const a = list[i];
-      if (a && a.kind === 'file' && orphanUrls.current.has(a.url)) {
-        orphanUrls.current.delete(a.url);
-        const filename = a.url.split('/').pop() || '';
-        homeworkApi.deleteUpload(filename).catch(() => {});
-      }
-      return list.filter((_, j) => j !== i);
-    });
-    if (initial) setAttDirty(true);
-    clear('attachment');
-  };
-
-  /** Chọn file từ máy → validate client → upload qua XHR (có % tiến trình) → thêm vào đính kèm. */
-  const handleFileSelect = async (file: File | undefined) => {
-    if (!file || uploading) return;
-    const problem = validateLocalUpload(file.name, file.size);
-    if (problem === 'size') {
-      show({ ...errors, attachment: t('form.errors.attTooBig') });
-      return;
-    }
-    if (problem === 'type') {
-      show({ ...errors, attachment: t('form.errors.attTypeInvalid') });
-      return;
-    }
-    setUploading(true);
-    setUploadPct(0);
-    clear('attachment');
-    try {
-      const up = await uploadFile(file, setUploadPct);
-      setAttachments((a) => [...a, { name: up.name, url: up.url, kind: 'file' }]);
-      orphanUrls.current.add(up.url); // chưa lưu bài → mồ côi nếu hủy modal
-      if (initial) setAttDirty(true);
-    } catch (err) {
-      show({ ...errors, attachment: err instanceof Error ? err.message : t('form.errors.attUploadFailed') });
-    } finally {
-      setUploading(false);
-      setUploadPct(null);
-      if (fileInputRef.current) fileInputRef.current.value = '';
-    }
-  };
-
-  /** Dọn file mồ côi đã upload trong phiên này (khi hủy modal). Best-effort, không chặn đóng. */
-  const cleanupOrphans = useCallback(() => {
-    for (const url of orphanUrls.current) {
-      const filename = url.split('/').pop() || '';
-      homeworkApi.deleteUpload(filename).catch(() => {});
-    }
-    orphanUrls.current.clear();
-  }, []);
-
-  const createRubricNow = async () => {
-    if (rubricBusy) return;
-    // Validate inline dưới field + focus field lỗi đầu tiên (skill 8.2)
-    const rerrs: { rubricName?: string; rubricCriteria?: string } = {};
-    if (!newRubricName.trim()) rerrs.rubricName = t('form.errors.rubricNameRequired');
-    const validCriteria = newCriteria
-      .map((c) => ({ name: c.name.trim(), max_score: Number(c.max_score) || 0 }))
-      .filter((c) => c.name && c.max_score > 0);
-    if (validCriteria.length === 0) rerrs.rubricCriteria = t('form.errors.rubricCriteriaRequired');
-    // P1-9: merge lỗi rubric vào map hiện có thay vì ghi đè toàn bộ lỗi form;
-    // chỉ chặn tạo rubric khi chính rubric có lỗi (lỗi form khác không liên quan).
-    if (Object.keys(rerrs).length > 0) {
-      show({ ...errors, ...rerrs });
-      return;
-    }
-    setRubricBusy(true);
-    try {
-      const r = await homeworkApi.createRubric(newRubricName.trim(), validCriteria);
-      setRubrics((rs) => [r, ...rs]);
-      setRubricId(String(r.id));
-      setShowRubricForm(false);
-      setNewRubricName('');
-      toast(t('form.toast.rubricCreated'), 'success');
-    } catch (err) {
-      toast(err instanceof Error ? err.message : t('form.toast.rubricFail'), 'error');
-    } finally {
-      setRubricBusy(false);
-    }
-  };
-
-  // Quiz builder helpers
-  /** Mọi thao tác sửa đề quiz đi qua đây để đánh dấu đã sửa (dirty-check P0-1).
-   * Tải đề cũ lúc mở modal sửa dùng setQuestions trực tiếp nên không bị đánh dấu. */
-  const editQuestions = (updater: (qs: QuizQuestionForm[]) => QuizQuestionForm[]) => {
-    setQuizEdited(true);
-    setQuestions(updater);
-  };
-  const addQuestion = () =>
-    editQuestions((q) => [
-      ...q,
-      {
-        question: '',
-        points: 1,
-        qtype: 'single' as QType,
-        options: BLANK_QTYPE_OPTIONS.map((o) => ({ ...o })),
-      },
-    ]);
-  const updateQuestion = (i: number, patch: Partial<QuizQuestionForm>) => {
-    clear('quiz');
-    editQuestions((qs) => qs.map((q, j) => (j === i ? { ...q, ...patch } : q)));
-  };
-  /** Đổi loại câu hỏi: truefalse tự tạo sẵn 2 đáp án Đúng/Sai, essay ẩn đáp án. */
-  const changeQuestionType = (qi: number, next: QType) => {
-    clear('quiz');
-    editQuestions((qs) =>
-      qs.map((q, j) => {
-        if (j !== qi) return q;
-        if (next === 'truefalse') {
-          return {
-            ...q,
-            qtype: next,
-            options: [
-              { text: t('bank.trueLabel'), is_correct: true },
-              { text: t('bank.falseLabel'), is_correct: false },
-            ],
-          };
-        }
-        if (next === 'essay') return { ...q, qtype: next, options: [] };
-        const options = q.options.length >= 2 ? q.options : BLANK_QTYPE_OPTIONS.map((o) => ({ ...o }));
-        // Chuyển về single: đảm bảo chỉ 1 đáp án đúng
-        const fixed =
-          next === 'single' && options.filter((o) => o.is_correct).length !== 1
-            ? options.map((o, k) => ({ ...o, is_correct: k === 0 }))
-            : options;
-        return { ...q, qtype: next, options: fixed };
-      })
-    );
-  };
-  const addOption = (qi: number) =>
-    editQuestions((qs) =>
-      qs.map((q, j) => (j === qi ? { ...q, options: [...q.options, { text: '', is_correct: false }] } : q))
-    );
-  const updateOption = (qi: number, oi: number, patch: Partial<{ text: string; is_correct: boolean }>) =>
-    editQuestions((qs) =>
-      qs.map((q, j) => {
-        if (j !== qi) return q;
-        const qtype = q.qtype ?? 'single';
-        return {
-          ...q,
-          // single/truefalse: 1 đáp án đúng nên bỏ chọn các đáp án khác;
-          // multiple: bật/tắt từng đáp án, giữ nguyên các đáp án còn lại
-          options: q.options.map((o, k) =>
-            k === oi
-              ? { ...o, ...patch }
-              : patch.is_correct && (qtype === 'single' || qtype === 'truefalse')
-                ? { ...o, is_correct: false }
-                : o
-          ),
-        };
-      })
-    );
-  const removeOption = (qi: number, oi: number) =>
-    editQuestions((qs) =>
-      qs.map((q, j) => (j === qi ? { ...q, options: q.options.filter((_, k) => k !== oi) } : q))
-    );
-
-  const selectedRubric = rubrics.find((r) => String(r.id) === rubricId);
-  const quizTotal = questions.reduce((s, q) => s + (Number(q.points) || 0), 0);
-
-  /** Validate builder theo loại câu hỏi (server validate lại từ B1). */
-  const quizInvalidCount = questions.filter(isQuizQuestionInvalid).length;
-
-  // Lọc đáp án trống trước khi gửi (server cũng validate lại)
-  const cleanedQuestions: QuizQuestionForm[] = questions.map((q) => ({
-    ...q,
-    qtype: q.qtype ?? 'single',
-    options: q.qtype === 'essay' ? [] : q.options.filter((o) => o.text.trim()),
-  }));
+  // Sửa quiz: chỉ lưu đề khi đã sửa đề và đề không bị khóa (có lượt làm / tải lỗi) — server chặn sửa đề đã có lượt làm
+  const willSaveQuiz = kind === 'quiz' && (!initial || (quizEdited && !builderLocked));
 
   const validate = () => {
     // P1-1: thứ tự insert errs khớp thứ tự field trên form để focus field lỗi đầu tiên đúng.
     const errs: Partial<Record<HwErrKey, string>> = {};
     if (!initial && selectedClasses.length === 0) errs.classes = t('form.errors.classRequired');
-    if (!initial && targetMode === 'selected' && selectedStudents.length === 0)
-      errs.students = t('form.errors.studentsRequired');
+    if (!initial && targetMode === 'selected') {
+      if (studentsLoading) errs.students = t('form.loadingStudents');
+      else if (pickedStudents.length === 0) errs.students = t('form.errors.studentsRequired');
+    }
     if (!title.trim()) errs.title = t('form.errors.titleRequired');
     if (kind === 'homework' && maxScore) {
       const m = Number(maxScore);
@@ -488,24 +97,17 @@ export function HomeworkFormModal({
     // Hạn quá khứ chỉ cấm khi tạo mới; khi sửa được giữ hạn cũ (bài đã quá hạn vẫn lưu được)
     if (!initial && dueDate && dueDate < todayVN()) errs.dueDate = t('form.errors.duePast');
     if (dueDate && closeDate && closeDate < dueDate) errs.closeDate = t('form.errors.closeBeforeDue');
-    if (kind === 'quiz' && quizInvalidCount > 0)
+    if (kind === 'quiz' && maxAttempts) {
+      const n = Number(maxAttempts);
+      if (!Number.isInteger(n) || n < 1 || n > 100) errs.maxAttempts = t('form.errors.maxAttemptsInvalid');
+    }
+    if (willSaveQuiz && quizInvalidCount > 0)
       errs.quiz = t('form.errors.quizInvalid', { count: quizInvalidCount });
     if (!initial && publishMode === 'schedule' && !publishAt)
       errs.publishAt = t('form.errors.publishAtRequired');
     const ok = show(errs);
     // P1-2: lỗi quiz là lỗi đầu tiên → cuộn + focus tới câu hỏi lỗi đầu tiên (pattern QuizTaker)
-    if (!ok && (Object.keys(errs) as HwErrKey[])[0] === 'quiz') {
-      const firstBad = questions.findIndex(isQuizQuestionInvalid);
-      if (firstBad >= 0) {
-        requestAnimationFrame(() => {
-          const el = qBlockRefs.current[firstBad];
-          if (!el) return;
-          const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-          el.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'center' });
-          el.focus({ preventScroll: true });
-        });
-      }
-    }
+    if (!ok && (Object.keys(errs) as HwErrKey[])[0] === 'quiz') quiz.focusFirstInvalid();
     return ok;
   };
 
@@ -524,10 +126,16 @@ export function HomeworkFormModal({
           max_score: kind === 'quiz' ? quizTotal || null : maxScore ? Number(maxScore) : null,
           close_date: closeDate || null,
           rubric_id: rubricId ? Number(rubricId) : null,
-          // YC1: đồng bộ đính kèm khi sửa (thêm/xóa); server giữ file đã gắn
-          attachments: attachments.map((a) => ({ name: a.name, url: a.url, kind: a.kind })),
+          ...(kind === 'quiz' ? { max_attempts: maxAttemptsPayload } : {}),
+          // Giữ trạng thái xuất bản hiện tại: sửa bài nháp/hẹn giờ không được tự đăng ngay
+          status: initial.status,
+          publish_at: initial.publish_at ?? null,
+          // YC1: đồng bộ đính kèm khi sửa (thêm/xóa); chưa tải xong/lỗi → undefined = server giữ nguyên
+          attachments: att.editPayload(),
         });
-        if (kind === 'quiz') await homeworkApi.saveQuiz(initial.id, cleanedQuestions);
+        // Đính kèm đã gắn vào bài → không còn mồ côi (Hủy sau lỗi lưu đề không được xóa file)
+        att.markSaved();
+        if (willSaveQuiz) await homeworkApi.saveQuiz(initial.id, cleanedQuestions);
         toast(t('form.toast.updated'), 'success');
       } else {
         const res = await homeworkApi.create({
@@ -541,8 +149,9 @@ export function HomeworkFormModal({
           close_date: closeDate || null,
           kind,
           rubric_id: rubricId ? Number(rubricId) : null,
+          max_attempts: kind === 'quiz' ? maxAttemptsPayload : null,
           attachments,
-          target_student_ids: targetMode === 'selected' ? selectedStudents : [],
+          target_student_ids: targetMode === 'selected' ? pickedStudents : [],
           questions: kind === 'quiz' ? cleanedQuestions : [],
         });
         toast(
@@ -555,10 +164,10 @@ export function HomeworkFormModal({
         );
       }
       // Lưu thành công → file đã gắn vào bài, không còn mồ côi
-      orphanUrls.current.clear();
+      att.markSaved();
       onSaved();
     } catch (err) {
-      toast(err instanceof Error ? err.message : t('form.toast.saveFail'), 'error');
+      toastApiError(toast, err, t('form.toast.saveFail'));
     } finally {
       setBusy(false);
     }
@@ -574,6 +183,7 @@ export function HomeworkFormModal({
         dueDate !== (initial.due_date?.slice(0, 10) || '') ||
         closeDate !== (initial.close_date?.slice(0, 10) || '') ||
         maxScore !== (initial.max_score?.toString() || '') ||
+        maxAttempts !== initialMaxAttempts ||
         rubricId !== (initial.rubric_id?.toString() || '') ||
         attDirty ||
         quizEdited
@@ -586,6 +196,7 @@ export function HomeworkFormModal({
       dueDate !== '' ||
       closeDate !== '' ||
       maxScore !== '' ||
+      maxAttempts !== initialMaxAttempts ||
       selectedClasses.length > 0 ||
       selectedStudents.length > 0 ||
       attachments.length > 0 ||
@@ -600,15 +211,34 @@ export function HomeworkFormModal({
       (questions[0]?.question.trim() ?? '') !== ''
     );
   }, [
-    initial, kind, title, content, dueDate, closeDate, maxScore, selectedClasses,
-    selectedStudents, attachments, attName, attUrl, rubricId, newRubricName, publishMode, publishAt,
-    questions, quizEdited, attDirty,
+    initial,
+    kind,
+    title,
+    content,
+    dueDate,
+    closeDate,
+    maxScore,
+    maxAttempts,
+    initialMaxAttempts,
+    selectedClasses,
+    selectedStudents,
+    attachments,
+    attName,
+    attUrl,
+    rubricId,
+    newRubricName,
+    publishMode,
+    publishAt,
+    questions,
+    quizEdited,
+    attDirty,
   ]);
   const [confirmClose, setConfirmClose] = useState(false);
   // tryClose phải ổn định identity: Modal re-run effect (focus lại control đầu) mỗi khi onClose đổi,
   // nên đọc isDirty qua ref để không giật focus khi user đang gõ ký tự đầu tiên.
   const isDirtyRef = useRef(isDirty);
   isDirtyRef.current = isDirty;
+  useUnsavedGuard(isDirty); // reload/đóng tab khi đang soạn dở
   /** Đóng modal: dọn file mồ côi đã upload trong phiên này rồi mới đóng. */
   const finalizeClose = useCallback(() => {
     setConfirmClose(false);
@@ -619,13 +249,6 @@ export function HomeworkFormModal({
     if (isDirtyRef.current) setConfirmClose(true);
     else finalizeClose();
   }, [finalizeClose]);
-
-  const quickDueOptions = [
-    { k: 'today', label: t('form.dueToday') },
-    { k: 'tomorrow', label: t('form.dueTomorrow') },
-    { k: 'weekend', label: t('form.dueWeekend') },
-    { k: 'nextweek', label: t('form.dueNextWeek') },
-  ] as const;
 
   return (
     <Modal title={initial ? t('form.titleEdit') : t('form.titleNew')} onClose={tryClose} wide>
@@ -655,114 +278,12 @@ export function HomeworkFormModal({
           void submit();
         }}
       >
-        {/* Chọn lớp */}
-        {!initial && (
-          <Field label={t('form.selectClass', { count: selectedClasses.length })} error={errors.classes}>
-            <input
-              ref={refFor('classes')}
-              className="text-input hw-mb-8"
-              placeholder={t('form.searchClass')}
-              value={classSearch}
-              onChange={(e) => setClassSearch(e.target.value)}
-            />
-            <div className="chip-grid">
-              {filteredClasses.map((c) => {
-                const active = selectedClasses.includes(c.id);
-                return (
-                  <button
-                    key={c.id}
-                    type="button"
-                    className={`chip ${active ? 'chip-active' : ''}`}
-                    onClick={() => toggleClass(c.id)}
-                  >
-                    {active && <Icon name="check" size={12} />}
-                    {c.name}
-                  </button>
-                );
-              })}
-            </div>
-            <div className="hw-flex hw-mt-8">
-              <button
-                type="button"
-                className="btn btn-sm"
-                onClick={() => setSelectedClasses(classes.map((c) => c.id))}
-              >
-                {t('form.selectAll')}
-              </button>
-              <button type="button" className="btn btn-sm" onClick={() => setSelectedClasses([])}>
-                {t('form.deselectAll')}
-              </button>
-            </div>
-          </Field>
-        )}
-
-        {/* Đối tượng */}
-        {!initial && (
-          <Field label={t('form.assignTo')} error={errors.students}>
-            <div className="hw-flex hw-mb-8">
-              <button
-                type="button"
-                className={`btn btn-sm ${targetMode === 'all' ? 'btn-primary' : ''}`}
-                onClick={() => setTargetMode('all')}
-              >
-                {t('form.wholeClass')}
-              </button>
-              <button
-                type="button"
-                className={`btn btn-sm ${targetMode === 'selected' ? 'btn-primary' : ''}`}
-                onClick={() => setTargetMode('selected')}
-              >
-                {t('form.pickStudents')}
-              </button>
-            </div>
-            {targetMode === 'selected' && (
-              <>
-                <input
-                  ref={refFor('students')}
-                  className="text-input hw-mb-8"
-                  placeholder={t('form.searchStudent')}
-                  value={studentSearch}
-                  onChange={(e) => setStudentSearch(e.target.value)}
-                />
-                <div className="chip-grid">
-                  {filteredStudents.map((s) => {
-                    const active = selectedStudents.includes(s.id);
-                    return (
-                      <button
-                        key={s.id}
-                        type="button"
-                        className={`chip ${active ? 'chip-active' : ''}`}
-                        onClick={() => toggleStudent(s.id)}
-                      >
-                        {active && <Icon name="check" size={12} />}
-                        {s.name}
-                      </button>
-                    );
-                  })}
-                  {filteredStudents.length === 0 && (
-                    <div className="hw-empty-inline">
-                      <Icon name="users" size={18} />
-                      <span>
-                        {studentsLoading
-                          ? t('form.loadingStudents')
-                          : selectedClasses.length === 0
-                            ? t('form.pickClassFirst')
-                            : t('form.noResults')}
-                      </span>
-                    </div>
-                  )}
-                </div>
-                <div className="muted hw-text-13 hw-mt-4">
-                  {t('form.selectedCount', { count: selectedStudents.length })}
-                </div>
-              </>
-            )}
-          </Field>
-        )}
+        {/* Chọn lớp + đối tượng */}
+        {!initial && <ClassTargeting ct={ct} classes={classes} fe={fe} />}
 
         {/* Mẫu nhanh */}
         {!initial && kind === 'homework' && (
-          <Field label={t('form.quickTemplates')}>
+          <Field label={t('form.quickTemplates')} group>
             <div className="hw-flex-wrap">
               {templates.map((tpl) => (
                 <button
@@ -806,407 +327,54 @@ export function HomeworkFormModal({
           </Field>
         )}
 
-        {/* Điểm + Hạn */}
-        <div className="form-grid">
-          {kind === 'quiz' ? (
-            // P1-5: điểm quiz tự tính từ tổng điểm câu hỏi (server cũng re-sync), khóa nhập tay để khỏi lệch
-            <Field label={t('form.maxScore')} hint={t('form.quizScoreAuto')}>
-              <input className="text-input" type="number" value={quizTotal} disabled />
-            </Field>
-          ) : (
-            <Field label={t('form.maxScore')} error={errors.maxScore}>
-              <input
-                ref={refFor('maxScore')}
-                className="text-input"
-                type="number"
-                min="0"
-                step="0.5"
-                value={maxScore}
-                onChange={(e) => {
-                  setMaxScore(e.target.value);
-                  clear('maxScore');
-                }}
-                placeholder={t('form.maxScorePh')}
-              />
-            </Field>
-          )}
-          <Field label={t('form.dueDate')} error={errors.dueDate}>
+        <DeadlineFields
+          isQuiz={kind === 'quiz'}
+          isEdit={!!initial}
+          quizTotal={quizTotal}
+          maxScore={maxScore}
+          setMaxScore={setMaxScore}
+          dueDate={dueDate}
+          setDueDate={setDueDate}
+          closeDate={closeDate}
+          setCloseDate={setCloseDate}
+          fe={fe}
+        />
+        {kind === 'quiz' && (
+          <Field label={t('form.maxAttempts')} hint={t('form.maxAttemptsHint')} error={errors.maxAttempts}>
             <input
-              ref={refFor('dueDate')}
+              ref={refFor('maxAttempts')}
               className="text-input"
-              type="date"
-              value={dueDate}
-              min={initial ? undefined : todayVN()}
+              type="number"
+              inputMode="numeric"
+              min="1"
+              max="100"
+              step="1"
+              value={maxAttempts}
               onChange={(e) => {
-                setDueDate(e.target.value);
-                clear('dueDate');
+                setMaxAttempts(e.target.value);
+                clear('maxAttempts');
               }}
+              placeholder={t('form.maxAttemptsPh')}
             />
           </Field>
-        </div>
-        <div className="form-grid">
-          <Field label={t('form.quickDue')}>
-            <div className="hw-flex-6-wrap">
-              {quickDueOptions.map(({ k, label }) => (
-                <button
-                  key={k}
-                  type="button"
-                  className={`btn btn-sm ${dueDate === quickDate(k) ? 'btn-primary' : ''}`}
-                  onClick={() => setDueDate(quickDate(k))}
-                >
-                  {label}
-                </button>
-              ))}
-              {dueDate && (
-                <button type="button" className="btn btn-sm" onClick={() => setDueDate('')}>
-                  {t('actions.delete', { ns: 'common' })}
-                </button>
-              )}
-            </div>
-          </Field>
-          <Field label={t('form.hardDeadline')} error={errors.closeDate}>
-            <input
-              ref={refFor('closeDate')}
-              className="text-input"
-              type="date"
-              value={closeDate}
-              min={initial ? undefined : dueDate || todayVN()}
-              onChange={(e) => {
-                setCloseDate(e.target.value);
-                clear('closeDate');
-              }}
-            />
-            <div className="muted hw-text-12">{t('form.hardDeadlineHint')}</div>
-          </Field>
-        </div>
+        )}
 
         {/* Đính kèm: cả bài thường lẫn quiz, cả chế độ tạo và sửa (updateHomework đã đồng bộ). */}
-        <Field label={t('form.attachments')} error={errors.attachment}>
-          {attachments.map((a, i) => (
-            <div key={i} className="att-row">
-              <Icon name={a.kind === 'file' ? 'file' : 'paperclip'} size={14} />
-              <span>{a.name}</span>
-              <span className="muted hw-text-12">{a.url.slice(0, 40)}...</span>
-              <button
-                type="button"
-                className="btn btn-sm btn-danger-ghost"
-                onClick={() => removeAttachment(i)}
-                aria-label={t('form.removeAttachment', { name: a.name })}
-              >
-                {t('actions.delete', { ns: 'common' })}
-              </button>
-            </div>
-          ))}
-          {/* Tải file từ máy (YC1) */}
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept={UPLOAD_ACCEPT}
-            className="hw-hidden-input"
-            aria-label={t('form.uploadFile')}
-            onChange={(e) => void handleFileSelect(e.target.files?.[0])}
-          />
-          <div className="hw-flex-wrap">
-            <button
-              type="button"
-              className="btn hw-action-icon"
-              onClick={() => fileInputRef.current?.click()}
-              disabled={uploading || busy}
-            >
-              {uploading && <span className="spinner spinner-dark" aria-hidden="true" />}
-              <Icon name="upload" size={16} />
-              {uploading && uploadPct !== null
-                ? t('form.uploadingPct', { pct: uploadPct })
-                : t('form.uploadFile')}
-            </button>
-            <button type="button" className="btn" onClick={addAttachment} disabled={uploading || busy}>
-              {t('form.addAttachment')}
-            </button>
-          </div>
-          {uploading && uploadPct !== null && (
-            <div className="upload-row" role="progressbar" aria-valuenow={uploadPct} aria-valuemin={0} aria-valuemax={100}>
-              <div className="upload-track">
-                <div className="upload-fill" style={{ width: `${uploadPct}%` }} />
-              </div>
-              <span className="upload-pct">{uploadPct}%</span>
-            </div>
-          )}
-          <div className="muted hw-text-12 hw-mt-8">{t('form.uploadHint')}</div>
-          <div className="hw-flex-wrap hw-mt-8">
-            <input
-              ref={attNameRef}
-              className="text-input"
-              placeholder={t('form.attNamePh')}
-              value={attName}
-              onChange={(e) => setAttName(e.target.value)}
-            />
-            <input
-              ref={attUrlRef}
-              className="text-input"
-              placeholder={t('form.attUrlPh')}
-              value={attUrl}
-              onChange={(e) => setAttUrl(e.target.value)}
-            />
-          </div>
-        </Field>
+        <AttachmentsField att={att} error={errors.attachment} busy={busy} />
 
         {/* Rubric — bài thường chấm tay; quiz dùng để chấm các câu tự luận (YC2) */}
-        <Field label={t('form.rubric')} hint={kind === 'quiz' ? t('form.rubricQuizHint') : undefined}>
-          <div className="hw-flex hw-mb-8">
-              <select
-                className="text-input hw-flex-1"
-                value={rubricId}
-                onChange={(e) => setRubricId(e.target.value)}
-              >
-                <option value="">{t('form.noRubric')}</option>
-                {rubrics.map((r) => (
-                  <option key={r.id} value={r.id}>
-                    {t('form.rubricOption', { name: r.name, score: r.total_score })}
-                  </option>
-                ))}
-              </select>
-              <button type="button" className="btn" onClick={() => setShowRubricForm((s) => !s)}>
-                {t('form.newRubric')}
-              </button>
-            </div>
-            {selectedRubric && (
-              <div className="rubric-preview">
-                {selectedRubric.criteria.map((c) => (
-                  <div key={c.id} className="rubric-row">
-                    <span>{c.name}</span>
-                    <span className="num">{t('form.criterionScore', { score: c.max_score })}</span>
-                  </div>
-                ))}
-              </div>
-            )}
-            {showRubricForm && (
-              <div className="rubric-form">
-                <input
-                  ref={refFor('rubricName')}
-                  className="text-input hw-mb-8"
-                  placeholder={t('form.rubricNamePh')}
-                  value={newRubricName}
-                  onChange={(e) => {
-                    setNewRubricName(e.target.value);
-                    clear('rubricName');
-                  }}
-                  aria-invalid={errors.rubricName ? true : undefined}
-                />
-                {errors.rubricName && (
-                  <span className="field-error" role="alert">
-                    {errors.rubricName}
-                  </span>
-                )}
-                {newCriteria.map((c, i) => (
-                  <div key={i} className="hw-flex hw-mb-8">
-                    <input
-                      ref={i === 0 ? refFor('rubricCriteria') : undefined}
-                      className="text-input"
-                      placeholder={t('form.criterion')}
-                      value={c.name}
-                      onChange={(e) => {
-                        setNewCriteria((x) => x.map((y, j) => (j === i ? { ...y, name: e.target.value } : y)));
-                        clear('rubricCriteria');
-                      }}
-                      aria-invalid={errors.rubricCriteria ? true : undefined}
-                    />
-                    <input
-                      className="text-input hw-w-100"
-                      type="number"
-                      min="0"
-                      placeholder={t('form.points')}
-                      value={c.max_score}
-                      onChange={(e) =>
-                        setNewCriteria((x) =>
-                          x.map((y, j) => (j === i ? { ...y, max_score: e.target.value } : y))
-                        )
-                      }
-                    />
-                    <button
-                      type="button"
-                      className="btn btn-sm btn-danger-ghost"
-                      onClick={() => setNewCriteria((x) => x.filter((_, j) => j !== i))}
-                    >
-                      ×
-                    </button>
-                  </div>
-                ))}
-                {errors.rubricCriteria && (
-                  <span className="field-error" role="alert">
-                    {errors.rubricCriteria}
-                  </span>
-                )}
-                <div className="hw-flex">
-                  <button
-                    type="button"
-                    className="btn btn-sm"
-                    onClick={() => setNewCriteria((x) => [...x, { name: '', max_score: '10' }])}
-                  >
-                    {t('form.addCriterion')}
-                  </button>
-                  <button
-                    type="button"
-                    className="btn btn-sm btn-primary"
-                    disabled={rubricBusy}
-                    onClick={createRubricNow}
-                  >
-                    {rubricBusy && <span className="spinner" aria-hidden="true" />}
-                    {rubricBusy ? t('actions.saving', { ns: 'common' }) : t('form.saveRubric')}
-                  </button>
-                </div>
-              </div>
-            )}
-          </Field>
+        <RubricField r={rubric} fe={fe} isQuiz={kind === 'quiz'} />
 
         {/* Quiz builder */}
         {kind === 'quiz' && (
           <div ref={refFor('quiz')} tabIndex={-1}>
-            <Field
-              label={t('form.quizQuestions', { count: questions.length, total: quizTotal })}
-              error={errors.quiz}
-            >
-            {quizLocked && (
-              <div className="alert alert-warning alert-with-icon hw-mb-12">
-                <Icon name="alert" size={16} />
-                <span>{t('form.quizLocked')}</span>
-              </div>
-            )}
-            {questions.map((q, qi) => {
-              const qtype = q.qtype ?? 'single';
-              return (
-              <div
-                key={qi}
-                className="quiz-q"
-                tabIndex={-1}
-                ref={(el) => {
-                  qBlockRefs.current[qi] = el;
-                }}
-              >
-                <div className="hw-flex hw-mb-8">
-                  <span className="quiz-num">{qi + 1}</span>
-                  <input
-                    className="text-input hw-flex-1"
-                    placeholder={t('form.questionPh', { n: qi + 1 })}
-                    value={q.question}
-                    disabled={quizLocked}
-                    onChange={(e) => updateQuestion(qi, { question: e.target.value })}
-                  />
-                  {questions.length > 1 && (
-                    <button
-                      type="button"
-                      className="btn btn-sm btn-danger-ghost"
-                      disabled={quizLocked}
-                      onClick={() => editQuestions((x) => x.filter((_, j) => j !== qi))}
-                    >
-                      ×
-                    </button>
-                  )}
-                </div>
-                <div className="hw-flex-wrap hw-mb-8">
-                  <select
-                    className="text-input"
-                    aria-label={t('bank.qtype')}
-                    value={qtype}
-                    disabled={quizLocked}
-                    onChange={(e) => changeQuestionType(qi, e.target.value as QType)}
-                  >
-                    <option value="single">{t('bank.qtypeSingle')}</option>
-                    <option value="multiple">{t('bank.qtypeMultiple')}</option>
-                    <option value="truefalse">{t('bank.qtypeTruefalse')}</option>
-                    <option value="essay">{t('bank.qtypeEssay')}</option>
-                  </select>
-                  <input
-                    className="text-input hw-w-80"
-                    type="number"
-                    min="0.5"
-                    step="0.5"
-                    value={q.points}
-                    disabled={quizLocked}
-                    // P1-8: không ép 0/NaN thành 1 im lặng — để validate inline báo lỗi (server: điểm > 0, ≤ 1000)
-                    onChange={(e) => updateQuestion(qi, { points: Number(e.target.value) })}
-                    title={t('form.points')}
-                    aria-label={t('form.points')}
-                    aria-invalid={!(q.points > 0) || q.points > 1000 ? true : undefined}
-                  />
-                </div>
-                {(!(q.points > 0) || q.points > 1000) && (
-                  <div className="field-error hw-mb-8" role="alert">
-                    {t('form.errors.pointsInvalid')}
-                  </div>
-                )}
-                {qtype === 'essay' ? (
-                  <p className="muted-sm hw-mb-8">{t('bank.essayHint')}</p>
-                ) : (
-                  <>
-                    {qtype === 'multiple' && <p className="muted-sm">{t('bank.answersMultiple')}</p>}
-                    {q.options.map((o, oi) => (
-                      <div key={oi} className="quiz-opt">
-                        <button
-                          type="button"
-                          className={`quiz-correct ${o.is_correct ? 'active' : ''}`}
-                          disabled={quizLocked}
-                          onClick={() =>
-                            updateOption(qi, oi, { is_correct: qtype === 'multiple' ? !o.is_correct : true })
-                          }
-                          title={t('form.correctAnswer')}
-                          aria-pressed={o.is_correct}
-                        >
-                          {qtype === 'multiple' ? (o.is_correct ? '☑' : '☐') : o.is_correct ? '●' : '○'}
-                        </button>
-                        <input
-                          className="text-input input-sm hw-flex-1"
-                          placeholder={t('form.optionPh', { letter: String.fromCharCode(65 + oi) })}
-                          value={o.text}
-                          disabled={quizLocked || qtype === 'truefalse'}
-                          onChange={(e) => updateOption(qi, oi, { text: e.target.value })}
-                        />
-                        {qtype !== 'truefalse' && q.options.length > 2 && (
-                          <button
-                            type="button"
-                            className="btn btn-sm btn-danger-ghost"
-                            disabled={quizLocked}
-                            onClick={() => removeOption(qi, oi)}
-                          >
-                            ×
-                          </button>
-                        )}
-                      </div>
-                    ))}
-                    {qtype !== 'truefalse' && (
-                      <button
-                        type="button"
-                        className="btn btn-sm hw-mt-4"
-                        disabled={quizLocked}
-                        onClick={() => addOption(qi)}
-                      >
-                        {t('form.addOption')}
-                      </button>
-                    )}
-                  </>
-                )}
-              </div>
-              );
-            })}
-            <div className="hw-flex">
-              <button type="button" className="btn" disabled={quizLocked} onClick={addQuestion}>
-                {t('form.addQuestion')}
-              </button>
-              <button
-                type="button"
-                className="btn hw-action-icon"
-                disabled={quizLocked}
-                onClick={() => setShowBankPicker(true)}
-              >
-                <Icon name="book" size={15} /> {t('form.fromBank')}
-              </button>
-            </div>
-            </Field>
+            <QuizBuilder quiz={quiz} error={errors.quiz} />
           </div>
         )}
 
         {/* Xuất bản */}
         {!initial && (
-          <Field label={t('form.publishSection')} error={errors.publishAt}>
+          <Field label={t('form.publishSection')} error={errors.publishAt} group>
             <div className="publish-options">
               {(
                 [
@@ -1269,7 +437,7 @@ export function HomeworkFormModal({
             {t('actions.cancel', { ns: 'common' })}
           </button>
           {initial ? (
-            <button type="submit" className="btn btn-primary" disabled={busy}>
+            <button type="submit" className="btn btn-primary" disabled={busy || attLoad === 'loading'}>
               {busy && <span className="spinner" aria-hidden="true" />}
               {busy ? t('actions.saving', { ns: 'common' }) : t('form.saveChanges')}
             </button>
@@ -1295,8 +463,12 @@ export function HomeworkFormModal({
           )}
         </div>
       </form>
-      {showBankPicker && (
-        <QuestionBank onClose={() => setShowBankPicker(false)} selectMode onImport={importBankQuestions} />
+      {quiz.showBankPicker && (
+        <QuestionBank
+          onClose={() => quiz.setShowBankPicker(false)}
+          selectMode
+          onImport={quiz.importBankQuestions}
+        />
       )}
       {confirmClose && (
         <ConfirmDialog

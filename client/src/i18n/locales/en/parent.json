@@ -1,6 +1,6 @@
 {
   "auth": {
-    "confirmPassword": "Confirm password *",
+    "confirmPassword": "Confirm password",
     "confirmPlaceholder": "Re-enter your password",
     "fullName": "Full name *",
     "hasAccount": "Already have an account?",
@@ -27,7 +27,7 @@
     "registering": "Signing up...",
     "welcome": "Hello, {{name}}!",
     "centerRequired": "Could not determine the center. Please try again.",
-    "registerAtCenter": "Registering at {name}",
+    "registerAtCenter": "Registering at {{name}}",
     "phoneEmpty": "Please enter your phone number",
     "phoneInvalid": "Invalid phone number format (10 digits, starting with 0)",
     "passwordEmpty": "Please enter your password",
@@ -76,7 +76,9 @@
       "viewSubmissions": "Submitted work",
       "emptyDesc": "Homework will appear here once the teacher assigns it.",
       "closeLabel": "Final deadline: {{date}}",
-      "reviewQuiz": "Review result"
+      "reviewQuiz": "Review result",
+      "quizBadge": "Quiz",
+      "attachments": "Attachments"
     },
     "loadError": "Couldn't load the details",
     "notFoundDesc": "Student record not found.",
@@ -156,14 +158,14 @@
   },
   "leaves": {
     "allClasses": "- All classes -",
-    "child": "Child *",
+    "child": "Child",
     "childRequired": "Please choose your child",
     "class": "Class",
     "create": "New request",
     "emptyDesc": "Tap the New request button to send a leave request for your child.",
     "emptyTitle": "No leave requests yet",
     "formTitle": "New leave request",
-    "fromDate": "From *",
+    "fromDate": "From",
     "loadError": "Couldn't load leave requests",
     "reason": "Reason",
     "selectChild": "- Choose your child -",
@@ -171,7 +173,7 @@
     "sent": "Leave request sent",
     "submit": "Send request",
     "title": "Leave requests",
-    "toDate": "To *",
+    "toDate": "To",
     "fromRequired": "Please pick the first day of leave",
     "toRequired": "Please pick the last day of leave",
     "dateRangeInvalid": "The end date must be on or after the start date"
@@ -187,7 +189,8 @@
     "pendingChecking": "Checking transaction status...",
     "pendingTimeout": "The transaction is still processing. You can check back later; no need to pay again.",
     "successDesc": "Tuition has been paid. Thank you!",
-    "successTitle": "Payment successful!"
+    "successTitle": "Payment successful!",
+    "failBadge": "Failed"
   },
   "profile": {
     "leaves": "Leave requests",
@@ -211,6 +214,9 @@
     "bestScore": "Best:",
     "bestScoreLine": "{{best}}/{{max}} pts",
     "confirmSubmit": "Submit? You can retake it to improve your score.",
+    "confirmSubmitLast": "Submit? This is your last attempt; you won't be able to retake it.",
+    "confirmSubmitN_one": "Submit? You will have {{count}} more attempt after this one.",
+    "confirmSubmitN_other": "Submit? You will have {{count}} more attempts after this one.",
     "confirmTitle": "Submit the quiz?",
     "dueDate": "- Due: {{date}}",
     "excellent": "Excellent!",
@@ -235,7 +241,14 @@
     "unanswered": "{{count}} questions unanswered",
     "viewAnswers": "View answers",
     "youChose": "(your choice)",
+    "attemptsLeft_one": "{{count}} attempt left",
+    "attemptsLeft_other": "{{count}} attempts left",
+    "noAttemptsLeft": "No attempts left",
+    "noAttemptsLeftDesc_one": "This quiz allows at most {{count}} attempt.",
+    "noAttemptsLeftDesc_other": "This quiz allows at most {{count}} attempts.",
     "retry": "Retry",
+    "retakeN_one": "Retake ({{count}} attempt left)",
+    "retakeN_other": "Retake ({{count}} attempts left)",
     "noQuestionsDesc": "This quiz has no questions yet. Please try again later or contact the center.",
     "closeDate": "- Final deadline: {{date}}",
     "attemptLine": "{{score}}/{{max}} pts",
@@ -246,7 +259,9 @@
     "pendingGrade": "Pending grading",
     "essayAnswer": "Student's answer",
     "unansweredEssay": "{{count}} questions unanswered (including essays)",
-    "essayGraded": "Essay {{score}}/{{max}}"
+    "essayGraded": "Essay {{score}}/{{max}}",
+    "leaveTitle": "Discard this attempt?",
+    "leaveMessage": "Unsubmitted answers will be lost. Close anyway?"
   },
   "referral": {
     "copied": "Copied",

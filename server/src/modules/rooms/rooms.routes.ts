@@ -1,29 +1,19 @@
 import { Router, Response } from 'express';
-import { db } from '../../db';
-import { AuthRequest, reqCenterId } from '../../middleware/auth';
+import { AuthRequest, reqCenterId, requireCenterId } from '../../middleware/auth';
 import { requirePermission } from '../authorization/authorization.middleware';
-import { getDefaultCenter } from '../../utils/plans';
 import { asyncHandler } from '../../shared/http';
 import { validate, v, paramId } from '../../shared/validate';
-import { audit, actorFromReq } from '../../shared/audit';
-import { listRooms } from './rooms.service';
+import { actorFromReq } from '../../shared/audit';
+import { listRooms, createRoom, updateRoom, deleteRoom } from './rooms.service';
 
 const router = Router();
-
-/** center_id hiệu lực: superadmin (null) dùng trung tâm mặc định */
-async function effCid(req: AuthRequest): Promise<number | null> {
-  const cid = reqCenterId(req);
-  if (cid !== null) return cid;
-  return (await getDefaultCenter())?.id ?? null;
-}
 
 /** Danh sách phòng học kèm số lớp đang dùng */
 router.get(
   '/',
   requirePermission('rooms.view'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
-    const isSuper = req.user?.role === 'superadmin';
-    const cid = isSuper ? null : await effCid(req);
+    const cid = reqCenterId(req); // superadmin: null = mọi trung tâm
     const { page, limit } = req.query as { page?: string; limit?: string };
     res.json(await listRooms(cid, { page, limit }));
   })
@@ -34,45 +24,15 @@ router.post(
   '/',
   requirePermission('rooms.manage'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
-    const cid = await effCid(req);
+    // Superadmin phải chỉ rõ center_id (400 CENTER_REQUIRED), không ngầm ghi vào tenant #1
+    const cid = requireCenterId(req);
     const { name, capacity } = validate(req.body, {
       name: v.string({ required: true, max: 100, label: 'Tên phòng' }),
       capacity: v.number({ integer: true, min: 1, max: 10000, label: 'Sức chứa' }),
     });
-    const trimmed = String(name).trim();
-    // Chống trùng tên phòng trong trung tâm
-    const dup = (await db
-      .prepare('SELECT id FROM rooms WHERE center_id = ? AND LOWER(name) = LOWER(?)')
-      .get(cid, trimmed)) as { id: number } | undefined;
-    if (dup) {
-      res.status(409).json({ error: 'Tên phòng đã tồn tại trong trung tâm', code: 'DUPLICATE' });
-      return;
-    }
-    const r = await db
-      .prepare('INSERT INTO rooms (center_id, name, capacity) VALUES (?, ?, ?)')
-      .run(cid, trimmed, capacity ?? 30);
-    const roomId = Number(r.lastInsertRowid);
-    await audit({
-      centerId: cid,
-      action: 'create',
-      entity: 'rooms',
-      entityId: roomId,
-      summary: `Tạo phòng "${trimmed}"`,
-      actor: actorFromReq(req as AuthRequest),
-    });
-    res.status(201).json(await db.prepare('SELECT * FROM rooms WHERE id = ?').get(roomId));
+    res.status(201).json(await createRoom(cid, String(name).trim(), capacity ?? 30, actorFromReq(req)));
   })
 );
-
-async function getScopedRoom(req: AuthRequest, id: number) {
-  const cid = await effCid(req);
-  const row = (await db.prepare('SELECT * FROM rooms WHERE id = ?').get(id)) as
-    { id: number; center_id: number | null; name: string } | undefined;
-  if (!row) return null;
-  // superadmin (effCid = default center) vẫn được sửa phòng của mọi trung tâm? Không — chỉ phòng thuộc center hiệu lực
-  if (req.user?.role !== 'superadmin' && cid !== null && row.center_id !== cid) return null;
-  return row;
-}
 
 /** Sửa phòng học */
 router.put(
@@ -80,11 +40,6 @@ router.put(
   requirePermission('rooms.manage'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const id = paramId(req.params);
-    const room = await getScopedRoom(req, id);
-    if (!room) {
-      res.status(404).json({ error: 'Không tìm thấy phòng học', code: 'NOT_FOUND' });
-      return;
-    }
     const { name, capacity } = req.body as { name?: string; capacity?: number };
     if (!name || !String(name).trim()) {
       res.status(400).json({ error: 'Tên phòng là bắt buộc', code: 'VALIDATION_REQUIRED' });
@@ -95,32 +50,12 @@ router.put(
       res.status(400).json({ error: 'Tên phòng tối đa 100 ký tự', code: 'VALIDATION_INVALID' });
       return;
     }
-    // Chống trùng tên khi đổi tên (loại trừ chính phòng đang sửa)
-    const dup = (await db
-      .prepare('SELECT id FROM rooms WHERE center_id = ? AND LOWER(name) = LOWER(?) AND id != ?')
-      .get(room.center_id, trimmed, id)) as { id: number } | undefined;
-    if (dup) {
-      res.status(409).json({ error: 'Tên phòng đã tồn tại trong trung tâm', code: 'DUPLICATE' });
-      return;
-    }
     const cap = Number(capacity);
     if (!Number.isFinite(cap) || cap < 1 || cap > 10000) {
       res.status(400).json({ error: 'Sức chứa phải từ 1 đến 10000', code: 'VALIDATION_INVALID' });
       return;
     }
-    await db
-      .prepare('UPDATE rooms SET name = ?, capacity = ? WHERE id = ?')
-      .run(String(name).trim(), Math.floor(cap), id);
-    await audit({
-      centerId: room.center_id,
-      actor: actorFromReq(req),
-      action: 'update',
-      entity: 'rooms',
-      entityId: id,
-      summary: `Cập nhật phòng ${String(name).trim()}`,
-      meta: { old_name: room.name, new_name: String(name).trim(), capacity: Math.floor(cap) },
-    });
-    res.json(await db.prepare('SELECT * FROM rooms WHERE id = ?').get(id));
+    res.json(await updateRoom(reqCenterId(req), id, trimmed, Math.floor(cap), actorFromReq(req)));
   })
 );
 
@@ -129,16 +64,7 @@ router.delete(
   '/:id',
   requirePermission('rooms.manage'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
-    const id = paramId(req.params);
-    const room = await getScopedRoom(req, id);
-    if (!room) {
-      res.status(404).json({ error: 'Không tìm thấy phòng học', code: 'NOT_FOUND' });
-      return;
-    }
-    await db.transaction(async (tx) => {
-      await tx.prepare('UPDATE classes SET room_id = NULL WHERE room_id = ?').run(id);
-      await tx.prepare('DELETE FROM rooms WHERE id = ?').run(id);
-    });
+    await deleteRoom(reqCenterId(req), paramId(req.params), actorFromReq(req));
     res.json({ ok: true });
   })
 );

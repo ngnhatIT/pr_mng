@@ -5,7 +5,8 @@
  * result.phone cho biết SĐT nào sẽ được gửi.
  */
 // PHẢI đặt trước mọi import db — pg-compat đọc DATABASE_URL lúc load module
-process.env.DATABASE_URL = process.env.TEST_DATABASE_URL || 'postgres://educenter:educenter123@localhost:5432/educenter_test';
+process.env.DATABASE_URL =
+  process.env.TEST_DATABASE_URL || 'postgres://educenter:educenter123@localhost:5432/educenter_test';
 
 import { describe, it, before, beforeEach, after } from 'node:test';
 import assert from 'node:assert/strict';

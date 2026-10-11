@@ -39,11 +39,6 @@ export async function listCenters(): Promise<Center[]> {
   return (await db.prepare('SELECT * FROM centers ORDER BY id ASC').all()) as Center[];
 }
 
-/** Trung tâm mặc định cho các API công khai (trung tâm đầu tiên) */
-export async function getDefaultCenter(): Promise<Center | undefined> {
-  return (await db.prepare('SELECT * FROM centers ORDER BY id ASC LIMIT 1').get()) as Center | undefined;
-}
-
 /** Gói hiệu lực: hết hạn thì rớt về basic */
 export function effectivePlan(center: Center | undefined): string {
   if (!center) return 'basic';
@@ -63,18 +58,19 @@ export function hasFeature(center: Center | undefined, key: string): boolean {
 }
 
 /**
- * Xác định trung tâm cho API công khai: ưu tiên subdomain từ Host,
- * ngược lại dùng trung tâm mặc định.
+ * Xác định trung tâm cho API công khai theo subdomain của Host.
+ * Host không khớp subdomain nào (apex, www, IP, localhost, subdomain cũ/gõ sai, Host giả):
+ * - hệ thống CHỈ có 1 trung tâm (single-tenant/dev) -> trung tâm đó;
+ * - nhiều trung tâm -> undefined (caller trả 404) — KHÔNG rơi về trung tâm id nhỏ nhất
+ *   (lead/đăng ký học thử chứa PII sẽ vào nhầm tenant #1).
  */
 export async function resolvePublicCenter(req: Request): Promise<Center | undefined> {
   const host = (req.get('host') || '').split(':')[0].toLowerCase();
-  if (host && !['localhost', '127.0.0.1'].includes(host)) {
-    const sub = host.split('.')[0];
-    if (sub && sub !== 'www') {
-      const c = (await db.prepare('SELECT * FROM centers WHERE subdomain = ?').get(sub)) as
-        Center | undefined;
-      if (c) return c;
-    }
+  const sub = host.split('.')[0];
+  if (sub && sub !== 'www' && !['localhost', '127.0.0.1'].includes(host)) {
+    const c = (await db.prepare('SELECT * FROM centers WHERE subdomain = ?').get(sub)) as Center | undefined;
+    if (c) return c;
   }
-  return await getDefaultCenter();
+  const only = (await db.prepare('SELECT * FROM centers ORDER BY id ASC LIMIT 2').all()) as Center[];
+  return only.length === 1 ? only[0] : undefined;
 }

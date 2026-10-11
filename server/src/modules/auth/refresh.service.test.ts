@@ -11,7 +11,14 @@ import assert from 'node:assert/strict';
 import { createHash } from 'crypto';
 import { db } from '../../db/pg-compat';
 import { setupTestDb, resetTestDb, teardownTestDb } from '../../db/test-utils';
-import { issueTokenPair, rotateRefreshToken, revokeRefreshToken, revokeAllForOwner } from './refresh.service';
+import {
+  issueTokenPair,
+  rotateRefreshToken,
+  revokeRefreshToken,
+  revokeAllForOwner,
+  revokeAllForOwnerExcept,
+} from './refresh.service';
+import { env } from '../../config/env';
 import { AuthUser } from '../../middleware/auth';
 
 const staffUser: AuthUser = {
@@ -44,7 +51,9 @@ describe('refresh token rotation (PostgreSQL)', () => {
     const pair = await issueTokenPair(staffUser, { ip: '127.0.0.1' });
     assert.ok(pair.token.length > 20);
     assert.ok(pair.refresh_token.length >= 40);
-    assert.equal(pair.expires_in, 900); // ACCESS_TOKEN_TTL mặc định 15 phút (D2)
+    // expires_in khớp ACCESS_TOKEN_TTL cấu hình (mặc định 15m; .env dev có thể đặt khác)
+    const m = env.ACCESS_TOKEN_TTL.match(/^(\d+)([smhd])$/)!;
+    assert.equal(pair.expires_in, Number(m[1]) * { s: 1, m: 60, h: 3600, d: 86400 }[m[2] as 's']);
     // DB chỉ lưu hash, không lưu token thô
     const rows = (await db.prepare('SELECT token_hash FROM refresh_tokens').all()) as {
       token_hash: string;
@@ -111,6 +120,18 @@ describe('refresh token rotation (PostgreSQL)', () => {
     await assert.rejects(() => rotateRefreshToken(p1.refresh_token), /thu hồi|không hợp lệ|đánh cắp/);
     // Cả token mới p2 cũng bị thu hồi theo
     await assert.rejects(() => rotateRefreshToken(p2.refresh_token), /thu hồi|không hợp lệ/);
+  });
+
+  it('SEC-12: token vừa rotate (trong grace) KHÔNG được cấp mới sau revoke-all; phiên giữ lại vẫn sống', async () => {
+    const p1 = await issueTokenPair(staffUser);
+    const p2 = await rotateRefreshToken(p1.refresh_token);
+    const keep = await issueTokenPair(staffUser);
+    await revokeAllForOwnerExcept('staff', 1, keep.refresh_token);
+    await assert.rejects(() => rotateRefreshToken(p1.refresh_token), /không hợp lệ|hết hạn/);
+    await assert.rejects(() => rotateRefreshToken(p2.refresh_token), /không hợp lệ|hết hạn/);
+    // Token bị revoke-all dùng lại KHÔNG phải tín hiệu trộm -> không đá phiên được giữ lại
+    const k2 = await rotateRefreshToken(keep.refresh_token);
+    assert.ok(k2.refresh_token.length >= 40);
   });
 
   it('logout revoke refresh token', async () => {

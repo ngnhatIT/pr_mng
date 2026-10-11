@@ -42,7 +42,7 @@ function lockRoute(): MockRoute {
     match: 'FROM homework WHERE id = ? FOR UPDATE',
     get: () => {
       locked = true;
-      return { id: 1 };
+      return { id: 1, kind: 'quiz' };
     },
   };
 }
@@ -140,7 +140,11 @@ describe('P1-13 submitQuiz lock row homework khi tạo attempt', () => {
       { match: 'SELECT close_date FROM homework', get: () => ({ close_date: null }) },
       {
         match: 'FROM quiz_questions WHERE homework_id',
-        all: () => [{ id: 21, qtype: 'single', points: 2 }],
+        all: () => {
+          // HW-18: đề đọc SAU lock — saveQuizQuestions không thể thay đề giữa lúc chấm và ghi
+          assert.ok(locked, 'đọc câu hỏi phải chạy SAU khi lock row homework');
+          return [{ id: 21, qtype: 'single', points: 2 }];
+        },
       },
       {
         match: 'FROM quiz_options WHERE question_id IN',

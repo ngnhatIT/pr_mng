@@ -1,6 +1,9 @@
 import { db } from '../../db';
 import { parsePagination, paginate, type PageOptions, type Paginated } from '../../shared/pagination';
 import { AppError } from '../../shared/errors';
+import { audit, type AuditActor } from '../../shared/audit';
+import { nextStudentCode } from '../students/students.service';
+import { enrollInTx } from '../classes/classes.service';
 
 /* ---------------------------------- Types ---------------------------------- */
 
@@ -32,7 +35,11 @@ export async function listTrials(
     conds.push('tr.center_id = ?');
     params.push(centerId);
   }
-  if (status && (TRIAL_STATUS as readonly string[]).includes(status)) {
+  if (status && !(TRIAL_STATUS as readonly string[]).includes(status)) {
+    // Filter sai không được âm thầm bỏ qua (trả TẤT CẢ dưới nhãn của trạng thái khác)
+    throw AppError.badRequest('Trạng thái lọc không hợp lệ');
+  }
+  if (status) {
     conds.push('tr.status = ?');
     params.push(status);
   }
@@ -55,15 +62,6 @@ interface TrialFull {
   class_id: number | null;
   referral_code: string | null;
   status: string;
-}
-
-async function genStudentCode(): Promise<string> {
-  for (let i = 0; i < 10; i++) {
-    const code = `HV${Date.now().toString().slice(-6)}`;
-    const exists = await db.prepare('SELECT 1 FROM students WHERE code = ?').get(code);
-    if (!exists) return code;
-  }
-  return `HV${Date.now().toString().slice(-8)}`;
 }
 
 /**
@@ -97,7 +95,8 @@ export async function convertTrial(
   if (classId) {
     const cls = (await db.prepare('SELECT id, center_id FROM classes WHERE id = ?').get(Number(classId))) as
       { id: number; center_id: number | null } | undefined;
-    if (!cls || (centerId !== null && cls.center_id !== centerId)) {
+    // Lớp phải cùng trung tâm với đăng ký học thử (kể cả khi superadmin thao tác)
+    if (!cls || cls.center_id !== trial.center_id) {
       throw AppError.notFound('Không tìm thấy lớp học');
     }
     enrollClassId = cls.id;
@@ -105,17 +104,9 @@ export async function convertTrial(
     enrollClassId = trial.class_id;
   }
 
-  const code = await genStudentCode();
+  const trialCenterId = trial.center_id;
+  if (trialCenterId === null) throw AppError.badRequest('Đăng ký học thử chưa gắn trung tâm');
   const studentId = await db.transaction(async (tx) => {
-    const r = await tx
-      .prepare("INSERT INTO students (code, name, phone, status, center_id) VALUES (?, ?, ?, 'studying', ?)")
-      .run(code, trial.name, trial.phone, trial.center_id);
-    const studentId = Number(r.lastInsertRowid);
-    if (enrollClassId) {
-      await tx
-        .prepare('INSERT OR IGNORE INTO enrollments (student_id, class_id) VALUES (?, ?)')
-        .run(studentId, enrollClassId);
-    }
     // Atomic: chỉ 1 luồng giành được chuyển trạng thái (chống convert đồng thời tạo trùng học viên)
     const upd = await tx
       .prepare("UPDATE trial_registrations SET status = 'converted' WHERE id = ? AND status != 'converted'")
@@ -123,15 +114,61 @@ export async function convertTrial(
     if ((upd.changes ?? 0) !== 1) {
       throw AppError.conflict('Đăng ký học thử này đã được chuyển đổi thành học viên');
     }
-    // Gắn referral đang chờ theo SĐT (nếu trial đăng ký bằng mã giới thiệu)
+    const code = await nextStudentCode(tx, trialCenterId);
+    const r = await tx
+      .prepare("INSERT INTO students (code, name, phone, status, center_id) VALUES (?, ?, ?, 'studying', ?)")
+      .run(code, trial.name, trial.phone, trialCenterId);
+    const studentId = Number(r.lastInsertRowid);
+    // Ghi danh qua cùng logic có lock + kiểm tra sĩ số/lớp ngừng hoạt động như ghi danh thủ công
+    if (enrollClassId) await enrollInTx(tx, enrollClassId, studentId);
+    // Gắn ĐÚNG referral của mã giới thiệu trên trial, trong cùng trung tâm (không gắn mọi referral theo SĐT)
     if (trial.referral_code && trial.phone) {
       await tx
         .prepare(
-          "UPDATE referrals SET referred_student_id = ? WHERE referred_phone = ? AND status = 'pending' AND referred_student_id IS NULL"
+          `UPDATE referrals SET referred_student_id = ?
+           WHERE id = (
+             SELECT r.id FROM referrals r JOIN parents p ON p.id = r.referrer_parent_id
+             WHERE p.referral_code = ? AND p.center_id = ? AND COALESCE(r.center_id, p.center_id) = ?
+               AND r.referred_phone = ? AND r.status = 'pending' AND r.referred_student_id IS NULL
+             ORDER BY r.id LIMIT 1
+           )`
         )
-        .run(studentId, trial.phone);
+        .run(studentId, trial.referral_code, trialCenterId, trialCenterId, trial.phone);
     }
     return studentId;
   });
   return { student_id: studentId };
+}
+
+/** Đổi trạng thái đăng ký học thử (không cho 'converted' — phải qua convertTrial). */
+export async function updateTrialStatus(
+  centerId: number | null,
+  id: number,
+  status: string,
+  actor: AuditActor
+) {
+  const trial = (await db
+    .prepare('SELECT id, center_id, name, status FROM trial_registrations WHERE id = ?')
+    .get(id)) as { id: number; center_id: number | null; name: string; status: string } | undefined;
+  if (!trial || (centerId !== null && trial.center_id !== centerId)) {
+    throw AppError.notFound('Không tìm thấy đăng ký học thử');
+  }
+  // Đã chuyển thành học viên thì khóa trạng thái (mở lại rồi convert lần nữa = học viên trùng).
+  // Điều kiện status != 'converted' ngay trong UPDATE để chống race với convert đồng thời.
+  const upd = await db
+    .prepare("UPDATE trial_registrations SET status = ? WHERE id = ? AND status <> 'converted'")
+    .run(status, id);
+  if ((upd.changes ?? 0) !== 1) {
+    throw AppError.conflict('Đăng ký học thử đã chuyển thành học viên, không thể đổi trạng thái');
+  }
+  await audit({
+    centerId: trial.center_id,
+    actor,
+    action: 'update',
+    entity: 'trial_registrations',
+    entityId: id,
+    summary: `Đổi trạng thái học thử ${trial.name}: ${trial.status} → ${status}`,
+    meta: { old_status: trial.status, new_status: status },
+  });
+  return db.prepare('SELECT * FROM trial_registrations WHERE id = ?').get(id);
 }

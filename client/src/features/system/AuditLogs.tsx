@@ -1,11 +1,13 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useToast } from '../../shared/ui/toast';
+import { toastApiError, useToast } from '../../shared/ui/toast';
 import { PageHeader } from '../../shared/components/PageHeader';
-import { EmptyState } from '../../shared/components/EmptyState';
+import { EmptyState, LoadError } from '../../shared/components/EmptyState';
 import { TableSkeleton } from '../../shared/components/Skeleton';
-import { Pagination, type PaginationMeta } from '../../shared/components/Pagination';
-import { auditApi, type AuditLog } from './audit.api';
+import { Pagination, clampPage } from '../../shared/components/Pagination';
+import { useLoad } from '../../shared/hooks/useLoad';
+import { useUrlState } from '../../shared/hooks/useUrlState';
+import { auditApi } from './audit.api';
 import { formatDateTime } from '../../shared/types';
 import './SystemAdmin.css';
 import { EmptyCell } from '../../shared/components/EmptyCell';
@@ -38,30 +40,24 @@ function actionBadge(action: string): string {
 
 export function AuditLogs() {
   const { t } = useTranslation(['ops', 'common']);
-  const [logs, setLogs] = useState<AuditLog[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [page, setPage] = useState(1);
-  const [pagination, setPagination] = useState<PaginationMeta | null>(null);
-  const [action, setAction] = useState('');
-  const [entity, setEntity] = useState('');
+  const [q, setQ] = useUrlState({ action: '', entity: '', page: '1' });
+  const { action, entity } = q;
+  const page = Number(q.page) || 1;
   const toast = useToast();
-
-  const load = useCallback(async () => {
-    setLoading(true);
-    try {
-      const res = await auditApi.list({ action, entity }, { page });
-      setLogs(res.data);
-      setPagination(res.pagination);
-    } catch (err) {
-      toast(err instanceof Error ? err.message : t('audit.toast.loadFail'), 'error');
-    } finally {
-      setLoading(false);
-    }
-  }, [action, entity, page, toast, t]);
-
+  const { data, loading, error, reload } = useLoad(
+    () => auditApi.list({ action, entity }, { page }),
+    [action, entity, page]
+  );
+  const logs = data?.data ?? [];
+  const pagination = data?.pagination ?? null;
   useEffect(() => {
-    void load();
-  }, [load]);
+    if (!data) return;
+    const p = clampPage(page, data.pagination.totalPages);
+    if (p !== page) setQ({ page: String(p) });
+  }, [data]); // chỉ kéo trang khi có kết quả mới
+  useEffect(() => {
+    if (error) toastApiError(toast, error, t('audit.toast.loadFail'));
+  }, [error, toast, t]);
 
   return (
     <div className="page">
@@ -71,10 +67,7 @@ export function AuditLogs() {
         <select
           className="text-input"
           value={action}
-          onChange={(e) => {
-            setAction(e.target.value);
-            setPage(1);
-          }}
+          onChange={(e) => setQ({ action: e.target.value, page: '1' })}
           aria-label={t('audit.filterAction')}
         >
           <option value="">{t('audit.allActions')}</option>
@@ -87,10 +80,7 @@ export function AuditLogs() {
         <select
           className="text-input"
           value={entity}
-          onChange={(e) => {
-            setEntity(e.target.value);
-            setPage(1);
-          }}
+          onChange={(e) => setQ({ entity: e.target.value, page: '1' })}
           aria-label={t('audit.filterEntity')}
         >
           <option value="">{t('audit.allEntities')}</option>
@@ -107,12 +97,14 @@ export function AuditLogs() {
         )}
       </div>
 
-      {loading ? (
+      {loading && !data ? (
         <TableSkeleton cols={5} />
+      ) : error && !data ? (
+        <LoadError onRetry={reload} />
       ) : logs.length === 0 ? (
         <EmptyState icon="shield" title={t('audit.empty.title')} desc={t('audit.empty.desc')} />
       ) : (
-        <div className="table-wrap sticky">
+        <div className="table-wrap sticky" aria-busy={loading || undefined}>
           <table className="table">
             <thead>
               <tr>
@@ -145,7 +137,9 @@ export function AuditLogs() {
         </div>
       )}
 
-      {pagination && <Pagination pagination={pagination} onChange={setPage} />}
+      {pagination && (
+        <Pagination pagination={pagination} onChange={(p) => setQ({ page: String(p) })} loading={loading} />
+      )}
     </div>
   );
 }

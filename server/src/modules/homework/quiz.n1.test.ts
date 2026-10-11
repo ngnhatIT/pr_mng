@@ -39,10 +39,15 @@ const ANSWERS = [
   { attempt_id: 12, question_id: 101, option_id: 2, correct: 1 },
 ];
 
+/** close_date của quiz (HW-4: chỉ lộ đáp án đúng sau hạn chót). */
+let closeDate: string | null = null;
+
 function stmtFor(sql: string) {
   return {
     get: async () => {
-      if (sql.includes('FROM quiz_attempts WHERE id')) return { homework_id: 1, student_id: 10 };
+      if (sql.includes('FROM quiz_attempts qa JOIN homework h'))
+        return { homework_id: 1, student_id: 10, close_date: closeDate, rubric_id: null };
+      if (sql.includes('SELECT close_date FROM homework')) return { close_date: closeDate };
       throw new Error('unexpected get: ' + sql);
     },
     all: async () => {
@@ -50,7 +55,8 @@ function stmtFor(sql: string) {
       if (sql.includes('FROM quiz_options')) return OPTIONS;
       if (sql.includes('FROM quiz_attempts WHERE homework_id')) return ATTEMPTS;
       if (sql.includes('FROM quiz_answers qa')) return ANSWERS;
-      if (sql.includes('FROM quiz_answers WHERE attempt_id')) return ANSWERS.filter((a) => a.attempt_id === 11);
+      if (sql.includes('FROM quiz_answers WHERE attempt_id'))
+        return ANSWERS.filter((a) => a.attempt_id === 11);
       // YC2: điểm chấm tay câu essay trong getAttemptReview — 1 query GROUP BY duy nhất
       if (sql.includes('FROM quiz_essay_scores')) return [];
       throw new Error('unexpected all: ' + sql);
@@ -61,6 +67,7 @@ function stmtFor(sql: string) {
 
 beforeEach(() => {
   captured = [];
+  closeDate = null;
   (db as { prepare: unknown }).prepare = (sql: string) => {
     captured.push(sql);
     return stmtFor(sql);
@@ -101,5 +108,20 @@ describe('quiz.service - batch query chống N+1 (P1-4)', () => {
     const review = await quizService.getAttemptReview(11, 10);
     assert.equal(review.length, 3);
     assert.equal(countQ('FROM quiz_options'), 1);
+  });
+
+  it('HW-4 + C-1: chưa qua close_date → ẩn cả is_correct lẫn đúng/sai từng câu (chống dò đáp án)', async () => {
+    const review = await quizService.getAttemptReview(11, 10);
+    assert.ok(review.every((q) => q.options.every((o) => o.is_correct === null)));
+    assert.ok(review.every((q) => q.correct === null));
+    const atts = await quizService.getStudentAttempts(1, 10);
+    assert.ok(atts.every((a) => a.answers.every((x) => x.correct === null)));
+    assert.equal(atts[1].score, 4); // tổng điểm vẫn trả
+    closeDate = '2000-01-01'; // đã qua hạn chót → không làm lại được nữa → lộ đáp án + đúng/sai
+    const after = await quizService.getAttemptReview(11, 10);
+    assert.ok(after.some((q) => q.options.some((o) => o.is_correct === true)));
+    assert.equal(after.find((q) => q.question_id === 101)!.correct, true);
+    const attsAfter = await quizService.getStudentAttempts(1, 10);
+    assert.equal(attsAfter[0].answers.find((x) => x.question_id === 101)!.correct, true);
   });
 });

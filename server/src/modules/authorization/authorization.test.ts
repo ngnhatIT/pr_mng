@@ -21,6 +21,7 @@ import {
   canAccess,
   getUserPermissions,
   invalidateAllPermissions,
+  setRolePermissions,
 } from './authorization.service';
 import { requirePermission } from './authorization.middleware';
 import { PERMISSIONS, SYSTEM_ROLES } from './permissions';
@@ -207,31 +208,73 @@ describe('authorization (RBAC)', () => {
     const perms = await getUserPermissions(id);
     assert.equal(perms.size, PERMISSIONS.length);
   });
-});
 
-describe('RBAC privilege escalation (loop 85)', () => {
-  it('chặn gán role hệ thống cho non-superadmin', async () => {
-    // Logic ở roles.routes.ts: role.is_system && req.user.role !== 'superadmin' → 403
-    // Test ở mức service: verify system role có flag is_system
-    const sysRole = (await db
-      .prepare("SELECT id, is_system FROM roles WHERE name = 'superadmin' AND center_id IS NULL")
-      .get()) as { id: number; is_system: boolean } | undefined;
-    assert.ok(sysRole, 'System role superadmin phải tồn tại');
-    assert.equal(sysRole.is_system, true);
+  it('SEC-1: setRolePermissions chặn non-superadmin cấp all / system.* / vượt scope của mình', async () => {
+    const cid = await ensureCenter();
+    const adminId = await createUser('adm_cap', 'admin');
+    const staffId = await createUser('staff_cap', 'staff');
+    const rootId = await createUser('root_cap', 'superadmin', null);
+    const r = (await db
+      .prepare("INSERT INTO roles (code, name, center_id) VALUES ('cap', 'Cap', ?) RETURNING id")
+      .get(cid)) as { id: number };
+    const admin = { id: adminId, role: 'admin', center_id: cid } as never;
+    const staff = { id: staffId, role: 'staff', center_id: cid } as never;
+    await assert.rejects(
+      () => setRolePermissions(r.id, [{ code: 'users.update', scope: 'all' }], admin),
+      /vượt quyền/
+    );
+    await assert.rejects(
+      () => setRolePermissions(r.id, [{ code: 'system.manage', scope: 'center' }], admin),
+      /vượt quyền/
+    );
+    // staff không có users.update -> không cấp được cho người khác
+    await assert.rejects(
+      () => setRolePermissions(r.id, [{ code: 'users.update', scope: 'own' }], staff),
+      /vượt quyền/
+    );
+    await assert.rejects(() => setRolePermissions(r.id, { code: 'x' }, admin), /mảng/);
+    assert.deepEqual(await setRolePermissions(r.id, [{ code: 'students.view', scope: 'center' }], admin), {
+      count: 1,
+      permissions: [{ code: 'students.view', scope: 'center' }],
+    });
+    const root = { id: rootId, role: 'superadmin', center_id: null } as never;
+    assert.equal((await setRolePermissions(r.id, [{ code: 'users.update', scope: 'all' }], root)).count, 1);
   });
 
-  it('admin không sửa được role của center khác (check center)', async () => {
-    // Logic ở roles.routes.ts PUT /:id: cid !== null && role.center_id !== cid → 404
-    // Test verify role có center_id để check hoạt động
-    const centerA = await ensureCenter();
-    const roleA = (await db
-      .prepare('INSERT INTO roles (name, center_id, is_system) VALUES (?, ?, false) RETURNING id')
-      .get('test-role-a', centerA)) as { id: number };
-    const role = (await db
-      .prepare('SELECT center_id FROM roles WHERE id = ?')
-      .get(roleA.id)) as { center_id: number };
-    assert.equal(role.center_id, centerA);
-    // Dọn
-    await db.prepare('DELETE FROM roles WHERE id = ?').run(roleA.id);
+  it('SEC-1: user thường có role chứa scope all vẫn chỉ được center; custom role trùng code ở center khác không lẫn quyền', async () => {
+    const cid = await ensureCenter();
+    const other = Number(
+      (await db.prepare("INSERT INTO centers (name) VALUES ('TT 2')").run()).lastInsertRowid
+    );
+    const id = await createUser('t_all', 'teacher');
+    const perm = (await db.prepare("SELECT id FROM permissions WHERE code = 'invoices.view'").get()) as {
+      id: number;
+    };
+    const mine = (await db
+      .prepare("INSERT INTO roles (code, name, center_id) VALUES ('ketoan', 'KT', ?) RETURNING id")
+      .get(cid)) as { id: number };
+    const theirs = (await db
+      .prepare("INSERT INTO roles (code, name, center_id) VALUES ('ketoan', 'KT', ?) RETURNING id")
+      .get(other)) as { id: number };
+    const del = (await db.prepare("SELECT id FROM permissions WHERE code = 'students.delete'").get()) as {
+      id: number;
+    };
+    await db
+      .prepare("INSERT INTO role_permissions (role_id, permission_id, scope) VALUES (?, ?, 'all')")
+      .run(mine.id, perm.id);
+    await db
+      .prepare("INSERT INTO role_permissions (role_id, permission_id, scope) VALUES (?, ?, 'center')")
+      .run(theirs.id, del.id);
+    await db.prepare('INSERT INTO user_roles (user_id, role_id) VALUES (?, ?)').run(id, mine.id);
+    // Custom role code 'teacher' ở center khác không được cộng vào role chính 'teacher'
+    const fake = (await db
+      .prepare("INSERT INTO roles (code, name, center_id) VALUES ('teacher', 'Fake', ?) RETURNING id")
+      .get(other)) as { id: number };
+    await db
+      .prepare("INSERT INTO role_permissions (role_id, permission_id, scope) VALUES (?, ?, 'center')")
+      .run(fake.id, del.id);
+    invalidateAllPermissions();
+    assert.equal(await getPermissionScope(id, 'invoices.view'), 'center');
+    assert.equal(await hasPermission(id, 'students.delete'), false);
   });
 });

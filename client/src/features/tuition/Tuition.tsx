@@ -1,52 +1,71 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useTranslation, Trans } from 'react-i18next';
-import { invoicesApi, paymentsApi, InvoiceItem, PendingPayment, DebtRow } from './tuition.api';
-import { studentsApi, Student } from '../students/students.api';
+import {
+  invoicesApi,
+  paymentsApi,
+  paymentMethodLabel,
+  InvoiceItem,
+  PendingPayment,
+  DebtRow,
+} from './tuition.api';
+import { useStudentSearch, type Student } from '../students/students.api';
 import { classesApi, ClassItem } from '../classes/classes.api';
+import { useMyPermissions } from '../system/roles.api';
 import { useToast, toastApiError } from '../../shared/ui/toast';
 import { Modal } from '../../shared/components/Modal';
-import { Field, useFieldErrors } from '../../shared/components/Form';
+import { Field, MoneyInput, moneyDigits, useFieldErrors } from '../../shared/components/Form';
 import { PageHeader } from '../../shared/components/PageHeader';
-import { EmptyState } from '../../shared/components/EmptyState';
+import { EmptyState, LoadError } from '../../shared/components/EmptyState';
 import { TableSkeleton } from '../../shared/components/Skeleton';
-import { Pagination, type PaginationMeta } from '../../shared/components/Pagination';
-import { useDebounce } from '../../shared/hooks/useDebounce';
+import {
+  Pagination,
+  clampPage,
+  fetchAllPages,
+  type PaginationMeta,
+} from '../../shared/components/Pagination';
+import { useLoad } from '../../shared/hooks/useLoad';
+import { useUrlSearch, useUrlState } from '../../shared/hooks/useUrlState';
 import { Icon } from '../../shared/components/icons';
-import { formatVND, formatDate } from '../../shared/types';
+import { formatVND, formatDate, remainingOf, todayVN } from '../../shared/types';
 import './Tuition.css';
 import { ReceiptModal } from '../../shared/components/ReceiptModal';
 import { EmptyCell } from '../../shared/components/EmptyCell';
+import { getUser } from '../../shared/api/client';
 
-export function remindKind(dueDate: string | null): 'overdue' | 'upcoming' {
-  const today = new Date().toISOString().slice(0, 10);
+/** ADM-15: so với ngày hôm nay theo giờ VN (không phải UTC) để 0:00-7:00 không chọn nhầm mẫu 'upcoming'. */
+export function remindKind(dueDate: string | null, today = todayVN()): 'overdue' | 'upcoming' {
   return dueDate && dueDate < today ? 'overdue' : 'upcoming';
 }
+
+type TabKey = 'invoices' | 'debt' | 'pending';
 
 export function Tuition() {
   const { t } = useTranslation(['tuition', 'common']);
   const [searchParams, setSearchParams] = useSearchParams();
+  // B-3: tab suy ra từ URL (không useState) -> bấm sidebar /app/tuition khi đang ?tab=debt thì về đúng tab
   const tabParam = searchParams.get('tab');
-  const [tab, setTab] = useState(tabParam === 'debt' || tabParam === 'pending' ? tabParam : 'invoices');
+  const tab: TabKey = tabParam === 'debt' || tabParam === 'pending' ? tabParam : 'invoices';
 
-  const switchTab = (t: 'invoices' | 'debt' | 'pending') => {
-    setTab(t);
+  const switchTab = (t: TabKey) => {
     setSearchParams(t === 'invoices' ? {} : { tab: t }, { replace: true });
   };
 
   return (
     <div className="page">
       <PageHeader title={t('title')} desc={t('desc')} />
-      <div className="tabs">
-        <button className={`tab${tab === 'invoices' ? ' active' : ''}`} onClick={() => switchTab('invoices')}>
-          {t('invoices.tab')}
-        </button>
-        <button className={`tab${tab === 'debt' ? ' active' : ''}`} onClick={() => switchTab('debt')}>
-          {t('debt.tab')}
-        </button>
-        <button className={`tab${tab === 'pending' ? ' active' : ''}`} onClick={() => switchTab('pending')}>
-          {t('pending.tab')}
-        </button>
+      <div className="tabs" role="tablist">
+        {(['invoices', 'debt', 'pending'] as const).map((k) => (
+          <button
+            key={k}
+            role="tab"
+            aria-selected={tab === k}
+            className={`tab${tab === k ? ' active' : ''}`}
+            onClick={() => switchTab(k)}
+          >
+            {t(`${k}.tab`)}
+          </button>
+        ))}
       </div>
       {tab === 'invoices' ? (
         <InvoiceList />
@@ -61,29 +80,17 @@ export function Tuition() {
 
 function PendingPayments({ onViewInvoices }: { onViewInvoices: () => void }) {
   const { t } = useTranslation(['tuition', 'common']);
-  const [items, setItems] = useState<PendingPayment[]>([]);
-  const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState<number | null>(null);
-  const [page, setPage] = useState(1);
-  const [pagination, setPagination] = useState<PaginationMeta | null>(null);
+  const [q, setQ] = useUrlState({ page: '1' });
+  const page = Number(q.page) || 1;
   const toast = useToast();
+  const canApprove = useMyPermissions().has('payments.approve');
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    try {
-      const res = await paymentsApi.listPending({ page });
-      setItems(res.data);
-      setPagination(res.pagination);
-    } catch (err) {
-      toastApiError(toast, err, t('pending.loadError'));
-    } finally {
-      setLoading(false);
-    }
-  }, [page, toast, t]);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
+  const { data: res, loading, error, reload } = useLoad(() => paymentsApi.listPending({ page }), [page]);
+  const items = res?.data ?? [];
+  useLoadErrorToast(error, t('pending.loadError'));
+  // ADM-13: duyệt dòng cuối của trang cuối -> lùi về trang hợp lệ thay vì hiện "trống"
+  useClampPage(res, page, setQ);
 
   const moderate = async (p: PendingPayment, action: 'approve' | 'reject') => {
     setBusyId(p.id);
@@ -91,7 +98,7 @@ function PendingPayments({ onViewInvoices }: { onViewInvoices: () => void }) {
       if (action === 'approve') await paymentsApi.approve(p.id);
       else await paymentsApi.reject(p.id);
       toast(action === 'approve' ? t('pending.approved') : t('pending.rejected'), 'success');
-      void load();
+      reload();
     } catch (err) {
       toastApiError(toast, err, t('pending.fail'));
     } finally {
@@ -104,8 +111,10 @@ function PendingPayments({ onViewInvoices }: { onViewInvoices: () => void }) {
       <div className="toolbar">
         <span className="muted">{t('pending.note')}</span>
       </div>
-      {loading && items.length === 0 ? (
+      {loading && !res ? (
         <TableSkeleton cols={6} />
+      ) : error && !res ? (
+        <LoadError onRetry={reload} />
       ) : items.length === 0 ? (
         <EmptyState
           icon="check-circle"
@@ -139,28 +148,30 @@ function PendingPayments({ onViewInvoices }: { onViewInvoices: () => void }) {
                     {p.student_name} <span className="muted mono">({p.student_code})</span>
                   </td>
                   <td className="num">{formatVND(p.amount)}</td>
-                  <td>{p.method || t('pending.defaultMethod')}</td>
+                  <td>{paymentMethodLabel(p.method, (k) => t(k)) || t('pending.defaultMethod')}</td>
                   <td>{formatDate(p.paid_at)}</td>
                   <td>{p.note || <EmptyCell />}</td>
                   <td className="td-right">
-                    <span className="tuition-actions">
-                      <button
-                        className="btn btn-sm btn-primary"
-                        onClick={() => void moderate(p, 'approve')}
-                        disabled={busyId === p.id}
-                      >
-                        {busyId === p.id && <span className="spinner" aria-hidden="true" />}
-                        {t('pending.approve')}
-                      </button>
-                      <button
-                        className="btn btn-sm btn-danger-ghost"
-                        onClick={() => void moderate(p, 'reject')}
-                        disabled={busyId === p.id}
-                      >
-                        {busyId === p.id && <span className="spinner spinner-dark" aria-hidden="true" />}
-                        {t('pending.reject')}
-                      </button>
-                    </span>
+                    {canApprove && (
+                      <span className="tuition-actions">
+                        <button
+                          className="btn btn-sm btn-primary"
+                          onClick={() => void moderate(p, 'approve')}
+                          disabled={busyId === p.id}
+                        >
+                          {busyId === p.id && <span className="spinner" aria-hidden="true" />}
+                          {t('pending.approve')}
+                        </button>
+                        <button
+                          className="btn btn-sm btn-danger-ghost"
+                          onClick={() => void moderate(p, 'reject')}
+                          disabled={busyId === p.id}
+                        >
+                          {busyId === p.id && <span className="spinner spinner-dark" aria-hidden="true" />}
+                          {t('pending.reject')}
+                        </button>
+                      </span>
+                    )}
                   </td>
                 </tr>
               ))}
@@ -168,27 +179,32 @@ function PendingPayments({ onViewInvoices }: { onViewInvoices: () => void }) {
           </table>
         </div>
       )}
-      {pagination && <Pagination pagination={pagination} onChange={(p) => setPage(p)} loading={loading} />}
+      {res && (
+        <Pagination
+          pagination={res.pagination}
+          onChange={(p) => setQ({ page: String(p) })}
+          loading={loading}
+        />
+      )}
     </>
   );
 }
 
 function InvoiceList() {
   const { t } = useTranslation(['tuition', 'common']);
-  const [invoices, setInvoices] = useState<InvoiceItem[]>([]);
-  const [debtSummary, setDebtSummary] = useState<{ totalDebt: number; debtorCount: number } | null>(null);
-  const [status, setStatus] = useState('');
-  const [search, setSearch] = useState('');
-  const [loading, setLoading] = useState(true);
+  const [q, setQ] = useUrlState({ search: '', status: '', page: '1' });
+  const { status } = q;
+  // B-2: chữ đang gõ ở state cục bộ, URL nhận giá trị đã debounce
+  const [search, setSearch] = useUrlSearch(q.search, (v) => setQ({ search: v, page: '1' }));
+  const page = Number(q.page) || 1;
   const [showCreate, setShowCreate] = useState(false);
   const [paying, setPaying] = useState<InvoiceItem | null>(null);
   const [receipt, setReceipt] = useState<InvoiceItem | null>(null);
   const [crediting, setCrediting] = useState<InvoiceItem | null>(null);
   const [refunding, setRefunding] = useState<InvoiceItem | null>(null);
   const [remindingId, setRemindingId] = useState<number | null>(null);
-  const [page, setPage] = useState(1);
-  const [pagination, setPagination] = useState<PaginationMeta | null>(null);
   const toast = useToast();
+  const perms = useMyPermissions();
 
   const remindInvoice = async (inv: InvoiceItem) => {
     setRemindingId(inv.id);
@@ -205,33 +221,27 @@ function InvoiceList() {
     }
   };
 
-  const debouncedSearch = useDebounce(search);
+  const debouncedSearch = q.search;
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    try {
-      const res = await invoicesApi.list(debouncedSearch, status, { page });
-      setInvoices(res.data);
-      setPagination(res.pagination);
-    } catch (err) {
-      toastApiError(toast, err, t('invoices.loadError'));
-    } finally {
-      setLoading(false);
-    }
-  }, [status, debouncedSearch, page, toast, t]);
+  const {
+    data: res,
+    loading,
+    error,
+    reload,
+  } = useLoad(() => invoicesApi.list(debouncedSearch, status, { page }), [debouncedSearch, status, page]);
+  const invoices = res?.data ?? [];
+  useLoadErrorToast(error, t('invoices.loadError'));
+  useClampPage(res, page, setQ);
 
-  useEffect(() => {
-    void load();
-  }, [load]);
+  // UX-8: tổng nợ toàn trung tâm lấy từ server (/debt-summary); chưa có/lỗi thì hiện "—",
+  // không cộng tạm các dòng trang hiện tại (đã lọc + chỉ 20 dòng) rồi gắn nhãn "tổng".
+  const { data: debtSummary, reload: reloadSummary } = useLoad(() => invoicesApi.getDebtSummary(), []);
 
-  const totalDebt = debtSummary?.totalDebt ?? invoices.reduce((s, i) => s + (i.amount - (i.paid || 0)), 0);
-
-  useEffect(() => {
-    invoicesApi
-      .getDebtSummary()
-      .then(setDebtSummary)
-      .catch(() => {});
-  }, []);
+  // ADM-8: sau khi tạo hóa đơn/thu/hoàn/áp credit thì tải lại cả danh sách lẫn tổng nợ
+  const reloadAll = () => {
+    reload();
+    reloadSummary();
+  };
 
   const filteringInvoices = search.trim() !== '' || status !== '';
 
@@ -247,10 +257,7 @@ function InvoiceList() {
             aria-label={t('invoices.searchPlaceholder')}
             placeholder={t('invoices.searchPlaceholder')}
             value={search}
-            onChange={(e) => {
-              setSearch(e.target.value);
-              setPage(1);
-            }}
+            onChange={(e) => setSearch(e.target.value)}
           />
           {search !== '' &&
             (loading || search !== debouncedSearch ? (
@@ -261,10 +268,7 @@ function InvoiceList() {
               <button
                 type="button"
                 className="search-clear"
-                onClick={() => {
-                  setSearch('');
-                  setPage(1);
-                }}
+                onClick={() => setSearch('')}
                 aria-label={t('invoices.clearSearch')}
               >
                 <Icon name="x" size={14} />
@@ -275,10 +279,7 @@ function InvoiceList() {
           aria-label={t('invoices.statusFilterLabel')}
           className="text-input"
           value={status}
-          onChange={(e) => {
-            setStatus(e.target.value);
-            setPage(1);
-          }}
+          onChange={(e) => setQ({ status: e.target.value, page: '1' })}
         >
           <option value="">{t('searchAllStatuses')}</option>
           <option value="unpaid">{t('invoiceStatus.unpaid')}</option>
@@ -295,18 +296,22 @@ function InvoiceList() {
             })
           ) : (
             <>
-              {t('invoices.totalDebt')} <strong className="debt-amount">{formatVND(totalDebt)}</strong>
+              {t('invoices.totalDebt')} <strong className="debt-amount">—</strong>
             </>
           )}
         </span>
-        <button className="btn btn-primary btn-inline" onClick={() => setShowCreate(true)}>
-          <Icon name="plus" size={14} />
-          {t('invoice.create')}
-        </button>
+        {perms.has('invoices.create') && (
+          <button className="btn btn-primary btn-inline" onClick={() => setShowCreate(true)}>
+            <Icon name="plus" size={14} />
+            {t('invoice.create')}
+          </button>
+        )}
       </div>
 
-      {loading && invoices.length === 0 ? (
+      {loading && !res ? (
         <TableSkeleton cols={8} />
+      ) : error && !res ? (
+        <LoadError onRetry={reload} />
       ) : invoices.length === 0 ? (
         <EmptyState
           icon="banknote"
@@ -318,18 +323,19 @@ function InvoiceList() {
                 className="btn btn-secondary btn-inline"
                 onClick={() => {
                   setSearch('');
-                  setStatus('');
-                  setPage(1);
+                  setQ({ search: '', status: '', page: '1' });
                 }}
               >
                 <Icon name="x" size={14} />
                 {t('invoices.emptyFiltered.clear')}
               </button>
             ) : (
-              <button className="btn btn-primary btn-inline" onClick={() => setShowCreate(true)}>
-                <Icon name="plus" size={14} />
-                {t('invoice.create')}
-              </button>
+              perms.has('invoices.create') && (
+                <button className="btn btn-primary btn-inline" onClick={() => setShowCreate(true)}>
+                  <Icon name="plus" size={14} />
+                  {t('invoice.create')}
+                </button>
+              )
             )
           }
         />
@@ -370,7 +376,7 @@ function InvoiceList() {
                     <td>{inv.class_name || <EmptyCell />}</td>
                     <td className="num">{formatVND(inv.amount)}</td>
                     <td className="num">{formatVND(paid)}</td>
-                    <td className="num debt-amount">{formatVND(inv.amount - paid)}</td>
+                    <td className="num debt-amount">{formatVND(remainingOf(inv))}</td>
                     <td>{formatDate(inv.due_date)}</td>
                     <td>
                       <span className={`badge badge-${inv.status}`}>{t(`invoiceStatus.${inv.status}`)}</span>
@@ -379,30 +385,36 @@ function InvoiceList() {
                       <span className="tuition-actions">
                         {inv.status !== 'paid' && (
                           <>
-                            <button
-                              className="btn btn-sm"
-                              onClick={() => void remindInvoice(inv)}
-                              disabled={remindingId === inv.id}
-                              title={t('invoice.remindTitle')}
-                            >
-                              {remindingId === inv.id && (
-                                <span className="spinner spinner-dark" aria-hidden="true" />
-                              )}
-                              {remindingId === inv.id ? t('invoice.sending') : t('invoice.remindZalo')}
-                            </button>
-                            <button
-                              className="btn btn-sm"
-                              onClick={() => setCrediting(inv)}
-                              title={t('credit.applyTitle')}
-                            >
-                              {t('credit.apply')}
-                            </button>
-                            <button className="btn btn-sm btn-primary" onClick={() => setPaying(inv)}>
-                              {t('pay.collect')}
-                            </button>
+                            {perms.has('notifications.send') && (
+                              <button
+                                className="btn btn-sm"
+                                onClick={() => void remindInvoice(inv)}
+                                disabled={remindingId === inv.id}
+                                title={t('invoice.remindTitle')}
+                              >
+                                {remindingId === inv.id && (
+                                  <span className="spinner spinner-dark" aria-hidden="true" />
+                                )}
+                                {remindingId === inv.id ? t('invoice.sending') : t('invoice.remindZalo')}
+                              </button>
+                            )}
+                            {perms.has('payments.collect') && (
+                              <>
+                                <button
+                                  className="btn btn-sm"
+                                  onClick={() => setCrediting(inv)}
+                                  title={t('credit.applyTitle')}
+                                >
+                                  {t('credit.applyRow')}
+                                </button>
+                                <button className="btn btn-sm btn-primary" onClick={() => setPaying(inv)}>
+                                  {t('pay.collect')}
+                                </button>
+                              </>
+                            )}
                           </>
                         )}
-                        {paid > 0 && (
+                        {paid > 0 && perms.has('payments.refund') && (
                           <button
                             className="btn btn-sm btn-danger-ghost"
                             onClick={() => setRefunding(inv)}
@@ -430,14 +442,20 @@ function InvoiceList() {
         </div>
       )}
 
-      {pagination && <Pagination pagination={pagination} onChange={(p) => setPage(p)} loading={loading} />}
+      {res && (
+        <Pagination
+          pagination={res.pagination}
+          onChange={(p) => setQ({ page: String(p) })}
+          loading={loading}
+        />
+      )}
 
       {showCreate && (
         <InvoiceFormModal
           onClose={() => setShowCreate(false)}
           onDone={() => {
             setShowCreate(false);
-            void load();
+            reloadAll();
           }}
         />
       )}
@@ -447,14 +465,14 @@ function InvoiceList() {
           onClose={() => setPaying(null)}
           onDone={() => {
             setPaying(null);
-            void load();
+            reloadAll();
           }}
         />
       )}
       {receipt && (
         <ReceiptModal
           invoice={receipt}
-          centerName={t('receipt.defaultCenter')}
+          centerName={getUser()?.center_name || t('receipt.defaultCenter')}
           onClose={() => setReceipt(null)}
         />
       )}
@@ -464,7 +482,7 @@ function InvoiceList() {
           onClose={() => setRefunding(null)}
           onDone={() => {
             setRefunding(null);
-            void load();
+            reloadAll();
           }}
         />
       )}
@@ -474,7 +492,7 @@ function InvoiceList() {
           onClose={() => setCrediting(null)}
           onDone={() => {
             setCrediting(null);
-            void load();
+            reloadAll();
           }}
         />
       )}
@@ -492,20 +510,29 @@ function ApplyCreditModal({
   onDone: () => void;
 }) {
   const { t } = useTranslation(['tuition', 'common']);
+  // O-2: chọn từ danh sách credits khả dụng (server lọc đúng phụ huynh/trung tâm) thay vì nhập ID tay
+  const {
+    data: credits,
+    loading,
+    error,
+    reload,
+  } = useLoad(() => invoicesApi.listCredits(invoice.id), [invoice.id]);
   const [creditId, setCreditId] = useState('');
   const [busy, setBusy] = useState(false);
   const toast = useToast();
-  const remain = invoice.amount - (invoice.paid || 0);
+  const remain = remainingOf(invoice);
+  const selected = creditId || (credits?.length === 1 ? String(credits[0].id) : '');
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!creditId.trim()) {
+    if (busy) return;
+    if (!selected) {
       toast(t('credit.idRequired'), 'error');
       return;
     }
     setBusy(true);
     try {
-      const r = await invoicesApi.applyCredit(invoice.id, Number(creditId));
+      const r = await invoicesApi.applyCredit(invoice.id, Number(selected));
       toast(t('credit.applied', { amount: formatVND(r.applied) }), 'success');
       onDone();
     } catch (err) {
@@ -530,25 +557,44 @@ function ApplyCreditModal({
             components={{ strong: <strong className="debt-amount" /> }}
           />
         </p>
-        <p className="muted">
-          <Trans i18nKey="credit.help" ns="tuition" components={{ strong: <strong /> }} />
-        </p>
-        <Field label={t('credit.idLabel')}>
-          <input
-            className="text-input"
-            type="number"
-            min={1}
-            value={creditId}
-            onChange={(e) => setCreditId(e.target.value)}
-            placeholder={t('credit.idPlaceholder')}
-            required
-          />
-        </Field>
+        {loading && !credits ? (
+          <TableSkeleton rows={2} cols={1} />
+        ) : error && !credits ? (
+          <LoadError onRetry={reload} />
+        ) : !credits?.length ? (
+          <p className="muted">{t('credit.none')}</p>
+        ) : (
+          <>
+            <p className="muted">{t('credit.help')}</p>
+            <Field label={t('credit.idLabel')} required>
+              <select
+                // B3-4: select mount sau khi tải xong -> autoFocus để focus không nằm ở nút Hủy
+                autoFocus
+                className="text-input"
+                value={selected}
+                onChange={(e) => setCreditId(e.target.value)}
+                required
+              >
+                <option value="">{t('credit.selectPlaceholder')}</option>
+                {credits.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {t('credit.option', {
+                      id: c.id,
+                      parent: c.parent_name,
+                      amount: formatVND(c.available),
+                      reason: c.reason || '—',
+                    })}
+                  </option>
+                ))}
+              </select>
+            </Field>
+          </>
+        )}
         <div className="modal-actions">
           <button type="button" className="btn" onClick={onClose}>
             {t('actions.cancel', { ns: 'common' })}
           </button>
-          <button type="submit" className="btn btn-primary" disabled={busy}>
+          <button type="submit" className="btn btn-primary" disabled={busy || !credits?.length}>
             {busy && <span className="spinner" aria-hidden="true" />}
             {busy ? t('credit.applying') : t('credit.apply')}
           </button>
@@ -560,7 +606,12 @@ function ApplyCreditModal({
 
 function InvoiceFormModal({ onClose, onDone }: { onClose: () => void; onDone: () => void }) {
   const { t } = useTranslation(['tuition', 'common']);
-  const [students, setStudents] = useState<Student[]>([]);
+  // ADM-6: tìm học viên server-side (debounce) thay vì tải sẵn 100 học viên mới nhất
+  const [studentSearch, setStudentSearch] = useState('');
+  const { results: studentResults } = useStudentSearch(studentSearch);
+  const [picked, setPicked] = useState<Student | null>(null);
+  const students =
+    picked && !studentResults.some((s) => s.id === picked.id) ? [picked, ...studentResults] : studentResults;
   const [classes, setClasses] = useState<ClassItem[]>([]);
   const [studentId, setStudentId] = useState('');
   const [classId, setClassId] = useState('');
@@ -575,23 +626,18 @@ function InvoiceFormModal({ onClose, onDone }: { onClose: () => void; onDone: ()
   const toast = useToast();
 
   useEffect(() => {
-    Promise.all([
-      studentsApi.list('', 'studying', { limit: 100 }),
-      classesApi.list('', { limit: 100 }).then((r) => r.data),
-    ])
-      .then(([s, c]) => {
-        setStudents(s.data);
-        setClasses(c);
-      })
-      .catch((err: Error) => toast(err.message, 'error'));
-  }, [toast]);
+    fetchAllPages((p) => classesApi.list('', p))
+      .then(setClasses)
+      .catch((err: unknown) => toastApiError(toast, err, t('states.loadError', { ns: 'common' })));
+  }, [toast, t]);
 
   // Auto-fill tuition fee when a class is picked
   const pickClass = (cid: string) => {
     setClassId(cid);
     const c = classes.find((x) => String(x.id) === cid);
-    if (c) setAmount(String(c.tuition_fee));
+    if (c) setAmount(moneyDigits(c.tuition_fee));
   };
+  const dirty = !!(studentId || classId || amount || dueDate || note);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -627,15 +673,27 @@ function InvoiceFormModal({ onClose, onDone }: { onClose: () => void; onDone: ()
   };
 
   return (
-    <Modal title={t('invoiceForm.title')} onClose={onClose}>
+    <Modal title={t('invoiceForm.title')} onClose={onClose} dirty={dirty}>
       <form onSubmit={submit}>
         <div className="form-grid">
+          <Field label={t('invoiceForm.searchStudent')} span>
+            <input
+              className="text-input"
+              type="search"
+              value={studentSearch}
+              onChange={(e) => setStudentSearch(e.target.value)}
+              placeholder={t('invoiceForm.searchStudentPlaceholder')}
+            />
+          </Field>
           <Field label={t('invoiceForm.student')} span error={fieldErrors.studentId} required>
             <select
               ref={studentRef}
               className="text-input"
               value={studentId}
-              onChange={(e) => setStudentId(e.target.value)}
+              onChange={(e) => {
+                setStudentId(e.target.value);
+                setPicked(students.find((s) => String(s.id) === e.target.value) ?? null);
+              }}
               required
             >
               <option value="">{t('invoiceForm.selectStudent')}</option>
@@ -657,15 +715,7 @@ function InvoiceFormModal({ onClose, onDone }: { onClose: () => void; onDone: ()
             </select>
           </Field>
           <Field label={t('invoiceForm.amount')} error={fieldErrors.amount} required>
-            <input
-              ref={amountRef}
-              className="text-input"
-              type="number"
-              min={1}
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-              required
-            />
+            <MoneyInput ref={amountRef} className="text-input" value={amount} onChange={setAmount} required />
           </Field>
           <Field label={t('invoiceForm.dueDate')}>
             <input
@@ -706,7 +756,7 @@ const PAYMENT_METHODS = [
 
 type PaymentMethodCode = (typeof PAYMENT_METHODS)[number]['code'];
 
-function PayModal({
+export function PayModal({
   invoice,
   onClose,
   onDone,
@@ -716,8 +766,7 @@ function PayModal({
   onDone: () => void;
 }) {
   const { t } = useTranslation(['tuition', 'common']);
-  const paid = invoice.paid || 0;
-  const remain = invoice.amount - paid;
+  const remain = remainingOf(invoice);
   const [amount, setAmount] = useState(String(remain));
   const [method, setMethod] = useState<PaymentMethodCode>('cash');
   const [note, setNote] = useState('');
@@ -760,7 +809,11 @@ function PayModal({
   };
 
   return (
-    <Modal title={t('pay.title')} onClose={onClose}>
+    <Modal
+      title={t('pay.title')}
+      onClose={onClose}
+      dirty={amount !== String(remain) || method !== 'cash' || note !== ''}
+    >
       <form onSubmit={submit}>
         <p className="confirm-text">
           <Trans
@@ -772,15 +825,12 @@ function PayModal({
         </p>
         <div className="form-grid">
           <Field label={t('pay.amount')} error={errors.amount}>
-            <input
+            <MoneyInput
               ref={refFor('amount')}
               className="text-input"
-              type="number"
-              min={1}
-              max={remain}
               value={amount}
-              onChange={(e) => {
-                setAmount(e.target.value);
+              onChange={(v) => {
+                setAmount(v);
                 clear('amount');
               }}
             />
@@ -864,7 +914,7 @@ function RefundModal({
   };
 
   return (
-    <Modal title={t('refund.title')} onClose={onClose}>
+    <Modal title={t('refund.title')} onClose={onClose} dirty={amount !== String(paid) || reason !== ''}>
       <form onSubmit={submit}>
         <p className="confirm-text">
           <Trans
@@ -876,15 +926,12 @@ function RefundModal({
         </p>
         <div className="form-grid">
           <Field label={t('refund.amount')} error={errors.amount}>
-            <input
+            <MoneyInput
               ref={refFor('amount')}
               className="text-input"
-              type="number"
-              min={1}
-              max={paid}
               value={amount}
-              onChange={(e) => {
-                setAmount(e.target.value);
+              onChange={(v) => {
+                setAmount(v);
                 clear('amount');
               }}
             />
@@ -914,31 +961,17 @@ function RefundModal({
 
 function DebtList() {
   const { t } = useTranslation(['tuition', 'common']);
-  const [debts, setDebts] = useState<DebtRow[]>([]);
-  const [loading, setLoading] = useState(true);
   const [remindingId, setRemindingId] = useState<number | null>(null);
-  const [page, setPage] = useState(1);
-  const [pagination, setPagination] = useState<PaginationMeta | null>(null);
+  const [q, setQ] = useUrlState({ page: '1' });
+  const page = Number(q.page) || 1;
   const toast = useToast();
 
-  const loadDebts = useCallback(async () => {
-    setLoading(true);
-    try {
-      const r = await invoicesApi.listDebt({ page });
-      setDebts(r.data);
-      setPagination(r.pagination);
-    } catch (err) {
-      toastApiError(toast, err, t('debt.loadError'));
-    } finally {
-      setLoading(false);
-    }
-  }, [page, toast, t]);
-
-  useEffect(() => {
-    void loadDebts();
-  }, [loadDebts]);
-
-  const total = debts.reduce((s, d) => s + d.debt, 0);
+  const { data: res, loading, error, reload } = useLoad(() => invoicesApi.listDebt({ page }), [page]);
+  const debts: DebtRow[] = res?.data ?? [];
+  useLoadErrorToast(error, t('debt.loadError'));
+  useClampPage(res, page, setQ);
+  // UX-8: số học viên + tổng nợ của toàn bộ danh sách (server), không phải cộng 20 dòng trang hiện tại
+  const { data: summary } = useLoad(() => invoicesApi.getDebtSummary(), []);
 
   /** Nhắc Zalo tất cả hóa đơn chưa thanh toán đủ của một học viên */
   const remindStudent = async (d: DebtRow) => {
@@ -978,17 +1011,21 @@ function DebtList() {
   return (
     <>
       <div className="toolbar">
-        <span className="muted">
-          <Trans
-            i18nKey="debt.summary"
-            ns="tuition"
-            values={{ count: debts.length, total: formatVND(total) }}
-            components={{ strong: <strong className="debt-amount" /> }}
-          />
-        </span>
+        {summary && (
+          <span className="muted">
+            <Trans
+              i18nKey="debt.summary"
+              ns="tuition"
+              values={{ count: summary.debtorCount, total: formatVND(summary.totalDebt) }}
+              components={{ strong: <strong className="debt-amount" /> }}
+            />
+          </span>
+        )}
       </div>
-      {loading && debts.length === 0 ? (
+      {loading && !res ? (
         <TableSkeleton cols={6} />
+      ) : error && !res ? (
+        <LoadError onRetry={reload} />
       ) : debts.length === 0 ? (
         <EmptyState icon="check-circle" title={t('debt.emptyTitle')} desc={t('debt.emptyDesc')} />
       ) : (
@@ -1038,7 +1075,34 @@ function DebtList() {
           </table>
         </div>
       )}
-      {pagination && <Pagination pagination={pagination} onChange={(p) => setPage(p)} loading={loading} />}
+      {res && (
+        <Pagination
+          pagination={res.pagination}
+          onChange={(p) => setQ({ page: String(p) })}
+          loading={loading}
+        />
+      )}
     </>
   );
+}
+
+/** Toast lỗi tải 1 lần mỗi lỗi mới (useLoad giữ data cũ, nên lỗi khi tải lại chỉ báo qua toast). */
+function useLoadErrorToast(error: unknown, fallback: string) {
+  const toast = useToast();
+  useEffect(() => {
+    if (error) toastApiError(toast, error, fallback);
+  }, [error, toast]);
+}
+
+/** ADM-13: xóa/duyệt dòng cuối của trang cuối -> lùi về trang hợp lệ thay vì hiện "trống". */
+function useClampPage(
+  res: { pagination: PaginationMeta } | undefined,
+  page: number,
+  setQ: (patch: { page: string }) => void
+) {
+  useEffect(() => {
+    if (!res) return;
+    const p = clampPage(page, res.pagination.totalPages);
+    if (p !== page) setQ({ page: String(p) });
+  }, [res, page, setQ]);
 }

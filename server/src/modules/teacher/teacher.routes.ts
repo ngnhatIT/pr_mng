@@ -12,7 +12,7 @@ const router = Router();
 /** Các buổi dạy hôm nay */
 router.get(
   '/today',
-  requirePermission('sessions.view'),
+  requirePermission('sessions.view', 'own'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const tid = await effTeacherId(req);
     if (!tid) {
@@ -26,7 +26,7 @@ router.get(
 /** Giáo viên điểm danh bằng mã check-in của buổi học */
 router.post(
   '/checkin',
-  requirePermission('attendance.take'),
+  requirePermission('attendance.take', 'own'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const tid = req.user?.teacher_id;
     if (!tid) {
@@ -44,7 +44,7 @@ router.post(
 /** Bảng lương của chính giáo viên */
 router.get(
   '/payroll',
-  requirePermission('payroll.view_self'),
+  requirePermission('payroll.view_self', 'own'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const tid = await effTeacherId(req);
     if (!tid) {

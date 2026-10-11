@@ -4,7 +4,7 @@ Tài liệu này dành cho dev mới join. Đọc `docs/ARCHITECTURE.md` trướ
 
 ## Thêm 1 tính năng mới (checklist)
 
-1. **DB**: thêm bảng/cột vào `server/src/db/schema.ts` (+ migration trong `migrations.ts` nếu DB cũ cần nâng cấp).
+1. **DB**: thêm bảng/cột vào `server/src/db/schema.tables.ts` + mô tả trong `schema.docs.ts` (+ migration trong `migrations.ts` nếu DB cũ cần nâng cấp).
 2. **Service**: viết hàm nghiệp vụ trong `server/src/modules/<domain>/<domain>.service.ts`.
    Service là hàm thuần nhận `(centerId | ScopeCtx, ...args)` — KHÔNG nhận `req/res`.
 3. **Route**: thêm handler mỏng trong `<domain>.routes.ts`:
@@ -14,7 +14,7 @@ Tài liệu này dành cho dev mới join. Đọc `docs/ARCHITECTURE.md` trướ
      requirePermission('students.create'),
      asyncHandler(async (req: AuthRequest, res: Response) => {
        const input = validate(req.body, { name: v.string({ required: true, max: 100, label: 'Tên' }) });
-       res.status(201).json(myService.create(reqCenterId(req), input));
+       res.status(201).json(await myService.create(requireCenterId(req), input)); // service luôn async — thiếu await trả `{}`
      })
    );
    ```
@@ -30,13 +30,18 @@ Tài liệu này dành cho dev mới join. Đọc `docs/ARCHITECTURE.md` trướ
 - ❌ Không `console.log` → dùng `logger.scope('<domain>')`.
 - ❌ Không query thiếu `center_id` → dùng `findByIdOr404` từ `shared/repository.ts`.
 - ✅ Mọi endpoint staff mới phải qua `denyParents` (đã gắn ở mount trong `app.ts`).
+- ✅ Ghi dữ liệu thuộc tenant: dùng `requireCenterId(req)` (superadmin phải chỉ rõ trung tâm); đọc: `reqCenterId(req)` (fail-closed 403 nếu user chưa có trung tâm).
 - ✅ Input từ client luôn qua `validate()` trước khi vào service.
 
 ## Chạy test
 
 ```bash
-cd server && npm test        # unit test (node:test, 0 dependency)
+cd server && npm test        # node:test trên PostgreSQL thật, chạy tuần tự (--test-concurrency=1)
 ```
+
+Test cần PostgreSQL; tên DB phải kết thúc bằng `_test` hoặc `_test_<hậu tố>` (helper từ chối DB khác để khỏi xóa nhầm dữ liệu thật). Đặt
+`TEST_DATABASE_URL` trong **shell** (`npm test` KHÔNG đọc `server/.env`); mặc định
+`postgres://educenter:educenter123@localhost:5432/educenter_test`. Thư mục build test: `TEST_OUT=<dir>`.
 
 ## Code chuẩn (lint + format + CI)
 
@@ -64,5 +69,5 @@ import { AppError } from '../../shared/errors';
 import { validate, v, paramId } from '../../shared/validate';
 import { findByIdOr404 } from '../../shared/repository';
 import { logger } from '../../shared/logger';
-import { reqCenterId } from '../../middleware/auth';
+import { reqCenterId, requireCenterId } from '../../middleware/auth';
 ```

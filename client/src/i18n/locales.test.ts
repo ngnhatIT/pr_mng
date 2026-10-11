@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+import i18n from './index';
 
 // Khóa thành quả đợt quét toast cụt (UI loop 77-84):
 // 1. mọi namespace vi/en phải có cùng tập key
@@ -82,5 +83,18 @@ describe('i18n locales', () => {
     for (const [ns, d] of Object.entries(vi)) walkAll(d as Record<string, unknown>, ns, '');
     for (const [ns, d] of Object.entries(en)) walkAll(d as Record<string, unknown>, ns, '');
     expect(bad).toEqual([]);
+  });
+});
+
+describe('i18n lazy load namespace', () => {
+  it('namespace ngoài common tải qua backend lazy, cả vi lẫn en', async () => {
+    await i18n.loadNamespaces('homework');
+    await i18n.loadLanguages(['vi', 'en']);
+    expect(i18n.getFixedT('vi', 'homework')('form.errors.titleRequired')).toBe(
+      (vi.homework as any).form.errors.titleRequired
+    );
+    expect(i18n.getFixedT('en', 'homework')('form.errors.titleRequired')).toBe(
+      (en.homework as any).form.errors.titleRequired
+    );
   });
 });

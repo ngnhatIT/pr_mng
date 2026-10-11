@@ -16,9 +16,16 @@ import { toISODate, addDays, ourDayOfWeek, parseISODate } from './date-utils';
  */
 export async function seedDatabase(): Promise<void> {
   if (!env.SEED_DEMO) return;
-  const demoId = await ensureDemoCenter();
-  const count = ((await db.prepare('SELECT COUNT(*) as c FROM users').get()) as { c: number }).c;
-  if (count === 0) {
+  // DATA-21: chỉ seed khi DB TRỐNG thật sự (không user, không học viên, không center
+  // nào ngoài 'demo' mà backfillCenters có thể vừa tạo) — không trộn demo vào dữ liệu thật.
+  const hasData = (await db
+    .prepare(
+      `SELECT (EXISTS (SELECT 1 FROM users) OR EXISTS (SELECT 1 FROM students)
+              OR EXISTS (SELECT 1 FROM centers WHERE subdomain IS DISTINCT FROM 'demo')) AS v`
+    )
+    .get()) as { v: boolean };
+  if (!hasData.v) {
+    const demoId = await ensureDemoCenter();
     console.log('Đang tạo dữ liệu demo...');
 
     const adminHash = bcrypt.hashSync('123456', 10);
@@ -29,9 +36,15 @@ export async function seedDatabase(): Promise<void> {
     const addTeacher = db.prepare(
       'INSERT INTO teachers (name, phone, email, subject, center_id) VALUES (?, ?, ?, ?, ?)'
     );
-    await addTeacher.run('Nguyễn Văn An', '0901112223', 'an.nv@educenter.vn', 'Tiếng Anh', demoId);
-    await addTeacher.run('Trần Thị Bình', '0904445556', 'binh.tt@educenter.vn', 'Tiếng Nhật', demoId);
-    await addTeacher.run('Lê Văn Cường', '0907778889', 'cuong.lv@educenter.vn', 'IELTS', demoId);
+    // Không giả định id (1, 2, 3...) — DB có thể đã dùng sequence trước đó.
+    const teacherIds: number[] = [];
+    for (const t of [
+      ['Nguyễn Văn An', '0901112223', 'an.nv@educenter.vn', 'Tiếng Anh'],
+      ['Trần Thị Bình', '0904445556', 'binh.tt@educenter.vn', 'Tiếng Nhật'],
+      ['Lê Văn Cường', '0907778889', 'cuong.lv@educenter.vn', 'IELTS'],
+    ]) {
+      teacherIds.push(Number((await addTeacher.run(...t, demoId)).lastInsertRowid));
+    }
 
     const studentNames = [
       'Phạm Minh Tuấn',
@@ -50,10 +63,11 @@ export async function seedDatabase(): Promise<void> {
     const addStudent = db.prepare(
       'INSERT INTO students (code, name, phone, email, dob, address, status, center_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
     );
+    const studentIds: number[] = [];
     for (const [i, name] of studentNames.entries()) {
       const n = i + 1;
       const status = n === 11 ? 'paused' : n === 12 ? 'quit' : 'studying';
-      await addStudent.run(
+      const r = await addStudent.run(
         `HV${String(n).padStart(3, '0')}`,
         name,
         `0912${String(100000 + n * 137).slice(0, 6)}`,
@@ -63,6 +77,7 @@ export async function seedDatabase(): Promise<void> {
         status,
         demoId
       );
+      studentIds.push(Number(r.lastInsertRowid));
     }
 
     const today = new Date();
@@ -74,10 +89,13 @@ export async function seedDatabase(): Promise<void> {
     const addClass = db.prepare(
       'INSERT INTO classes (name, teacher_id, schedule, start_date, end_date, tuition_fee, max_students, status, center_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
     );
+    const classIds: number[] = [];
+    const addClassId = async (...args: unknown[]) =>
+      classIds.push(Number((await addClass.run(...args)).lastInsertRowid));
     // Lớp 1: có lịch học hôm nay để dashboard hiển thị buổi học hôm nay
-    await addClass.run(
+    await addClassId(
       'Tiếng Anh Giao Tiếp A1',
-      1,
+      teacherIds[0],
       JSON.stringify([
         { day: todayDow, start: '18:00', end: '20:00' },
         { day: otherDow, start: '18:00', end: '20:00' },
@@ -89,9 +107,9 @@ export async function seedDatabase(): Promise<void> {
       'active',
       demoId
     );
-    await addClass.run(
+    await addClassId(
       'Tiếng Nhật N5',
-      2,
+      teacherIds[1],
       JSON.stringify([
         { day: 3, start: '19:00', end: '21:00' },
         { day: 6, start: '19:00', end: '21:00' },
@@ -103,9 +121,9 @@ export async function seedDatabase(): Promise<void> {
       'active',
       demoId
     );
-    await addClass.run(
+    await addClassId(
       'IELTS 6.5 Cấp tốc',
-      3,
+      teacherIds[2],
       JSON.stringify([{ day: 7, start: '08:00', end: '11:00' }]),
       startDate,
       endDate,
@@ -116,22 +134,23 @@ export async function seedDatabase(): Promise<void> {
     );
 
     const enroll = db.prepare('INSERT OR IGNORE INTO enrollments (student_id, class_id) VALUES (?, ?)');
-    for (const s of [1, 2, 3, 4, 5, 6]) await enroll.run(s, 1);
-    for (const s of [4, 5, 7, 8]) await enroll.run(s, 2);
-    for (const s of [6, 9, 10, 11, 12]) await enroll.run(s, 3);
+    // Số thứ tự 1-based trong danh sách vừa tạo -> id thật
+    const S = (n: number) => studentIds[n - 1];
+    const C = (n: number) => classIds[n - 1];
+    for (const s of [1, 2, 3, 4, 5, 6]) await enroll.run(S(s), C(1));
+    for (const s of [4, 5, 7, 8]) await enroll.run(S(s), C(2));
+    for (const s of [6, 9, 10, 11, 12]) await enroll.run(S(s), C(3));
 
     // Sinh buổi học cho các lớp
-    await generateSessionsForClass(1);
-    await generateSessionsForClass(2);
-    await generateSessionsForClass(3);
+    for (const c of classIds) await generateSessionsForClass(c);
 
     // Điểm danh cho các buổi đã qua của lớp 1 (tối đa 6 buổi gần nhất)
     const pastSessions = (await db
-      .prepare("SELECT id FROM sessions WHERE class_id = 1 AND date < date('now') ORDER BY date DESC LIMIT 6")
-      .all()) as { id: number }[];
+      .prepare("SELECT id FROM sessions WHERE class_id = ? AND date < date('now') ORDER BY date DESC LIMIT 6")
+      .all(C(1))) as { id: number }[];
     const class1Students = (await db
-      .prepare('SELECT student_id FROM enrollments WHERE class_id = 1 AND status = ?')
-      .all('active')) as { student_id: number }[];
+      .prepare('SELECT student_id FROM enrollments WHERE class_id = ? AND status = ?')
+      .all(C(1), 'active')) as { student_id: number }[];
     const addAtt = db.prepare(
       'INSERT OR IGNORE INTO attendance (session_id, student_id, status) VALUES (?, ?, ?)'
     );
@@ -157,12 +176,13 @@ export async function seedDatabase(): Promise<void> {
 
     // Hóa đơn + thanh toán demo
     const addInvoice = db.prepare(
-      "INSERT INTO invoices (student_id, class_id, amount, due_date, status, note, created_at) VALUES (?, ?, ?, ?, 'unpaid', ?, datetime('now'))"
+      "INSERT INTO invoices (student_id, class_id, amount, due_date, status, note, center_id, created_at) VALUES (?, ?, ?, ?, 'unpaid', ?, ?, datetime('now'))"
     );
     const addPayment = db.prepare(
       "INSERT INTO payments (invoice_id, amount, paid_at, method, note, status) VALUES (?, ?, ?, ?, ?, 'confirmed')"
     );
     const thisMonth = toISODate(today).slice(0, 7); // YYYY-MM
+    const invoiceIds: number[] = [];
     const mk = async (
       studentId: number,
       classId: number,
@@ -170,7 +190,15 @@ export async function seedDatabase(): Promise<void> {
       dueInDays: number,
       note: string
     ): Promise<number> => {
-      const r = await addInvoice.run(studentId, classId, amount, toISODate(addDays(today, dueInDays)), note);
+      const r = await addInvoice.run(
+        S(studentId),
+        C(classId),
+        amount,
+        toISODate(addDays(today, dueInDays)),
+        note,
+        demoId
+      );
+      invoiceIds.push(Number(r.lastInsertRowid));
       return Number(r.lastInsertRowid);
     };
     // 1: đã thanh toán đủ (trong tháng này)
@@ -196,8 +224,7 @@ export async function seedDatabase(): Promise<void> {
     const lastMonth = toISODate(addDays(parseISODate(`${thisMonth}-01`), -15)).slice(0, 7);
     await addPayment.run(id, 2500000, `${lastMonth}-20 09:00:00`, 'Tiền mặt', '');
     // Cập nhật trạng thái hóa đơn
-    const allInv = (await db.prepare('SELECT id FROM invoices').all()) as { id: number }[];
-    for (const inv of allInv) await recalcInvoiceStatus(inv.id);
+    for (const invId of invoiceIds) await recalcInvoiceStatus(invId);
 
     console.log('Đã tạo xong dữ liệu demo.');
     // seedExtraAccounts CHỈ chạy khi DB trống (trong block count===0)

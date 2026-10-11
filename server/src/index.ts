@@ -6,11 +6,12 @@ import { logger } from './shared/logger';
 import { createApp } from './app';
 import { startReminderScheduler, stopReminderScheduler } from './jobs/reminderScheduler';
 import { startVnpayReconcileScheduler, stopVnpayReconcileScheduler } from './jobs/vnpayReconcile';
-import { initDatabase, closePool, db } from './db';
+import { initDatabase, closePool, db, extendActiveClassSessions } from './db';
 import { sendAlert } from './shared/alert';
 import { backupDatabase } from './db/backup';
 import { withAdvisoryLock } from './shared/advisoryLock';
 import { trackJob, waitForJobs } from './shared/jobTracker';
+import { sweepOrphanUploads } from './shared/upload';
 
 /**
  * Bẫy lỗi toàn cục — chuẩn production:
@@ -51,7 +52,32 @@ function checkPgDump(): void {
 let backupTask: ReturnType<typeof cron.schedule> | null = null;
 let consistencyTask: ReturnType<typeof cron.schedule> | null = null;
 
+let sessionsTask: ReturnType<typeof cron.schedule> | null = null;
+
+/**
+ * Nối lịch buổi học cho lớp đang hoạt động (lớp không có ngày kết thúc luôn có buổi trước 90 ngày).
+ * Chạy 1 lần lúc khởi động + 00:15 mỗi ngày (giờ VN); idempotent (ON CONFLICT DO NOTHING).
+ */
+function startSessionsScheduler(): void {
+  const run = (): void => {
+    void trackJob(
+      withAdvisoryLock('educenter-sessions-extend', async () => {
+        try {
+          const added = await extendActiveClassSessions();
+          if (added > 0) logger.info('Đã nối lịch buổi học', { added });
+        } catch (err: unknown) {
+          logger.error('Nối lịch buổi học thất bại', { error: String(err) });
+        }
+      })
+    );
+  };
+  run();
+  sessionsTask = cron.schedule('15 0 * * *', run, { timezone: 'Asia/Ho_Chi_Minh' });
+}
+
 export function stopSchedulers(): void {
+  void sessionsTask?.stop();
+  sessionsTask = null;
   void backupTask?.stop();
   void consistencyTask?.stop();
   backupTask = consistencyTask = null;
@@ -117,33 +143,36 @@ function startConsistencyScheduler(): void {
       // trackJob: graceful shutdown chờ vòng check/dọn dẹp đang chạy (tối đa 30s).
       void trackJob(
         withAdvisoryLock('educenter-consistency', async () => {
-        try {
-          const { checkFinancialConsistency } = await import('./db/consistency.js');
-          const issues = await checkFinancialConsistency(db);
-          if (issues.length > 0) {
-            logger.error('Phát hiện lệch dữ liệu tài chính', { count: issues.length, issues });
+          try {
+            const { checkFinancialConsistency } = await import('./db/consistency.js');
+            const issues = await checkFinancialConsistency(db);
+            if (issues.length > 0) {
+              logger.error('Phát hiện lệch dữ liệu tài chính', { count: issues.length, issues });
+            }
+            // Dọn refresh token hết hạn (chống phình bảng)
+            const r = await db
+              .prepare("DELETE FROM refresh_tokens WHERE expires_at < NOW() - INTERVAL '7 days'")
+              .run();
+            if ((r.changes ?? 0) > 0) logger.info('Đã dọn refresh token hết hạn', { count: r.changes });
+            // Dọn idempotency keys hết hạn (TTL 24h)
+            await db
+              .prepare(
+                "DELETE FROM idempotency_keys WHERE created_at < to_char(NOW() - INTERVAL '24 hours', 'YYYY-MM-DD HH24:MI:SS')"
+              )
+              .run();
+            // Dọn audit_logs cũ hơn 1 năm (retention forensic 12 tháng)
+            const ar = await db
+              .prepare(
+                "DELETE FROM audit_logs WHERE created_at < to_char(NOW() - INTERVAL '1 year', 'YYYY-MM-DD HH24:MI:SS')"
+              )
+              .run();
+            if ((ar.changes ?? 0) > 0) logger.info('Đã dọn audit_logs cũ', { count: ar.changes });
+            // HW-16: dọn file tải lên > 24h mà chưa gắn vào bài nào (modal đóng ngang, mất mạng)
+            const swept = await sweepOrphanUploads(24);
+            if (swept > 0) logger.info('Đã dọn file upload mồ côi', { count: swept });
+          } catch (err: unknown) {
+            logger.error('Kiểm tra nhất quán tài chính thất bại', { error: String(err) });
           }
-          // Dọn refresh token hết hạn (chống phình bảng)
-          const r = await db
-            .prepare("DELETE FROM refresh_tokens WHERE expires_at < NOW() - INTERVAL '7 days'")
-            .run();
-          if ((r.changes ?? 0) > 0) logger.info('Đã dọn refresh token hết hạn', { count: r.changes });
-          // Dọn idempotency keys hết hạn (TTL 24h)
-          await db
-            .prepare(
-              "DELETE FROM idempotency_keys WHERE created_at < to_char(NOW() - INTERVAL '24 hours', 'YYYY-MM-DD HH24:MI:SS')"
-            )
-            .run();
-          // Dọn audit_logs cũ hơn 1 năm (retention forensic 12 tháng)
-          const ar = await db
-            .prepare(
-              "DELETE FROM audit_logs WHERE created_at < to_char(NOW() - INTERVAL '1 year', 'YYYY-MM-DD HH24:MI:SS')"
-            )
-            .run();
-          if ((ar.changes ?? 0) > 0) logger.info('Đã dọn audit_logs cũ', { count: ar.changes });
-        } catch (err: unknown) {
-          logger.error('Kiểm tra nhất quán tài chính thất bại', { error: String(err) });
-        }
         })
       );
     },
@@ -165,7 +194,10 @@ async function main(): Promise<void> {
     startReminderScheduler();
     startBackupScheduler();
     startConsistencyScheduler();
+    startSessionsScheduler(); // sinh buổi học trước cho lớp đang hoạt động (không còn sinh lúc GET)
     startVnpayReconcileScheduler(); // G6: đối soát đơn VNPay treo mỗi 15 phút
+    // OPS-3: PM2 wait_ready — chỉ coi worker là online (và tắt worker cũ khi reload) sau khi listen.
+    process.send?.('ready');
   });
 
   /**

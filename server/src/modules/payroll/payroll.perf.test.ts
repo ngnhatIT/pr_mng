@@ -22,16 +22,18 @@ describe('Performance upgrades (audit 2026-10-09)', () => {
     await teardownTestDb();
   });
 
-  it('migration v7 tạo đủ index FK nóng', async () => {
+  it('đủ index FK nóng (v7; v23 bỏ bản trùng, giữ bản composite)', async () => {
     const expected = [
-      'idx_payments_invoice',
-      'idx_invoices_student',
+      'idx_payments_invoice_status',
+      'idx_invoices_student_status',
       'idx_invoices_center',
-      'idx_students_center',
-      'idx_homework_class',
-      'idx_quiz_attempts_homework',
-      'idx_leave_requests_student',
+      'idx_students_center_status',
+      'idx_homework_class_status',
+      'idx_quiz_attempts',
+      'idx_leaves_student',
       'idx_sessions_date',
+      'idx_txns_pending',
+      'idx_txns_invoice',
     ];
     for (const name of expected) {
       const row = (await db.prepare('SELECT 1 as ok FROM pg_indexes WHERE indexname = ?').get(name)) as
@@ -71,8 +73,11 @@ describe('Performance upgrades (audit 2026-10-09)', () => {
     );
     const today = new Date().toISOString().slice(0, 10);
     const sess = Number(
-      (await db.prepare('INSERT INTO sessions (class_id, date) VALUES (?, ?)').run(cls, today))
-        .lastInsertRowid
+      (
+        await db
+          .prepare('INSERT INTO sessions (class_id, date, teacher_id) VALUES (?, ?, ?)')
+          .run(cls, today, t1)
+      ).lastInsertRowid
     );
     const st = Number(
       (

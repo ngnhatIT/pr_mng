@@ -8,14 +8,15 @@
  * Cần PostgreSQL (CI). Mock global fetch để không gọi Zalo thật.
  */
 // PHẢI đặt trước mọi import db — pg-compat đọc DATABASE_URL lúc load module
-process.env.DATABASE_URL = process.env.TEST_DATABASE_URL || 'postgres://educenter:educenter123@localhost:5432/educenter_test';
+process.env.DATABASE_URL =
+  process.env.TEST_DATABASE_URL || 'postgres://educenter:educenter123@localhost:5432/educenter_test';
 
 import { describe, it, before, beforeEach, after, afterEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { db } from '../db/pg-compat';
 import { setupTestDb, resetTestDb, teardownTestDb } from '../db/test-utils';
 import { setCenterSetting, getCenterSettings } from '../db/helpers';
-import { refreshZaloAccessToken, ensureZaloTokenFresh } from './zalo';
+import { refreshZaloAccessToken, ensureZaloTokenFresh, sendTuitionReminder } from './zalo';
 
 let centerId = 0;
 const realFetch = globalThis.fetch;
@@ -77,13 +78,14 @@ describe('H1: refreshZaloAccessToken', () => {
   });
 
   it('Zalo trả lỗi -> false, không throw (đã log + sendAlert)', async () => {
+    await setCenterSetting(centerId, 'zalo_access_token', 'old-access');
     await setCenterSetting(centerId, 'zalo_refresh_token', 'bad-refresh');
     await setCenterSetting(centerId, 'zalo_app_id', 'app1');
     await setCenterSetting(centerId, 'zalo_app_secret', 's3cr3t');
     mockFetchJson({ error_description: 'Invalid refresh token' }, false);
     assert.equal(await refreshZaloAccessToken(centerId), false);
     // token cũ giữ nguyên, không bị ghi đè rỗng
-    assert.equal(await getSetting(centerId, 'zalo_access_token'), null);
+    assert.equal(await getSetting(centerId, 'zalo_access_token'), 'old-access');
   });
 });
 
@@ -105,5 +107,48 @@ describe('H1: ensureZaloTokenFresh', () => {
     await ensureZaloTokenFresh(centerId);
     assert.equal(fetchCalls.length, 1);
     assert.equal(await getSetting(centerId, 'zalo_access_token'), 'fresh-access');
+  });
+});
+
+describe('DATA-6: Zalo báo token hỏng khi gửi -> refresh bắt buộc rồi gửi lại 1 lần', () => {
+  it('ZNS -216 -> refresh (dù chưa biết expires_at) -> gửi lại bằng token mới', async () => {
+    for (const [k, v] of [
+      ['zalo_enabled', '1'],
+      ['zalo_access_token', 'old-access'],
+      ['zalo_refresh_token', 'rt'],
+      ['zalo_app_id', 'app1'],
+      ['zalo_app_secret', 's3cr3t'],
+      ['zalo_template_overdue', 'TPL1'],
+    ]) {
+      await setCenterSetting(centerId, k, v);
+    }
+    const st = await db
+      .prepare("INSERT INTO students (code, name, phone, center_id) VALUES ('HV1', 'A', '0901234567', ?)")
+      .run(centerId);
+    const inv = await db
+      .prepare(
+        "INSERT INTO invoices (student_id, amount, due_date, center_id) VALUES (?, 100000, '2026-01-01', ?)"
+      )
+      .run(Number(st.lastInsertRowid), centerId);
+    const used: string[] = [];
+    globalThis.fetch = (async (url: string | URL, init?: RequestInit) => {
+      const u = String(url);
+      if (u.includes('oauth.zaloapp.com')) {
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({ access_token: 'new-access', expires_in: 90000 }),
+        } as Response;
+      }
+      const token = (init?.headers as Record<string, string>).access_token;
+      used.push(token);
+      const payload =
+        token === 'old-access' ? { error: -216, message: 'Access token is invalid' } : { error: 0 };
+      return { ok: true, status: 200, json: async () => payload } as Response;
+    }) as typeof fetch;
+    const r = await sendTuitionReminder(Number(inv.lastInsertRowid), 'overdue', centerId);
+    assert.equal(r.status, 'sent');
+    assert.deepEqual(used, ['old-access', 'new-access']);
+    assert.equal(await getSetting(centerId, 'zalo_access_token'), 'new-access');
   });
 });

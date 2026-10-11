@@ -10,8 +10,8 @@ import { hasFeature, type Center } from '../utils/plans';
 export function requireFeature(featureKey: string) {
   return async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
     const cid = reqCenterId(req);
-    if (cid === null) {
-      // Superadmin/root không gắn center: cho qua
+    if (cid === null || req.user?.role === 'superadmin') {
+      // Superadmin (kể cả khi đang chọn 1 trung tâm): không bị giới hạn gói
       next();
       return;
     }

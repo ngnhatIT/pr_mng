@@ -85,6 +85,11 @@ export interface InvoiceItem {
   paid?: number;
 }
 
+/** Số tiền còn nợ của hóa đơn: amount − paid (paid thiếu/null coi như 0). Dùng chung mọi màn hình. */
+export function remainingOf(invoice: { amount: number; paid?: number | null }): number {
+  return invoice.amount - (invoice.paid || 0);
+}
+
 export interface DebtRow {
   id: number;
   code: string;
@@ -318,6 +323,8 @@ export interface HomeworkItem {
   close_date: string | null;
   kind: 'homework' | 'quiz';
   rubric_id: number | null;
+  max_attempts?: number | null; // quiz: số lượt làm tối đa (null = không giới hạn)
+  attempts_used?: number; // parent view, quiz: số lượt con đã làm (server cũ có thể chưa trả)
   completed_count?: number;
   student_count?: number;
   question_count?: number;
@@ -351,7 +358,7 @@ export interface TrialItem {
   desired_date: string | null;
   note: string | null;
   referral_code: string | null;
-  status: 'new' | 'contacted' | 'trialed' | 'enrolled' | 'lost' | 'converted';
+  status: 'new' | 'contacted' | 'converted'; // khớp TRIAL_STATUS của server (ADM-5)
   created_at: string;
 }
 

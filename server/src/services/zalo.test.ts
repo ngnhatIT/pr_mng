@@ -9,6 +9,7 @@ import {
   sendZNS,
   ZaloTokenError,
   ZaloQuotaError,
+  isKeepSecret,
 } from './zalo.js';
 
 /**
@@ -161,5 +162,15 @@ describe('sendZNS phân loại mã lỗi', () => {
     } finally {
       afterEachRestore();
     }
+  });
+});
+
+describe('isKeepSecret (DATA-5/ADM-9)', () => {
+  it('secret đã che hoặc rỗng -> giữ nguyên; giá trị mới -> ghi', () => {
+    assert.equal(isKeepSecret('zalo_refresh_token', 'abcd••••••••wxyz'), true);
+    assert.equal(isKeepSecret('zalo_app_secret', ''), true);
+    assert.equal(isKeepSecret('pay_vnp_hashsecret', '  '), true);
+    assert.equal(isKeepSecret('zalo_access_token', 'new-token'), false);
+    assert.equal(isKeepSecret('zalo_template_overdue', ''), false); // key thường: rỗng là xóa thật
   });
 });

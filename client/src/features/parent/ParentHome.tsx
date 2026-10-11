@@ -3,9 +3,9 @@ import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { getUser } from '../../shared/api/client';
 import { parentApi } from './parent.api';
-import { useToast } from '../../shared/ui/toast';
+import { toastApiError, useToast } from '../../shared/ui/toast';
 import { Field, useFieldErrors } from '../../shared/components/Form';
-import { EmptyState } from '../../shared/components/EmptyState';
+import { EmptyState, LoadError } from '../../shared/components/EmptyState';
 import { Skeleton } from '../../shared/components/Skeleton';
 import { Icon } from '../../shared/components/icons';
 import { ParentChild, formatVND } from '../../shared/types';
@@ -16,6 +16,8 @@ export function ParentHome() {
   const [children, setChildren] = useState<ParentChild[]>([]);
   const [debts, setDebts] = useState<{ child: ParentChild; debt: number }[]>([]);
   const [loading, setLoading] = useState(true);
+  // UX-5: tải lỗi thì hiện "Thử lại", KHÔNG hiện "chưa liên kết con" (dễ hiểu nhầm là con bị gỡ liên kết)
+  const [loadFailed, setLoadFailed] = useState(false);
   const [code, setCode] = useState('');
   const [dob, setDob] = useState('');
   const [linking, setLinking] = useState(false);
@@ -25,32 +27,46 @@ export function ParentHome() {
   const toast = useToast();
   const user = getUser();
 
+  const loadSeq = useRef(0);
   const load = useCallback(async () => {
+    const seq = ++loadSeq.current;
     setLoading(true);
+    let data: ParentChild[];
     try {
-      const data = await parentApi.children();
+      data = await parentApi.children();
+      if (seq !== loadSeq.current) return;
       setChildren(data);
-      // Công nợ thật từ childOverview -> invoices (API có sẵn), không tự bịa số
-      const settled = await Promise.allSettled(
-        data.map(async (c) => {
-          const ov = await parentApi.childOverview(c.id);
-          const debt = ov.invoices
-            .filter((inv) => inv.status !== 'paid')
-            .reduce((sum, inv) => sum + inv.amount - inv.paid, 0);
-          return { child: c, debt };
-        }),
-      );
-      setDebts(
-        settled
-          .filter((r): r is PromiseFulfilledResult<{ child: ParentChild; debt: number }> => r.status === 'fulfilled')
-          .map((r) => r.value)
-          .filter((d) => d.debt > 0),
-      );
+      setLoadFailed(false);
     } catch (err) {
-      toast(err instanceof Error ? err.message : t('home.loadError'), 'error');
+      if (seq === loadSeq.current) {
+        setLoadFailed(true);
+        toastApiError(toast, err, t('home.loadError'));
+      }
+      return;
     } finally {
-      setLoading(false);
+      // Danh sách con hiện ngay, không chờ tính công nợ
+      if (seq === loadSeq.current) setLoading(false);
     }
+    // Công nợ thật từ childOverview -> invoices, tính nền sau khi đã hiện danh sách.
+    // ponytail: chưa có endpoint công nợ nhẹ, vẫn gọi overview mỗi con; thêm /parent/children/debts nếu chậm.
+    const settled = await Promise.allSettled(
+      data.map(async (c) => {
+        const ov = await parentApi.childOverview(c.id);
+        const debt = ov.invoices
+          .filter((inv) => inv.status !== 'paid')
+          .reduce((sum, inv) => sum + inv.amount - (inv.paid || 0), 0);
+        return { child: c, debt };
+      })
+    );
+    if (seq !== loadSeq.current) return;
+    setDebts(
+      settled
+        .filter(
+          (r): r is PromiseFulfilledResult<{ child: ParentChild; debt: number }> => r.status === 'fulfilled'
+        )
+        .map((r) => r.value)
+        .filter((d) => d.debt > 0)
+    );
   }, [toast, t]);
 
   useEffect(() => {
@@ -130,6 +146,8 @@ export function ParentHome() {
             </div>
           ))}
         </div>
+      ) : loadFailed && children.length === 0 ? (
+        <LoadError onRetry={() => void load()} />
       ) : children.length === 0 ? (
         <EmptyState
           icon="users"

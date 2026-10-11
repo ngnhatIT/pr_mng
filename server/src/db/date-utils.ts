@@ -74,3 +74,16 @@ export function formatSchedule(scheduleJson: string): string {
     return '';
   }
 }
+
+/**
+ * Timestamp SQLite cũ 'YYYY-MM-DD HH:MM[:SS]' (UTC, datetime('now')) -> 'YYYY-MM-DD HH:MM:SS'
+ * giờ VN (UTC+7, không DST). Giá trị khác (date-only, null, số) giữ nguyên.
+ * Dùng bởi scripts/migrate-sqlite-to-pg.ts (DATA-15).
+ */
+export function utcToVnText(v: unknown): unknown {
+  if (typeof v !== 'string') return v;
+  const m = v.match(/^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})(?::(\d{2}))?/);
+  if (!m) return v;
+  const d = new Date(Date.UTC(+m[1], +m[2] - 1, +m[3], +m[4] + 7, +m[5], +(m[6] ?? 0)));
+  return d.toISOString().slice(0, 19).replace('T', ' ');
+}

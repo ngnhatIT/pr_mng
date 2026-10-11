@@ -52,7 +52,6 @@ export interface SessionItem {
   class_id: number;
   date: string;
   topic: string | null;
-  checkin_code: string | null;
   attendance_count?: number;
 }
 

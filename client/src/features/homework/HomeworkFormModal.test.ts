@@ -1,5 +1,12 @@
 import { describe, it, expect } from 'vitest';
-import { isValidHttpUrl, isQuizQuestionInvalid, quickDate, validateLocalUpload } from './HomeworkFormModal';
+import {
+  isValidHttpUrl,
+  isQuizQuestionInvalid,
+  quickDate,
+  validateLocalUpload,
+  pruneSelected,
+  editAttachmentsPayload,
+} from './HomeworkFormModal';
 import type { QuizQuestionForm } from './homework.api';
 import { todayVN } from '../../shared/types';
 
@@ -129,5 +136,30 @@ describe('validateLocalUpload', () => {
   it('từ chối file quá 10MB', () => {
     expect(validateLocalUpload('lon.mp4', 10 * 1024 * 1024 + 1)).toBe('size');
     expect(validateLocalUpload('lon.mp4', 10 * 1024 * 1024)).toBe(null);
+  });
+});
+
+describe('pruneSelected', () => {
+  it('bỏ học viên không còn thuộc lớp đang chọn', () => {
+    expect(pruneSelected([1, 2, 3], [{ id: 2 }, { id: 3 }, { id: 4 }])).toEqual([2, 3]);
+    expect(pruneSelected([1, 2], [])).toEqual([]);
+  });
+  it('không đổi gì thì giữ nguyên tham chiếu (không re-render thừa)', () => {
+    const sel = [2];
+    expect(pruneSelected(sel, [{ id: 2 }])).toBe(sel);
+  });
+});
+
+describe('editAttachmentsPayload', () => {
+  const list = [{ id: 1, name: 'a', url: '/uploads/hw_a.pdf', kind: 'file' }];
+  it('chưa tải xong / tải lỗi → undefined (server giữ đính kèm cũ, không gửi [])', () => {
+    expect(editAttachmentsPayload('loading', [])).toBeUndefined();
+    expect(editAttachmentsPayload('error', [])).toBeUndefined();
+  });
+  it('đã tải xong → gửi danh sách (bỏ id)', () => {
+    expect(editAttachmentsPayload('ok', list)).toEqual([
+      { name: 'a', url: '/uploads/hw_a.pdf', kind: 'file' },
+    ]);
+    expect(editAttachmentsPayload('ok', [])).toEqual([]);
   });
 });

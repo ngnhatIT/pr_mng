@@ -28,7 +28,7 @@
       "hashSecret": "Chuỗi bí mật (Hash Secret)",
       "hashSecretHint": "VNPay cấp cùng TMN Code. Để trống nếu không muốn đổi.",
       "tmnCodeHint": "VNPay cấp khi trung tâm đăng ký merchant, xem trong email xác nhận.",
-      "savedPlaceholder": "Đã lưu (để trống nếu không đổi)",
+      "savedPlaceholder": "{{mask}} (đã lưu - để trống nếu không đổi)",
       "status": "Trạng thái",
       "statusHint": "Tắt để tạm ngưng thanh toán online, chỉ nhận tiền mặt hoặc chuyển khoản.",
       "title": "VNPay",
@@ -44,13 +44,16 @@
     "applied": "Đã áp dụng {{amount}} credits vào hóa đơn",
     "apply": "Áp dụng",
     "applyError": "Không áp dụng được credits, vui lòng thử lại",
-    "applying": "Đang áp dụng credits...",
+    "applyRow": "Dùng credit",
     "applyTitle": "Áp dụng credits của phụ huynh vào hóa đơn",
+    "applying": "Đang áp dụng credits...",
     "confirmText": "{{name}} ({{code}}) - còn nợ <strong>{{amount}}</strong>",
-    "help": "Nhập <strong>ID credits</strong> của phụ huynh (xem trong trang Giới thiệu của phụ huynh). Hệ thống sẽ trừ credits khả dụng vào số tiền còn nợ của hóa đơn.",
-    "idLabel": "ID credits *",
-    "idPlaceholder": "VD: 12",
-    "idRequired": "Vui lòng nhập ID credits",
+    "help": "Chọn credits khả dụng của phụ huynh học viên. Hệ thống sẽ trừ credits vào số tiền còn nợ của hóa đơn.",
+    "idLabel": "Credits",
+    "idRequired": "Vui lòng chọn credits",
+    "none": "Phụ huynh của học viên không có credits khả dụng.",
+    "option": "#{{id}} · {{parent}} · còn {{amount}} · {{reason}}",
+    "selectPlaceholder": "Chọn credits...",
     "title": "Áp dụng credits vào hóa đơn"
   },
   "debt": {
@@ -94,7 +97,7 @@
     }
   },
   "invoiceForm": {
-    "amount": "Số tiền (đ) *",
+    "amount": "Số tiền (đ)",
     "class": "Lớp học",
     "classOption": "{{name}} - {{fee}}",
     "create": "Tạo phiếu",
@@ -105,10 +108,12 @@
     "noClass": "- Không gắn lớp -",
     "note": "Ghi chú",
     "selectStudent": "- Chọn học viên -",
-    "student": "Học viên *",
+    "student": "Học viên",
     "studentRequired": "Vui lòng chọn học viên",
     "title": "Tạo phiếu thu",
-    "amountInvalid": "Số tiền phải là số dương"
+    "amountInvalid": "Số tiền phải là số dương",
+    "searchStudent": "Tìm học viên",
+    "searchStudentPlaceholder": "Gõ tên hoặc mã học viên"
   },
   "detail": {
     "title": "Hóa đơn #{{id}}",
@@ -167,7 +172,7 @@
       "desc": "Thử từ khóa khác hoặc xóa bộ lọc để xem toàn bộ danh sách.",
       "clear": "Xóa bộ lọc"
     },
-    "debtStrip": "{count} học viên còn nợ, tổng {total}",
+    "debtStrip": "{{count}} học viên còn nợ, tổng {{total}}",
     "debtStripTitle": "Tổng công nợ chưa thu của toàn trung tâm"
   },
   "pay": {
@@ -181,7 +186,9 @@
       "cash": "Tiền mặt",
       "transfer": "Chuyển khoản",
       "card": "Quẹt thẻ",
-      "ewallet": "Ví điện tử"
+      "ewallet": "Ví điện tử",
+      "refund": "Hoàn tiền",
+      "credit": "Trừ credit"
     },
     "note": "Ghi chú",
     "payError": "Không thu được tiền, vui lòng thử lại",
@@ -238,10 +245,9 @@
     "class": "Lớp",
     "amount": "Tổng tiền",
     "paid": "Đã thu",
-    "discount": "Giảm giá",
     "remaining": "Còn lại",
     "note": "Ghi chú",
-    "date": "Ngày {date}",
+    "date": "Ngày {{date}}",
     "cashier": "Người thu tiền",
     "payer": "Người nộp tiền",
     "print": "In biên lai",

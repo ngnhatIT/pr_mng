@@ -36,6 +36,7 @@ interface Cfg {
   attempts?: number; // số lượt làm (0 = chưa làm)
   maxAttemptScore?: number; // điểm tự động cao nhất
   scoresRow?: { score: number | null; feedback: string | null } | null;
+  essayPoints?: number; // điểm của câu essay (mặc định 10 = tổng rubric)
 }
 
 let cfg: Cfg;
@@ -63,13 +64,18 @@ function stmtFor(sql: string) {
         return { id: 9, submitted_at: '2026-10-10 10:00:00' };
       throw new Error('unexpected get: ' + sql);
     },
-    all: async (..._args: unknown[]) => {
+    all: async (...args: unknown[]) => {
       if (sql.includes('FROM rubric_criteria')) return cfg.criteria ?? CRITERIA;
+      // HW-5/HW-8: SUM theo câu, CHỈ tiêu chí của rubric hiện tại (args: hw, student, ...criterion ids)
+      if (sql.includes('FROM quiz_essay_scores es JOIN quiz_questions')) {
+        const ids = new Set(args.slice(2).map(Number));
+        const sum = [...essayTable.entries()].filter(([cid]) => ids.has(cid)).reduce((a, [, v]) => a + v, 0);
+        return essayTable.size ? [{ question_id: 201, points: cfg.essayPoints ?? 10, s: sum }] : [];
+      }
       if (sql.includes("qtype = 'essay'") && sql.includes('SELECT id as question_id'))
         return [{ question_id: 201, question: 'Tự luận 1', points: 10 }];
       if (sql.includes('FROM quiz_answers')) return [{ question_id: 201, answer_text: 'Bài làm mẫu' }];
-      if (sql.includes('FROM quiz_essay_scores') && sql.includes('SELECT question_id'))
-        return [];
+      if (sql.includes('FROM quiz_essay_scores') && sql.includes('SELECT question_id')) return [];
       throw new Error('unexpected all: ' + sql);
     },
     run: async (...args: unknown[]) => {
@@ -211,6 +217,18 @@ describe('gradeQuizEssay — tính tổng điểm', () => {
     const upserts = runs.filter((x) => x.sql.includes('INTO quiz_essay_scores'));
     assert.equal(upserts.length, 2, 'upsert từng dòng tiêu chí');
     assert.ok(upserts[0].sql.includes('ON CONFLICT'), 'phải dùng ON CONFLICT (idempotent)');
+  });
+  it('HW-5: điểm essay quy đổi theo điểm câu (câu 2đ, rubric 10đ: 5+3 → 1.6)', async () => {
+    cfg.essayPoints = 2;
+    cfg.maxAttemptScore = 8;
+    const r = await grade();
+    assert.equal(r.essay_score, 1.6);
+    assert.equal(r.total, 9.6);
+  });
+  it('HW-8: điểm tiêu chí của rubric cũ không cộng vào tổng', async () => {
+    essayTable.set(999, 8); // tiêu chí rubric cũ còn sót trong quiz_essay_scores
+    const r = await grade();
+    assert.equal(r.essay_score, 8); // chỉ 71 + 72 = 5 + 3
   });
   it('tổng vượt max_score của quiz → 400 (chống gõ nhầm)', async () => {
     cfg.maxAttemptScore = 15;

@@ -10,14 +10,17 @@ import {
   assertSafeUpload,
   cleanupUploadedFile,
   isValidUploadFilename,
-  deleteUploadFileByUrl,
+  recordUpload,
 } from '../../shared/upload';
+import { deleteUnusedUpload } from './uploads.service';
 
 /**
  * Upload file đính kèm cho staff (giáo viên/admin có quyền giao bài).
  * File vật lý lưu ở server/uploads/ với tên do server sinh (CSPRNG), chưa gắn
  * vào bài tập nào — client gắn URL vào attachments khi lưu bài (POST/PUT /homework).
  * File không được gắn mà modal bị hủy thì client gọi DELETE để dọn dẹp.
+ * HW-6: mỗi file ghi vào sổ `uploads` (trung tâm + người tải) — DELETE và gắn đính kèm
+ * kiểm quyền theo sổ này; file chưa gắn quá 24h được sweeper dọn (HW-16).
  */
 const router = Router();
 
@@ -25,13 +28,14 @@ const router = Router();
 router.post(
   '/',
   uploadRateLimit,
-  requirePermission('homework.create'),
+  requirePermission('homework.create', 'own'),
   uploadSingle,
   asyncHandler(async (req: AuthRequest, res: Response) => {
     if (!req.file) throw AppError.badRequest('Chưa chọn file để tải lên');
     try {
       // E2: check magic bytes + mimetype SAU khi multer ghi đĩa (file giả → xóa + 400)
       assertSafeUpload(req.file);
+      await recordUpload(`/uploads/${req.file.filename}`, reqCenterId(req), req.user!.id);
       await audit({
         centerId: reqCenterId(req),
         actor: actorFromReq(req),
@@ -55,26 +59,18 @@ router.post(
 
 /**
  * Xóa file đã upload nhưng chưa gắn vào bài nào (user gỡ khỏi form hoặc hủy modal).
- * Chỉ nhận tên file do server sinh — validate chặt để chống path traversal.
+ * HW-6: chỉ file có trong sổ uploads, do chính mình tải hoặc nhân sự scope center/all
+ * cùng trung tâm, và CHƯA được đính kèm/bài nộp nào tham chiếu.
  */
 router.delete(
   '/:filename',
-  requirePermission('homework.create'),
+  requirePermission('homework.create', 'own'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const filename = req.params.filename;
     if (!isValidUploadFilename(filename)) {
       throw AppError.badRequest('Tên file không hợp lệ');
     }
-    const url = `/uploads/${filename}`;
-    await deleteUploadFileByUrl(url);
-    await audit({
-      centerId: reqCenterId(req),
-      actor: actorFromReq(req),
-      action: 'delete',
-      entity: 'upload',
-      summary: `Xóa file đính kèm chưa dùng "${filename}"`,
-      meta: { filename },
-    });
+    await deleteUnusedUpload(reqCenterId(req), req.user!.id, filename, actorFromReq(req));
     res.json({ ok: true });
   })
 );

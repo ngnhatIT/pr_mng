@@ -2,8 +2,12 @@
  * API layer cho feature Học viên.
  * Page chỉ import từ đây - không gọi http trực tiếp với URL string rải rác.
  */
+import { useEffect, useState } from 'react';
 import { http, type Paginated, type PageParams } from '../../shared/api/client';
-import { type Grade } from '../../shared/types';
+import { type Grade, type InvoiceItem } from '../../shared/types';
+import { useDebounce } from '../../shared/hooks/useDebounce';
+import { useToast, toastApiError } from '../../shared/ui/toast';
+import i18n from '../../i18n';
 
 export interface Student {
   id: number;
@@ -21,7 +25,7 @@ export interface Student {
 export interface StudentDetail {
   student: Student;
   classes: { id: number; name: string; enroll_status: string; enrolled_at: string }[];
-  invoices: unknown[];
+  invoices: InvoiceItem[];
 }
 
 export interface StudentForm {
@@ -65,3 +69,29 @@ export const studentsApi = {
   }) => http.post<Grade>('/grades', data),
   deleteGrade: (id: number) => http.del<{ ok: boolean }>(`/grades/${id}`),
 };
+
+/**
+ * ADM-6: ô chọn học viên tìm server-side (debounce) thay vì tải sẵn 100 học viên mới nhất rồi lọc ở client
+ * (server chặn limit 100 -> học viên cũ không bao giờ hiện). Bỏ qua response cũ khi người dùng gõ tiếp.
+ */
+export function useStudentSearch(search: string, status = 'studying', limit = 30) {
+  const q = useDebounce(search.trim());
+  const [results, setResults] = useState<Student[]>([]);
+  const [loading, setLoading] = useState(true);
+  const toast = useToast();
+  useEffect(() => {
+    let alive = true;
+    setLoading(true);
+    studentsApi
+      .list(q, status, { limit })
+      .then((r) => alive && setResults(r.data))
+      .catch(
+        (err: unknown) => alive && toastApiError(toast, err, i18n.t('states.loadError', { ns: 'common' }))
+      )
+      .finally(() => alive && setLoading(false));
+    return () => {
+      alive = false;
+    };
+  }, [q, status, limit, toast]);
+  return { results, loading: loading || q !== search.trim() };
+}

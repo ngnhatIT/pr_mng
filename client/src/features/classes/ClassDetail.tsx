@@ -3,14 +3,14 @@ import { Link, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { classesApi, sessionsApi, SessionItem, EnrolledStudent } from './classes.api';
 import type { ClassDetail as ClassDetailData } from './classes.api';
-import { studentsApi, Student } from '../students/students.api';
-import { useToast } from '../../shared/ui/toast';
+import { useStudentSearch } from '../students/students.api';
+import { useMyPermissions } from '../system/roles.api';
+import { toastApiError, useToast } from '../../shared/ui/toast';
 import { Modal, ConfirmDialog } from '../../shared/components/Modal';
 import { Field } from '../../shared/components/Form';
 import { EmptyState } from '../../shared/components/EmptyState';
 import { Skeleton } from '../../shared/components/Skeleton';
-import { formatVND, formatDate } from '../../shared/types';
-import type { ScheduleEntry } from '../../shared/types';
+import { formatVND, formatDate, formatScheduleText } from '../../shared/types';
 import { Icon } from '../../shared/components/icons';
 import './ClassDetail.css';
 import { EmptyCell } from '../../shared/components/EmptyCell';
@@ -21,18 +21,24 @@ export function ClassDetail() {
   const [data, setData] = useState<ClassDetailData | null>(null);
   const [sessions, setSessions] = useState<SessionItem[]>([]);
   const [loading, setLoading] = useState(true);
+  // ADM-22: phân biệt "không tồn tại" (404) với lỗi tải (mạng/timeout) để hiện nút Thử lại
+  const [error, setError] = useState<'notFound' | 'load' | null>(null);
+  const canEnroll = useMyPermissions().has('classes.enroll');
   const [showEnroll, setShowEnroll] = useState(false);
   const [kicking, setKicking] = useState<EnrolledStudent | null>(null);
   const toast = useToast();
 
   const load = useCallback(async () => {
     setLoading(true);
+    setError(null);
     try {
       const [d, sess] = await Promise.all([classesApi.get(id || ''), sessionsApi.listByClass(id || '')]);
       setData(d);
       setSessions(sess);
     } catch (err) {
-      toast(err instanceof Error ? err.message : t('detail.loadError'), 'error');
+      setData(null);
+      const code = err instanceof Error ? (err as Error & { code?: string }).code : undefined;
+      setError(code === 'NOT_FOUND' ? 'notFound' : 'load');
     } finally {
       setLoading(false);
     }
@@ -50,17 +56,7 @@ export function ClassDetail() {
       setKicking(null);
       void load();
     } catch (err) {
-      toast(err instanceof Error ? err.message : t('states.deleteError', { ns: 'common' }), 'error');
-    }
-  };
-
-  /** Localized schedule text (shared formatScheduleText is Vietnamese-only) */
-  const formatSchedule = (scheduleJson: string) => {
-    try {
-      const s: ScheduleEntry[] = JSON.parse(scheduleJson || '[]');
-      return s.map((e) => `${t('days.' + e.day)} ${e.start}-${e.end}`).join(', ');
-    } catch {
-      return '';
+      toastApiError(toast, err, t('states.deleteError', { ns: 'common' }));
     }
   };
 
@@ -91,6 +87,21 @@ export function ClassDetail() {
             <Skeleton height={14} />
           </div>
         </section>
+      </div>
+    );
+  if (error === 'load')
+    return (
+      <div className="page">
+        <EmptyState
+          icon="alert"
+          title={t('detail.loadError')}
+          action={
+            <button type="button" className="btn btn-primary btn-inline" onClick={() => void load()}>
+              <Icon name="rotate" size={14} />
+              {t('actions.retry', { ns: 'common' })}
+            </button>
+          }
+        />
       </div>
     );
   if (!data)
@@ -138,7 +149,7 @@ export function ClassDetail() {
           <dt>{t('detail.room')}</dt>
           <dd>{cls.room_name || t('detail.noRoom')}</dd>
           <dt>{t('detail.schedule')}</dt>
-          <dd>{formatSchedule(cls.schedule || '') || <EmptyCell />}</dd>
+          <dd>{formatScheduleText(cls.schedule || '') || <EmptyCell />}</dd>
           <dt>{t('detail.dateRange')}</dt>
           <dd className="num">
             {formatDate(cls.start_date)} - {formatDate(cls.end_date)}
@@ -158,10 +169,12 @@ export function ClassDetail() {
         <section className="card">
           <div className="card-head">
             <h2>{t('detail.studentsTitle', { count: data.students.length })}</h2>
-            <button className="btn btn-sm btn-primary btn-inline" onClick={() => setShowEnroll(true)}>
-              <Icon name="plus" size={13} />
-              {t('detail.enroll.add')}
-            </button>
+            {canEnroll && (
+              <button className="btn btn-sm btn-primary btn-inline" onClick={() => setShowEnroll(true)}>
+                <Icon name="plus" size={13} />
+                {t('detail.enroll.add')}
+              </button>
+            )}
           </div>
           {data.students.length === 0 ? (
             <EmptyState
@@ -169,10 +182,12 @@ export function ClassDetail() {
               title={t('detail.emptyStudentsTitle')}
               desc={t('detail.emptyStudentsDesc')}
               action={
-                <button className="btn btn-primary btn-inline" onClick={() => setShowEnroll(true)}>
-                  <Icon name="plus" size={14} />
-                  {t('detail.enroll.add')}
-                </button>
+                canEnroll && (
+                  <button className="btn btn-primary btn-inline" onClick={() => setShowEnroll(true)}>
+                    <Icon name="plus" size={14} />
+                    {t('detail.enroll.add')}
+                  </button>
+                )
               }
             />
           ) : (
@@ -186,10 +201,12 @@ export function ClassDetail() {
                     <span className="muted mono">({s.code})</span>
                     <div className="list-sub">{s.phone || ''}</div>
                   </div>
-                  <button className="btn btn-sm btn-danger-ghost" onClick={() => setKicking(s)}>
-                    <Icon name="trash" size={14} />
-                    {t('detail.kick.removeFromClass')}
-                  </button>
+                  {canEnroll && (
+                    <button className="btn btn-sm btn-danger-ghost" onClick={() => setKicking(s)}>
+                      <Icon name="trash" size={14} />
+                      {t('detail.kick.removeFromClass')}
+                    </button>
+                  )}
                 </li>
               ))}
             </ul>
@@ -285,26 +302,14 @@ function EnrollModal({
   onDone: () => void;
 }) {
   const { t } = useTranslation(['classes', 'common']);
-  const [students, setStudents] = useState<Student[]>([]);
   const [search, setSearch] = useState('');
+  const { results, loading } = useStudentSearch(search);
   const [busyId, setBusyId] = useState<number | null>(null);
   const toast = useToast();
   // Ẩn học viên đã ghi danh khỏi danh sách để không bấm Thêm rồi nhận lỗi khó hiểu
   const enrolled = new Set(enrolledIds);
 
-  useEffect(() => {
-    studentsApi
-      .list('', 'studying', { limit: 100 })
-      .then((r) => setStudents(r.data))
-      .catch((err: Error) => toast(err.message, 'error'));
-  }, [toast]);
-
-  const filtered = students.filter(
-    (s) =>
-      !enrolled.has(s.id) &&
-      (s.name.toLowerCase().includes(search.toLowerCase()) ||
-        s.code.toLowerCase().includes(search.toLowerCase()))
-  );
+  const filtered = results.filter((s) => !enrolled.has(s.id));
 
   const enroll = async (studentId: number) => {
     setBusyId(studentId);
@@ -313,7 +318,7 @@ function EnrollModal({
       toast(t('detail.enroll.added'), 'success');
       onDone();
     } catch (err) {
-      toast(err instanceof Error ? err.message : t('detail.enroll.addError'), 'error');
+      toastApiError(toast, err, t('detail.enroll.addError'));
     } finally {
       setBusyId(null);
     }
@@ -341,8 +346,8 @@ function EnrollModal({
           )}
         </span>
       </Field>
-      <ul className="list list-scroll">
-        {filtered.slice(0, 30).map((s) => (
+      <ul className="list list-scroll" aria-busy={loading || undefined}>
+        {filtered.map((s) => (
           <li key={s.id} className="list-item">
             <div>
               {s.name} <span className="muted mono">({s.code})</span>
@@ -357,7 +362,7 @@ function EnrollModal({
             </button>
           </li>
         ))}
-        {filtered.length === 0 && <li className="muted">{t('detail.enroll.notFound')}</li>}
+        {filtered.length === 0 && !loading && <li className="muted">{t('detail.enroll.notFound')}</li>}
       </ul>
     </Modal>
   );

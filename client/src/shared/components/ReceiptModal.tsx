@@ -1,7 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { Modal } from '../components/Modal';
-import type { InvoiceItem } from '../../features/tuition/tuition.api';
-import { formatVND, formatDate } from '../../shared/types';
+import { formatVND, formatDate, remainingOf, todayVN, type InvoiceItem } from '../../shared/types';
 import { EmptyCell } from './EmptyCell';
 
 /**
@@ -13,13 +12,13 @@ export function ReceiptModal({
   centerName,
   onClose,
 }: {
-  invoice: InvoiceItem;
+  invoice: Pick<InvoiceItem, 'student_name' | 'student_code' | 'class_name' | 'amount' | 'paid' | 'note'>;
   centerName: string;
   onClose: () => void;
 }) {
   const { t } = useTranslation('tuition');
-  // Ngày in biên lai: dùng formatDate chung của app (dd/mm/yyyy), không toLocaleDateString lẻ.
-  const today = formatDate(new Date().toISOString().slice(0, 10));
+  // Ngày in biên lai theo giờ VN (CORR-9: toISOString là ngày UTC, lệch 1 ngày trong 0:00-7:00).
+  const today = formatDate(todayVN());
 
   return (
     <Modal title={t('receipt.title')} onClose={onClose}>
@@ -45,17 +44,11 @@ export function ReceiptModal({
           </div>
           <div className="kv">
             <span>{t('receipt.paid')}</span>
-            <strong>{formatVND(invoice.paid)}</strong>
+            <strong>{formatVND(invoice.paid || 0)}</strong>
           </div>
-          {invoice.discount > 0 && (
-            <div className="kv">
-              <span>{t('receipt.discount')}</span>
-              <strong>{formatVND(invoice.discount)}</strong>
-            </div>
-          )}
           <div className="kv">
             <span>{t('receipt.remaining')}</span>
-            <strong>{formatVND(invoice.amount - invoice.discount - invoice.paid)}</strong>
+            <strong>{formatVND(remainingOf(invoice))}</strong>
           </div>
           {invoice.note && (
             <div className="kv">

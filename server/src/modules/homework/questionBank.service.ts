@@ -87,16 +87,27 @@ export async function listBankQuestions(
   const rows = (await db
     .prepare(`SELECT * FROM question_bank WHERE ${where} ORDER BY id DESC LIMIT ? OFFSET ?`)
     .all(...params, limit, offset)) as BankRow[];
-  const questions = await Promise.all(
-    rows.map(async (r) => ({
-      ...r,
-      options: (await db
-        .prepare(
-          'SELECT id, text, is_correct FROM question_bank_options WHERE question_id = ? ORDER BY position'
-        )
-        .all(r.id)) as { id: number; text: string; is_correct: boolean }[],
-    }))
-  );
+  // HW-15: 1 query cho đáp án của cả trang (hết N+1), gom theo question_id trong memory
+  const byQ = new Map<number, { id: number; text: string; is_correct: boolean }[]>();
+  if (rows.length) {
+    const opts = (await db
+      .prepare(
+        `SELECT id, question_id, text, is_correct FROM question_bank_options
+         WHERE question_id IN (${rows.map(() => '?').join(',')}) ORDER BY question_id, position`
+      )
+      .all(...rows.map((r) => r.id))) as {
+      id: number;
+      question_id: number;
+      text: string;
+      is_correct: number;
+    }[];
+    for (const o of opts) {
+      const list = byQ.get(o.question_id) ?? [];
+      list.push({ id: o.id, text: o.text, is_correct: !!o.is_correct });
+      byQ.set(o.question_id, list);
+    }
+  }
+  const questions = rows.map((r) => ({ ...r, options: byQ.get(r.id) ?? [] }));
   return paginate(questions, total, page, limit);
 }
 
@@ -112,15 +123,13 @@ async function getBankQuestion(id: number, centerId: number | null): Promise<Ban
     params.push(centerId);
   }
   const r = (await db.prepare(`SELECT * FROM question_bank WHERE ${cond}`).get(...params)) as
-    | BankRow
-    | undefined;
+    BankRow | undefined;
   if (!r) return null;
   const options = (await db
-    .prepare(
-      'SELECT id, text, is_correct FROM question_bank_options WHERE question_id = ? ORDER BY position'
-    )
-    .all(r.id)) as { id: number; text: string; is_correct: boolean }[];
-  return { ...r, options };
+    .prepare('SELECT id, text, is_correct FROM question_bank_options WHERE question_id = ? ORDER BY position')
+    .all(r.id)) as { id: number; text: string; is_correct: number }[];
+  // Cột is_correct là INTEGER 0/1 — trả boolean đúng kiểu BankQuestion
+  return { ...r, options: options.map((o) => ({ ...o, is_correct: !!o.is_correct })) };
 }
 
 /** Các tag đã dùng (để filter). */
@@ -191,16 +200,7 @@ export async function addBankQuestion(
       .prepare(
         'INSERT INTO question_bank (center_id, tag, subject, difficulty, qtype, question, points, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
       )
-      .run(
-        centerId,
-        input.tag?.trim() || null,
-        subject,
-        difficulty,
-        qtype,
-        question,
-        points,
-        createdBy
-      );
+      .run(centerId, input.tag?.trim() || null, subject, difficulty, qtype, question, points, createdBy);
     const qid = Number(ins.lastInsertRowid);
     const stmt = await tx.prepare(
       'INSERT INTO question_bank_options (question_id, position, text, is_correct) VALUES (?, ?, ?, ?)'
@@ -232,16 +232,10 @@ export async function updateBankQuestion(
   const { question, qtype, subject, difficulty, options, points } = validateBankInput(input);
   await db.transaction(async (tx) => {
     await tx
-      .prepare('UPDATE question_bank SET tag = ?, subject = ?, difficulty = ?, qtype = ?, question = ?, points = ? WHERE id = ?')
-      .run(
-        input.tag?.trim() || null,
-        subject,
-        difficulty,
-        qtype,
-        question,
-        points,
-        id
-      );
+      .prepare(
+        'UPDATE question_bank SET tag = ?, subject = ?, difficulty = ?, qtype = ?, question = ?, points = ? WHERE id = ?'
+      )
+      .run(input.tag?.trim() || null, subject, difficulty, qtype, question, points, id);
     await tx.prepare('DELETE FROM question_bank_options WHERE question_id = ?').run(id);
     const stmt = await tx.prepare(
       'INSERT INTO question_bank_options (question_id, position, text, is_correct) VALUES (?, ?, ?, ?)'
@@ -292,7 +286,9 @@ export async function importFromBank(
     params.push(centerId);
   }
   const valid = (await db
-    .prepare(`SELECT id, qtype, question, points FROM question_bank WHERE id IN (${placeholders}) ${scopeCond}`)
+    .prepare(
+      `SELECT id, qtype, question, points FROM question_bank WHERE id IN (${placeholders}) ${scopeCond}`
+    )
     .all(...params)) as { id: number; qtype: string; question: string; points: number }[];
   if (!valid.length) throw AppError.badRequest('Không tìm thấy câu hỏi hợp lệ để import');
   // Sắp lại theo đúng thứ tự client gửi (bỏ id không tồn tại/khác center)
@@ -313,9 +309,9 @@ export async function importFromBank(
     await tx.prepare('SELECT id FROM homework WHERE id = ? FOR UPDATE').get(homeworkId);
     // Chặn import khi đã có học viên làm bài (đồng nhất với saveQuizQuestions)
     const attempts = (
-      (await tx
-        .prepare('SELECT COUNT(*) as c FROM quiz_attempts WHERE homework_id = ?')
-        .get(homeworkId)) as { c: number }
+      (await tx.prepare('SELECT COUNT(*) as c FROM quiz_attempts WHERE homework_id = ?').get(homeworkId)) as {
+        c: number;
+      }
     ).c;
     if (attempts > 0) {
       throw AppError.badRequest('Đã có học viên làm bài, không thể thêm câu hỏi. Hãy tạo quiz mới.');
@@ -333,7 +329,13 @@ export async function importFromBank(
     );
     let n = 0;
     for (const [bi, bq] of ordered.entries()) {
-      const qr = await qStmt.run(homeworkId, maxPos + 1 + bi, normalizeQtype(bq.qtype), bq.question, bq.points);
+      const qr = await qStmt.run(
+        homeworkId,
+        maxPos + 1 + bi,
+        normalizeQtype(bq.qtype),
+        bq.question,
+        bq.points
+      );
       const nqid = Number(qr.lastInsertRowid);
       const opts = optsAll.filter((o) => o.question_id === bq.id);
       for (const [oi, o] of opts.entries()) await oStmt.run(nqid, oi, o.text, o.is_correct);

@@ -1,9 +1,18 @@
 /**
  * API layer cho feature Bài tập về nhà.
  */
-import { http, getToken, type Paginated, type PageParams } from '../../shared/api/client';
+import {
+  http,
+  getToken,
+  tryRefresh,
+  withActingCenter,
+  type Paginated,
+  type PageParams,
+} from '../../shared/api/client';
+import i18n from '../../i18n';
 import { HomeworkItem } from '../../shared/types';
 import { ClassItem } from '../classes/classes.api';
+import { fetchAllPages } from '../../shared/components/Pagination';
 
 /** Định dạng file giáo viên được tải lên (khớp ALLOWED_EXT của server). */
 export const UPLOAD_ACCEPT = '.jpg,.jpeg,.png,.gif,.webp,.pdf,.mp3,.mp4,.doc,.docx';
@@ -16,14 +25,14 @@ export interface UploadedFile {
   size: number;
 }
 
-/**
- * Upload file qua XMLHttpRequest để có tiến trình % (fetch không báo progress).
- * Reject với Error mang message tiếng Việt của server (400/413) hoặc lỗi mạng.
- */
-export function uploadFile(file: File, onProgress: (pct: number) => void): Promise<UploadedFile> {
+/** Thông báo lỗi upload theo ngôn ngữ đang chọn (namespace homework). */
+const tUpload = (key: string) => i18n.t(`form.errors.${key}`, { ns: 'homework' });
+
+/** 1 lần gửi XHR. Reject Error mang message của server (400/413) hoặc lỗi mạng, kèm `status`. */
+function sendUpload(file: File, onProgress: (pct: number) => void): Promise<UploadedFile> {
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
-    xhr.open('POST', '/api/v1/uploads');
+    xhr.open('POST', '/api/v1' + withActingCenter('/uploads'));
     xhr.timeout = 60_000;
     xhr.withCredentials = true;
     const token = getToken();
@@ -36,11 +45,11 @@ export function uploadFile(file: File, onProgress: (pct: number) => void): Promi
         try {
           resolve(JSON.parse(xhr.responseText) as UploadedFile);
         } catch {
-          reject(new Error('Phản hồi máy chủ không hợp lệ'));
+          reject(new Error(tUpload('attBadResponse')));
         }
         return;
       }
-      let msg = 'Tải file thất bại, vui lòng thử lại';
+      let msg = tUpload('attUploadFailed');
       try {
         msg = (JSON.parse(xhr.responseText) as { error?: string }).error || msg;
       } catch {
@@ -48,12 +57,28 @@ export function uploadFile(file: File, onProgress: (pct: number) => void): Promi
       }
       reject(Object.assign(new Error(msg), { status: xhr.status }));
     };
-    xhr.onerror = () => reject(new Error('Lỗi mạng khi tải file, vui lòng thử lại'));
-    xhr.ontimeout = () => reject(new Error('Tải file quá lâu, vui lòng thử lại'));
+    xhr.onerror = () => reject(new Error(tUpload('attNetwork')));
+    xhr.ontimeout = () => reject(new Error(tUpload('attTimeout')));
     const fd = new FormData();
     fd.append('file', file);
     xhr.send(fd);
   });
+}
+
+/**
+ * Upload file qua XMLHttpRequest để có tiến trình % (fetch không báo progress).
+ * Access token hết hạn (401) → refresh 1 lần rồi gửi lại (giống api()).
+ */
+export async function uploadFile(file: File, onProgress: (pct: number) => void): Promise<UploadedFile> {
+  try {
+    return await sendUpload(file, onProgress);
+  } catch (err) {
+    if ((err as { status?: number }).status === 401 && (await tryRefresh())) {
+      onProgress(0);
+      return sendUpload(file, onProgress);
+    }
+    throw err;
+  }
 }
 
 export interface HomeworkForm {
@@ -67,15 +92,25 @@ export interface HomeworkForm {
   close_date?: string | null;
   kind?: 'homework' | 'quiz';
   rubric_id?: number | null;
+  /** Quiz: số lượt làm tối đa (null = không giới hạn) */
+  max_attempts?: number | null;
   attachments?: { name: string; url: string; kind: string }[];
   target_student_ids?: number[];
   questions?: QuizQuestionForm[];
 }
 
+export type QType = 'single' | 'multiple' | 'truefalse' | 'essay';
+
+/** 2 đáp án trống (đáp án đầu đúng) cho câu trắc nghiệm mới — dùng chung builder quiz + ngân hàng câu hỏi. */
+export const blankOptions = () => [
+  { text: '', is_correct: true },
+  { text: '', is_correct: false },
+];
+
 export interface QuizQuestionForm {
   question: string;
   points: number;
-  qtype?: 'single' | 'multiple' | 'truefalse' | 'essay';
+  qtype?: QType;
   options: { text: string; is_correct: boolean }[];
 }
 
@@ -183,7 +218,8 @@ export const homeworkApi = {
   reuse: (id: number) => http.post<{ created: HomeworkItem; count: number }>(`/homework/${id}/reuse`),
   publish: (id: number) => http.post<{ ok: boolean }>(`/homework/${id}/publish`),
   unpublish: (id: number) => http.post<{ ok: boolean }>(`/homework/${id}/unpublish`),
-  listClasses: () => http.get<Paginated<ClassItem>>('/classes?limit=100').then((r) => r.data),
+  listClasses: () =>
+    fetchAllPages((p) => http.get<Paginated<ClassItem>>(`/classes?page=${p.page}&limit=${p.limit}`)),
   // Điểm số
   getScores: (id: number) => http.get<HomeworkScoreRow[]>(`/homework/${id}/scores`),
   grade: (id: number, studentId: number, score: number | null, feedback: string) =>

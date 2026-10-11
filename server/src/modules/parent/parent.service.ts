@@ -5,8 +5,8 @@ import { nowVNSql } from '../../shared/vnTime';
 import { withAdvisoryLock } from '../../shared/advisoryLock';
 import { AuthUser, DUMMY_PASSWORD_HASH, invalidateTokenCheck } from '../../middleware/auth';
 import { issueTokenPair, TokenPair } from '../auth/refresh.service';
-import { ensureParentReferralCode } from '../../services/referrals';
-import { buildVnpayUrl } from '../../services/vnpay';
+import { ensureParentReferralCode } from '../referrals/rewards.service';
+import { buildVnpayUrl, vnpDate } from '../../services/vnpay';
 import { normalizePhone } from '../../services/zalo';
 import { AppError } from '../../shared/errors';
 import { targetScopeCond } from '../homework/homework.helpers';
@@ -23,6 +23,7 @@ export interface ParentRow {
   referral_code: string | null;
   token_version: number;
   is_active: boolean;
+  must_change_password: boolean;
 }
 
 export interface ParentPublic {
@@ -31,6 +32,8 @@ export interface ParentPublic {
   name: string;
   referral_code: string | null;
   center_id: number | null;
+  /** N-5: mật khẩu tạm do trung tâm đặt lại -> mọi API (trừ đổi mật khẩu) trả 403 PASSWORD_CHANGE_REQUIRED. */
+  must_change_password: boolean;
 }
 
 export interface LinkedStudent {
@@ -59,6 +62,7 @@ async function issueTokenPairForParent(p: ParentPublic & { token_version: number
     center_id: p.center_id,
     parent_id: p.id,
     tv: p.token_version, // D2: nhúng token version để thu hồi access token ngay khi đổi pass/khóa TK
+    must_change_password: p.must_change_password, // N-5 (đổi cờ luôn kèm tăng token_version)
   };
   return issueTokenPair(payload);
 }
@@ -106,7 +110,7 @@ async function remainingOrThrow(invoiceId: number, amount: number): Promise<numb
 async function creditSummary(parentId: number): Promise<{ total: number; used: number; available: number }> {
   const cr = (await db
     .prepare(
-      'SELECT COALESCE(SUM(amount),0) as total, COALESCE(SUM(used_amount),0) as used FROM credits WHERE parent_id = ?'
+      'SELECT COALESCE(SUM(amount),0) as total, COALESCE(SUM(used_amount),0) as used FROM credits WHERE parent_id = ? AND voided_at IS NULL'
     )
     .get(parentId)) as { total: number; used: number };
   return { total: cr.total, used: cr.used, available: cr.total - cr.used };
@@ -126,7 +130,7 @@ export async function registerParent(input: {
   const name = (input.name || '').trim();
   if (!name) throw AppError.badRequest('Vui lòng nhập họ tên');
 
-  // M3: bắt buộc center_id (client gửi), KHÔNG dùng center mặc định — chống tạo nhầm tenant
+  // M3: bắt buộc center_id (route lấy từ Host qua resolvePublicCenter), KHÔNG dùng center mặc định
   const centerId = Number(input.center_id);
   if (!Number.isInteger(centerId) || centerId <= 0) throw AppError.badRequest('Thiếu trung tâm đăng ký');
   const center = (await db.prepare('SELECT id FROM centers WHERE id = ?').get(centerId)) as
@@ -138,7 +142,7 @@ export async function registerParent(input: {
     .get(center.id, normalized);
   if (exists) throw AppError.conflict('Số điện thoại này đã được đăng ký');
 
-  const hash = bcrypt.hashSync(input.password as string, BCRYPT_ROUNDS);
+  const hash = await bcrypt.hash(input.password as string, BCRYPT_ROUNDS);
   const r = await db
     .prepare('INSERT INTO parents (center_id, phone, password_hash, name) VALUES (?, ?, ?, ?)')
     .run(center.id, normalized, hash, name);
@@ -149,6 +153,7 @@ export async function registerParent(input: {
     name,
     referral_code: await ensureParentReferralCode(parentId),
     center_id: center.id,
+    must_change_password: false,
   };
   return { ...(await issueTokenPairForParent({ ...parent, token_version: 1 })), parent };
 }
@@ -168,12 +173,11 @@ export async function loginParent(input: {
   const rows = (await db
     .prepare('SELECT * FROM parents WHERE phone = ?' + (centerId !== undefined ? ' AND center_id = ?' : ''))
     .all(...(centerId !== undefined ? [normalized, centerId] : [normalized]))) as ParentRow[];
+  const parent = rows.length === 1 ? rows[0] : undefined;
+  // M6: luôn chạy bcrypt.compare (kể cả khi user không tồn tại / nhiều trung tâm) để chống timing side-channel
+  const ok = await bcrypt.compare(input.password, parent ? parent.password_hash : DUMMY_PASSWORD_HASH);
   if (rows.length > 1)
     throw AppError.badRequest('Số điện thoại này tồn tại ở nhiều trung tâm, vui lòng chọn trung tâm');
-  const parent = rows[0];
-  // M6: luôn chạy bcrypt.compare (kể cả khi user không tồn tại) để chống timing side-channel
-  const hashToCheck = parent ? parent.password_hash : DUMMY_PASSWORD_HASH;
-  const ok = bcrypt.compareSync(input.password, hashToCheck);
   if (!parent || !ok) {
     throw AppError.unauthorized('Số điện thoại hoặc mật khẩu không đúng');
   }
@@ -187,11 +191,19 @@ export async function loginParent(input: {
     name: parent.name,
     referral_code: await ensureParentReferralCode(parent.id),
     center_id: parent.center_id,
+    must_change_password: !!parent.must_change_password,
   };
   return { ...(await issueTokenPairForParent({ ...out, token_version: parent.token_version })), parent: out };
 }
 
 /* ------------------------------ Con & liên kết ------------------------------ */
+
+/** Ngưỡng khóa liên kết con: 5 lần sai / 15 phút / phụ huynh; 10 lần sai / giờ / (trung tâm, mã HV). */
+const LINK_PARENT_MAX_FAILS = 5;
+const LINK_PARENT_WINDOW_MIN = 15;
+const LINK_CODE_MAX_FAILS = 10;
+const LINK_CODE_WINDOW_MIN = 60;
+// ponytail: đếm rồi mới ghi (không khóa) — burst song song vượt ngưỡng vài lần; writeRateLimit chặn trần.
 
 export async function linkStudent(
   parentId: number,
@@ -204,16 +216,30 @@ export async function linkStudent(
   // M4: yêu cầu ngày sinh (YYYY-MM-DD) khớp với hồ sơ học viên mới cho liên kết
   if (!dob || !DATE_RE.test(dob))
     throw AppError.badRequest('Vui lòng nhập đúng ngày sinh của học viên (YYYY-MM-DD)');
-  const student = (await db
+  if (centerId === null) throw AppError.badRequest('Tài khoản chưa thuộc trung tâm nào');
+  // SEC-4: chống dò ngày sinh — khóa theo phụ huynh và theo (trung tâm, mã HV) khi sai nhiều lần
+  const since = (min: number) => `to_char(NOW() - INTERVAL '${min} minutes', 'YYYY-MM-DD HH24:MI:SS')`;
+  const fails = (await db
     .prepare(
-      'SELECT id, code, name, dob FROM students WHERE code = ?' +
-        (centerId !== null ? ' AND center_id = ?' : '')
+      `SELECT
+         (SELECT COUNT(*) FROM parent_link_failures WHERE parent_id = ? AND created_at >= ${since(LINK_PARENT_WINDOW_MIN)}) AS by_parent,
+         (SELECT COUNT(*) FROM parent_link_failures WHERE center_id = ? AND student_code = ? AND created_at >= ${since(LINK_CODE_WINDOW_MIN)}) AS by_code`
     )
-    .get(...(centerId !== null ? [code, centerId] : [code]))) as
-    (LinkedStudent & { dob: string | null }) | undefined;
-  if (!student) throw AppError.notFound('Không tìm thấy học viên với mã này');
-  if (!student.dob || student.dob.slice(0, 10) !== dob) {
-    throw AppError.badRequest('Ngày sinh không khớp với hồ sơ học viên');
+    .get(parentId, centerId, code)) as { by_parent: number; by_code: number };
+  if (Number(fails.by_parent) >= LINK_PARENT_MAX_FAILS || Number(fails.by_code) >= LINK_CODE_MAX_FAILS) {
+    throw AppError.tooManyRequests(
+      'Bạn đã nhập sai quá nhiều lần, vui lòng thử lại sau hoặc liên hệ trung tâm'
+    );
+  }
+  const student = (await db
+    .prepare('SELECT id, code, name, dob FROM students WHERE code = ? AND center_id = ?')
+    .get(code, centerId)) as (LinkedStudent & { dob: string | null }) | undefined;
+  // Một thông báo chung cho cả "không có mã" và "sai ngày sinh" — không lộ mã HV nào tồn tại
+  if (!student || !student.dob || student.dob.slice(0, 10) !== dob) {
+    await db
+      .prepare('INSERT INTO parent_link_failures (center_id, parent_id, student_code) VALUES (?, ?, ?)')
+      .run(centerId, parentId, code);
+    throw AppError.badRequest('Mã học viên hoặc ngày sinh không đúng', 'LINK_MISMATCH');
   }
   const linked = await db
     .prepare('SELECT 1 FROM parent_students WHERE parent_id = ? AND student_id = ?')
@@ -273,7 +299,7 @@ export async function getChildOverview(
       `SELECT s.id, s.date, s.topic, c.name as class_name
        FROM sessions s JOIN classes c ON c.id = s.class_id
        JOIN enrollments e ON e.class_id = c.id
-       WHERE e.student_id = ? AND e.status = 'active' AND s.date >= ?
+       WHERE e.student_id = ? AND e.status = 'active' AND s.date >= ? AND s.status <> 'cancelled'
        ORDER BY s.date ASC LIMIT 10`
     )
     .all(studentId, today);
@@ -286,15 +312,18 @@ export async function getChildOverview(
   const late = attRows.find((r) => r.status === 'late')?.c ?? 0;
   const total = present + absent + late;
 
-  const invoiceRows = (await db
+  // PERF-1: số đã thu (payment confirmed) gộp bằng 1 subquery thay vì 1 query/hóa đơn
+  const invoices = await db
     .prepare(
-      `SELECT i.id, i.amount, i.due_date, i.status, i.note, c.name as class_name
+      `SELECT i.id, i.amount, i.due_date, i.status, i.note, c.name as class_name,
+        COALESCE(pp.paid, 0) as paid
        FROM invoices i LEFT JOIN classes c ON c.id = i.class_id
+       LEFT JOIN (SELECT p.invoice_id, SUM(p.amount) as paid FROM payments p
+                  JOIN invoices i2 ON i2.id = p.invoice_id
+                  WHERE i2.student_id = ? AND p.status = 'confirmed' GROUP BY p.invoice_id) pp ON pp.invoice_id = i.id
        WHERE i.student_id = ? ORDER BY i.id DESC`
     )
-    .all(studentId)) as { id: number; amount: number }[];
-  const paidList = await Promise.all(invoiceRows.map((i) => confirmedPaid(i.id)));
-  const invoices = invoiceRows.map((i, idx) => ({ ...i, paid: paidList[idx] }));
+    .all(studentId, studentId);
 
   const grades = await db
     .prepare(
@@ -304,20 +333,45 @@ export async function getChildOverview(
     )
     .all(studentId);
 
-  const homework = await db
+  const homework = (await db
     .prepare(
-      `SELECT h.id, h.title, h.content, h.due_date, h.kind, h.max_score, h.close_date, c.name as class_name,
+      `SELECT h.id, h.title, h.content, h.due_date, h.kind, h.max_score, h.close_date, h.max_attempts,
+        c.name as class_name,
         CASE WHEN hc.id IS NOT NULL THEN 1 ELSE 0 END as completed,
-        hs.score, hs.feedback
+        hs.score, hs.feedback,
+        -- B3-2: số lượt quiz con đã làm (cùng max_attempts -> client biết còn làm lại được không)
+        (SELECT COUNT(*)::int FROM quiz_attempts qa
+         WHERE qa.homework_id = h.id AND qa.student_id = e.student_id) AS attempts_used
        FROM homework h JOIN classes c ON c.id = h.class_id
        JOIN enrollments e ON e.class_id = c.id
        LEFT JOIN homework_completions hc ON hc.homework_id = h.id AND hc.student_id = e.student_id
        LEFT JOIN homework_scores hs ON hs.homework_id = h.id AND hs.student_id = e.student_id
        WHERE e.student_id = ? AND e.status = 'active' AND h.status = 'published'
          AND ${targetScopeCond('h', 'e.student_id')}
-       ORDER BY hc.id ASC, (h.due_date IS NULL), h.due_date ASC LIMIT 20`
+       ORDER BY (hc.id IS NOT NULL), (h.due_date IS NULL), h.due_date ASC, h.id DESC LIMIT 20`
     )
-    .all(studentId);
+    .all(studentId)) as { id: number }[];
+  // COR-4: bài CHƯA hoàn thành lên trước (PostgreSQL sắp NULL cuối khi ASC — `hc.id ASC`
+  // cũ đẩy bài chưa làm ra sau LIMIT khi con đã hoàn thành ≥ 20 bài).
+  // FE-4: kèm đính kèm của giáo viên (1 query cho cả danh sách).
+  const attByHw = new Map<number, { name: string; url: string; kind: string }[]>();
+  if (homework.length) {
+    for (const a of (await db
+      .prepare(
+        `SELECT homework_id, name, url, kind FROM homework_attachments
+         WHERE homework_id IN (${homework.map(() => '?').join(',')}) ORDER BY id`
+      )
+      .all(...homework.map((h) => h.id))) as {
+      homework_id: number;
+      name: string;
+      url: string;
+      kind: string;
+    }[]) {
+      const list = attByHw.get(a.homework_id) ?? [];
+      list.push({ name: a.name, url: a.url, kind: a.kind });
+      attByHw.set(a.homework_id, list);
+    }
+  }
 
   return {
     student,
@@ -338,7 +392,7 @@ export async function getChildOverview(
     },
     invoices,
     grades,
-    homework,
+    homework: homework.map((h) => ({ ...h, attachments: attByHw.get(h.id) ?? [] })),
     credits: await creditSummary(parentId),
   };
 }
@@ -396,11 +450,14 @@ export async function claimPaid(
       .run(invoiceId, remaining, 'Phụ huynh báo đã chuyển khoản');
     return { payment_id: Number(r.lastInsertRowid), status: 'pending' };
   });
+  // Lỗi nghiệp vụ (404/400...) ném bên trong lock giữ nguyên status, không biến thành 503
+  if (outcome.error instanceof AppError) throw outcome.error;
   if (outcome.status !== 'done' || !outcome.result) {
     // Lock bận hoặc lỗi: trả 409/503 có code để client phân biệt "thử lại" với lỗi hệ thống
     if (outcome.status === 'locked') {
       throw AppError.conflict('Hệ thống đang bận, vui lòng thử lại sau giây lát');
     }
+    if (outcome.error instanceof AppError) throw outcome.error; // lỗi nghiệp vụ (đã trả đủ, 404) giữ nguyên
     throw new AppError(503, 'Không thể tạo phiếu thu lúc này, vui lòng thử lại', 'SERVICE_UNAVAILABLE');
   }
   return outcome.result;
@@ -423,6 +480,7 @@ export async function createVnpayPayment(
     throw AppError.badRequest('Trung tâm chưa cấu hình thanh toán VNPay');
   }
   const ref = `HD${invoiceId}_${Date.now()}`;
+  const createDate = vnpDate(new Date()); // PAY-4: lưu vào payment_txns.vnp_create_date
   // Chống double-click: nếu đã có pending txn cho hóa đơn này (tạo trong 15 phút),
   // tái sử dụng thay vì tạo mới (tránh 2 URL thanh toán → trừ tiền 2 lần)
   // Chống race tạo 2 pending txn đồng thời (phụ huynh bị trừ tiền 2 lần)
@@ -431,12 +489,12 @@ export async function createVnpayPayment(
   const lockOutcome = await withAdvisoryLock(lockKey, async () => {
     const existing = (await db
       .prepare(
-        `SELECT ref, amount FROM payment_txns
-       WHERE invoice_id = ? AND status = 'pending'
+        `SELECT ref, amount, vnp_create_date FROM payment_txns
+       WHERE invoice_id = ? AND status = 'pending' AND vnp_create_date IS NOT NULL
          AND created_at > to_char(NOW() - INTERVAL '15 minutes', 'YYYY-MM-DD HH24:MI:SS')
        ORDER BY created_at DESC LIMIT 1`
       )
-      .get(invoiceId)) as { ref: string; amount: number } | undefined;
+      .get(invoiceId)) as { ref: string; amount: number; vnp_create_date: string } | undefined;
     if (existing && Math.abs(existing.amount - remaining) <= 1) {
       const payUrl = buildVnpayUrl(
         { tmnCode, hashSecret, returnUrl: `${baseUrl}/api/v1/payments/vnpay-return` },
@@ -445,13 +503,16 @@ export async function createVnpayPayment(
           txnRef: existing.ref,
           orderInfo: 'Thanh toan hoc phi HD' + invoiceId,
           ipAddr,
+          createDate: existing.vnp_create_date, // PAY-4: giữ đúng ngày đã gửi VNPay (querydr cần)
         }
       );
       return { pay_url: payUrl, reused: true as const };
     }
     await db
-      .prepare("INSERT INTO payment_txns (ref, invoice_id, amount, status) VALUES (?, ?, ?, 'pending')")
-      .run(ref, invoiceId, remaining);
+      .prepare(
+        "INSERT INTO payment_txns (ref, invoice_id, amount, status, vnp_create_date) VALUES (?, ?, ?, 'pending', ?)"
+      )
+      .run(ref, invoiceId, remaining, createDate);
     return { pay_url: null as string | null, reused: false as const };
   });
   if (lockOutcome.status === 'locked') {
@@ -464,7 +525,7 @@ export async function createVnpayPayment(
   // Tạo URL cho txn mới
   const payUrl = buildVnpayUrl(
     { tmnCode, hashSecret, returnUrl: `${baseUrl}/api/v1/payments/vnpay-return` },
-    { amountVnd: remaining, txnRef: ref, orderInfo: 'Thanh toan hoc phi HD' + invoiceId, ipAddr }
+    { amountVnd: remaining, txnRef: ref, orderInfo: 'Thanh toan hoc phi HD' + invoiceId, ipAddr, createDate }
   );
   return { pay_url: payUrl };
 }
@@ -478,9 +539,8 @@ export async function getVnpayTxnStatus(
   parentId: number,
   ref: string
 ): Promise<{ status: 'confirmed' | 'pending' | 'failed' }> {
-  const txn = (await db
-    .prepare('SELECT invoice_id, status FROM payment_txns WHERE ref = ?')
-    .get(ref)) as { invoice_id: number; status: string } | undefined;
+  const txn = (await db.prepare('SELECT invoice_id, status FROM payment_txns WHERE ref = ?').get(ref)) as
+    { invoice_id: number; status: string } | undefined;
   if (!txn) throw AppError.notFound('Không tìm thấy giao dịch');
   await getParentInvoice(parentId, txn.invoice_id); // throw 404 nếu hóa đơn không thuộc phụ huynh
   const status = txn.status === 'confirmed' ? 'confirmed' : txn.status === 'failed' ? 'failed' : 'pending';
@@ -545,6 +605,8 @@ export async function createLeave(
   if (outcome.status === 'locked') {
     throw AppError.conflict('Hệ thống đang bận, vui lòng thử lại sau giây lát');
   }
+  // Đơn trùng (409) / lớp sai (400) ném bên trong lock giữ nguyên status, không biến thành 503
+  if (outcome.error instanceof AppError) throw outcome.error;
   if (outcome.status !== 'done' || !outcome.result) {
     throw new AppError(503, 'Không thể tạo đơn xin nghỉ lúc này, vui lòng thử lại', 'SERVICE_UNAVAILABLE');
   }
@@ -613,7 +675,10 @@ export async function createReview(
     .run(centerId, parentId, r, input.comment || null);
   // ON CONFLICT ... RETURNING không trả rows qua pg-compat run(); query lại id
   const row = (await db
-    .prepare('SELECT id FROM reviews WHERE parent_id = ? AND ' + (centerId === null ? 'center_id IS NULL' : 'center_id = ?'))
+    .prepare(
+      'SELECT id FROM reviews WHERE parent_id = ? AND ' +
+        (centerId === null ? 'center_id IS NULL' : 'center_id = ?')
+    )
     .get(...(centerId === null ? [parentId] : [parentId, centerId]))) as { id: number } | undefined;
   return { id: row?.id ?? 0, status: 'pending' };
 }
@@ -771,17 +836,27 @@ export async function getChildSubmissions(parentId: number, studentId: number, h
 }
 
 /** Đổi mật khẩu phụ huynh: verify mật khẩu cũ, hash mật khẩu mới. */
-export async function changePassword(parentId: number, oldPassword: string, newPassword: string): Promise<void> {
-  const row = (await db.prepare('SELECT password_hash FROM parents WHERE id = ?').get(parentId)) as {
-    password_hash: string;
-  } | undefined;
+export async function changePassword(
+  parentId: number,
+  oldPassword: string,
+  newPassword: string
+): Promise<void> {
+  const row = (await db.prepare('SELECT password_hash FROM parents WHERE id = ?').get(parentId)) as
+    | {
+        password_hash: string;
+      }
+    | undefined;
   if (!row) throw AppError.notFound('Không tìm thấy tài khoản');
   const ok = await bcrypt.compare(oldPassword, row.password_hash);
   if (!ok) throw AppError.badRequest('Mật khẩu cũ không đúng');
   const hash = await bcrypt.hash(newPassword, 10);
-  await db.prepare('UPDATE parents SET password_hash = ? WHERE id = ?').run(hash, parentId);
-  // D2: tăng token_version → mọi access token cũ bị thu hồi ngay (client tự refresh khi gặp 401)
-  await db.prepare('UPDATE parents SET token_version = token_version + 1 WHERE id = ?').run(parentId);
+  // D2: tăng token_version → mọi access token cũ bị thu hồi ngay (client tự refresh khi gặp 401).
+  // N-5: đổi xong thì hết mật khẩu tạm (cùng câu UPDATE với tăng token_version).
+  await db
+    .prepare(
+      'UPDATE parents SET password_hash = ?, must_change_password = false, token_version = token_version + 1 WHERE id = ?'
+    )
+    .run(hash, parentId);
   invalidateTokenCheck('parent', parentId);
 }
 
@@ -789,9 +864,11 @@ export async function changePassword(parentId: number, oldPassword: string, newP
 export type ZaloConsent = 'granted' | 'denied' | 'unknown';
 
 export async function getZaloConsent(parentId: number): Promise<ZaloConsent> {
-  const row = (await db.prepare('SELECT zalo_consent FROM parents WHERE id = ?').get(parentId)) as {
-    zalo_consent: ZaloConsent | null;
-  } | undefined;
+  const row = (await db.prepare('SELECT zalo_consent FROM parents WHERE id = ?').get(parentId)) as
+    | {
+        zalo_consent: ZaloConsent | null;
+      }
+    | undefined;
   return row?.zalo_consent ?? 'unknown';
 }
 

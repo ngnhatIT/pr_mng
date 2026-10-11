@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useDocumentTitle } from '../../shared/hooks/useDocumentTitle';
-import { useToast } from '../../shared/ui/toast';
+import { toastApiError, useToast } from '../../shared/ui/toast';
 import { Field } from '../../shared/components/Form';
 import { Icon } from '../../shared/components/icons';
 import { Skeleton } from '../../shared/components/Skeleton';
@@ -369,7 +369,7 @@ function LeadForm() {
       setPhone('');
       setNote('');
     } catch (err) {
-      toast(err instanceof Error ? err.message : t('lead.fail'), 'error');
+      toastApiError(toast, err, t('lead.fail'));
     } finally {
       setBusy(false);
     }
@@ -449,7 +449,7 @@ function TrialForm({
       setDesiredDate('');
       setNote('');
     } catch (err) {
-      toast(err instanceof Error ? err.message : t('trial.fail'), 'error');
+      toastApiError(toast, err, t('trial.fail'));
     } finally {
       setBusy(false);
     }

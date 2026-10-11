@@ -27,7 +27,7 @@ const origTransaction = db.transaction;
 const opt = (text: string, is_correct: boolean) => ({ text, is_correct });
 
 describe('validate theo loại câu hỏi', () => {
-  it("single: 2 đáp án đúng → 400", () => {
+  it('single: 2 đáp án đúng → 400', () => {
     assert.throws(
       () => validateQuestionOptions('single', [opt('A', true), opt('B', true)], 'Câu 1'),
       /đúng 1 đáp án đúng/
@@ -40,7 +40,11 @@ describe('validate theo loại câu hỏi', () => {
     );
   });
   it('multiple: nhiều đáp án đúng OK, 0 đáp án đúng → 400', () => {
-    const ok = validateQuestionOptions('multiple', [opt('A', true), opt('B', true), opt('C', false)], 'Câu 1');
+    const ok = validateQuestionOptions(
+      'multiple',
+      [opt('A', true), opt('B', true), opt('C', false)],
+      'Câu 1'
+    );
     assert.equal(ok.length, 3);
     assert.throws(
       () => validateQuestionOptions('multiple', [opt('A', false), opt('B', false)], 'Câu 1'),
@@ -49,7 +53,12 @@ describe('validate theo loại câu hỏi', () => {
   });
   it('truefalse: phải đúng 2 đáp án', () => {
     assert.throws(
-      () => validateQuestionOptions('truefalse', [opt('Đúng', true), opt('Sai', false), opt('C', false)], 'Câu 1'),
+      () =>
+        validateQuestionOptions(
+          'truefalse',
+          [opt('Đúng', true), opt('Sai', false), opt('C', false)],
+          'Câu 1'
+        ),
       /đúng 2 đáp án/
     );
     const ok = validateQuestionOptions('truefalse', [opt('Đúng', true), opt('Sai', false)], 'Câu 1');
@@ -77,7 +86,12 @@ describe('validate theo loại câu hỏi', () => {
         qtype: 'multiple',
         options: [opt('A', true), opt('B', true), opt('C', false)],
       },
-      { question: 'Đúng sai', points: 1, qtype: 'truefalse', options: [opt('Đúng', true), opt('Sai', false)] },
+      {
+        question: 'Đúng sai',
+        points: 1,
+        qtype: 'truefalse',
+        options: [opt('Đúng', true), opt('Sai', false)],
+      },
     ]);
     assert.equal(out[0].qtype, 'essay');
     assert.deepEqual(out[0].options, []);
@@ -170,10 +184,7 @@ describe('submitQuiz — đa loại câu hỏi', () => {
     assert.equal(r.max_score, 10);
     // multiple lưu 2 dòng đáp án; essay lưu 1 dòng answer_text
     const q202 = answerInserts.filter((a) => a.question_id === 202);
-    assert.deepEqual(
-      q202.map((a) => a.option_id).sort(),
-      [21, 22]
-    );
+    assert.deepEqual(q202.map((a) => a.option_id).sort(), [21, 22]);
     const q203 = answerInserts.filter((a) => a.question_id === 203);
     assert.equal(q203.length, 1);
     assert.equal(q203[0].answer_text, 'Bài làm tự luận của em');

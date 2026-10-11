@@ -1,13 +1,15 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { teacherApi } from './teacher.api';
-import { useToast } from '../../shared/ui/toast';
+import { toastApiError, useToast } from '../../shared/ui/toast';
 import { Modal, ConfirmDialog } from '../../shared/components/Modal';
 import { Field, useFieldErrors } from '../../shared/components/Form';
 import { PageHeader } from '../../shared/components/PageHeader';
-import { EmptyState } from '../../shared/components/EmptyState';
+import { EmptyState, LoadError } from '../../shared/components/EmptyState';
+import { useLoad } from '../../shared/hooks/useLoad';
+import { useUrlState } from '../../shared/hooks/useUrlState';
 import { TableSkeleton } from '../../shared/components/Skeleton';
-import { Pagination, type PaginationMeta } from '../../shared/components/Pagination';
+import { Pagination } from '../../shared/components/Pagination';
 import { Icon } from '../../shared/components/icons';
 import { ClassItem } from '../classes/classes.api';
 import { Grade, formatDate } from '../../shared/types';
@@ -17,60 +19,49 @@ import { EmptyCell } from '../../shared/components/EmptyCell';
 export function TeacherGrades() {
   const { t } = useTranslation(['teacher', 'common']);
   const [classes, setClasses] = useState<ClassItem[]>([]);
-  const [students, setStudents] = useState<{ id: number; name: string; code: string }[]>([]);
-  const [grades, setGrades] = useState<Grade[]>([]);
-  const [classId, setClassId] = useState('');
-  const [studentId, setStudentId] = useState('');
-  const [loading, setLoading] = useState(false);
+  // UX-6: lớp/học viên/trang trên URL -> reload hay Back vẫn đúng học viên đang xem
+  const [q, setQ] = useUrlState({ class: '', student: '', page: '1' });
+  const classId = q.class;
+  const studentId = q.student;
+  const page = Number(q.page) || 1;
   const [showForm, setShowForm] = useState(false);
   const [deleting, setDeleting] = useState<Grade | null>(null);
-  const [page, setPage] = useState(1);
-  const [pagination, setPagination] = useState<PaginationMeta | null>(null);
   const toast = useToast();
 
   useEffect(() => {
     teacherApi
       .listClasses()
       .then((c) => setClasses(c.filter((x) => x.status === 'active')))
-      .catch((err: Error) => toast(err.message, 'error'));
+      .catch((err: unknown) => toastApiError(toast, err, t('states.loadError', { ns: 'common' })));
   }, [toast]);
 
-  const loadGrades = useCallback(async () => {
-    if (!studentId) {
-      setGrades([]);
-      setPagination(null);
-      return;
-    }
-    setLoading(true);
-    try {
-      const res = await teacherApi.listGrades(studentId, classId, { page });
-      setGrades(res.data);
-      setPagination(res.pagination);
-    } catch (err) {
-      toast(err instanceof Error ? err.message : t('grades.loadError'), 'error');
-    } finally {
-      setLoading(false);
-    }
-  }, [studentId, classId, page, toast, t]);
+  // useLoad bỏ qua response cũ về muộn (đổi lớp/học viên/trang liên tục)
+  const studentsLoad = useLoad(
+    () => (classId ? teacherApi.classStudents(classId).then((d) => d.students) : Promise.resolve([])),
+    [classId]
+  );
+  // đang tải lớp mới: không để học viên lớp cũ trong dropdown
+  const students = studentsLoad.loading ? [] : (studentsLoad.data ?? []);
+  const {
+    data,
+    loading,
+    error,
+    reload: loadGrades,
+  } = useLoad(
+    () => (studentId ? teacherApi.listGrades(studentId, classId, { page }) : Promise.resolve(null)),
+    [studentId, classId, page]
+  );
+  const grades: Grade[] = (studentId && data?.data) || [];
+  const pagination = (studentId && data?.pagination) || null;
 
   useEffect(() => {
-    void loadGrades();
-  }, [loadGrades]);
+    if (studentsLoad.error) toastApiError(toast, studentsLoad.error, t('grades.studentsError'));
+  }, [studentsLoad.error, toast, t]);
+  useEffect(() => {
+    if (error) toastApiError(toast, error, t('grades.loadError'));
+  }, [error, toast, t]);
 
-  const pickClass = async (cid: string) => {
-    setClassId(cid);
-    setStudentId('');
-    setStudents([]);
-    setGrades([]);
-    setPage(1);
-    if (!cid) return;
-    try {
-      const d = await teacherApi.classStudents(cid);
-      setStudents(d.students);
-    } catch (err) {
-      toast(err instanceof Error ? err.message : t('grades.studentsError'), 'error');
-    }
-  };
+  const pickClass = (cid: string) => setQ({ class: cid, student: '', page: '1' });
 
   const remove = async () => {
     if (!deleting) return;
@@ -78,9 +69,9 @@ export function TeacherGrades() {
       await teacherApi.deleteGrade(deleting.id);
       toast(t('grades.deleted'), 'success');
       setDeleting(null);
-      void loadGrades();
+      loadGrades();
     } catch (err) {
-      toast(err instanceof Error ? err.message : t('grades.deleteFail'), 'error');
+      toastApiError(toast, err, t('grades.deleteFail'));
     }
   };
 
@@ -104,7 +95,7 @@ export function TeacherGrades() {
           aria-label={t('grades.selectClass')}
           className="text-input"
           value={classId}
-          onChange={(e) => void pickClass(e.target.value)}
+          onChange={(e) => pickClass(e.target.value)}
         >
           <option value="">{t('grades.selectClass')}</option>
           {classes.map((c) => (
@@ -117,10 +108,7 @@ export function TeacherGrades() {
           aria-label={t('grades.selectStudent')}
           className="text-input"
           value={studentId}
-          onChange={(e) => {
-            setStudentId(e.target.value);
-            setPage(1);
-          }}
+          onChange={(e) => setQ({ student: e.target.value, page: '1' })}
           disabled={!classId}
         >
           <option value="">{t('grades.selectStudent')}</option>
@@ -132,10 +120,12 @@ export function TeacherGrades() {
         </select>
       </div>
 
-      {loading ? (
-        <TableSkeleton cols={5} />
-      ) : !studentId ? (
+      {!studentId ? (
         <EmptyState icon="cap" title={t('grades.noStudentTitle')} desc={t('grades.noStudentDesc')} />
+      ) : loading ? (
+        <TableSkeleton cols={5} />
+      ) : error ? (
+        <LoadError onRetry={loadGrades} />
       ) : grades.length === 0 ? (
         <EmptyState
           icon="file"
@@ -189,7 +179,7 @@ export function TeacherGrades() {
         </div>
       )}
 
-      {pagination && <Pagination pagination={pagination} onChange={(p) => setPage(p)} />}
+      {pagination && <Pagination pagination={pagination} onChange={(p) => setQ({ page: String(p) })} />}
 
       {showForm && studentId && (
         <GradeFormModal
@@ -198,7 +188,7 @@ export function TeacherGrades() {
           onClose={() => setShowForm(false)}
           onDone={() => {
             setShowForm(false);
-            void loadGrades();
+            loadGrades();
           }}
         />
       )}
@@ -274,7 +264,11 @@ function GradeFormModal({
   };
 
   return (
-    <Modal title={t('grades.formTitle')} onClose={onClose}>
+    <Modal
+      title={t('grades.formTitle')}
+      onClose={onClose}
+      dirty={title !== '' || score !== '' || maxScore !== '10' || comment !== ''}
+    >
       <form onSubmit={submit} noValidate>
         <div className="form-grid">
           <Field label={t('grades.formTestName')} error={errors.title} span>

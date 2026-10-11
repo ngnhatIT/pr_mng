@@ -64,15 +64,12 @@ function setupState(): void {
     },
     {
       match: 'FROM enrollments WHERE student_id = ? AND class_id = ?',
-      get: (p) =>
-        enrollments.find((e) => e.student_id === Number(p[0]) && e.class_id === Number(p[1])),
+      get: (p) => enrollments.find((e) => e.student_id === Number(p[0]) && e.class_id === Number(p[1])),
     },
     {
       match: "UPDATE enrollments SET status = 'active'",
       run: (p) => {
-        const e = enrollments.find(
-          (x) => x.student_id === Number(p[0]) && x.class_id === Number(p[1])
-        );
+        const e = enrollments.find((x) => x.student_id === Number(p[0]) && x.class_id === Number(p[1]));
         if (e) e.status = 'active';
         return okRun();
       },

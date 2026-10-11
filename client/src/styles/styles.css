@@ -1085,6 +1085,8 @@ button.search-clear:active {
   }
 }
 
+/* UX-3: nền KHÔNG cuộn (click thanh cuộn của nền từng đóng modal); modal tự giới hạn chiều cao và chỉ
+   .modal-body cuộn, nút hành động dính đáy để form dài vẫn thấy nút Lưu. */
 .modal-backdrop {
   position: fixed;
   inset: 0;
@@ -1095,13 +1097,17 @@ button.search-clear:active {
   justify-content: center;
   padding: var(--sp-8) var(--sp-4);
   z-index: var(--z-modal);
-  overflow-y: auto;
+  overflow: hidden;
 }
 .modal {
   background: var(--bg-soft);
   border-radius: var(--radius-xl);
   width: 520px;
   max-width: 100%;
+  max-height: calc(100vh - 2 * var(--sp-8));
+  max-height: calc(100dvh - 2 * var(--sp-8));
+  display: flex;
+  flex-direction: column;
   box-shadow: var(--shadow-lg);
 }
 .modal-wide {
@@ -1123,6 +1129,9 @@ button.search-clear:active {
 }
 .modal-body {
   padding: var(--sp-5);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  min-height: 0;
 }
 .modal-actions {
   display: flex;
@@ -1131,6 +1140,34 @@ button.search-clear:active {
   margin-top: var(--sp-5);
   padding-top: var(--sp-4);
   border-top: 1px solid var(--border);
+}
+.modal-body .modal-actions {
+  position: sticky;
+  bottom: calc(-1 * var(--sp-5));
+  margin-bottom: calc(-1 * var(--sp-5));
+  padding-bottom: var(--sp-5);
+  background: var(--bg-soft);
+  z-index: 1;
+}
+.money-echo {
+  font-variant-numeric: tabular-nums;
+}
+/* Mobile: modal thành bottom sheet full chiều ngang, nút hành động luôn trong tầm ngón cái */
+@media (max-width: 600px) {
+  .modal-backdrop {
+    padding: 0;
+    align-items: flex-end;
+  }
+  .modal,
+  .modal-wide {
+    width: 100%;
+    max-height: 100vh;
+    max-height: 100dvh;
+    border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+  }
+  .modal-body .modal-actions {
+    padding-bottom: calc(var(--sp-5) + env(safe-area-inset-bottom, 0px));
+  }
 }
 .confirm-text {
   margin: 0 0 6px;
@@ -2484,6 +2521,9 @@ button.search-clear:active {
   color: var(--text);
   box-shadow: none;
 }
+.topbar-center {
+  max-width: 220px;
+}
 .topbar-user {
   display: flex;
   align-items: center;
@@ -2817,6 +2857,13 @@ button.search-clear:active {
 .login-card .btn-lg {
   margin-top: 6px;
 }
+/* Dark mode (B-4: global, không nằm trong Login.css vì /parent/login|register không tải chunk Login) */
+[data-theme='dark'] .login-page {
+  background: #0a0f1e;
+}
+[data-theme='dark'] .login-card {
+  background: var(--bg-soft);
+}
 
 /* ---------- Parent portal polish ---------- */
 .parent-page .btn {
@@ -2893,6 +2940,10 @@ button.search-clear:active {
   }
   .topbar-user span {
     display: none;
+  }
+  .topbar-center {
+    min-width: 0;
+    max-width: 130px;
   }
   .att-item {
     padding: 12px;
@@ -3711,7 +3762,7 @@ a:focus-visible,
   .topbar,
   .mobile-drawer,
   .bottom-nav,
-  .modal-backdrop,
+  .modal-backdrop:not(:has(.receipt)),
   .modal-head,
   .toast-container,
   .network-banner,
@@ -3743,6 +3794,26 @@ a:focus-visible,
   }
   .receipt-footer {
     break-inside: avoid;
+  }
+  /* Biên lai nằm trong Modal (không portal, ở giữa cây trang): chỉ in biên lai — ẩn mọi phần tử không chứa
+     nó, bỏ fixed/scroll/max-height của các tầng bao (backdrop, modal, modal-body) để không bị cắt. */
+  body:has(.receipt) *:not(:has(.receipt), .receipt, .receipt *) {
+    display: none !important;
+  }
+  body:has(.receipt) :has(.receipt) {
+    display: block !important;
+    position: static !important;
+    overflow: visible !important;
+    max-height: none !important;
+    width: auto !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    box-shadow: none !important;
+    background: none !important;
+    backdrop-filter: none !important;
+    animation: none !important;
+    transform: none !important;
   }
 }
 

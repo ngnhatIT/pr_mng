@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { env } from '../config/env';
 import { db, requestActor } from '../db/pg-compat';
+import { AppError } from '../shared/errors';
 
 /**
  * Secret ký JWT — NGUỒN DUY NHẤT là config/env (đọc từ biến môi trường JWT_SECRET).
@@ -22,6 +23,11 @@ export interface AuthUser {
   center_id?: number | null;
   parent_id?: number;
   teacher_id?: number | null;
+  /**
+   * N-5: mật khẩu tạm (đặt lại / admin cấp) — token chỉ dùng được cho đổi mật khẩu + /auth/me.
+   * Nhúng trong JWT an toàn vì mọi lần đổi cờ trong DB đều tăng token_version (token cũ chết ngay).
+   */
+  must_change_password?: boolean;
 }
 
 /**
@@ -60,10 +66,11 @@ type TokenStatus = 'ok' | 'revoked' | 'locked';
 
 /**
  * Kiểm tra access token còn hiệu lực không: so tv trong JWT với DB, và is_active.
- * Token cấp trước D2 (không có tv) được bỏ qua — chúng hết hạn theo TTL cũ (tối đa 1h).
+ * C-6: token không có tv bị coi là đã thu hồi (mọi nơi ký token đều nhúng tv từ D2; không còn
+ * nhánh bỏ qua kiểm tra cho token cũ).
  */
 async function checkTokenFreshness(payload: AuthUser): Promise<TokenStatus> {
-  if (payload.tv == null) return 'ok';
+  if (payload.tv == null) return 'revoked';
   const kind = payload.kind === 'parent' || payload.role === 'parent' ? 'parent' : 'staff';
   const id = kind === 'parent' ? (payload.parent_id ?? payload.id) : payload.id;
   const key = `${kind}:${id}`;
@@ -85,6 +92,9 @@ async function checkTokenFreshness(payload: AuthUser): Promise<TokenStatus> {
   return tv === payload.tv ? 'ok' : 'revoked';
 }
 
+/** N-5: route vẫn dùng được khi đang giữ mật khẩu tạm (kể cả alias /api không version). */
+const MUST_CHANGE_ALLOWED = /^\/api(\/v1)?\/(auth\/(me|change-password)|parent\/change-password)\/?$/;
+
 /**
  * Verify xong → kiểm tra thu hồi/khóa (bất đồng bộ). Mọi lỗi bên trong đều biến
  * thành 401, không throw ra ngoài (Express 4 không hứng được lỗi từ middleware async).
@@ -102,6 +112,14 @@ function finishAuth(req: AuthRequest, res: Response, next: NextFunction, payload
         res
           .status(401)
           .json({ error: 'Phiên đăng nhập đã hết hiệu lực, vui lòng đăng nhập lại', code: 'TOKEN_REVOKED' });
+        return;
+      }
+      // N-5: mật khẩu tạm -> chỉ cho xem /auth/me và đổi mật khẩu (refresh/logout không qua middleware này)
+      if (payload.must_change_password && !MUST_CHANGE_ALLOWED.test(req.originalUrl.split('?')[0])) {
+        res.status(403).json({
+          error: 'Bạn cần đổi mật khẩu tạm trước khi tiếp tục',
+          code: 'PASSWORD_CHANGE_REQUIRED',
+        });
         return;
       }
       req.user = payload;
@@ -178,11 +196,41 @@ export const superadminOnly = requireRole('superadmin');
 
 /**
  * Lấy center_id hiệu lực của request.
- * Trả về null cho superadmin (không giới hạn trung tâm).
+ * - User thường -> center của mình. Fail-closed: không có center_id (dữ liệu lệch) -> 403,
+ *   không bao giờ coi là toàn hệ thống.
+ * - Superadmin: mặc định null (toàn hệ thống); có `?center_id=` (ô chọn trung tâm trên
+ *   thanh tiêu đề, client tự gắn) -> thao tác như trung tâm đó, đọc lẫn ghi.
  */
 export function reqCenterId(req: AuthRequest): number | null {
   if (!req.user) return null;
-  if (req.user.role === 'superadmin') return null;
+  if (req.user.role === 'superadmin') {
+    const raw = (req.query as Record<string, unknown> | undefined)?.center_id;
+    if (raw === undefined || raw === '') return null;
+    const n = Number(raw);
+    if (!Number.isInteger(n) || n <= 0) throw new AppError(400, 'center_id không hợp lệ', 'VALIDATION_ERROR');
+    return n;
+  }
   const cid = req.user.center_id;
-  return typeof cid === 'number' ? cid : null;
+  if (typeof cid === 'number') return cid;
+  throw new AppError(403, 'Tài khoản chưa được gán trung tâm', 'NO_CENTER');
+}
+
+/**
+ * Trung tâm đích cho thao tác GHI dữ liệu thuộc tenant. User thường -> center của mình.
+ * Superadmin bắt buộc chỉ rõ center_id (query hoặc body) — không còn ngầm rơi vào
+ * trung tâm id nhỏ nhất (ghi nhầm tenant #1).
+ */
+export function requireCenterId(req: AuthRequest): number {
+  const cid = reqCenterId(req);
+  if (cid !== null) return cid;
+  // Không có ?center_id (reqCenterId đã xử lý) -> chấp nhận center_id trong body.
+  const n = Number((req.body as Record<string, unknown> | undefined)?.center_id);
+  if (!Number.isInteger(n) || n <= 0) {
+    throw new AppError(
+      400,
+      'Superadmin cần chọn trung tâm (ô "Trung tâm" trên thanh tiêu đề) trước khi thao tác',
+      'CENTER_REQUIRED'
+    );
+  }
+  return n;
 }

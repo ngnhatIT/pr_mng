@@ -1,7 +1,6 @@
 import { Router, Response } from 'express';
-import { db, setCenterSetting, toISODate, addDays } from '../../db';
-import { AuthRequest, reqCenterId } from '../../middleware/auth';
-import { withAdvisoryLock } from '../../shared/advisoryLock';
+import { setCenterSetting, toISODate, addDays } from '../../db';
+import { AuthRequest, reqCenterId, requireCenterId } from '../../middleware/auth';
 import { paramId } from '../../shared/validate';
 import { requirePermission } from '../authorization/authorization.middleware';
 import {
@@ -9,29 +8,30 @@ import {
   maskAccessToken,
   normalizePhone,
   sendZNS,
-  sendTuitionReminder,
   ZALO_CONFIG_KEYS,
+  isKeepSecret,
+  logTestReminder,
+  listReminders,
+  sendManualReminder,
 } from '../../services/zalo';
 import { costlyOpRateLimit } from '../../middleware/rateLimit';
 import { requireFeature } from '../../middleware/requireFeature';
 import { runReminderOnce } from '../../jobs/reminderScheduler';
-import { getDefaultCenter } from '../../utils/plans';
 import { asyncHandler } from '../../shared/http';
 
 const router = Router();
 
-/** center_id hiệu lực cho cấu hình Zalo: center của user, superadmin dùng trung tâm mặc định */
-const cidOf = async (req: AuthRequest): Promise<number | undefined> =>
-  reqCenterId(req) ?? (await getDefaultCenter())?.id;
+/** center_id hiệu lực cho cấu hình Zalo — ARCH-1: superadmin phải chỉ rõ center_id (không rơi vào tenant #1) */
+const cidOf = (req: AuthRequest): number => requireCenterId(req);
 
 /* ------------------------- Cấu hình Zalo (admin) ------------------------- */
 
 // GET /api/zalo/config
 router.get(
   '/zalo/config',
-  requirePermission('notifications.manage'),
+  requirePermission('notifications.manage', 'center'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
-    const cfg = await getZaloConfig(await cidOf(req));
+    const cfg = await getZaloConfig(cidOf(req));
     res.json({
       ...cfg,
       zalo_access_token: maskAccessToken(cfg.zalo_access_token),
@@ -44,19 +44,18 @@ router.get(
 // PUT /api/zalo/config
 router.put(
   '/zalo/config',
-  requirePermission('notifications.manage'),
+  requirePermission('notifications.manage', 'center'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
-    const cid = await cidOf(req);
-    if (cid === undefined) {
-      res.status(400).json({ error: 'Chưa có trung tâm nào để lưu cấu hình', code: 'BAD_REQUEST' });
-      return;
-    }
+    const cid = cidOf(req);
     const body = req.body as Record<string, unknown>;
     // Cảnh báo (không chặn): Zalo khuyến nghị chỉ gửi tin 07:00-21:00
     let hourWarning: string | null = null;
+    const updates: [string, string][] = [];
     for (const k of ZALO_CONFIG_KEYS) {
       if (body[k] === undefined) continue;
       let v = String(body[k] ?? '');
+      // DATA-5/ADM-2/ADM-9: secret đã che hoặc rỗng = giữ nguyên, không ghi đè token/secret thật
+      if (isKeepSecret(k, v)) continue;
       if (k === 'reminder_hour' && v) {
         const m = /^(\d{2}):(\d{2})$/.exec(v);
         const hh = m ? Number(m[1]) : -1;
@@ -78,8 +77,10 @@ router.put(
         v = String(Math.floor(n));
       }
       if (k === 'zalo_enabled') v = v === '1' ? '1' : '0';
-      await setCenterSetting(cid, k, v.trim());
+      updates.push([k, v.trim()]);
     }
+    // Validate hết rồi mới ghi (không lưu dở dang khi 1 trường sai)
+    for (const [k, v] of updates) await setCenterSetting(cid, k, v);
     const cfg = await getZaloConfig(cid);
     res.json({
       ...cfg,
@@ -98,13 +99,16 @@ router.post(
   '/zalo/test',
   costlyOpRateLimit,
   requireFeature('zalo_auto'),
-  requirePermission('notifications.manage'),
+  requirePermission('notifications.manage', 'center'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
-    const cid = await cidOf(req);
+    const cid = cidOf(req);
     const cfg = await getZaloConfig(cid);
     const phone = normalizePhone(req.body?.phone as string | undefined);
     if (!phone) {
-      res.status(400).json({ error: 'Số điện thoại không hợp lệ (cần 10 số, bắt đầu bằng 0)', code: 'VALIDATION_INVALID' });
+      res.status(400).json({
+        error: 'Số điện thoại không hợp lệ (cần 10 số, bắt đầu bằng 0)',
+        code: 'VALIDATION_INVALID',
+      });
       return;
     }
     const templateData = {
@@ -120,13 +124,9 @@ router.post(
       `Học phí 1.500.000đ (mã HD-TEST) đến hạn nộp ngày ${templateData.han_nop}.\n` +
       `Quý khách vui lòng hoàn tất học phí sớm. Xin cảm ơn!`;
 
-    const insertLog = await db.prepare(
-      'INSERT INTO reminders (center_id, invoice_id, student_id, phone, kind, status, message, response) VALUES (?, NULL, NULL, ?, ?, ?, ?, ?)'
-    );
-
     // Chế độ demo: chưa có token hoặc chưa bật
     if (cfg.zalo_enabled !== '1' || !cfg.zalo_access_token) {
-      await insertLog.run(cid ?? null, phone, 'general', 'demo', demoMessage, null);
+      await logTestReminder(cid, phone, 'demo', demoMessage, null);
       res.json({
         demo: true,
         status: 'demo',
@@ -135,7 +135,9 @@ router.post(
       return;
     }
     if (!cfg.zalo_template_upcoming) {
-      res.status(400).json({ error: 'Chưa cấu hình Template ID cho tin nhắn sắp đến hạn', code: 'BAD_REQUEST' });
+      res
+        .status(400)
+        .json({ error: 'Chưa cấu hình Template ID cho tin nhắn sắp đến hạn', code: 'BAD_REQUEST' });
       return;
     }
     const r = await sendZNS({
@@ -145,10 +147,9 @@ router.post(
       accessToken: cfg.zalo_access_token,
     });
     const status = r.ok ? 'sent' : 'failed';
-    await insertLog.run(
-      cid ?? null,
+    await logTestReminder(
+      cid,
       phone,
-      'general',
       status,
       r.ok ? demoMessage : r.error || 'Gửi thất bại',
       r.data ? JSON.stringify(r.data).slice(0, 2000) : r.error || null
@@ -170,9 +171,9 @@ router.post(
   '/zalo/run-once',
   costlyOpRateLimit,
   requireFeature('zalo_auto'),
-  requirePermission('notifications.manage'),
+  requirePermission('notifications.manage', 'center'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
-    const r = await runReminderOnce(await cidOf(req));
+    const r = await runReminderOnce(cidOf(req));
     if (r.wasLocked) {
       res.status(409).json({
         ok: false,
@@ -196,23 +197,11 @@ router.post(
 // GET /api/reminders?limit=100 — lọc theo trung tâm (superadmin xem tất cả)
 router.get(
   '/reminders',
-  requirePermission('notifications.view'),
+  requirePermission('notifications.view', 'center'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const cid = reqCenterId(req);
     const limit = Math.min(500, Math.max(1, Number(req.query.limit) || 100));
-    // Lọc center cho cả 2 nhánh: row có student và row student_id NULL (dùng r.center_id)
-    const where = cid !== null ? 'WHERE (s.center_id = ? OR (r.student_id IS NULL AND r.center_id = ?))' : '';
-    const rows = await db
-      .prepare(
-        `SELECT r.*, s.name as student_name, s.code as student_code, i.amount as invoice_amount, i.due_date
-       FROM reminders r
-       LEFT JOIN students s ON s.id = r.student_id
-       LEFT JOIN invoices i ON i.id = r.invoice_id
-       ${where}
-       ORDER BY r.id DESC LIMIT ?`
-      )
-      .all(...(cid !== null ? [cid, cid] : []), limit);
-    res.json(rows);
+    res.json(await listReminders(cid, limit));
   })
 );
 
@@ -224,43 +213,12 @@ router.post(
   '/invoices/:id/remind',
   costlyOpRateLimit,
   requireFeature('zalo_auto'),
-  requirePermission('notifications.send'),
+  requirePermission('notifications.send', 'center'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const cid = reqCenterId(req);
     const id = paramId(req.params);
-    if (cid !== null) {
-      const inv = await db
-        .prepare(
-          'SELECT i.id FROM invoices i JOIN students s ON s.id = i.student_id WHERE i.id = ? AND s.center_id = ?'
-        )
-        .get(id, cid);
-      if (!inv) {
-        res.status(404).json({ error: 'Không tìm thấy hóa đơn', code: 'NOT_FOUND' });
-        return;
-      }
-    }
     const kind = req.body?.kind === 'upcoming' ? 'upcoming' : 'overdue';
-    // Anti-spam: không gửi lại cùng loại trong 1 giờ (endpoint thủ công bypass dedupe 3 ngày của scheduler)
-    // Dùng advisory lock để chống race: 2 request đồng thời chỉ 1 được gửi
-    const lockKey = `remind:${id}:${kind}`;
-    const lockOutcome = await withAdvisoryLock(lockKey, async () => {
-      const recent = (await db
-        .prepare(
-          `SELECT 1 FROM reminders
-           WHERE invoice_id = ? AND kind = ? AND created_at >= datetime('now', '-1 hour')
-           LIMIT 1`
-        )
-        .get(id, kind)) as { '1'?: number } | undefined;
-      if (recent) {
-        res.status(429).json({
-          error: 'Hóa đơn này vừa được nhắc trong 1 giờ qua. Vui lòng thử lại sau.',
-          code: 'REMINDER_COOLDOWN',
-        });
-        return;
-      }
-      const r = await sendTuitionReminder(id, kind, cid ?? undefined);
-      return r;
-    });
+    const lockOutcome = await sendManualReminder(cid, id, kind);
     if (lockOutcome.status === 'locked') {
       res.status(429).json({
         error: 'Đang có yêu cầu nhắc khác cho hóa đơn này. Vui lòng thử lại sau.',
@@ -269,6 +227,13 @@ router.post(
       return;
     }
     if (lockOutcome.status === 'error') throw lockOutcome.error;
+    if (lockOutcome.result === 'cooldown') {
+      res.status(429).json({
+        error: 'Hóa đơn này vừa được nhắc trong 1 giờ qua. Vui lòng thử lại sau.',
+        code: 'REMINDER_COOLDOWN',
+      });
+      return;
+    }
     res.json(lockOutcome.result);
   })
 );

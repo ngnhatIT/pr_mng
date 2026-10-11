@@ -1,5 +1,15 @@
 import { useEffect, useState } from 'react';
-import { getToken } from '../api/client';
+import { getToken, tryRefresh } from '../api/client';
+
+/** fetch kèm Bearer token; 401 (token 15 phút đã hết) -> refresh 1 lần rồi thử lại (CORR-7). */
+export async function fetchWithAuth(url: string): Promise<Response> {
+  const go = () => {
+    const token = getToken();
+    return fetch(url, { headers: token ? { Authorization: `Bearer ${token}` } : {} });
+  };
+  const res = await go();
+  return res.status === 401 && (await tryRefresh()) ? go() : res;
+}
 
 /**
  * Tải file từ URL tương đối bằng fetch + Authorization header,
@@ -18,8 +28,7 @@ export function useSecureFileUrl(url: string | null): string {
     }
     let alive = true;
     let objUrl = '';
-    const token = getToken();
-    fetch(url, { headers: token ? { Authorization: `Bearer ${token}` } : {} })
+    fetchWithAuth(url)
       .then((r) => {
         if (!r.ok) throw new Error(`HTTP ${r.status}`);
         return r.blob();

@@ -1,11 +1,12 @@
 import { db, getSetting, setCenterSetting } from '../db';
-import { getCenterSettings } from '../db/helpers';
+import { getCenterSettings, invalidateCenterSettings } from '../db/helpers';
 import { logger } from '../shared/logger';
 import { formatError } from '../shared/errorFormat';
 import { todayVN } from '../shared/vnTime';
 import { sendAlert } from '../shared/alert';
 import { DAY_MS } from '../shared/time';
 import { withAdvisoryLock } from '../shared/advisoryLock';
+import { AppError } from '../shared/errors';
 
 const log = logger.scope('zalo');
 
@@ -66,6 +67,22 @@ export function maskAccessToken(token: string): string {
   if (!token) return '';
   if (token.length <= 8) return '••••••••';
   return `${token.slice(0, 4)}••••••••${token.slice(-4)}`;
+}
+
+/** Key bí mật (token/secret) — GET trả về dạng che, client có thể gửi lại nguyên dạng che */
+const SECRET_KEYS = new Set([
+  'zalo_access_token',
+  'zalo_refresh_token',
+  'zalo_app_secret',
+  'pay_vnp_hashsecret',
+]);
+
+/**
+ * DATA-5/ADM-2/ADM-9: giá trị secret đã che (chứa '•') hoặc rỗng = "giữ nguyên" — KHÔNG ghi đè
+ * secret thật bằng chuỗi che hay xóa mất khi người dùng chỉ lướt qua ô nhập.
+ */
+export function isKeepSecret(key: string, value: string): boolean {
+  return SECRET_KEYS.has(key) && (value.trim() === '' || value.includes('•'));
 }
 
 /* --------------------------- Chuẩn hóa số điện thoại --------------------------- */
@@ -268,8 +285,6 @@ export async function sendZNS(params: {
 /* ------------------------- Tự động refresh access token ------------------------- */
 
 const ZALO_OAUTH_URL = 'https://oauth.zaloapp.com/v4/oa/access_token';
-/** Mã lỗi Zalo trả về khi access token hết hạn/không hợp lệ. */
-export const ZALO_ERR_INVALID_TOKEN = -216;
 /**
  * Mã lỗi ZNS khi người dùng chưa follow OA / không nhận được ZNS
  * (-114: không nhận được ZNS; -119: tài khoản không thể nhận ZNS).
@@ -281,19 +296,30 @@ const PROACTIVE_REFRESH_MS = 24 * 3600 * 1000;
 /**
  * H1: đổi refresh token lấy access token mới, lưu vào center_settings.
  * Bọc advisory lock để 2 worker không refresh đồng thời làm vô hiệu lẫn nhau.
+ * DATA-6: - minValidMs: chỉ bỏ qua khi token còn hạn hơn ngưỡng của CALLER (proactive = 24h).
+ *         - failedToken: Zalo vừa báo token này hỏng -> refresh bắt buộc, trừ khi worker khác đã thay token.
  * Thất bại -> logger.error + sendAlert (không throw ra caller).
  */
-export async function refreshZaloAccessToken(centerId: number): Promise<boolean> {
+export async function refreshZaloAccessToken(
+  centerId: number,
+  opts: { minValidMs?: number; failedToken?: string } = {}
+): Promise<boolean> {
   const outcome = await withAdvisoryLock(`zalo-token-refresh:${centerId}`, async () => {
-    // Đọc lại trong lock: worker khác có thể vừa refresh xong
+    // Đọc lại trong lock, BỎ QUA cache 60s của getCenterSettings: worker khác có thể vừa refresh
+    // (refresh token cũ đã bị Zalo vô hiệu — dùng lại sẽ hỏng)
+    invalidateCenterSettings(centerId);
     const cfg = await getZaloConfig(centerId);
     if (!cfg.zalo_refresh_token) {
       log.warn('Zalo: chưa cấu hình refresh token, bỏ qua auto-refresh', { centerId });
       return false;
     }
-    const expiresAt = Number(cfg.zalo_token_expires_at);
-    if (Number.isFinite(expiresAt) && expiresAt - Date.now() > 60 * 1000) {
-      return true; // token vẫn dùng được — worker khác vừa refresh
+    if (opts.failedToken !== undefined) {
+      if (cfg.zalo_access_token && cfg.zalo_access_token !== opts.failedToken) return true; // worker khác vừa thay
+    } else {
+      const expiresAt = Number(cfg.zalo_token_expires_at);
+      if (cfg.zalo_token_expires_at && expiresAt - Date.now() > (opts.minValidMs ?? 60 * 1000)) {
+        return true; // token còn đủ hạn (hoặc worker khác vừa refresh)
+      }
     }
     if (!cfg.zalo_app_id || !cfg.zalo_app_secret) {
       log.warn('Zalo: thiếu app_id/app_secret nên không refresh được access token', { centerId });
@@ -342,7 +368,7 @@ export async function refreshZaloAccessToken(centerId: number): Promise<boolean>
   if (outcome.status === 'error') {
     const detail = formatError(outcome.error);
     log.error('Zalo: refresh access token thất bại', { centerId, error: detail });
-    await sendAlert('Zalo refresh token thất bại', `Trung tâm #${centerId}: ${detail}`);
+    await sendAlert('Zalo refresh token thất bại', `Trung tâm #${centerId}: ${detail.message}`);
     return false;
   }
   // 'locked' = worker khác đang refresh -> coi như OK, lần gửi sau dùng token mới
@@ -357,7 +383,8 @@ export async function ensureZaloTokenFresh(centerId: number | null | undefined):
     if (!cfg.zalo_refresh_token || !cfg.zalo_token_expires_at) return;
     const expiresAt = Number(cfg.zalo_token_expires_at);
     if (!Number.isFinite(expiresAt) || expiresAt - Date.now() > PROACTIVE_REFRESH_MS) return;
-    await refreshZaloAccessToken(centerId);
+    // DATA-6: cùng ngưỡng 24h trong lock (trước đây lock chỉ refresh khi còn < 60s -> no-op)
+    await refreshZaloAccessToken(centerId, { minValidMs: PROACTIVE_REFRESH_MS });
   } catch (err) {
     log.warn('ensureZaloTokenFresh thất bại (best-effort)', { error: formatError(err) });
   }
@@ -390,11 +417,12 @@ export async function sendTuitionReminder(
       `SELECT i.id, i.amount, i.due_date, i.status,
          COALESCE((SELECT SUM(amount) FROM payments WHERE invoice_id = i.id AND status = 'confirmed'), 0) as paid,
          s.id as student_id, s.name as student_name, s.phone as student_phone, s.center_id,
-         (SELECT p.phone FROM parent_students ps JOIN parents p ON p.id = ps.parent_id
-          WHERE ps.student_id = s.id ORDER BY ps.id LIMIT 1) as parent_phone,
-         (SELECT p.id FROM parent_students ps JOIN parents p ON p.id = ps.parent_id
-          WHERE ps.student_id = s.id ORDER BY ps.id LIMIT 1) as parent_id
+         par.phone as parent_phone, par.id as parent_id, par.zalo_consent as parent_consent
        FROM invoices i JOIN students s ON s.id = i.student_id
+       LEFT JOIN LATERAL (
+         SELECT p.id, p.phone, p.zalo_consent FROM parent_students ps JOIN parents p ON p.id = ps.parent_id
+         WHERE ps.student_id = s.id ORDER BY ps.created_at, ps.parent_id LIMIT 1
+       ) par ON true
        WHERE i.id = ? AND s.status != 'quit'`
     )
     .get(invoiceId)) as
@@ -409,12 +437,18 @@ export async function sendTuitionReminder(
         student_phone: string | null;
         parent_phone: string | null;
         parent_id: number | null;
+        parent_consent: string | null;
         center_id: number | null;
       }
     | undefined;
 
   if (!inv) {
-    return { demo: false, status: 'failed', message: 'Không tìm thấy hóa đơn (hoặc học viên đã nghỉ học)', phone: null };
+    return {
+      demo: false,
+      status: 'failed',
+      message: 'Không tìm thấy hóa đơn (hoặc học viên đã nghỉ học)',
+      phone: null,
+    };
   }
   if (inv.status === 'paid') {
     return { demo: false, status: 'failed', message: 'Hóa đơn đã thanh toán đủ', phone: null };
@@ -445,25 +479,13 @@ export async function sendTuitionReminder(
   if (!phone) {
     const msg = `Học viên ${inv.student_name} chưa có SĐT phụ huynh/học viên hợp lệ`;
     const rawPhone = inv.parent_phone ?? inv.student_phone;
-    await insertLog.run(
-      inv.center_id,
-      invoiceId,
-      inv.student_id,
-      rawPhone,
-      kind,
-      'failed',
-      msg,
-      null
-    );
+    await insertLog.run(inv.center_id, invoiceId, inv.student_id, rawPhone, kind, 'failed', msg, null);
     return { demo: false, status: 'failed', message: msg, phone: rawPhone };
   }
 
   // H5: phụ huynh đã từ chối nhận tin Zalo -> bỏ qua, không gửi (kể cả demo)
   if (inv.parent_id) {
-    const prow = (await db
-      .prepare('SELECT zalo_consent FROM parents WHERE id = ?')
-      .get(inv.parent_id)) as { zalo_consent: string | null } | undefined;
-    if (prow?.zalo_consent === 'denied') {
+    if (inv.parent_consent === 'denied') {
       const msg = `Phụ huynh của ${inv.student_name} đã từ chối nhận tin Zalo — bỏ qua`;
       log.info('Bỏ qua nhắc ZNS: phụ huynh denied consent', { parentId: inv.parent_id, invoiceId });
       await insertLog.run(inv.center_id, invoiceId, inv.student_id, phone, kind, 'failed', msg, null);
@@ -516,7 +538,12 @@ export async function sendTuitionReminder(
       )
       .get(dedupKey)) as { id: number } | undefined;
     if (!stale) {
-      return { demo: false, status: 'failed', message: 'Hóa đơn này đã được nhắc hôm nay (chống gửi trùng)', phone };
+      return {
+        demo: false,
+        status: 'failed',
+        message: 'Hóa đơn này đã được nhắc hôm nay (chống gửi trùng)',
+        phone,
+      };
     }
     logId = stale.id;
   } else {
@@ -524,19 +551,23 @@ export async function sendTuitionReminder(
   }
   // H1: chủ động refresh token nếu sắp hết hạn (best-effort)
   await ensureZaloTokenFresh(inv.center_id);
-  const sendOnce = (accessToken: string) =>
-    sendZNS({ phone, templateId, templateData, accessToken });
+  const tokenCid = centerId ?? inv.center_id ?? undefined;
+  const sendOnce = (accessToken: string) => sendZNS({ phone, templateId, templateData, accessToken });
   let r: { ok: boolean; data?: unknown; error?: string };
   try {
-    r = await sendOnce(cfg.zalo_access_token);
-    // H1: Zalo báo token hết hạn (-216) -> refresh rồi gửi lại 1 lần
-    const errCode = (r.data as { error?: number } | undefined)?.error;
-    if (!r.ok && errCode === ZALO_ERR_INVALID_TOKEN && inv.center_id) {
-      log.warn('Zalo access token hết hạn khi gửi ZNS, thử refresh', { centerId: inv.center_id });
-      if (await refreshZaloAccessToken(inv.center_id)) {
-        const freshCfg = await getZaloConfig(centerId ?? inv.center_id ?? undefined);
-        if (freshCfg.zalo_access_token) r = await sendOnce(freshCfg.zalo_access_token);
-      }
+    // Đọc lại token sau ensureZaloTokenFresh (có thể vừa được refresh)
+    const accessToken = (await getZaloConfig(tokenCid)).zalo_access_token || cfg.zalo_access_token;
+    try {
+      r = await sendOnce(accessToken);
+    } catch (err) {
+      // DATA-6: Zalo báo token hỏng/hết hạn (sendZNS ném ZaloTokenError) -> refresh bắt buộc rồi gửi lại 1 lần
+      if (!(err instanceof ZaloTokenError) || !tokenCid) throw err;
+      log.warn('Zalo access token hỏng khi gửi ZNS, thử refresh', { centerId: tokenCid });
+      if (!(await refreshZaloAccessToken(tokenCid, { failedToken: accessToken }))) throw err;
+      invalidateCenterSettings(tokenCid);
+      const fresh = (await getZaloConfig(tokenCid)).zalo_access_token;
+      if (!fresh || fresh === accessToken) throw err;
+      r = await sendOnce(fresh);
     }
   } catch (err) {
     // Lỗi hệ thống Zalo (token/quota): ghi log failed rồi ném tiếp để scheduler dừng vòng chạy
@@ -593,4 +624,69 @@ export async function notifyHomeworkPublished(
   } catch {
     /* bảng reminders có thể chưa có cột kind — bỏ qua */
   }
+}
+
+/* ------------------------- Dùng cho zalo.routes (ARCH-3) ------------------------- */
+
+/** Ghi log tin nhắn thử (POST /zalo/test) vào lịch sử nhắc. */
+export async function logTestReminder(
+  centerId: number,
+  phone: string,
+  status: string,
+  message: string,
+  response: string | null
+): Promise<void> {
+  await db
+    .prepare(
+      'INSERT INTO reminders (center_id, invoice_id, student_id, phone, kind, status, message, response) VALUES (?, NULL, NULL, ?, ?, ?, ?, ?)'
+    )
+    .run(centerId, phone, 'general', status, message, response);
+}
+
+/** Lịch sử nhắc — lọc theo trung tâm (null = superadmin xem tất cả). */
+export async function listReminders(centerId: number | null, limit: number) {
+  // Lọc center cho cả 2 nhánh: row có student và row student_id NULL (dùng r.center_id)
+  const where =
+    centerId !== null ? 'WHERE (s.center_id = ? OR (r.student_id IS NULL AND r.center_id = ?))' : '';
+  return db
+    .prepare(
+      `SELECT r.*, s.name as student_name, s.code as student_code, i.amount as invoice_amount, i.due_date
+       FROM reminders r
+       LEFT JOIN students s ON s.id = r.student_id
+       LEFT JOIN invoices i ON i.id = r.invoice_id
+       ${where}
+       ORDER BY r.id DESC LIMIT ?`
+    )
+    .all(...(centerId !== null ? [centerId, centerId] : []), limit);
+}
+
+/**
+ * Gửi nhắc thủ công 1 hóa đơn (404 nếu khác trung tâm). Anti-spam: không gửi lại cùng loại trong 1 giờ
+ * (endpoint thủ công bypass dedupe 3 ngày của scheduler); advisory lock chống 2 request đồng thời.
+ * DATA-20: không ghi response trong callback — trả outcome để route xử lý HTTP sau khi nhả lock.
+ */
+export async function sendManualReminder(
+  centerId: number | null,
+  invoiceId: number,
+  kind: 'overdue' | 'upcoming'
+) {
+  if (centerId !== null) {
+    const inv = await db
+      .prepare(
+        'SELECT i.id FROM invoices i JOIN students s ON s.id = i.student_id WHERE i.id = ? AND s.center_id = ?'
+      )
+      .get(invoiceId, centerId);
+    if (!inv) throw AppError.notFound('Không tìm thấy hóa đơn');
+  }
+  return withAdvisoryLock(`remind:${invoiceId}:${kind}`, async () => {
+    const recent = await db
+      .prepare(
+        `SELECT 1 FROM reminders
+         WHERE invoice_id = ? AND kind = ? AND created_at >= datetime('now', '-1 hour')
+         LIMIT 1`
+      )
+      .get(invoiceId, kind);
+    if (recent) return 'cooldown' as const;
+    return sendTuitionReminder(invoiceId, kind, centerId ?? undefined);
+  });
 }

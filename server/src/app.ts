@@ -3,15 +3,21 @@ import cors from 'cors';
 import helmet from 'helmet';
 import path from 'path';
 import fs from 'fs';
-import { requireAuth, denyParents, reqCenterId, AuthRequest } from './middleware/auth';
-import { requirePermission } from './modules/authorization/authorization.middleware';
+import { requireAuth, denyParents, AuthRequest, superadminOnly } from './middleware/auth';
 import { requestId } from './middleware/requestId';
 import { requestLogger } from './middleware/requestLogger';
 import { errorHandler, notFoundHandler, asyncHandler } from './shared/http';
 import { getUploadDir } from './shared/upload';
 import { checkUploadAccess } from './shared/uploadAccess';
 import { registerZaloListeners } from './shared/events/zalo.listeners';
-import { apiRateLimit, writeRateLimit, parentRateLimit, fileServeRateLimit, publicRateLimit } from './middleware/rateLimit';
+import {
+  apiRateLimit,
+  writeRateLimit,
+  parentRateLimit,
+  fileServeRateLimit,
+  publicRateLimit,
+  vnpayCallbackRateLimit,
+} from './middleware/rateLimit';
 import { db } from './db';
 import { env } from './config/env';
 import { setupSwagger } from './docs/swagger';
@@ -55,8 +61,9 @@ export function createApp(): Express {
   app.use(requestId); // Gán X-Request-Id cho mọi request (trace logs)
   app.use(requestLogger); // Log method/path/status/duration + đếm metrics
   // M5: CORS allowlist + security headers
-  // Lưu ý: credentials=false vì auth dùng Bearer token (localStorage), không dùng cookie.
-  // Nếu chuyển sang httpOnly cookie trong tương lai, PHẢI thêm CSRF protection.
+  // Access token: Bearer header, giữ trong BỘ NHỚ JS (không localStorage). Refresh token: HttpOnly
+  // cookie SameSite=strict, path /api/v1/auth|/api/v1/parent — client cùng origin nên credentials=false
+  // vẫn gửi cookie. CSRF cho các route dùng cookie (/refresh, /logout) chặn bằng requireSameOrigin.
   app.use(
     cors({
       origin: env.CORS_ORIGIN.split(',')
@@ -70,7 +77,8 @@ export function createApp(): Express {
       contentSecurityPolicy: {
         directives: {
           defaultSrc: ["'self'"],
-          scriptSrc: ["'self'", "'unsafe-inline'"],
+          // SEC-13: không 'unsafe-inline' — script theme chống FOUC đã tách ra /theme-init.js
+          scriptSrc: ["'self'"],
           styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
           imgSrc: ["'self'", 'data:', 'blob:'],
           connectSrc: ["'self'"],
@@ -92,6 +100,10 @@ export function createApp(): Express {
   // Asset Vite có tên file chứa content-hash → cache immutable 1 năm, an toàn.
   // index.html và file public/ không hash vẫn serve không cache ở mount dưới.
   app.use('/assets', express.static(path.join(clientDist, 'assets'), { maxAge: '1y', immutable: true }));
+  // Chunk cũ không còn (sau deploy) -> 404 thay vì SPA fallback index.html 200 (SW cache nhầm HTML vào URL .js)
+  app.use('/assets', (_req, res) => {
+    res.status(404).end();
+  });
   app.use(express.static(clientDist));
 
   // Phục vụ file bài nộp — CÓ AUTH (ảnh bài làm của học viên, không public)
@@ -104,16 +116,12 @@ export function createApp(): Express {
     asyncHandler(async (req, res) => {
       const authReq = req as AuthRequest;
       // C3: PHẢI await — nếu không, check quyền bị bỏ qua hoàn toàn
-      await checkUploadAccess(
-        req.params.filename,
-        authReq.user?.role,
-        reqCenterId(authReq),
-        authReq.user!.id,
-        authReq.user?.parent_id
-      );
+      await checkUploadAccess(req.params.filename, authReq.user!);
       const filename = req.params.filename.split('/').pop() || '';
       res.setHeader('X-Content-Type-Options', 'nosniff');
       res.setHeader('Content-Disposition', 'inline');
+      // File riêng tư theo quyền: không cho browser/SW/proxy cache (lộ cho user sau trên máy dùng chung)
+      res.setHeader('Cache-Control', 'private, no-store');
       res.sendFile(path.join(uploadDir, filename), (err) => {
         if (err) res.status(404).json({ error: 'Không tìm thấy file' });
       });
@@ -124,10 +132,15 @@ export function createApp(): Express {
   // Chuẩn enterprise: mọi API dưới /api/v1. Giữ /api như legacy alias (có deprecation header).
   const v1 = express.Router();
 
+  // C-3: callback VNPay (IPN/return) có limiter riêng, rộng — không chung trần 300/IP với API thường
+  const VNPAY_CALLBACK = /^\/payments\/vnpay-(ipn|return)\/?$/;
   // Rate limit global: 300 req / 15 phút / IP cho mọi endpoint versioned
-  v1.use(apiRateLimit);
-  // Write limiter: 60 req / 15 phút / IP cho POST/PUT/PATCH/DELETE
+  v1.use((req, res, next) =>
+    VNPAY_CALLBACK.test(req.path) ? vnpayCallbackRateLimit(req, res, next) : apiRateLimit(req, res, next)
+  );
+  // Write limiter: 600 req / 15 phút / tài khoản cho POST/PUT/PATCH/DELETE (auth/public có limiter riêng chặt hơn)
   v1.use((req, res, next) => {
+    if (VNPAY_CALLBACK.test(req.path)) return next();
     if (req.method === 'POST' || req.method === 'PUT' || req.method === 'PATCH' || req.method === 'DELETE') {
       return writeRateLimit(req, res, next);
     }
@@ -171,6 +184,7 @@ export function createApp(): Express {
   });
   app.get(
     '/api/health',
+    publicRateLimit(60), // OPS-5: route công khai chạm DB — chặn dùng nó để chiếm pool connection
     asyncHandler(async (_req: express.Request, res: express.Response) => {
       // Readiness probe: ping DB với timeout (LB ngừng route khi DB chết, không kill process)
       let dbOk = true;
@@ -186,12 +200,12 @@ export function createApp(): Express {
     })
   );
 
-  // Health check CHI TIẾT (DB, disk, memory) — chỉ admin mới xem được chi tiết hệ thống.
+  // Health check CHI TIẾT (DB, disk, memory) — chỉ superadmin (admin trung tâm có system.manage scope center).
   // Mount trên v1 router → /api/v1/health (legacy /api/health vẫn trúng route public ở trên nhờ thứ tự đăng ký).
   v1.get(
     '/health',
     requireAuth,
-    requirePermission('system.manage'),
+    superadminOnly,
     asyncHandler(async (_req: express.Request, res: express.Response) => {
       const checks: Record<string, { ok: boolean; detail?: string }> = {};
       // DB: query đơn giản + version PostgreSQL
@@ -225,6 +239,10 @@ export function createApp(): Express {
     })
   );
 
+  // OPS-5: METRICS_TOKEN (Prometheus) hoặc JWT superadmin — kiểm nội bộ. PHẢI đứng trước các mount '/'
+  // có requireAuth (sessions/zalo) để scraper dùng token tĩnh không bị 401.
+  v1.use('/metrics', metricsRoutes);
+
   /* ------------------------- Quản trị trung tâm ------------------------- */
   // denyParents: phụ huynh chỉ được dùng /api/parent, không chạm API nhân sự
   const staff = [requireAuth, denyParents];
@@ -248,7 +266,6 @@ export function createApp(): Express {
   v1.use('/reviews', ...staff, reviewRoutes);
   v1.use('/centers', ...staff, centerRoutes); // C1: denyParents + superadminOnly nội bộ (requirePermission('system.manage'))
   v1.use('/audit-logs', requireAuth, denyParents, auditRoutes); // adminOnly nội bộ
-  v1.use('/metrics', requireAuth, denyParents, metricsRoutes); // adminOnly: Prometheus metrics
   v1.use('/roles', requireAuth, denyParents, rolesRoutes); // quản trị phân quyền
 
   // 404 cuối v1 (tránh fallthrough sang mount /api gây double-processing)

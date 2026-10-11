@@ -1,5 +1,7 @@
 import { db, toISODate } from '../../db';
 import { AppError } from '../../shared/errors';
+import { audit, type AuditActor } from '../../shared/audit';
+import { todayVN } from '../../shared/vnTime';
 
 /** Định dạng tháng YYYY-MM */
 export const MONTH_RE = /^\d{4}-\d{2}$/;
@@ -27,26 +29,34 @@ export function currentMonth(): string {
 }
 
 /**
- * Tính lương 1 giáo viên trong tháng:
- * số buổi đã điểm danh/check-in × đơn giá buổi dạy.
+ * Điều kiện 1 buổi (alias s) được tính lương:
+ * - giáo viên = sessions.teacher_id (người dạy thực tế: gán lúc sinh buổi, cập nhật khi check-in),
+ *   KHÔNG theo giáo viên hiện tại của lớp — đổi GV không làm đổi lương các tháng trước;
+ * - buổi chưa hủy, đã diễn ra (date <= hôm nay giờ VN);
+ * - có check-in của giáo viên HOẶC ít nhất 1 học viên có mặt/đi muộn (buổi toàn vắng không tính).
  */
-export async function calcPayroll(teacherId: number, month: string): Promise<PayrollResult> {
-  const row = (await db
-    .prepare(
-      `SELECT
-         (SELECT COUNT(*) FROM sessions s
-            JOIN classes c ON c.id = s.class_id
-          WHERE c.teacher_id = ?
-            AND substr(s.date, 1, 7) = ?
-            AND (EXISTS (SELECT 1 FROM attendance a WHERE a.session_id = s.id)
-                 OR EXISTS (SELECT 1 FROM teacher_checkins tc WHERE tc.session_id = s.id))) as sessions,
-         COALESCE((SELECT per_session_amount FROM salary_rules sr WHERE sr.teacher_id = ?), 0) as per_session`
-    )
-    .get(teacherId, month, teacherId)) as { sessions: number; per_session: number };
-  const sessions = row.sessions || 0;
-  const perSession = row.per_session || 0;
-  return { sessions, per_session: perSession, total: sessions * perSession };
-}
+const PAYABLE_SESSION = `s.status <> 'cancelled' AND substr(s.date, 1, 7) = ? AND s.date <= ?
+  AND (EXISTS (SELECT 1 FROM teacher_checkins tc WHERE tc.session_id = s.id)
+       OR EXISTS (SELECT 1 FROM attendance a WHERE a.session_id = s.id AND a.status IN ('present', 'late')))`;
+
+/**
+ * O-1: mỗi buổi tính theo đơn giá hiệu lực TẠI NGÀY CỦA BUỔI (salary_rate_history) — đổi đơn giá
+ * không viết lại lương tháng cũ. N-1: setSalaryRule luôn ghi mốc '1970-01-01' (đơn giá trước đó, chưa có = 0)
+ * nên đơn giá ĐẦU TIÊN không áp ngược. GV không có lịch sử nào (đơn giá ghi ngoài API) -> salary_rules.
+ * per_session = đơn giá hiện hành (hiển thị).
+ */
+const PAYROLL_FROM = `FROM teachers t
+  LEFT JOIN sessions s ON s.teacher_id = t.id AND ${PAYABLE_SESSION}
+  LEFT JOIN salary_rules sr ON sr.teacher_id = t.id
+  LEFT JOIN LATERAL (SELECT COALESCE(
+      (SELECT h.per_session_amount FROM salary_rate_history h
+       WHERE h.teacher_id = t.id AND h.effective_from <= s.date
+       ORDER BY h.effective_from DESC LIMIT 1),
+      sr.per_session_amount, 0) AS rate) r ON s.id IS NOT NULL`;
+
+const PAYROLL_SELECT = `SELECT t.id as teacher_id, t.name as teacher_name, t.center_id, COUNT(s.id) as sessions,
+  COALESCE(sr.per_session_amount, 0) as per_session, COALESCE(SUM(r.rate), 0) as total
+  ${PAYROLL_FROM}`;
 
 export interface PayrollRow {
   teacher_id: number;
@@ -56,38 +66,242 @@ export interface PayrollRow {
   total: number;
 }
 
-/**
- * Bảng lương cả trung tâm trong 1 query duy nhất (GROUP BY teacher_id).
- * Thay thế pattern 1 + N query (N = số giáo viên).
- */
-export async function calcPayrollBulk(centerId: number | null, month: string): Promise<PayrollRow[]> {
-  const rows = (await db
-    .prepare(
-      `SELECT t.id as teacher_id, t.name as teacher_name,
-         COUNT(DISTINCT CASE WHEN s.id IS NOT NULL THEN s.id END) as sessions,
-         COALESCE(sr.per_session_amount, 0) as per_session
-       FROM teachers t
-       LEFT JOIN classes c ON c.teacher_id = t.id
-       LEFT JOIN sessions s ON s.class_id = c.id
-         AND substr(s.date, 1, 7) = ?
-         AND (EXISTS (SELECT 1 FROM attendance a WHERE a.session_id = s.id)
-              OR EXISTS (SELECT 1 FROM teacher_checkins tc WHERE tc.session_id = s.id))
-       LEFT JOIN salary_rules sr ON sr.teacher_id = t.id
-       ${centerId !== null ? 'WHERE t.center_id = ?' : ''}
-       GROUP BY t.id, t.name, sr.per_session_amount
-       ORDER BY t.name`
-    )
-    .all(month, ...(centerId !== null ? [centerId] : []))) as {
-    teacher_id: number;
-    teacher_name: string;
-    sessions: number;
-    per_session: number;
-  }[];
-  return rows.map((r) => ({
+function toPayrollRow(r: PayrollRow): PayrollRow {
+  return {
     teacher_id: r.teacher_id,
     teacher_name: r.teacher_name,
     sessions: Number(r.sessions) || 0,
     per_session: Number(r.per_session) || 0,
-    total: (Number(r.sessions) || 0) * (Number(r.per_session) || 0),
-  }));
+    total: Number(r.total) || 0,
+  };
+}
+
+/** Tính lương 1 giáo viên trong tháng (tổng theo đơn giá từng buổi). Tháng đã chốt -> số đã chốt. */
+export async function calcPayroll(teacherId: number, month: string): Promise<PayrollResult> {
+  const t = (await db.prepare('SELECT center_id FROM teachers WHERE id = ?').get(teacherId)) as
+    { center_id: number | null } | undefined;
+  const frozen = t?.center_id != null ? await frozenPayroll(t.center_id, month) : null;
+  const row = frozen?.centers.size
+    ? frozen.rows.find((r) => r.teacher_id === teacherId)
+    : ((await db
+        .prepare(`${PAYROLL_SELECT} WHERE t.id = ? GROUP BY t.id, t.name, t.center_id, sr.per_session_amount`)
+        .get(month, toISODate(new Date()), teacherId)) as PayrollRow | undefined);
+  if (!row) return { sessions: 0, per_session: 0, total: 0 };
+  const { sessions, per_session, total } = toPayrollRow(row);
+  return { sessions, per_session, total };
+}
+
+/** Bảng lương tính từ dữ liệu hiện tại (không xét chốt tháng). Giữ center_id để ghép với bản chốt. */
+async function livePayroll(
+  centerId: number | null,
+  month: string
+): Promise<(PayrollRow & { center_id: number | null })[]> {
+  const rows = (await db
+    .prepare(
+      `${PAYROLL_SELECT}
+       ${centerId !== null ? 'WHERE t.center_id = ?' : ''}
+       GROUP BY t.id, t.name, t.center_id, sr.per_session_amount
+       ORDER BY t.name`
+    )
+    .all(month, toISODate(new Date()), ...(centerId !== null ? [centerId] : []))) as (PayrollRow & {
+    center_id: number | null;
+  })[];
+  return rows.map((r) => ({ ...toPayrollRow(r), center_id: r.center_id }));
+}
+
+/**
+ * N-1: số liệu đã chốt của các trung tâm đã chốt tháng `month` (centerId null = mọi trung tâm).
+ * Bản chốt trước v25 chưa có snapshot -> chụp lần đầu được đọc (sau backfill mốc 1970 của v25).
+ */
+async function frozenPayroll(
+  centerId: number | null,
+  month: string
+): Promise<{ centers: Set<number | null>; rows: PayrollRow[] }> {
+  const closures = (await db
+    .prepare(
+      `SELECT center_id, snapshot FROM payroll_closures WHERE month = ? ${centerId !== null ? 'AND center_id = ?' : ''}`
+    )
+    .all(month, ...(centerId !== null ? [centerId] : []))) as {
+    center_id: number;
+    snapshot: PayrollRow[] | null;
+  }[];
+  const rows: PayrollRow[] = [];
+  for (const c of closures) {
+    let snap = c.snapshot;
+    if (!snap) {
+      snap = (await livePayroll(c.center_id, month)).map(toPayrollRow);
+      await db
+        .prepare(
+          'UPDATE payroll_closures SET snapshot = ? WHERE center_id = ? AND month = ? AND snapshot IS NULL'
+        )
+        .run(JSON.stringify(snap), c.center_id, month);
+    }
+    rows.push(...snap.map(toPayrollRow));
+  }
+  return { centers: new Set(closures.map((c) => c.center_id)), rows };
+}
+
+/**
+ * Bảng lương cả trung tâm trong 1 query duy nhất (GROUP BY teacher_id).
+ * Thay thế pattern 1 + N query (N = số giáo viên).
+ * N-1: trung tâm đã chốt tháng -> trả số liệu chụp lúc chốt (đổi đơn giá/điểm danh/xóa HV sau đó không đổi được).
+ */
+export async function calcPayrollBulk(centerId: number | null, month: string): Promise<PayrollRow[]> {
+  const frozen = await frozenPayroll(centerId, month);
+  const live = await livePayroll(centerId, month);
+  if (!frozen.centers.size) return live.map(toPayrollRow);
+  return [...live.filter((r) => !frozen.centers.has(r.center_id)), ...frozen.rows]
+    .sort((a, b) => a.teacher_name.localeCompare(b.teacher_name))
+    .map(toPayrollRow);
+}
+
+/** Ngày đầu tháng trước (YYYY-MM-01) của một ngày YYYY-MM-DD. */
+export function firstDayOfPrevMonth(today: string): string {
+  const y = Number(today.slice(0, 4));
+  const m = Number(today.slice(5, 7));
+  return m === 1 ? `${y - 1}-12-01` : `${y}-${String(m - 1).padStart(2, '0')}-01`;
+}
+
+/**
+ * J-A8: tháng lương đã chốt -> 409. Dùng cho đổi đơn giá lùi ngày, lưu điểm danh, hủy buổi.
+ * date: 'YYYY-MM-DD' (hoặc 'YYYY-MM'); chặn khi tháng đó HOẶC tháng sau đã chốt (tháng sau chốt
+ * nghĩa là mọi tháng trước đã trả lương). centerId null (dữ liệu cũ không gắn trung tâm) -> bỏ qua.
+ * ponytail: kiểm tra ngoài transaction ghi — chốt tháng đúng lúc đang lưu điểm danh có thể lọt 1 lần;
+ * cần tuyệt đối thì SELECT ... FOR SHARE trên payroll_closures trong cùng transaction.
+ */
+export async function assertPayrollMonthOpen(centerId: number | null, date: string): Promise<void> {
+  if (centerId === null) return;
+  const closed = (await db
+    .prepare('SELECT month FROM payroll_closures WHERE center_id = ? AND month >= ? ORDER BY month LIMIT 1')
+    .get(centerId, date.slice(0, 7))) as { month: string } | undefined;
+  if (closed) {
+    throw AppError.conflict(
+      `Bảng lương tháng ${closed.month} đã chốt — không sửa được dữ liệu ảnh hưởng lương từ ${date.slice(0, 7)}`,
+      'PAYROLL_CLOSED'
+    );
+  }
+}
+
+/** J-A8: chốt / mở lại tháng lương (payroll.manage). Chỉ chốt được tháng đã kết thúc. */
+export async function setPayrollClosed(
+  centerId: number,
+  month: string,
+  closed: boolean,
+  actor?: AuditActor
+): Promise<void> {
+  assertValidMonth(month);
+  if (closed && month >= todayVN().slice(0, 7)) {
+    throw AppError.badRequest('Chỉ chốt được tháng đã kết thúc');
+  }
+  // N-1: chụp bảng lương lúc chốt — tháng đã chốt luôn trả đúng số này (xem frozenPayroll)
+  const r = closed
+    ? await db
+        .prepare(
+          'INSERT INTO payroll_closures (center_id, month, closed_by, snapshot) VALUES (?, ?, ?, ?) ON CONFLICT DO NOTHING'
+        )
+        .run(
+          centerId,
+          month,
+          actor?.id ?? null,
+          JSON.stringify((await livePayroll(centerId, month)).map(toPayrollRow))
+        )
+    : await db.prepare('DELETE FROM payroll_closures WHERE center_id = ? AND month = ?').run(centerId, month);
+  if (r.changes === 0) return; // idempotent
+  await audit({
+    centerId,
+    action: 'update',
+    entity: 'payroll_closures',
+    entityId: null,
+    summary: `${closed ? 'Chốt' : 'Mở lại'} bảng lương tháng ${month}`,
+    meta: { month, closed },
+    actor,
+  });
+}
+
+/** Các tháng đã chốt của trung tâm (mới nhất trước). */
+export async function listPayrollClosures(centerId: number | null): Promise<unknown[]> {
+  return db
+    .prepare(
+      `SELECT center_id, month, closed_by, closed_at FROM payroll_closures
+       ${centerId !== null ? 'WHERE center_id = ?' : ''} ORDER BY month DESC LIMIT 120`
+    )
+    .all(...(centerId !== null ? [centerId] : []));
+}
+
+/**
+ * Đặt đơn giá lương theo buổi (PUT /payroll/rules). Ghi lịch sử theo ngày hiệu lực
+ * (mặc định hôm nay giờ VN; chỉ lùi được tới đầu tháng trước để sửa sai) và cập nhật
+ * salary_rules = đơn giá đang hiệu lực hôm nay. Ném AppError (404 GV khác trung tâm, 400 dữ liệu sai).
+ */
+export async function setSalaryRule(
+  centerId: number | null,
+  input: { teacher_id: number; per_session_amount: number; effective_from?: string | null },
+  actor?: AuditActor
+): Promise<void> {
+  const teacher = (await db
+    .prepare('SELECT id, center_id FROM teachers WHERE id = ?')
+    .get(input.teacher_id)) as { id: number; center_id: number | null } | undefined;
+  if (!teacher || (centerId !== null && teacher.center_id !== centerId)) {
+    throw AppError.notFound('Không tìm thấy giáo viên');
+  }
+  const amount = Number(input.per_session_amount);
+  if (!Number.isInteger(amount) || amount < 0 || amount > 100000000) {
+    throw AppError.badRequest('Số tiền mỗi buổi phải là số nguyên từ 0 đến 100,000,000');
+  }
+  const today = todayVN();
+  const effectiveFrom = input.effective_from || today;
+  if (effectiveFrom > today || effectiveFrom < firstDayOfPrevMonth(today)) {
+    throw AppError.badRequest('Ngày hiệu lực chỉ được từ đầu tháng trước đến hôm nay');
+  }
+  await assertPayrollMonthOpen(teacher.center_id, effectiveFrom);
+  const old = await db.transaction(async (tx) => {
+    const prev = (await tx
+      .prepare('SELECT per_session_amount FROM salary_rules WHERE teacher_id = ? FOR UPDATE')
+      .get(teacher.id)) as { per_session_amount: number } | undefined;
+    // Chưa có lịch sử -> mốc '1970-01-01' = đơn giá trước đó (GV có giá từ trước v23) hoặc 0 (N-1: đơn giá
+    // đầu tiên KHÔNG áp ngược cho các tháng cũ — kể cả tháng đã chốt)
+    await tx
+      .prepare(
+        `INSERT INTO salary_rate_history (teacher_id, effective_from, per_session_amount)
+         SELECT ?, '1970-01-01', ? WHERE NOT EXISTS (SELECT 1 FROM salary_rate_history WHERE teacher_id = ?)`
+      )
+      .run(teacher.id, prev?.per_session_amount ?? 0, teacher.id);
+    await tx
+      .prepare(
+        `INSERT INTO salary_rate_history (teacher_id, effective_from, per_session_amount, changed_by)
+         VALUES (?, ?, ?, ?)
+         ON CONFLICT (teacher_id, effective_from)
+         DO UPDATE SET per_session_amount = excluded.per_session_amount, changed_by = excluded.changed_by`
+      )
+      .run(teacher.id, effectiveFrom, amount, actor?.id ?? null);
+    // Đơn giá hiện hành = bản lịch sử mới nhất đã hiệu lực (sửa lùi ngày không đè giá mới hơn)
+    const current = (await tx
+      .prepare(
+        `SELECT per_session_amount FROM salary_rate_history
+         WHERE teacher_id = ? AND effective_from <= ? ORDER BY effective_from DESC LIMIT 1`
+      )
+      .get(teacher.id, today)) as { per_session_amount: number };
+    await tx
+      .prepare(
+        `INSERT INTO salary_rules (teacher_id, per_session_amount, updated_at) VALUES (?, ?, datetime('now'))
+         ON CONFLICT(teacher_id) DO UPDATE SET per_session_amount = excluded.per_session_amount, updated_at = datetime('now')`
+      )
+      .run(teacher.id, current.per_session_amount);
+    return prev;
+  });
+  // Audit: thay đổi định mức lương ảnh hưởng trực tiếp tiền lương
+  await audit({
+    centerId: teacher.center_id,
+    action: old ? 'update' : 'create',
+    entity: 'salary_rules',
+    entityId: teacher.id,
+    summary: `Đổi định mức lương GV#${teacher.id}: ${old?.per_session_amount ?? 0} → ${amount}đ/buổi từ ${effectiveFrom}`,
+    meta: {
+      teacher_id: teacher.id,
+      old_amount: old?.per_session_amount ?? null,
+      new_amount: amount,
+      effective_from: effectiveFrom,
+    },
+    actor,
+  });
 }

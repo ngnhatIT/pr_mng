@@ -5,6 +5,7 @@
 import { http, type Paginated, type PageParams } from '../../shared/api/client';
 import { TeacherTodayItem, Grade } from '../../shared/types';
 import { ClassItem } from '../classes/classes.api';
+import { fetchAllPages } from '../../shared/components/Pagination';
 
 export interface CheckinResult {
   ok: boolean;
@@ -38,7 +39,8 @@ export const teacherApi = {
   checkin: (code: string) => http.post<CheckinResult>('/teacher/checkin', { code }),
   payroll: (month: string) => http.get<SalaryInfo>(`/teacher/payroll?month=${month}`),
 
-  listClasses: () => http.get<Paginated<ClassItem>>('/classes?limit=100').then((r) => r.data),
+  listClasses: () =>
+    fetchAllPages((p) => http.get<Paginated<ClassItem>>(`/classes?page=${p.page}&limit=${p.limit}`)),
   classStudents: (classId: number | string) => http.get<ClassStudents>(`/classes/${classId}`),
 
   listGrades: (studentId: string, classId: string, page?: PageParams) => {

@@ -6,7 +6,7 @@ process.env.DATABASE_URL || (process.env.DATABASE_URL = 'postgres://u:p@localhos
 
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { monthRange } from './dashboard.routes';
+import { monthRange } from './dashboard.service';
 
 describe('monthRange', () => {
   it('tháng thường: đầu tháng này -> đầu tháng sau', () => {

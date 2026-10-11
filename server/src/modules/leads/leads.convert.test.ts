@@ -5,7 +5,7 @@ import { describe, it, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { db } from '../../db/pg-compat.js';
 import { setupTestDb, resetTestDb, teardownTestDb } from '../../db/test-utils.js';
-import { convertLeadToStudent } from './leads.service.js';
+import { convertLeadToStudent, listLeads } from './leads.service.js';
 
 describe('Leads convert atomicity', () => {
   let centerId: number;
@@ -58,5 +58,26 @@ describe('Leads convert atomicity', () => {
     );
     await convertLeadToStudent({ leadId, centerId });
     await assert.rejects(() => convertLeadToStudent({ leadId, centerId }), /đã được chuyển/);
+  });
+
+  it('lưu SĐT chuẩn hóa vào học viên; listLeads trả counts theo trạng thái', async () => {
+    const leadId = Number(
+      (
+        await db
+          .prepare(
+            "INSERT INTO leads (name, phone, center_id, status) VALUES ('Lead C', '+84 905 555 666', ?, 'trial')"
+          )
+          .run(centerId)
+      ).lastInsertRowid
+    );
+    const { student_id } = await convertLeadToStudent({ leadId, centerId });
+    const st = (await db.prepare('SELECT phone FROM students WHERE id = ?').get(student_id)) as {
+      phone: string;
+    };
+    assert.equal(st.phone, '0905555666');
+    const r = await listLeads(centerId, { status: 'new' }, { limit: '1' });
+    assert.equal(r.counts.enrolled, 3);
+    assert.equal(r.counts.new, 0);
+    assert.equal(r.counts.lost, 0);
   });
 });

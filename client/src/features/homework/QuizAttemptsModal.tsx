@@ -38,8 +38,7 @@ export function QuizAttemptsModal({ homework, onClose }: { homework: HomeworkIte
     void load();
   }, [load]);
 
-  const canGradeEssay =
-    !!essayInfo && essayInfo.essay_questions.length > 0 && !!essayInfo.rubric;
+  const canGradeEssay = !!essayInfo && essayInfo.essay_questions.length > 0 && !!essayInfo.rubric;
 
   const avg =
     rows.length > 0

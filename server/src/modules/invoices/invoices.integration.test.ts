@@ -330,3 +330,58 @@ describe('invoices.service - công nợ & xóa', () => {
     assert.equal(await invoiceStatus(id), 'paid');
   });
 });
+
+describe('invoices.service - review fixes (ADM-3, ADM-8, INV-2, INV-3, DATA-19)', () => {
+  beforeEach(async () => {
+    await resetDb();
+  });
+
+  it('ADM-8: getDebtSummary trả số khác 0 khi có nợ (alias camelCase)', async () => {
+    const id = await createInvoice(1500000);
+    await invoicesService.recordPayment(centerId, id, { amount: 500000 });
+    const s = await invoicesService.getDebtSummary(centerId);
+    assert.equal(s.totalDebt, 1000000);
+    assert.equal(s.debtorCount, 1);
+  });
+
+  it('ADM-3: getInvoiceDetail có paid = tổng đã xác nhận', async () => {
+    const id = await createInvoice(1000000);
+    await invoicesService.recordPayment(centerId, id, { amount: 400000 });
+    const d = (await invoicesService.getInvoiceDetail(centerId, id)) as { invoice: { paid: number } };
+    assert.equal(Number(d.invoice.paid), 400000);
+  });
+
+  it('INV-2: class_id của trung tâm khác -> 404', async () => {
+    const other = Number(
+      (await db.prepare("INSERT INTO centers (name) VALUES ('Khác')").run()).lastInsertRowid
+    );
+    const cls = Number(
+      (await db.prepare('INSERT INTO classes (name, center_id) VALUES (?, ?)').run('Lớp B', other))
+        .lastInsertRowid
+    );
+    await assert.rejects(
+      invoicesService.createInvoice(centerId, { student_id: studentId, class_id: cls, amount: 1000 }),
+      /Không tìm thấy lớp/
+    );
+  });
+
+  it('INV-3: số tiền làm tròn về 0 (0.4) bị chặn', async () => {
+    await assert.rejects(
+      invoicesService.createInvoice(centerId, { student_id: studentId, amount: 0.4 }),
+      /lớn hơn 0/
+    );
+  });
+
+  it('DATA-19: recalcInvoiceStatus không UPDATE khi trạng thái không đổi (version giữ nguyên)', async () => {
+    const { recalcInvoiceStatus } = await import('../../db/helpers');
+    const id = await createInvoice(1000000);
+    const v = async () =>
+      Number(
+        ((await db.prepare('SELECT version FROM invoices WHERE id = ?').get(id)) as { version: number })
+          .version
+      );
+    const before = await v();
+    assert.equal(await recalcInvoiceStatus(id), 'unpaid');
+    assert.equal(await v(), before);
+  });
+});

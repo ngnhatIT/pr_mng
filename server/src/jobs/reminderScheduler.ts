@@ -216,47 +216,46 @@ export function startReminderScheduler(): void {
       // trackJob: shutdown chờ vòng quét đang chạy xong (tối đa 30s).
       void trackJob(
         (async () => {
-        try {
-          // Dọn entries cũ mỗi phút để tránh rò rỉ bộ nhớ
-          pruneAutoRunDays(nowVN().today);
-          // Tự đăng bài tập đã hẹn giờ (Google Classroom: Schedule post)
-          const published = await publishScheduled();
-          if (published > 0) log.info(`Đã tự đăng ${published} bài tập hẹn giờ`);
-        } catch (err) {
-          log.error('Lỗi tự đăng bài tập hẹn giờ', { error: formatError(err) });
-        }
-        try {
-          // Giờ Việt Nam — không phụ thuộc TZ của server
-          const { hhmm, today } = nowVN();
-          for (const center of await listCenters()) {
-            if (!hasFeature(center, 'zalo_auto')) continue;
-            const cfg = await getZaloConfig(center.id);
-            if (cfg.zalo_enabled !== '1') continue;
-            if (!/^\d{2}:\d{2}$/.test(cfg.reminder_hour || '')) continue;
-            const key = `${center.id}:${today}`;
-            if (autoRunDays.has(key)) continue;
-            // Catch-up: server down đúng phút reminder_hour → chạy bù nếu đã qua giờ
-            // và hôm nay chưa chạy
-            if (hhmm < cfg.reminder_hour) continue;
-            autoRunDays.add(key);
-            log.info(`Bắt đầu vòng nhắc tự động lúc ${hhmm} (giờ VN)`, { center: center.name });
-            // Vòng nhắc chạy fire-and-forget (tới 100 ZNS) — track để shutdown chờ xong.
-            void trackJob(
-              runReminderOnce(center.id)
-                .then((r) => {
-                  log.info(
-                    `Xong: ${r.overdue} quá hạn, ${r.upcoming} sắp đến hạn, ${r.skipped} bỏ qua (chống spam)`,
-                    { center: center.name }
-                  );
-                })
-                .catch((err) => log.error('Lỗi vòng nhắc', { error: formatError(err) }))
-            );
+          try {
+            // Dọn entries cũ mỗi phút để tránh rò rỉ bộ nhớ
+            pruneAutoRunDays(nowVN().today);
+            // Tự đăng bài tập đã hẹn giờ (Google Classroom: Schedule post)
+            const published = await publishScheduled();
+            if (published > 0) log.info(`Đã tự đăng ${published} bài tập hẹn giờ`);
+          } catch (err) {
+            log.error('Lỗi tự đăng bài tập hẹn giờ', { error: formatError(err) });
           }
-        } catch (err) {
-          log.error('Lỗi scheduler', { error: formatError(err) });
-        }
-        })()
-        .catch((err) => log.error('Lỗi scheduler', { error: formatError(err) }))
+          try {
+            // Giờ Việt Nam — không phụ thuộc TZ của server
+            const { hhmm, today } = nowVN();
+            for (const center of await listCenters()) {
+              if (!hasFeature(center, 'zalo_auto')) continue;
+              const cfg = await getZaloConfig(center.id);
+              if (cfg.zalo_enabled !== '1') continue;
+              if (!/^\d{2}:\d{2}$/.test(cfg.reminder_hour || '')) continue;
+              const key = `${center.id}:${today}`;
+              if (autoRunDays.has(key)) continue;
+              // Catch-up: server down đúng phút reminder_hour → chạy bù nếu đã qua giờ
+              // và hôm nay chưa chạy
+              if (hhmm < cfg.reminder_hour) continue;
+              autoRunDays.add(key);
+              log.info(`Bắt đầu vòng nhắc tự động lúc ${hhmm} (giờ VN)`, { center: center.name });
+              // Vòng nhắc chạy fire-and-forget (tới 100 ZNS) — track để shutdown chờ xong.
+              void trackJob(
+                runReminderOnce(center.id)
+                  .then((r) => {
+                    log.info(
+                      `Xong: ${r.overdue} quá hạn, ${r.upcoming} sắp đến hạn, ${r.skipped} bỏ qua (chống spam)`,
+                      { center: center.name }
+                    );
+                  })
+                  .catch((err) => log.error('Lỗi vòng nhắc', { error: formatError(err) }))
+              );
+            }
+          } catch (err) {
+            log.error('Lỗi scheduler', { error: formatError(err) });
+          }
+        })().catch((err) => log.error('Lỗi scheduler', { error: formatError(err) }))
       );
     },
     { timezone: VN_TZ }
