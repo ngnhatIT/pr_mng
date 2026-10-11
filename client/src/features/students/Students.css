@@ -66,3 +66,9 @@
   max-height: 260px;
   overflow: auto;
 }
+
+/* Menu "Dữ liệu cá nhân" nằm sát phải đầu hồ sơ */
+.profile-head .profile-meta {
+  flex: 1;
+  min-width: 0;
+}

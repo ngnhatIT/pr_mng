@@ -140,6 +140,18 @@
     "partial": "Partially paid",
     "unpaid": "Unpaid"
   },
+  "privacy": {
+    "anonymize": "Anonymize student",
+    "anonymizeError": "Could not anonymize, please try again",
+    "anonymized": "Student anonymized",
+    "badge": "Anonymized",
+    "confirmDesc": "Name, phone, email, date of birth, address and notes are erased and parent accounts are unlinked. Invoices, payments, attendance and grades are kept without identifying details. This cannot be undone.",
+    "confirmTitle": "Anonymize this student?",
+    "export": "Export personal data (JSON)",
+    "exportError": "Could not export the data, please try again",
+    "menu": "Personal data",
+    "typeCode": "Type the student code {{code}} to confirm"
+  },
   "searchPlaceholder": "Search by name, code, phone...",
   "status": {
     "paused": "Paused",

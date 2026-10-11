@@ -15,6 +15,7 @@ import { Skeleton, TableSkeleton } from '../../shared/components/Skeleton';
 import { Icon } from '../../shared/components/icons';
 import './Students.css';
 import { EmptyCell } from '../../shared/components/EmptyCell';
+import { PrivacyActions } from './PrivacyActions';
 
 export function StudentDetail() {
   const { t } = useTranslation(['students', 'common']);
@@ -97,8 +98,10 @@ export function StudentDetail() {
           <div className="profile-badges">
             <span className="profile-code mono">{student.code}</span>
             <span className={`badge badge-${student.status}`}>{t(`status.${student.status}`)}</span>
+            {student.anonymized_at && <span className="badge badge-neutral">{t('privacy.badge')}</span>}
           </div>
         </div>
+        <PrivacyActions student={student} onChanged={reload} />
       </div>
 
       <div className="two-col">

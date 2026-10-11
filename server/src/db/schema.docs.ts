@@ -119,6 +119,7 @@ export const TABLE_DOCS: Record<string, TableDoc> = {
       address: 'Địa chỉ.',
       status: "Trạng thái: 'studying' | 'paused' | 'quit'.",
       note: 'Ghi chú nội bộ.',
+      anonymized_at: 'v31: thời điểm ẩn danh (xóa thông tin định danh, giữ chứng từ tài chính/kết quả học).',
       created_at: 'Thời điểm tạo (giờ VN).',
       updated_at: 'Tự động cập nhật bởi trigger.',
       version: 'Phiên bản optimistic locking — tăng tự động mỗi lần UPDATE.',

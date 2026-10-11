@@ -871,6 +871,16 @@ export const MIGRATIONS: Migration[] = [
       }
     },
   },
+  {
+    version: 31,
+    name: 'students_anonymized_at',
+    up: async (tx) => {
+      await tx.exec('ALTER TABLE students ADD COLUMN IF NOT EXISTS anonymized_at TEXT');
+    },
+    down: async (tx) => {
+      await tx.exec('ALTER TABLE students DROP COLUMN IF EXISTS anonymized_at');
+    },
+  },
 ];
 
 /**

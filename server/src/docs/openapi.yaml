@@ -3051,6 +3051,27 @@ paths:
                 dry_run: { type: boolean }
       responses:
         '200': { description: '{ period, created, skipped, total, preview[] }' }
+  /api/v1/students/{id}/export:
+    get:
+      tags: [Students]
+      summary: Xuất toàn bộ dữ liệu cá nhân của học viên (GDPR điều 15 / NĐ 13/2023) — students.view + reports.export
+      parameters:
+        - { in: path, name: id, required: true, schema: { type: integer } }
+      responses:
+        '200': { description: 'JSON: student, enrollments, attendance, grades, invoices, payments, leave_requests, homework..., parents, notices' }
+        '404': { description: Không thuộc trung tâm }
+  /api/v1/students/{id}/anonymize:
+    post:
+      tags: [Students]
+      summary: Ẩn danh học viên (quyền được xóa) — students.delete, không hoàn tác
+      description: >-
+        Xóa tên/SĐT/email/ngày sinh/địa chỉ/ghi chú, gỡ liên kết phụ huynh, xóa ghi chú điểm danh/lý do nghỉ/nội dung nhắc.
+        Giữ hóa đơn, thanh toán, điểm danh, điểm số (không còn định danh được).
+      parameters:
+        - { in: path, name: id, required: true, schema: { type: integer } }
+      responses:
+        '200': { description: OK }
+        '409': { description: ALREADY_ANONYMIZED }
   /api/v1/students/import:
     post:
       tags: [Students]

@@ -145,6 +145,7 @@ CREATE TABLE IF NOT EXISTS students (
   status TEXT NOT NULL DEFAULT 'studying'
     CONSTRAINT chk_students_status CHECK (status IN ('studying', 'paused', 'quit')),
   note TEXT,
+  anonymized_at TEXT, -- v31: đã ẩn danh theo yêu cầu xóa dữ liệu cá nhân (không hoàn tác)
   created_at TEXT NOT NULL DEFAULT (to_char(NOW(), 'YYYY-MM-DD HH24:MI:SS')),
   updated_at TEXT NOT NULL DEFAULT (to_char(NOW(), 'YYYY-MM-DD HH24:MI:SS')),
   version INTEGER NOT NULL DEFAULT 0,

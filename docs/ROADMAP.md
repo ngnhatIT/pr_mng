@@ -38,7 +38,7 @@ Nguồn: 3 audit (tính năng so với Teachworks/TutorBird/Classe365, khả nă
 - [ ] Mã lỗi cụ thể + `details[]` theo field → client dịch theo code
 - [x] Test đối chiếu route Express ↔ OpenAPI (app.routes.test.ts) + bổ sung 8 operation còn thiếu
 - [x] 2FA TOTP cho nhân sự (RFC 6238 không thư viện, secret AES-GCM, mã khôi phục, chống dùng lại mã; migration v30)
-- [ ] Xuất/ẩn danh dữ liệu học viên (GDPR/PDPL)
+- [x] Xuất dữ liệu cá nhân (JSON) + ẩn danh học viên giữ chứng từ (GDPR/NĐ 13/2023, migration v31)
 
 ## Sau đó (L — cần quyết định kinh doanh)
 Đa tiền tệ/múi giờ theo trung tâm, cổng thanh toán quốc tế, gói buổi trả trước, nhắn tin PH↔GV, API key + webhook (outbox), lưu file S3.

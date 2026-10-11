@@ -23,7 +23,8 @@ export type AuditAction =
   | 'change_password'
   | 'referral_reward'
   | 'referral_revoke'
-  | 'vnpay_needs_review';
+  | 'vnpay_needs_review'
+  | 'export';
 
 export interface AuditActor {
   id?: number | null;

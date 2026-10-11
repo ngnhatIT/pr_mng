@@ -140,6 +140,18 @@
     "partial": "Thanh toán một phần",
     "unpaid": "Chưa thanh toán"
   },
+  "privacy": {
+    "anonymize": "Ẩn danh học viên",
+    "anonymizeError": "Không ẩn danh được, vui lòng thử lại",
+    "anonymized": "Đã ẩn danh học viên",
+    "badge": "Đã ẩn danh",
+    "confirmDesc": "Họ tên, điện thoại, email, ngày sinh, địa chỉ và ghi chú sẽ bị xóa, tài khoản phụ huynh bị gỡ liên kết. Hóa đơn, thanh toán, điểm danh và điểm số được giữ nhưng không còn thông tin định danh. Không thể hoàn tác.",
+    "confirmTitle": "Ẩn danh học viên này?",
+    "export": "Xuất dữ liệu cá nhân (JSON)",
+    "exportError": "Không xuất được dữ liệu, vui lòng thử lại",
+    "menu": "Dữ liệu cá nhân",
+    "typeCode": "Gõ mã học viên {{code}} để xác nhận"
+  },
   "searchPlaceholder": "Tìm theo tên, mã, số điện thoại...",
   "status": {
     "paused": "Tạm nghỉ",

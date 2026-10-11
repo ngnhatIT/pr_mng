@@ -21,6 +21,8 @@ export interface Student {
   status: 'studying' | 'paused' | 'quit';
   note: string | null;
   center_id: number | null;
+  /** v31: đã ẩn danh theo yêu cầu xóa dữ liệu cá nhân. */
+  anonymized_at?: string | null;
   /** Chỉ có ở danh sách: tên các lớp đang học, ngăn bằng dấu phẩy. */
   class_names?: string | null;
 }

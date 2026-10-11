@@ -7,6 +7,7 @@ import { asyncHandler } from '../../shared/http';
 import { validate, v, paramId } from '../../shared/validate';
 import * as studentService from './students.service';
 import { importStudents, type ImportRow } from './students.import';
+import { anonymizeStudent, exportStudentData } from './students.privacy';
 import { actorFromReq } from '../../shared/audit';
 
 const router = Router();
@@ -65,6 +66,30 @@ router.post(
         actor: actorFromReq(req),
       })
     );
+  })
+);
+
+// Quyền dữ liệu cá nhân: xuất toàn bộ dữ liệu của 1 học viên (JSON tải về)
+router.get(
+  '/:id/export',
+  requirePermission('students.view'),
+  requirePermission('reports.export'),
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const id = paramId(req.params);
+    const data = await exportStudentData(reqCenterId(req), id, actorFromReq(req));
+    res.setHeader('Content-Disposition', `attachment; filename="student-${id}-data.json"`);
+    res.setHeader('Cache-Control', 'no-store');
+    res.json(data);
+  })
+);
+
+// Quyền được xóa: ẩn danh (giữ hóa đơn/kết quả học, xóa thông tin định danh) — không hoàn tác
+router.post(
+  '/:id/anonymize',
+  requirePermission('students.delete'),
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    await anonymizeStudent(reqCenterId(req), paramId(req.params), actorFromReq(req));
+    res.json({ ok: true });
   })
 );
 
