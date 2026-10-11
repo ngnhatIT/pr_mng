@@ -83,6 +83,18 @@ export interface InvoiceItem {
   student_code?: string;
   class_name?: string | null;
   paid?: number;
+  /** v28: kỳ thu YYYY-MM */
+  period?: string | null;
+  discount_amount?: number;
+  discount_reason?: string | null;
+}
+
+/** v28: dòng hóa đơn (amount của hóa đơn = tổng dòng - giảm trừ). */
+export interface InvoiceLine {
+  id?: number;
+  description: string;
+  quantity: number;
+  unit_price: number;
 }
 
 /** Số tiền còn nợ của hóa đơn: amount − paid (paid thiếu/null coi như 0). Dùng chung mọi màn hình. */

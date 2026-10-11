@@ -27,6 +27,7 @@ const EXPECTED_FK_COUNT: Record<string, number> = {
   salary_rate_history: 2,
   payroll_closures: 2,
   invoices: 3,
+  invoice_items: 1, // v28
   payments: 2,
   payment_txns: 1,
   credits: 3,

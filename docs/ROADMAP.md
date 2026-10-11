@@ -23,8 +23,8 @@ Nguồn: 3 audit (tính năng so với Teachworks/TutorBird/Classe365, khả nă
 
 ## Gói 4 — Tài chính (M)
 - [ ] Dòng hóa đơn + giảm giá (anh chị em/khuyến mãi)
-- [ ] Tạo hóa đơn hàng loạt theo tháng
-- [ ] Phiếu thu PDF/in đẹp
+- [x] Tạo hóa đơn học phí tháng hàng loạt (xem trước, chạy lại an toàn)
+- [x] Biên lai in (lưu PDF qua hộp thoại in của trình duyệt) có dòng + giảm trừ; PDF phía server khi cần gửi email
 
 ## Gói 5 — Nhập liệu & điều hướng (S–M)
 - [ ] Nhập học viên từ CSV (xem trước + báo lỗi từng dòng)

@@ -8,6 +8,7 @@ import {
   InvoiceItem,
   PendingPayment,
   DebtRow,
+  type BulkInvoiceResult,
 } from './tuition.api';
 import { useStudentSearch, type Student } from '../students/students.api';
 import { classesApi, ClassItem } from '../classes/classes.api';
@@ -201,6 +202,7 @@ function InvoiceList() {
   const [search, setSearch] = useUrlSearch(q.search, (v) => setQ({ search: v, page: '1' }));
   const page = Number(q.page) || 1;
   const [showCreate, setShowCreate] = useState(false);
+  const [showBulk, setShowBulk] = useState(false);
   const [paying, setPaying] = useState<InvoiceItem | null>(null);
   const [receipt, setReceipt] = useState<InvoiceItem | null>(null);
   const [crediting, setCrediting] = useState<InvoiceItem | null>(null);
@@ -305,6 +307,12 @@ function InvoiceList() {
           )}
         </span>
         <ExportButton kind="invoices" query={{ search: debouncedSearch, status }} />
+        {perms.has('invoices.create') && (
+          <button className="btn btn-inline" onClick={() => setShowBulk(true)}>
+            <Icon name="calendar" size={14} />
+            {t('bulk.open')}
+          </button>
+        )}
         {perms.has('invoices.create') && (
           <button className="btn btn-primary btn-inline" onClick={() => setShowCreate(true)}>
             <Icon name="plus" size={14} />
@@ -481,6 +489,15 @@ function InvoiceList() {
         />
       )}
 
+      {showBulk && (
+        <BulkInvoiceModal
+          onClose={() => setShowBulk(false)}
+          onDone={() => {
+            setShowBulk(false);
+            reloadAll();
+          }}
+        />
+      )}
       {showCreate && (
         <InvoiceFormModal
           onClose={() => setShowCreate(false)}
@@ -635,6 +652,142 @@ function ApplyCreditModal({
   );
 }
 
+type LineDraft = { description: string; quantity: string; price: string };
+
+/** Tạo hóa đơn học phí tháng hàng loạt: chọn kỳ + lớp -> xem trước -> tạo (chạy lại không nhân đôi). */
+function BulkInvoiceModal({ onClose, onDone }: { onClose: () => void; onDone: () => void }) {
+  const { t, i18n } = useTranslation(['tuition', 'common']);
+  const toast = useToast();
+  const [period, setPeriod] = useState(todayVN().slice(0, 7));
+  const [classId, setClassId] = useState('');
+  const [dueDate, setDueDate] = useState('');
+  const [preview, setPreview] = useState<BulkInvoiceResult | null>(null);
+  const [busy, setBusy] = useState(false);
+  const { data: classes } = useLoad(() => fetchAllPages((p) => classesApi.list('', p)), []);
+
+  const body = (dry_run: boolean) => ({
+    period,
+    ...(classId ? { class_id: Number(classId) } : {}),
+    ...(dueDate ? { due_date: dueDate } : {}),
+    lang: i18n.language === 'en' ? 'en' : 'vi',
+    dry_run,
+  });
+  const run = async (dry: boolean) => {
+    setBusy(true);
+    try {
+      const r = await invoicesApi.bulk(body(dry));
+      if (dry) setPreview(r);
+      else {
+        toast(t('bulk.created', { count: r.created }), 'success');
+        onDone();
+      }
+    } catch (err) {
+      toastApiError(toast, err, t('bulk.error'));
+    } finally {
+      setBusy(false);
+    }
+  };
+  // Đổi tham số thì bản xem trước cũ không còn đúng
+  useEffect(() => setPreview(null), [period, classId, dueDate]);
+
+  return (
+    <Modal title={t('bulk.title')} onClose={onClose} wide>
+      <p className="muted">{t('bulk.desc')}</p>
+      <div className="form-grid">
+        <Field label={t('invoiceForm.period')} required>
+          <input
+            className="text-input"
+            type="month"
+            required
+            value={period}
+            onChange={(e) => setPeriod(e.target.value)}
+          />
+        </Field>
+        <Field label={t('invoiceForm.dueDate')}>
+          <input
+            className="text-input"
+            type="date"
+            value={dueDate}
+            onChange={(e) => setDueDate(e.target.value)}
+          />
+        </Field>
+        <Field label={t('invoiceForm.class')} span>
+          <select className="text-input" value={classId} onChange={(e) => setClassId(e.target.value)}>
+            <option value="">{t('bulk.allClasses')}</option>
+            {(classes ?? [])
+              .filter((c) => c.tuition_fee > 0)
+              .map((c) => (
+                <option key={c.id} value={c.id}>
+                  {t('invoiceForm.classOption', { name: c.name, fee: formatVND(c.tuition_fee) })}
+                </option>
+              ))}
+          </select>
+        </Field>
+      </div>
+      {preview && (
+        <div className="bulk-preview" aria-live="polite">
+          <p>
+            <Trans
+              i18nKey="bulk.summary"
+              ns="tuition"
+              count={preview.created}
+              values={{ count: preview.created, total: formatVND(preview.total), skipped: preview.skipped }}
+              components={{ strong: <strong /> }}
+            />
+          </p>
+          {preview.preview.length > 0 && (
+            <div className="table-wrap bulk-preview-table">
+              <table className="table">
+                <thead>
+                  <tr>
+                    <th scope="col">{t('receipt.student')}</th>
+                    <th scope="col">{t('receipt.class')}</th>
+                    <th scope="col" className="num">
+                      {t('receipt.amount')}
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {preview.preview.map((r) => (
+                    <tr key={`${r.student_id}-${r.class_name}`}>
+                      <td>
+                        {r.student_name} <span className="muted mono">({r.student_code})</span>
+                      </td>
+                      <td>{r.class_name}</td>
+                      <td className="num">{formatVND(r.amount)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
+      <div className="modal-actions">
+        <button type="button" className="btn" onClick={onClose}>
+          {t('actions.cancel', { ns: 'common' })}
+        </button>
+        {preview && preview.created > 0 ? (
+          <button type="button" className="btn btn-primary" disabled={busy} onClick={() => void run(false)}>
+            {busy && <span className="spinner" aria-hidden="true" />}
+            {t('bulk.confirm', { count: preview.created })}
+          </button>
+        ) : (
+          <button
+            type="button"
+            className="btn btn-primary"
+            disabled={busy || !period}
+            onClick={() => void run(true)}
+          >
+            {busy && <span className="spinner" aria-hidden="true" />}
+            {t('bulk.preview')}
+          </button>
+        )}
+      </div>
+    </Modal>
+  );
+}
+
 function InvoiceFormModal({ onClose, onDone }: { onClose: () => void; onDone: () => void }) {
   const { t } = useTranslation(['tuition', 'common']);
   // ADM-6: tìm học viên server-side (debounce) thay vì tải sẵn 100 học viên mới nhất
@@ -646,7 +799,11 @@ function InvoiceFormModal({ onClose, onDone }: { onClose: () => void; onDone: ()
   const [classes, setClasses] = useState<ClassItem[]>([]);
   const [studentId, setStudentId] = useState('');
   const [classId, setClassId] = useState('');
-  const [amount, setAmount] = useState('');
+  // v28: dòng hóa đơn; tổng = tổng dòng - giảm trừ (server tính lại, client chỉ hiển thị)
+  const [lines, setLines] = useState<LineDraft[]>([{ description: '', quantity: '1', price: '' }]);
+  const [discount, setDiscount] = useState('');
+  const [discountReason, setDiscountReason] = useState('');
+  const [period, setPeriod] = useState('');
   const [dueDate, setDueDate] = useState('');
   const [note, setNote] = useState('');
   const [busy, setBusy] = useState(false);
@@ -654,6 +811,11 @@ function InvoiceFormModal({ onClose, onDone }: { onClose: () => void; onDone: ()
   // Focus vào field lỗi đầu tiên sau submit (skill 8.2)
   const studentRef = useRef<HTMLSelectElement>(null);
   const amountRef = useRef<HTMLInputElement>(null);
+  const filled = lines.filter((l) => l.description.trim() || l.price);
+  const subtotal = filled.reduce((sum, l) => sum + (Number(l.quantity) || 0) * (Number(l.price) || 0), 0);
+  const total = Math.round(subtotal - (Number(discount) || 0));
+  const setLine = (i: number, patch: Partial<LineDraft>) =>
+    setLines((prev) => prev.map((l, j) => (j === i ? { ...l, ...patch } : l)));
   const toast = useToast();
 
   useEffect(() => {
@@ -666,18 +828,25 @@ function InvoiceFormModal({ onClose, onDone }: { onClose: () => void; onDone: ()
   const pickClass = (cid: string) => {
     setClassId(cid);
     const c = classes.find((x) => String(x.id) === cid);
-    if (c) setAmount(moneyDigits(c.tuition_fee));
+    if (c) {
+      setLine(0, {
+        description: t('invoiceForm.tuitionLine', { name: c.name }),
+        quantity: '1',
+        price: moneyDigits(c.tuition_fee),
+      });
+    }
   };
-  const dirty = !!(studentId || classId || amount || dueDate || note);
+  const dirty = !!(studentId || classId || filled.length || discount || dueDate || note || period);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     const errs: Record<string, string> = {};
     if (!studentId) errs.studentId = t('invoiceForm.studentRequired');
-    const amt = Number(amount);
-    if (!amount || !Number.isFinite(amt) || amt <= 0) {
-      errs.amount = t('invoiceForm.amountInvalid');
-    }
+    const badLine = filled.some(
+      (l) => !l.description.trim() || !(Number(l.quantity) > 0) || !(Number(l.price) >= 0) || l.price === ''
+    );
+    if (!filled.length || badLine || subtotal <= 0) errs.amount = t('invoiceForm.linesInvalid');
+    else if (total <= 0) errs.amount = t('invoiceForm.discountTooLarge');
     setFieldErrors(errs);
     if (Object.keys(errs).length > 0) {
       // Focus field lỗi đầu tiên (theo thứ tự hiển thị trên form)
@@ -690,7 +859,14 @@ function InvoiceFormModal({ onClose, onDone }: { onClose: () => void; onDone: ()
       await invoicesApi.create({
         student_id: Number(studentId),
         class_id: classId ? Number(classId) : null,
-        amount: Number(amount),
+        items: filled.map((l) => ({
+          description: l.description.trim(),
+          quantity: Number(l.quantity),
+          unit_price: Number(l.price),
+        })),
+        discount_amount: Number(discount) || 0,
+        discount_reason: Number(discount) ? discountReason.trim() || null : null,
+        period: period || null,
         due_date: dueDate || null,
         note: note || null,
       });
@@ -745,9 +921,84 @@ function InvoiceFormModal({ onClose, onDone }: { onClose: () => void; onDone: ()
               ))}
             </select>
           </Field>
-          <Field label={t('invoiceForm.amount')} error={fieldErrors.amount} required>
-            <MoneyInput ref={amountRef} className="text-input" value={amount} onChange={setAmount} required />
+          <Field label={t('invoiceForm.lines')} span group error={fieldErrors.amount} required>
+            <div className="line-editor">
+              {lines.map((l, i) => (
+                <div className="line-row" key={i}>
+                  <input
+                    ref={i === 0 ? amountRef : undefined}
+                    className="text-input"
+                    aria-label={t('lines.description')}
+                    placeholder={t('lines.description')}
+                    maxLength={200}
+                    value={l.description}
+                    onChange={(e) => setLine(i, { description: e.target.value })}
+                  />
+                  <input
+                    className="text-input line-qty"
+                    type="number"
+                    min={1}
+                    step="any"
+                    aria-label={t('lines.quantity')}
+                    value={l.quantity}
+                    onChange={(e) => setLine(i, { quantity: e.target.value })}
+                  />
+                  <div className="line-price">
+                    <MoneyInput
+                      className="text-input"
+                      aria-label={t('lines.unitPrice')}
+                      placeholder={t('lines.unitPrice')}
+                      value={l.price}
+                      onChange={(v) => setLine(i, { price: v })}
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    className="btn btn-icon btn-ghost"
+                    aria-label={t('lines.remove')}
+                    disabled={lines.length === 1}
+                    onClick={() => setLines((prev) => prev.filter((_, j) => j !== i))}
+                  >
+                    <Icon name="trash" size={14} />
+                  </button>
+                </div>
+              ))}
+              {lines.length < 20 && (
+                <button
+                  type="button"
+                  className="btn btn-ghost btn-sm line-add"
+                  onClick={() => setLines((prev) => [...prev, { description: '', quantity: '1', price: '' }])}
+                >
+                  <Icon name="plus" size={14} />
+                  {t('lines.add')}
+                </button>
+              )}
+            </div>
           </Field>
+          <Field label={t('lines.discount')}>
+            <MoneyInput className="text-input" value={discount} onChange={setDiscount} />
+          </Field>
+          <Field label={t('invoiceForm.discountReason')}>
+            <input
+              className="text-input"
+              maxLength={200}
+              value={discountReason}
+              disabled={!Number(discount)}
+              placeholder={t('invoiceForm.discountReasonPlaceholder')}
+              onChange={(e) => setDiscountReason(e.target.value)}
+            />
+          </Field>
+          <Field label={t('invoiceForm.period')} hint={t('invoiceForm.periodHint')}>
+            <input
+              className="text-input"
+              type="month"
+              value={period}
+              onChange={(e) => setPeriod(e.target.value)}
+            />
+          </Field>
+          <div className="line-total" aria-live="polite">
+            {t('lines.total')}: <strong>{formatVND(Math.max(0, total))}</strong>
+          </div>
           <Field label={t('invoiceForm.dueDate')}>
             <input
               className="text-input"

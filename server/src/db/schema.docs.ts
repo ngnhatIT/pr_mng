@@ -192,9 +192,23 @@ export const TABLE_DOCS: Record<string, TableDoc> = {
       due_date: 'Hạn thanh toán (ISO date).',
       status: "Trạng thái: 'unpaid' | 'partial' | 'paid' — tự động tính lại bởi recalcInvoiceStatus.",
       note: 'Ghi chú.',
+      period: 'v28: kỳ thu YYYY-MM (hóa đơn theo tháng). Duy nhất theo (học viên, lớp, kỳ).',
+      discount_amount: 'v28: giảm trừ (VND, >= 0). amount đã trừ khoản này.',
+      discount_reason: 'v28: lý do giảm trừ (anh chị em, khuyến mãi...).',
       created_at: 'Thời điểm tạo (giờ VN).',
       updated_at: 'Tự động cập nhật bởi trigger.',
       version: 'Phiên bản optimistic locking — tăng tự động mỗi lần UPDATE.',
+    },
+  },
+  invoice_items: {
+    description: 'v28: dòng hóa đơn (tùy chọn). Có dòng thì amount của hóa đơn = tổng dòng - giảm trừ.',
+    columns: {
+      id: 'Khóa chính.',
+      invoice_id: 'Hóa đơn. CASCADE khi xóa hóa đơn.',
+      position: 'Thứ tự hiển thị.',
+      description: 'Diễn giải (vd Học phí tháng 10, Giáo trình).',
+      quantity: 'Số lượng (> 0).',
+      unit_price: 'Đơn giá (VND, >= 0).',
     },
   },
   payments: {

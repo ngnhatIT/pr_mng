@@ -2,7 +2,7 @@
  * API layer cho feature Học phí (invoices + payments).
  */
 import { http, type Paginated, type PageParams } from '../../shared/api/client';
-import type { InvoiceItem, PendingPayment, DebtRow, RemindResult } from '../../shared/types';
+import type { InvoiceItem, InvoiceLine, PendingPayment, DebtRow, RemindResult } from '../../shared/types';
 
 // ADM-18: dùng type chung ở shared/types (trước đây khai báo trùng ở đây và đã lệch nhau)
 export type { InvoiceItem, PendingPayment, DebtRow, RemindResult };
@@ -20,6 +20,21 @@ export interface PaymentItem {
 export interface InvoiceDetailData {
   invoice: InvoiceItem;
   payments: PaymentItem[];
+  items?: InvoiceLine[];
+}
+
+export interface BulkInvoiceResult {
+  period: string;
+  created: number;
+  skipped: number;
+  total: number;
+  preview: {
+    student_id: number;
+    student_name: string;
+    student_code: string;
+    class_name: string;
+    amount: number;
+  }[];
 }
 
 export interface PaymentConfigData {
@@ -71,13 +86,20 @@ export const invoicesApi = {
     return http.get<Paginated<DebtRow>>(qs ? `/invoices/debt?${qs}` : '/invoices/debt');
   },
   getDebtSummary: () => http.get<{ totalDebt: number; debtorCount: number }>('/invoices/debt-summary'),
+  /** Có items thì server tự tính amount = tổng dòng - discount_amount. */
   create: (data: {
     student_id: number;
     class_id?: number | null;
-    amount: number;
+    amount?: number;
+    items?: Omit<InvoiceLine, 'id'>[];
+    discount_amount?: number;
+    discount_reason?: string | null;
+    period?: string | null;
     due_date?: string | null;
     note?: string | null;
   }) => http.post<InvoiceItem>('/invoices', data),
+  bulk: (data: { period: string; class_id?: number; due_date?: string; lang: string; dry_run: boolean }) =>
+    http.post<BulkInvoiceResult>('/invoices/bulk', data),
   recordPayment: (
     invoiceId: number,
     data: { amount: number; method: string; note?: string | null },

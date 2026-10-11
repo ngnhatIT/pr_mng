@@ -1,4 +1,18 @@
 {
+  "bulk": {
+    "allClasses": "All open classes with a tuition fee",
+    "confirm_one": "Create {{count}} invoice",
+    "confirm_other": "Create {{count}} invoices",
+    "created_one": "Created {{count}} invoice",
+    "created_other": "Created {{count}} invoices",
+    "desc": "Creates one invoice per enrolled student for the chosen month. Students who already have an invoice for that class and month are skipped, so it is safe to run again.",
+    "error": "Could not create the invoices, please try again",
+    "open": "Bulk invoicing",
+    "preview": "Preview",
+    "summary_one": "<strong>{{count}} invoice</strong> totalling <strong>{{total}}</strong> will be created. {{skipped}} already invoiced.",
+    "summary_other": "<strong>{{count}} invoices</strong> totalling <strong>{{total}}</strong> will be created. {{skipped}} already invoiced.",
+    "title": "Create monthly tuition invoices"
+  },
   "config": {
     "bank": {
       "accountName": "Account holder name",
@@ -8,10 +22,10 @@
       "title": "Receiving bank account"
     },
     "desc": "Used to generate VietQR codes for parents to scan and pay.",
-    "pageDesc": "Set up the receiving account, VNPay, and referral rewards",
     "loadError": "Could not load settings, please try again",
     "loadFailDesc": "Please try reloading the page.",
     "loadFailTitle": "Could not load settings",
+    "pageDesc": "Set up the receiving account, VNPay, and referral rewards",
     "referral": {
       "desc": "Credits awarded for successful referrals.",
       "forReferred": "Reward for the referred person",
@@ -25,19 +39,19 @@
       "desc": "Online payment gateway for parents.",
       "disabled": "Off",
       "enabled": "On",
+      "errors": {
+        "secretRequired": "Please enter the hash secret when VNPay is enabled",
+        "tmnRequired": "Please enter the TMN code when VNPay is enabled"
+      },
       "hashSecret": "Hash Secret",
       "hashSecretHint": "Issued by VNPay with the TMN code. Leave blank to keep the current one.",
-      "tmnCodeHint": "Issued by VNPay when the center registers as a merchant; see the confirmation email.",
+      "newSecretPlaceholder": "Enter new secret (leave blank to keep current)",
       "savedPlaceholder": "{{mask}} (saved - leave blank to keep)",
       "status": "Status",
       "statusHint": "Turn off to pause online payments; cash and bank transfer still work.",
       "title": "VNPay",
       "tmnCode": "Website code (TMN Code)",
-      "newSecretPlaceholder": "Enter new secret (leave blank to keep current)",
-      "errors": {
-        "tmnRequired": "Please enter the TMN code when VNPay is enabled",
-        "secretRequired": "Please enter the hash secret when VNPay is enabled"
-      }
+      "tmnCodeHint": "Issued by VNPay when the center registers as a merchant; see the confirmation email."
     }
   },
   "credit": {
@@ -78,6 +92,45 @@
     }
   },
   "desc": "Invoices to collect, payments parents reported, and the remaining debt.",
+  "detail": {
+    "amount": "Amount",
+    "back": "Back",
+    "backToTuition": "Back to Tuition",
+    "breadcrumbInvoice": "Invoice #{{id}}",
+    "breadcrumbLabel": "Invoice page navigation",
+    "breadcrumbTuition": "Tuition",
+    "class": "Class",
+    "collect": "Collect",
+    "createdAt": "Created at",
+    "dueDate": "Due date",
+    "info": "Invoice details",
+    "loadErrorDesc": "Something went wrong, please try again.",
+    "loadErrorTitle": "Could not load the invoice",
+    "noPaymentsDesc": "No payments have been recorded for this invoice.",
+    "noPaymentsTitle": "No payments yet",
+    "notFoundDesc": "This invoice may have been deleted or you do not have permission to view it.",
+    "notFoundTitle": "Invoice not found",
+    "paid": "Collected",
+    "paymentStatus": {
+      "confirmed": "Confirmed",
+      "pending": "Pending",
+      "rejected": "Rejected"
+    },
+    "payments": "Payment history",
+    "paymentsTable": {
+      "amount": "Amount",
+      "date": "Date",
+      "method": "Method",
+      "note": "Note",
+      "status": "Status"
+    },
+    "period": "Billing month",
+    "printReceipt": "Print receipt",
+    "remain": "Outstanding",
+    "retry": "Retry",
+    "student": "Student",
+    "title": "Invoice HD{{id}}"
+  },
   "invoice": {
     "create": "Create invoice",
     "creating": "Creating...",
@@ -99,60 +152,30 @@
   },
   "invoiceForm": {
     "amount": "Amount (VND)",
+    "amountInvalid": "Amount must be a positive number",
     "class": "Class",
     "classOption": "{{name}} - {{fee}}",
     "create": "Create invoice",
     "createError": "Could not create the invoice, please try again",
     "created": "Invoice created",
     "creating": "Creating...",
+    "discountReason": "Discount reason",
+    "discountReasonPlaceholder": "Sibling, promotion...",
+    "discountTooLarge": "The discount must be smaller than the subtotal",
     "dueDate": "Due date",
+    "lines": "Invoice lines",
+    "linesInvalid": "Each line needs a description, a quantity above 0 and a price",
     "noClass": "- No class -",
     "note": "Note",
+    "period": "Billing month",
+    "periodHint": "Optional. Prevents billing the same student twice for one class and month.",
+    "searchStudent": "Find student",
+    "searchStudentPlaceholder": "Type student name or code",
     "selectStudent": "- Select student -",
     "student": "Student",
     "studentRequired": "Please select a student",
     "title": "Create invoice",
-    "amountInvalid": "Amount must be a positive number",
-    "searchStudent": "Find student",
-    "searchStudentPlaceholder": "Type student name or code"
-  },
-  "detail": {
-    "title": "Invoice HD{{id}}",
-    "breadcrumbLabel": "Invoice page navigation",
-    "breadcrumbTuition": "Tuition",
-    "breadcrumbInvoice": "Invoice #{{id}}",
-    "back": "Back",
-    "backToTuition": "Back to Tuition",
-    "retry": "Retry",
-    "loadErrorTitle": "Could not load the invoice",
-    "loadErrorDesc": "Something went wrong, please try again.",
-    "notFoundTitle": "Invoice not found",
-    "notFoundDesc": "This invoice may have been deleted or you do not have permission to view it.",
-    "info": "Invoice details",
-    "student": "Student",
-    "class": "Class",
-    "amount": "Amount",
-    "paid": "Collected",
-    "remain": "Outstanding",
-    "dueDate": "Due date",
-    "createdAt": "Created at",
-    "printReceipt": "Print receipt",
-    "collect": "Collect",
-    "payments": "Payment history",
-    "noPaymentsTitle": "No payments yet",
-    "noPaymentsDesc": "No payments have been recorded for this invoice.",
-    "paymentsTable": {
-      "date": "Date",
-      "amount": "Amount",
-      "method": "Method",
-      "status": "Status",
-      "note": "Note"
-    },
-    "paymentStatus": {
-      "pending": "Pending",
-      "confirmed": "Confirmed",
-      "rejected": "Rejected"
-    }
+    "tuitionLine": "Tuition {{name}}"
   },
   "invoiceStatus": {
     "paid": "Paid",
@@ -160,22 +183,34 @@
     "unpaid": "Unpaid"
   },
   "invoices": {
+    "clearSearch": "Clear search",
+    "debtStripTitle": "Total outstanding tuition across the center",
+    "debtStrip_one": "{{count}} student still owes {{total}} in total",
+    "debtStrip_other": "{{count}} students still owe {{total}} in total",
     "emptyDesc": "Create tuition invoices for students to start collecting.",
+    "emptyFiltered": {
+      "clear": "Clear filters",
+      "desc": "Try a different keyword or clear the filters to see the full list.",
+      "title": "No invoices match your filters"
+    },
     "emptyTitle": "No invoices yet",
     "loadError": "Could not load invoices, please try again",
     "searchPlaceholder": "Search by student name/code...",
-    "clearSearch": "Clear search",
     "statusFilterLabel": "Filter by status",
     "tab": "Invoices",
-    "totalDebt": "Owes:",
-    "emptyFiltered": {
-      "title": "No invoices match your filters",
-      "desc": "Try a different keyword or clear the filters to see the full list.",
-      "clear": "Clear filters"
-    },
-    "debtStrip_one": "{{count}} student still owes {{total}} in total",
-    "debtStrip_other": "{{count}} students still owe {{total}} in total",
-    "debtStripTitle": "Total outstanding tuition across the center"
+    "totalDebt": "Owes:"
+  },
+  "lines": {
+    "add": "Add line",
+    "description": "Description",
+    "discount": "Discount",
+    "discountWithReason": "Discount ({{reason}})",
+    "lineTotal": "Amount",
+    "quantity": "Qty",
+    "remove": "Remove line",
+    "subtotal": "Subtotal",
+    "total": "Total due",
+    "unitPrice": "Unit price"
   },
   "pay": {
     "amount": "Amount collected (VND) *",
@@ -183,23 +218,23 @@
     "collecting": "Saving payment...",
     "confirm": "Confirm collection",
     "confirmText": "{{name}} - owes <strong>{{debt}}</strong>",
+    "errors": {
+      "amountInvalid": "Amount must be between 1 and the remaining debt",
+      "amountRequired": "Please enter the amount"
+    },
     "method": "Method",
     "methods": {
-      "cash": "Cash",
-      "transfer": "Bank transfer",
       "card": "Card",
+      "cash": "Cash",
+      "credit": "Credit applied",
       "ewallet": "E-wallet",
       "refund": "Refund",
-      "credit": "Credit applied"
+      "transfer": "Bank transfer"
     },
     "note": "Note",
     "payError": "Could not collect the payment, please try again",
     "recorded": "Payment recorded",
-    "title": "Collect tuition",
-    "errors": {
-      "amountRequired": "Please enter the amount",
-      "amountInvalid": "Amount must be between 1 and the remaining debt"
-    }
+    "title": "Collect tuition"
   },
   "pending": {
     "approve": "Approve",
@@ -223,36 +258,36 @@
     },
     "viewInvoices": "View invoices"
   },
-  "searchAllStatuses": "All statuses",
-  "title": "Tuition",
-  "refund": {
-    "title": "Refund",
-    "action": "Refund",
-    "amount": "Refund amount",
-    "reason": "Refund reason",
-    "reasonPlaceholder": "E.g.: Student withdrew mid-course",
-    "confirm": "Confirm refund",
-    "processing": "Processing refund...",
-    "done": "Refund recorded",
-    "error": "Could not process the refund, please try again",
-    "confirmText": "Refund for student <strong>{{name}}</strong> (collected <strong>{{paid}}</strong>). The refund will reduce the outstanding balance.",
-    "errors": {
-      "amountInvalid": "Refund amount must be between 1 and the paid amount"
-    }
-  },
   "receipt": {
-    "title": "Tuition Receipt",
-    "subtitle": "TUITION RECEIPT",
-    "student": "Student",
-    "class": "Class",
     "amount": "Total",
-    "paid": "Paid",
-    "remaining": "Remaining",
-    "note": "Note",
-    "date": "Date {{date}}",
     "cashier": "Cashier",
+    "class": "Class",
+    "date": "Date {{date}}",
+    "defaultCenter": "Center",
+    "note": "Note",
+    "paid": "Paid",
     "payer": "Payer",
     "print": "Print receipt",
-    "defaultCenter": "Center"
-  }
+    "remaining": "Remaining",
+    "student": "Student",
+    "subtitle": "TUITION RECEIPT",
+    "title": "Tuition Receipt"
+  },
+  "refund": {
+    "action": "Refund",
+    "amount": "Refund amount",
+    "confirm": "Confirm refund",
+    "confirmText": "Refund for student <strong>{{name}}</strong> (collected <strong>{{paid}}</strong>). The refund will reduce the outstanding balance.",
+    "done": "Refund recorded",
+    "error": "Could not process the refund, please try again",
+    "errors": {
+      "amountInvalid": "Refund amount must be between 1 and the paid amount"
+    },
+    "processing": "Processing refund...",
+    "reason": "Refund reason",
+    "reasonPlaceholder": "E.g.: Student withdrew mid-course",
+    "title": "Refund"
+  },
+  "searchAllStatuses": "All statuses",
+  "title": "Tuition"
 }

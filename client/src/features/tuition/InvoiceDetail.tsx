@@ -9,6 +9,7 @@ import { EmptyState } from '../../shared/components/EmptyState';
 import { Skeleton, TableSkeleton } from '../../shared/components/Skeleton';
 import { EmptyCell } from '../../shared/components/EmptyCell';
 import { ReceiptModal } from '../../shared/components/ReceiptModal';
+import { InvoiceLines } from '../../shared/components/InvoiceLines';
 import { Icon } from '../../shared/components/icons';
 import { formatVND, formatDate, formatDateTime, remainingOf } from '../../shared/types';
 import './Tuition.css';
@@ -114,7 +115,7 @@ export function InvoiceDetail() {
     );
   }
 
-  const { payments } = data as InvoiceDetailData;
+  const { payments, items = [] } = data as InvoiceDetailData;
   const paid = paidOf(data!.invoice, payments);
   const invoice = { ...data!.invoice, paid };
   const remain = remainingOf(invoice);
@@ -178,11 +179,23 @@ export function InvoiceDetail() {
           <dd className="num">
             <strong className="debt-amount">{formatVND(remain)}</strong>
           </dd>
+          {invoice.period && (
+            <>
+              <dt>{t('detail.period')}</dt>
+              <dd>{`${invoice.period.slice(5)}/${invoice.period.slice(0, 4)}`}</dd>
+            </>
+          )}
           <dt>{t('detail.dueDate')}</dt>
           <dd>{formatDate(invoice.due_date)}</dd>
           <dt>{t('detail.createdAt')}</dt>
           <dd>{formatDateTime(invoice.created_at)}</dd>
         </dl>
+        <InvoiceLines
+          items={items}
+          discount={invoice.discount_amount ?? 0}
+          discountReason={invoice.discount_reason}
+          amount={invoice.amount}
+        />
       </section>
 
       <section className="card">
@@ -249,6 +262,7 @@ export function InvoiceDetail() {
       {showReceipt && (
         <ReceiptModal
           invoice={invoice}
+          items={items}
           centerName={getUser()?.center_name || t('receipt.defaultCenter')}
           onClose={() => setShowReceipt(false)}
         />

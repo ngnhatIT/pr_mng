@@ -12,18 +12,89 @@ import { formatError } from '../../shared/errorFormat';
 
 export const INVOICE_STATUS = ['unpaid', 'partial', 'paid'] as const;
 
-export interface InvoiceInput {
+export interface InvoiceLine {
+  description: string;
+  quantity: number;
+  unit_price: number;
+}
+
+/** Tiền: có items thì amount bị bỏ qua (tạm tính = tổng dòng); không có items thì amount là tạm tính. */
+interface InvoiceMoney {
+  amount?: number | null;
+  items?: InvoiceLine[];
+  discount_amount?: number | null;
+  discount_reason?: string | null;
+  period?: string | null;
+}
+
+export interface InvoiceInput extends InvoiceMoney {
   student_id: number;
   class_id?: number | null;
-  amount: number;
   due_date?: string | null;
   note?: string | null;
 }
 
-export interface InvoiceUpdateInput {
-  amount: number;
+export interface InvoiceUpdateInput extends InvoiceMoney {
   due_date?: string | null;
   note?: string | null;
+}
+
+export const MAX_INVOICE_ITEMS = 50;
+const PERIOD_RE = /^\d{4}-(0[1-9]|1[0-2])$/;
+
+/** Chuẩn hóa dòng + giảm trừ -> số phải thu (VND làm tròn). Giảm trừ không được vượt tạm tính. */
+export function computeInvoiceTotal(m: InvoiceMoney): {
+  amount: number;
+  items: InvoiceLine[] | undefined;
+  discount: number;
+  period: string | null;
+} {
+  let items: InvoiceLine[] | undefined;
+  if (m.items !== undefined) {
+    if (!Array.isArray(m.items) || m.items.length > MAX_INVOICE_ITEMS) {
+      throw AppError.badRequest(`Tối đa ${MAX_INVOICE_ITEMS} dòng hóa đơn`, 'INVALID_ITEMS');
+    }
+    items = m.items.map((it) => {
+      const description = String(it?.description ?? '')
+        .trim()
+        .slice(0, 200);
+      const quantity = Number(it?.quantity ?? 1);
+      const unit_price = Math.round(Number(it?.unit_price));
+      if (!description || !(quantity > 0) || !Number.isFinite(quantity) || !(unit_price >= 0)) {
+        throw AppError.badRequest(
+          'Dòng hóa đơn không hợp lệ (cần diễn giải, số lượng > 0, đơn giá >= 0)',
+          'INVALID_ITEMS'
+        );
+      }
+      return { description, quantity, unit_price };
+    });
+  }
+  const subtotal = assertPositiveAmount(
+    items?.length ? items.reduce((s, it) => s + it.quantity * it.unit_price, 0) : m.amount
+  );
+  const discount = Math.round(Number(m.discount_amount ?? 0));
+  if (!Number.isFinite(discount) || discount < 0 || discount >= subtotal) {
+    throw AppError.badRequest('Giảm trừ phải từ 0 và nhỏ hơn tạm tính', 'INVALID_DISCOUNT');
+  }
+  const period = m.period || null;
+  if (period !== null && !PERIOD_RE.test(period)) throw AppError.badRequest('Kỳ thu phải có dạng YYYY-MM');
+  return { amount: assertPositiveAmount(subtotal - discount), items, discount, period };
+}
+
+async function replaceItems(tx: Pick<typeof db, 'prepare'>, invoiceId: number, items: InvoiceLine[]) {
+  await tx.prepare('DELETE FROM invoice_items WHERE invoice_id = ?').run(invoiceId);
+  if (!items.length) return;
+  await tx
+    .prepare(
+      `INSERT INTO invoice_items (invoice_id, position, description, quantity, unit_price)
+       SELECT ?, ord - 1, d, q, p FROM unnest(?::text[], ?::float8[], ?::float8[]) WITH ORDINALITY AS t(d, q, p, ord)`
+    )
+    .run(
+      invoiceId,
+      items.map((i) => i.description),
+      items.map((i) => i.quantity),
+      items.map((i) => i.unit_price)
+    );
 }
 
 export interface PaymentInput {
@@ -196,7 +267,12 @@ export async function getInvoiceDetail(
   const payments = await db
     .prepare('SELECT * FROM payments WHERE invoice_id = ? ORDER BY paid_at DESC')
     .all(id);
-  return { invoice: inv, payments };
+  const items = await db
+    .prepare(
+      'SELECT id, description, quantity, unit_price FROM invoice_items WHERE invoice_id = ? ORDER BY position'
+    )
+    .all(id);
+  return { invoice: inv, payments, items };
 }
 
 export async function createInvoice(
@@ -205,7 +281,7 @@ export async function createInvoice(
   actor?: AuditActor
 ): Promise<unknown> {
   if (!input.student_id) throw AppError.badRequest('Vui lòng chọn học viên');
-  const amt = assertPositiveAmount(input.amount);
+  const { amount: amt, items, discount, period } = computeInvoiceTotal(input);
   const student = (await db
     .prepare('SELECT id, center_id FROM students WHERE id = ?')
     .get(Number(input.student_id))) as { id: number; center_id: number | null } | undefined;
@@ -219,26 +295,39 @@ export async function createInvoice(
       .get(Number(input.class_id))) as { center_id: number | null } | undefined;
     if (!cls || cls.center_id !== student.center_id) throw AppError.notFound('Không tìm thấy lớp học');
   }
-  const r = await db
-    .prepare(
-      'INSERT INTO invoices (student_id, class_id, amount, due_date, note, center_id) VALUES (?, ?, ?, ?, ?, ?)'
-    )
-    .run(
-      Number(input.student_id),
-      input.class_id ? Number(input.class_id) : null,
-      amt,
-      input.due_date || null,
-      input.note || null,
-      student.center_id
-    );
-  const created = await db.prepare('SELECT * FROM invoices WHERE id = ?').get(Number(r.lastInsertRowid));
+  const newId = await db.transaction(async (tx) => {
+    const row = (await tx
+      .prepare(
+        `INSERT INTO invoices (student_id, class_id, amount, due_date, note, center_id, period, discount_amount, discount_reason)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+         ON CONFLICT (student_id, class_id, period) WHERE period IS NOT NULL DO NOTHING
+         RETURNING id`
+      )
+      .get(
+        Number(input.student_id),
+        input.class_id ? Number(input.class_id) : null,
+        amt,
+        input.due_date || null,
+        input.note || null,
+        student.center_id,
+        period,
+        discount,
+        discount ? input.discount_reason || null : null
+      )) as { id: number } | undefined;
+    if (!row) {
+      throw AppError.conflict('Học viên đã có hóa đơn của lớp này cho kỳ thu này', 'INVOICE_PERIOD_EXISTS');
+    }
+    if (items?.length) await replaceItems(tx, row.id, items);
+    return row.id;
+  });
+  const created = await db.prepare('SELECT * FROM invoices WHERE id = ?').get(newId);
   await audit({
     centerId,
     actor,
     action: 'create',
     entity: 'invoices',
-    entityId: Number(r.lastInsertRowid),
-    summary: `Tạo phiếu thu HD${r.lastInsertRowid}: ${formatVND(amt)}`,
+    entityId: newId,
+    summary: `Tạo phiếu thu HD${newId}: ${formatVND(amt)}`,
     meta: { student_id: input.student_id, amount: amt },
   });
   return created;
@@ -251,7 +340,7 @@ export async function updateInvoice(
   actor?: AuditActor
 ): Promise<unknown> {
   await assertInvoiceScope(centerId, id);
-  const amt = assertPositiveAmount(input.amount);
+  const { amount: amt, items, discount, period } = computeInvoiceTotal(input);
   // INV-1: check + update trong 1 transaction, lock hóa đơn (cùng lock với recordPayment/IPN/approve)
   const current = await db.transaction(async (tx) => {
     const cur = (await tx.prepare('SELECT amount, status FROM invoices WHERE id = ? FOR UPDATE').get(id)) as
@@ -277,8 +366,23 @@ export async function updateInvoice(
     }
     const status = paid >= amt - 0.01 ? 'paid' : paid > 0 ? 'partial' : 'unpaid';
     await tx
-      .prepare('UPDATE invoices SET amount = ?, due_date = ?, note = ?, status = ? WHERE id = ?')
-      .run(amt, input.due_date || null, input.note || null, status, id);
+      .prepare(
+        `UPDATE invoices SET amount = ?, due_date = ?, note = ?, status = ?, period = ?, discount_amount = ?,
+           discount_reason = ? WHERE id = ?`
+      )
+      .run(
+        amt,
+        input.due_date || null,
+        input.note || null,
+        status,
+        period,
+        discount,
+        discount ? input.discount_reason || null : null,
+        id
+      );
+    // Gửi items = thay toàn bộ; client cũ chỉ gửi amount mà số tiền đổi -> bỏ dòng cũ (amount là nguồn đúng)
+    if (items !== undefined) await replaceItems(tx, id, items);
+    else if (Math.round(cur.amount) !== amt) await replaceItems(tx, id, []);
     return cur;
   });
   await audit({
@@ -440,4 +544,93 @@ export async function applyCredit(
     logger.error('applyCredit thất bại', { invoiceId: id, creditId, ...formatError(err) });
     throw AppError.badRequest('Không thể áp dụng credits. Vui lòng thử lại sau.');
   }
+}
+
+/* ------------------------------ Hóa đơn hàng loạt ------------------------------ */
+
+export interface BulkInvoiceRow {
+  student_id: number;
+  student_name: string;
+  student_code: string;
+  class_id: number;
+  class_name: string;
+  amount: number;
+}
+
+/**
+ * Tạo hóa đơn học phí tháng cho mọi học viên đang học (ghi danh active, học viên 'studying') của các lớp
+ * đang mở có học phí > 0 (hoặc 1 lớp). Đã có hóa đơn cùng (học viên, lớp, kỳ) thì bỏ qua — chạy lại an toàn.
+ * dryRun: chỉ trả số lượng + xem trước, không ghi.
+ */
+export async function generateMonthlyInvoices(
+  centerId: number,
+  input: {
+    period: string;
+    class_id?: number | null;
+    due_date?: string | null;
+    lang?: 'vi' | 'en';
+    dry_run?: boolean;
+  },
+  actor?: AuditActor
+): Promise<{ period: string; created: number; skipped: number; total: number; preview: BulkInvoiceRow[] }> {
+  if (!PERIOD_RE.test(input.period)) throw AppError.badRequest('Kỳ thu phải có dạng YYYY-MM');
+  const params: unknown[] = [input.period, centerId];
+  let classCond = '';
+  if (input.class_id) {
+    classCond = 'AND c.id = ?';
+    params.push(input.class_id);
+  }
+  const rows = (await db
+    .prepare(
+      `SELECT s.id AS student_id, s.name AS student_name, s.code AS student_code, c.id AS class_id,
+         c.name AS class_name, ROUND(c.tuition_fee)::float8 AS amount,
+         EXISTS (SELECT 1 FROM invoices i WHERE i.student_id = s.id AND i.class_id = c.id AND i.period = ?) AS existing
+       FROM enrollments e JOIN students s ON s.id = e.student_id JOIN classes c ON c.id = e.class_id
+       WHERE c.center_id = ? AND c.status = 'active' AND c.tuition_fee > 0 AND e.status = 'active'
+         AND s.status = 'studying' ${classCond}
+       ORDER BY c.name, s.name`
+    )
+    .all(...params)) as (BulkInvoiceRow & { existing: boolean })[];
+  const todo = rows.filter((r) => !r.existing);
+  const result = {
+    period: input.period,
+    created: todo.length,
+    skipped: rows.length - todo.length,
+    total: todo.reduce((s, r) => s + r.amount, 0),
+    preview: todo.slice(0, 50).map(({ existing: _e, ...r }) => r),
+  };
+  if (input.dry_run || !todo.length) return input.dry_run ? result : { ...result, created: 0 };
+
+  const [y, m] = input.period.split('-');
+  const label = (cls: string) =>
+    input.lang === 'en' ? `Tuition ${cls} ${m}/${y}` : `Học phí ${cls} tháng ${m}/${y}`;
+  let created = 0;
+  let total = 0;
+  await db.transaction(async (tx) => {
+    for (const r of todo) {
+      const row = (await tx
+        .prepare(
+          `INSERT INTO invoices (student_id, class_id, amount, due_date, center_id, period)
+           VALUES (?, ?, ?, ?, ?, ?)
+           ON CONFLICT (student_id, class_id, period) WHERE period IS NOT NULL DO NOTHING RETURNING id`
+        )
+        .get(r.student_id, r.class_id, r.amount, input.due_date || null, centerId, input.period)) as
+        { id: number } | undefined;
+      if (!row) continue; // request song song vừa tạo
+      await replaceItems(tx, row.id, [
+        { description: label(r.class_name), quantity: 1, unit_price: r.amount },
+      ]);
+      created++;
+      total += r.amount;
+    }
+  });
+  await audit({
+    centerId,
+    actor,
+    action: 'create',
+    entity: 'invoices',
+    summary: `Tạo hàng loạt ${created} hóa đơn kỳ ${input.period}: ${formatVND(total)}`,
+    meta: { period: input.period, class_id: input.class_id ?? null, created, total },
+  });
+  return { ...result, created, total, skipped: rows.length - created };
 }

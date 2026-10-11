@@ -1,5 +1,6 @@
 import { Router, Response } from 'express';
-import { AuthRequest, reqCenterId } from '../../middleware/auth';
+import { AuthRequest, reqCenterId, requireCenterId } from '../../middleware/auth';
+import { AppError } from '../../shared/errors';
 import { requirePermission } from '../authorization/authorization.middleware';
 import { asyncHandler } from '../../shared/http';
 import { validate, v, paramId } from '../../shared/validate';
@@ -10,6 +11,54 @@ import { idempotency } from '../../middleware/idempotency';
 
 // AUTHZ-1: service hóa đơn/thu tiền thao tác toàn trung tâm -> yêu cầu scope 'center' (không nhận 'own')
 const router = Router();
+
+/** Phần tiền chung của tạo/sửa hóa đơn (items là mảng tùy chọn; service kiểm tra từng dòng). */
+function moneyOf(input: {
+  amount?: number | null;
+  items?: unknown;
+  discount_amount?: number | null;
+  discount_reason?: string | null;
+  period?: string | null;
+}) {
+  if (input.items !== undefined && input.items !== null && !Array.isArray(input.items)) {
+    throw AppError.badRequest('Dòng hóa đơn phải là danh sách', 'INVALID_ITEMS');
+  }
+  return {
+    amount: input.amount ?? null,
+    items: (input.items ?? undefined) as invoiceService.InvoiceLine[] | undefined,
+    discount_amount: input.discount_amount ?? 0,
+    discount_reason: input.discount_reason ?? null,
+    period: input.period || null,
+  };
+}
+
+// Tạo hóa đơn học phí tháng hàng loạt (dry_run=true để xem trước)
+router.post(
+  '/bulk',
+  requirePermission('invoices.create', 'center'),
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const input = validate(req.body, {
+      period: v.string({ required: true, max: 7, label: 'Kỳ thu' }),
+      class_id: v.number({ integer: true, min: 1, label: 'Lớp học' }),
+      due_date: v.date({ label: 'Hạn nộp' }),
+      lang: v.string({ max: 2, label: 'Ngôn ngữ' }),
+      dry_run: v.boolean({ label: 'Xem trước' }),
+    });
+    res.json(
+      await invoiceService.generateMonthlyInvoices(
+        requireCenterId(req),
+        {
+          period: input.period,
+          class_id: input.class_id ?? null,
+          due_date: input.due_date ?? null,
+          lang: input.lang === 'en' ? 'en' : 'vi',
+          dry_run: input.dry_run === true,
+        },
+        actorFromReq(req)
+      )
+    );
+  })
+);
 
 router.get(
   '/',
@@ -60,7 +109,11 @@ router.post(
     const input = validate(req.body, {
       student_id: v.number({ required: true, integer: true, label: 'Học viên' }),
       class_id: v.number({ integer: true, label: 'Lớp học' }),
-      amount: v.number({ required: true, label: 'Số tiền' }),
+      amount: v.number({ label: 'Số tiền' }),
+      items: v.any({ label: 'Dòng hóa đơn' }),
+      discount_amount: v.number({ min: 0, label: 'Giảm trừ' }),
+      discount_reason: v.string({ max: 200, label: 'Lý do giảm trừ' }),
+      period: v.string({ max: 7, label: 'Kỳ thu' }),
       due_date: v.date({ label: 'Hạn nộp' }),
       note: v.string({ max: 500, label: 'Ghi chú' }),
     });
@@ -69,7 +122,7 @@ router.post(
       {
         student_id: input.student_id,
         class_id: input.class_id ?? undefined,
-        amount: input.amount,
+        ...moneyOf(input),
         due_date: input.due_date ?? undefined,
         note: input.note ?? undefined,
       },
@@ -84,7 +137,11 @@ router.put(
   requirePermission('invoices.update', 'center'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const input = validate(req.body, {
-      amount: v.number({ required: true, label: 'Số tiền' }),
+      amount: v.number({ label: 'Số tiền' }),
+      items: v.any({ label: 'Dòng hóa đơn' }),
+      discount_amount: v.number({ min: 0, label: 'Giảm trừ' }),
+      discount_reason: v.string({ max: 200, label: 'Lý do giảm trừ' }),
+      period: v.string({ max: 7, label: 'Kỳ thu' }),
       due_date: v.date({ label: 'Hạn nộp' }),
       note: v.string({ max: 500, label: 'Ghi chú' }),
     });
@@ -93,7 +150,7 @@ router.put(
         reqCenterId(req),
         paramId(req.params),
         {
-          amount: input.amount,
+          ...moneyOf(input),
           due_date: input.due_date ?? undefined,
           note: input.note ?? undefined,
         },

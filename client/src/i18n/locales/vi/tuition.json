@@ -1,4 +1,18 @@
 {
+  "bulk": {
+    "allClasses": "Mọi lớp đang mở có học phí",
+    "confirm_one": "Tạo {{count}} hóa đơn",
+    "confirm_other": "Tạo {{count}} hóa đơn",
+    "created_one": "Đã tạo {{count}} hóa đơn",
+    "created_other": "Đã tạo {{count}} hóa đơn",
+    "desc": "Tạo mỗi học viên đang học một hóa đơn cho tháng đã chọn. Học viên đã có hóa đơn của lớp đó trong tháng sẽ được bỏ qua nên chạy lại vẫn an toàn.",
+    "error": "Không tạo được hóa đơn, vui lòng thử lại",
+    "open": "Tạo hàng loạt",
+    "preview": "Xem trước",
+    "summary_one": "Sẽ tạo <strong>{{count}} hóa đơn</strong>, tổng <strong>{{total}}</strong>. {{skipped}} đã có hóa đơn.",
+    "summary_other": "Sẽ tạo <strong>{{count}} hóa đơn</strong>, tổng <strong>{{total}}</strong>. {{skipped}} đã có hóa đơn.",
+    "title": "Tạo hóa đơn học phí theo tháng"
+  },
   "config": {
     "bank": {
       "accountName": "Tên chủ tài khoản",
@@ -8,10 +22,10 @@
       "title": "Tài khoản ngân hàng nhận tiền"
     },
     "desc": "Dùng để tạo mã VietQR cho phụ huynh quét thanh toán.",
-    "pageDesc": "Thiết lập tài khoản nhận tiền, VNPay và thưởng giới thiệu",
     "loadError": "Không tải được cấu hình, vui lòng thử lại",
     "loadFailDesc": "Vui lòng thử tải lại trang.",
     "loadFailTitle": "Không tải được cấu hình",
+    "pageDesc": "Thiết lập tài khoản nhận tiền, VNPay và thưởng giới thiệu",
     "referral": {
       "desc": "Credits tặng khi giới thiệu thành công.",
       "forReferred": "Thưởng cho người được giới thiệu",
@@ -25,19 +39,19 @@
       "desc": "Cổng thanh toán online cho phụ huynh.",
       "disabled": "Tắt",
       "enabled": "Bật",
+      "errors": {
+        "secretRequired": "Vui lòng nhập chuỗi bí mật khi bật VNPay",
+        "tmnRequired": "Vui lòng nhập mã website khi bật VNPay"
+      },
       "hashSecret": "Chuỗi bí mật (Hash Secret)",
       "hashSecretHint": "VNPay cấp cùng TMN Code. Để trống nếu không muốn đổi.",
-      "tmnCodeHint": "VNPay cấp khi trung tâm đăng ký merchant, xem trong email xác nhận.",
+      "newSecretPlaceholder": "Nhập secret mới (để trống = giữ nguyên)",
       "savedPlaceholder": "{{mask}} (đã lưu - để trống nếu không đổi)",
       "status": "Trạng thái",
       "statusHint": "Tắt để tạm ngưng thanh toán online, chỉ nhận tiền mặt hoặc chuyển khoản.",
       "title": "VNPay",
       "tmnCode": "Mã website (TMN Code)",
-      "newSecretPlaceholder": "Nhập secret mới (để trống = giữ nguyên)",
-      "errors": {
-        "tmnRequired": "Vui lòng nhập mã website khi bật VNPay",
-        "secretRequired": "Vui lòng nhập chuỗi bí mật khi bật VNPay"
-      }
+      "tmnCodeHint": "VNPay cấp khi trung tâm đăng ký merchant, xem trong email xác nhận."
     }
   },
   "credit": {
@@ -78,6 +92,45 @@
     }
   },
   "desc": "Phiếu thu cần thu, khoản phụ huynh báo đã chuyển và công nợ còn lại.",
+  "detail": {
+    "amount": "Số tiền",
+    "back": "Quay lại",
+    "backToTuition": "Về trang Học phí",
+    "breadcrumbInvoice": "Hóa đơn #{{id}}",
+    "breadcrumbLabel": "Điều hướng trang hóa đơn",
+    "breadcrumbTuition": "Học phí",
+    "class": "Lớp",
+    "collect": "Thu tiền",
+    "createdAt": "Ngày tạo",
+    "dueDate": "Hạn thanh toán",
+    "info": "Thông tin hóa đơn",
+    "loadErrorDesc": "Đã có lỗi xảy ra, vui lòng thử lại.",
+    "loadErrorTitle": "Không tải được hóa đơn",
+    "noPaymentsDesc": "Hóa đơn này chưa ghi nhận khoản thu nào.",
+    "noPaymentsTitle": "Chưa có thanh toán",
+    "notFoundDesc": "Hóa đơn này có thể đã bị xóa hoặc bạn không có quyền xem.",
+    "notFoundTitle": "Không tìm thấy hóa đơn",
+    "paid": "Đã thu",
+    "paymentStatus": {
+      "confirmed": "Đã xác nhận",
+      "pending": "Chờ duyệt",
+      "rejected": "Từ chối"
+    },
+    "payments": "Lịch sử thanh toán",
+    "paymentsTable": {
+      "amount": "Số tiền",
+      "date": "Ngày",
+      "method": "Phương thức",
+      "note": "Ghi chú",
+      "status": "Trạng thái"
+    },
+    "period": "Kỳ thu",
+    "printReceipt": "In biên lai",
+    "remain": "Còn nợ",
+    "retry": "Thử lại",
+    "student": "Học viên",
+    "title": "Hóa đơn HD{{id}}"
+  },
   "invoice": {
     "create": "Tạo phiếu thu",
     "creating": "Đang tạo...",
@@ -99,60 +152,30 @@
   },
   "invoiceForm": {
     "amount": "Số tiền (đ)",
+    "amountInvalid": "Số tiền phải là số dương",
     "class": "Lớp học",
     "classOption": "{{name}} - {{fee}}",
     "create": "Tạo phiếu",
     "createError": "Không tạo được phiếu thu, vui lòng thử lại",
     "created": "Đã tạo phiếu thu",
     "creating": "Đang tạo...",
+    "discountReason": "Lý do giảm trừ",
+    "discountReasonPlaceholder": "Anh chị em, khuyến mãi...",
+    "discountTooLarge": "Giảm trừ phải nhỏ hơn tạm tính",
     "dueDate": "Hạn nộp",
+    "lines": "Dòng hóa đơn",
+    "linesInvalid": "Mỗi dòng cần diễn giải, số lượng lớn hơn 0 và đơn giá",
     "noClass": "- Không gắn lớp -",
     "note": "Ghi chú",
+    "period": "Kỳ thu (tháng)",
+    "periodHint": "Không bắt buộc. Tránh thu trùng một học viên hai lần cho cùng lớp và tháng.",
+    "searchStudent": "Tìm học viên",
+    "searchStudentPlaceholder": "Gõ tên hoặc mã học viên",
     "selectStudent": "- Chọn học viên -",
     "student": "Học viên",
     "studentRequired": "Vui lòng chọn học viên",
     "title": "Tạo phiếu thu",
-    "amountInvalid": "Số tiền phải là số dương",
-    "searchStudent": "Tìm học viên",
-    "searchStudentPlaceholder": "Gõ tên hoặc mã học viên"
-  },
-  "detail": {
-    "title": "Hóa đơn HD{{id}}",
-    "breadcrumbLabel": "Điều hướng trang hóa đơn",
-    "breadcrumbTuition": "Học phí",
-    "breadcrumbInvoice": "Hóa đơn #{{id}}",
-    "back": "Quay lại",
-    "backToTuition": "Về trang Học phí",
-    "retry": "Thử lại",
-    "loadErrorTitle": "Không tải được hóa đơn",
-    "loadErrorDesc": "Đã có lỗi xảy ra, vui lòng thử lại.",
-    "notFoundTitle": "Không tìm thấy hóa đơn",
-    "notFoundDesc": "Hóa đơn này có thể đã bị xóa hoặc bạn không có quyền xem.",
-    "info": "Thông tin hóa đơn",
-    "student": "Học viên",
-    "class": "Lớp",
-    "amount": "Số tiền",
-    "paid": "Đã thu",
-    "remain": "Còn nợ",
-    "dueDate": "Hạn thanh toán",
-    "createdAt": "Ngày tạo",
-    "printReceipt": "In biên lai",
-    "collect": "Thu tiền",
-    "payments": "Lịch sử thanh toán",
-    "noPaymentsTitle": "Chưa có thanh toán",
-    "noPaymentsDesc": "Hóa đơn này chưa ghi nhận khoản thu nào.",
-    "paymentsTable": {
-      "date": "Ngày",
-      "amount": "Số tiền",
-      "method": "Phương thức",
-      "status": "Trạng thái",
-      "note": "Ghi chú"
-    },
-    "paymentStatus": {
-      "pending": "Chờ duyệt",
-      "confirmed": "Đã xác nhận",
-      "rejected": "Từ chối"
-    }
+    "tuitionLine": "Học phí {{name}}"
   },
   "invoiceStatus": {
     "paid": "Đã thanh toán",
@@ -160,22 +183,34 @@
     "unpaid": "Chưa thanh toán"
   },
   "invoices": {
+    "clearSearch": "Xóa từ khóa tìm kiếm",
+    "debtStripTitle": "Tổng công nợ chưa thu của toàn trung tâm",
+    "debtStrip_one": "{{count}} học viên còn nợ, tổng {{total}}",
+    "debtStrip_other": "{{count}} học viên còn nợ, tổng {{total}}",
     "emptyDesc": "Tạo phiếu thu học phí cho học viên để bắt đầu thu tiền.",
+    "emptyFiltered": {
+      "clear": "Xóa bộ lọc",
+      "desc": "Thử từ khóa khác hoặc xóa bộ lọc để xem toàn bộ danh sách.",
+      "title": "Không tìm thấy hóa đơn"
+    },
     "emptyTitle": "Chưa có phiếu thu nào",
     "loadError": "Không tải được phiếu thu, vui lòng thử lại",
     "searchPlaceholder": "Tìm theo tên/mã học viên...",
-    "clearSearch": "Xóa từ khóa tìm kiếm",
     "statusFilterLabel": "Lọc theo trạng thái",
     "tab": "Phiếu thu",
-    "totalDebt": "Còn nợ:",
-    "emptyFiltered": {
-      "title": "Không tìm thấy hóa đơn",
-      "desc": "Thử từ khóa khác hoặc xóa bộ lọc để xem toàn bộ danh sách.",
-      "clear": "Xóa bộ lọc"
-    },
-    "debtStrip_one": "{{count}} học viên còn nợ, tổng {{total}}",
-    "debtStrip_other": "{{count}} học viên còn nợ, tổng {{total}}",
-    "debtStripTitle": "Tổng công nợ chưa thu của toàn trung tâm"
+    "totalDebt": "Còn nợ:"
+  },
+  "lines": {
+    "add": "Thêm dòng",
+    "description": "Diễn giải",
+    "discount": "Giảm trừ",
+    "discountWithReason": "Giảm trừ ({{reason}})",
+    "lineTotal": "Thành tiền",
+    "quantity": "SL",
+    "remove": "Xóa dòng",
+    "subtotal": "Tạm tính",
+    "total": "Phải thu",
+    "unitPrice": "Đơn giá"
   },
   "pay": {
     "amount": "Số tiền thu (đ) *",
@@ -183,23 +218,23 @@
     "collecting": "Đang lưu thanh toán...",
     "confirm": "Xác nhận thu",
     "confirmText": "{{name}} - còn nợ <strong>{{debt}}</strong>",
+    "errors": {
+      "amountInvalid": "Số tiền phải từ 1 đến số còn nợ",
+      "amountRequired": "Vui lòng nhập số tiền thu"
+    },
     "method": "Phương thức",
     "methods": {
-      "cash": "Tiền mặt",
-      "transfer": "Chuyển khoản",
       "card": "Quẹt thẻ",
+      "cash": "Tiền mặt",
+      "credit": "Trừ credit",
       "ewallet": "Ví điện tử",
       "refund": "Hoàn tiền",
-      "credit": "Trừ credit"
+      "transfer": "Chuyển khoản"
     },
     "note": "Ghi chú",
     "payError": "Không thu được tiền, vui lòng thử lại",
     "recorded": "Đã ghi nhận thanh toán",
-    "title": "Thu tiền học phí",
-    "errors": {
-      "amountRequired": "Vui lòng nhập số tiền thu",
-      "amountInvalid": "Số tiền phải từ 1 đến số còn nợ"
-    }
+    "title": "Thu tiền học phí"
   },
   "pending": {
     "approve": "Duyệt",
@@ -223,36 +258,36 @@
     },
     "viewInvoices": "Xem hóa đơn"
   },
-  "searchAllStatuses": "Tất cả trạng thái",
-  "title": "Học phí",
-  "refund": {
-    "title": "Hoàn tiền",
-    "action": "Hoàn tiền",
-    "amount": "Số tiền hoàn",
-    "reason": "Lý do hoàn tiền",
-    "reasonPlaceholder": "VD: Học viên nghỉ giữa chừng",
-    "confirm": "Xác nhận hoàn tiền",
-    "processing": "Đang hoàn tiền...",
-    "done": "Đã ghi nhận hoàn tiền",
-    "error": "Không hoàn được tiền, vui lòng thử lại",
-    "confirmText": "Hoàn tiền cho học viên <strong>{{name}}</strong> (đã thu <strong>{{paid}}</strong>). Số tiền hoàn sẽ trừ vào công nợ.",
-    "errors": {
-      "amountInvalid": "Số tiền hoàn phải từ 1 đến số đã thu"
-    }
-  },
   "receipt": {
-    "title": "Biên lai thu học phí",
-    "subtitle": "BIÊN LAI THU HỌC PHÍ",
-    "student": "Học viên",
-    "class": "Lớp",
     "amount": "Tổng tiền",
-    "paid": "Đã thu",
-    "remaining": "Còn lại",
-    "note": "Ghi chú",
-    "date": "Ngày {{date}}",
     "cashier": "Người thu tiền",
+    "class": "Lớp",
+    "date": "Ngày {{date}}",
+    "defaultCenter": "Trung tâm",
+    "note": "Ghi chú",
+    "paid": "Đã thu",
     "payer": "Người nộp tiền",
     "print": "In biên lai",
-    "defaultCenter": "Trung tâm"
-  }
+    "remaining": "Còn lại",
+    "student": "Học viên",
+    "subtitle": "BIÊN LAI THU HỌC PHÍ",
+    "title": "Biên lai thu học phí"
+  },
+  "refund": {
+    "action": "Hoàn tiền",
+    "amount": "Số tiền hoàn",
+    "confirm": "Xác nhận hoàn tiền",
+    "confirmText": "Hoàn tiền cho học viên <strong>{{name}}</strong> (đã thu <strong>{{paid}}</strong>). Số tiền hoàn sẽ trừ vào công nợ.",
+    "done": "Đã ghi nhận hoàn tiền",
+    "error": "Không hoàn được tiền, vui lòng thử lại",
+    "errors": {
+      "amountInvalid": "Số tiền hoàn phải từ 1 đến số đã thu"
+    },
+    "processing": "Đang hoàn tiền...",
+    "reason": "Lý do hoàn tiền",
+    "reasonPlaceholder": "VD: Học viên nghỉ giữa chừng",
+    "title": "Hoàn tiền"
+  },
+  "searchAllStatuses": "Tất cả trạng thái",
+  "title": "Học phí"
 }

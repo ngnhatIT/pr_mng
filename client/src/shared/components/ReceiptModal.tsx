@@ -1,6 +1,14 @@
 import { useTranslation } from 'react-i18next';
 import { Modal } from '../components/Modal';
-import { formatVND, formatDate, remainingOf, todayVN, type InvoiceItem } from '../../shared/types';
+import {
+  formatVND,
+  formatDate,
+  remainingOf,
+  todayVN,
+  type InvoiceItem,
+  type InvoiceLine,
+} from '../../shared/types';
+import { InvoiceLines } from './InvoiceLines';
 import { EmptyCell } from './EmptyCell';
 
 /**
@@ -9,10 +17,22 @@ import { EmptyCell } from './EmptyCell';
  */
 export function ReceiptModal({
   invoice,
+  items = [],
   centerName,
   onClose,
 }: {
-  invoice: Pick<InvoiceItem, 'student_name' | 'student_code' | 'class_name' | 'amount' | 'paid' | 'note'>;
+  invoice: Pick<
+    InvoiceItem,
+    | 'student_name'
+    | 'student_code'
+    | 'class_name'
+    | 'amount'
+    | 'paid'
+    | 'note'
+    | 'discount_amount'
+    | 'discount_reason'
+  >;
+  items?: InvoiceLine[];
   centerName: string;
   onClose: () => void;
 }) {
@@ -38,6 +58,12 @@ export function ReceiptModal({
             <span>{t('receipt.class')}</span>
             <strong>{invoice.class_name || <EmptyCell />}</strong>
           </div>
+          <InvoiceLines
+            items={items}
+            discount={invoice.discount_amount ?? 0}
+            discountReason={invoice.discount_reason}
+            amount={invoice.amount}
+          />
           <div className="kv">
             <span>{t('receipt.amount')}</span>
             <strong>{formatVND(invoice.amount)}</strong>

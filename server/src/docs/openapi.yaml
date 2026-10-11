@@ -2259,6 +2259,9 @@ paths:
       tags:
         - Invoices
       summary: Tạo hóa đơn học phí
+      description: >-
+        v28: gửi items thì amount = tổng dòng - discount_amount (bỏ qua amount gửi lên); không có items thì amount là
+        tạm tính. period (YYYY-MM) chặn trùng (học viên, lớp, kỳ) -> 409 INVOICE_PERIOD_EXISTS.
       requestBody:
         required: true
         content:
@@ -2267,13 +2270,25 @@ paths:
               type: object
               required:
                 - student_id
-                - amount
               properties:
                 student_id:
                   type: integer
                 amount:
                   type: number
                   example: 2500000
+                items:
+                  type: array
+                  maxItems: 50
+                  items:
+                    type: object
+                    required: [description, unit_price]
+                    properties:
+                      description: { type: string, maxLength: 200 }
+                      quantity: { type: number, default: 1 }
+                      unit_price: { type: number }
+                discount_amount: { type: number, minimum: 0 }
+                discount_reason: { type: string, maxLength: 200 }
+                period: { type: string, example: '2026-10' }
                 due_date:
                   type: string
                   example: '2026-10-31'
@@ -2909,6 +2924,29 @@ paths:
       responses:
         '201': { description: '{ id, recipient_count }' }
         '400': { description: INVALID_CLASS / thiếu tiêu đề hoặc nội dung }
+  /api/v1/invoices/bulk:
+    post:
+      tags: [Invoices]
+      summary: Tạo hóa đơn học phí tháng hàng loạt (invoices.create)
+      description: >-
+        Mỗi học viên đang học (ghi danh active, học viên studying) của lớp đang mở có học phí > 0 nhận 1 hóa đơn
+        kỳ `period` (1 dòng "Học phí <lớp> tháng MM/YYYY"). Đã có hóa đơn cùng (học viên, lớp, kỳ) thì bỏ qua —
+        chạy lại an toàn. dry_run=true chỉ trả số lượng + 50 dòng xem trước.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [period]
+              properties:
+                period: { type: string, example: '2026-10' }
+                class_id: { type: integer }
+                due_date: { type: string, format: date }
+                lang: { type: string, enum: [vi, en] }
+                dry_run: { type: boolean }
+      responses:
+        '200': { description: '{ period, created, skipped, total, preview[] }' }
   /api/v1/payroll:
     get:
       tags:

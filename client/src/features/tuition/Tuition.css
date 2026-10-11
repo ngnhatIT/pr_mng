@@ -92,3 +92,55 @@ button.back-link {
   align-items: center;
   gap: 6px;
 }
+
+/* v28: dòng hóa đơn trong form tạo + bảng dòng ở chi tiết/biên lai + xem trước tạo hàng loạt */
+.line-editor {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+.line-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 72px 150px auto;
+  gap: var(--sp-2);
+  align-items: center;
+}
+.line-row .money-echo {
+  display: none;
+}
+.line-add {
+  align-self: flex-start;
+}
+.line-total {
+  grid-column: 1 / -1;
+  text-align: right;
+  font-size: var(--font-size-md);
+}
+.invoice-lines {
+  margin-top: var(--sp-4);
+}
+.invoice-lines tfoot th {
+  text-align: right;
+  font-weight: 500;
+  color: var(--text-muted);
+}
+.invoice-lines-total th,
+.invoice-lines-total td {
+  font-weight: 700;
+  color: var(--text);
+}
+.bulk-preview {
+  margin-top: var(--sp-4);
+}
+.bulk-preview-table {
+  max-height: 280px;
+  overflow: auto;
+}
+@media (max-width: 600px) {
+  .line-row {
+    grid-template-columns: minmax(0, 1fr) 64px;
+  }
+  .line-row .line-price {
+    grid-column: 1;
+  }
+}
