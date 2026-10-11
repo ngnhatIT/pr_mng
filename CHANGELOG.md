@@ -1,5 +1,20 @@
 # Changelog — EduCenterPro
 
+## 2026-10-11 — Nâng cấp chuẩn quốc tế (nhánh `upgrade-intl`)
+
+Migration v26–v31 (tự chạy khi khởi động). Chi tiết từng gói: `docs/ROADMAP.md`.
+
+- **Lịch học** `/app/schedule` (tuần/tháng, lọc GV/phòng) + dạy thay, đổi phòng/giờ, dời buổi từng buổi (v26).
+- **Thông báo trong app**: chuông cho quản trị/GV/phụ huynh, thông báo chung gửi phụ huynh `/app/announcements` (v27).
+- **Tài chính**: hóa đơn nhiều dòng + giảm trừ + kỳ thu, tạo hóa đơn tháng hàng loạt có xem trước (v28); biên lai có dòng.
+- **Dữ liệu**: xuất CSV (học viên, hóa đơn, công nợ, lương), nhập học viên từ CSV, tìm kiếm không dấu (v29),
+  sắp xếp cột, xuất/ẩn danh dữ liệu học viên theo GDPR/NĐ 13/2023 (v31).
+- **Bảo mật**: xác thực 2 lớp TOTP cho nhân sự + mã khôi phục (v30) — production nên đặt `DATA_ENCRYPTION_KEY`;
+  làm mới phiên chịu được server khởi động lại.
+- **UX/a11y/i18n**: tìm nhanh Ctrl/Cmd+K, URL tiếng Anh (URL cũ tự chuyển), số nhiều tiếng Anh, ngày theo ngôn ngữ,
+  tương phản WCAG, theme theo hệ điều hành, focus khi đổi trang, mọi mã lỗi API có bản dịch vi/en.
+- **Chất lượng**: test chống lệch OpenAPI ↔ route, test mã lỗi thiếu bản dịch; 20 lỗi từ review độc lập đã sửa.
+
 ## 2026-10-11 — Soạn bài tập và ngân hàng câu hỏi thành trang riêng
 
 Không có migration.

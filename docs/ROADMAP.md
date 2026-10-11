@@ -1,7 +1,8 @@
 # Roadmap — nâng cấp chuẩn quốc tế (bắt đầu 2026-10-11, nhánh `upgrade-intl`)
 
 Nguồn: 3 audit (tính năng so với Teachworks/TutorBird/Classe365, khả năng mở rộng backend, UI/UX + a11y).
-Đánh dấu `[x]` khi xong (kèm commit). Mỗi vòng: làm 1 gói → test server+client → kiểm trên trình duyệt → commit.
+Đánh dấu `[x]` khi xong (kèm commit). Trạng thái 2026-10-11: gói 1–6 xong phần lớn; 20 lỗi từ review độc lập
+đã sửa (20ae8e8, 92e1aa4). Mục `[ ]` còn lại cần quyết định sản phẩm hoặc nhỏ. Mỗi vòng: làm 1 gói → test server+client → kiểm trên trình duyệt → commit.
 
 ## Gói 1 — Xuất dữ liệu + sửa nhanh UI quốc tế (S)
 - [x] Xuất CSV (học viên, hóa đơn, công nợ, bảng lương) — `GET /api/v1/exports/*.csv`, quyền `reports.export`
