@@ -52,7 +52,8 @@
     "sessionsDone": "{{count}} sessions checked in",
     "title": "My salary",
     "totalOfMonth": "Total salary · {{month}}",
-    "loadErrorDesc": "Please try again."
+    "loadErrorDesc": "Please try again.",
+    "mixedRate": "Rate changed this month, average {{avg}}/session"
   },
   "today": {
     "attendanceCount": "{{count}} students marked present",

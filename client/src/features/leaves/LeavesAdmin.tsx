@@ -102,7 +102,7 @@ export function LeavesAdmin() {
         <EmptyState icon="calendar-x" title={t('leaves.empty.title')} desc={t('leaves.empty.desc')} />
       ) : (
         <div className="table-wrap sticky" aria-busy={loading || undefined}>
-          <table className="table">
+          <table className="table table-stack">
             <thead>
               <tr>
                 <th scope="col">{t('leaves.col.student')}</th>
@@ -123,12 +123,20 @@ export function LeavesAdmin() {
                     <span className="leave-code mono">({l.student_code})</span>
                     <div className="muted">{l.class_name || '-'}</div>
                   </td>
-                  <td className="nowrap">{formatDate(l.from_date)}</td>
-                  <td className="nowrap">{formatDate(l.to_date)}</td>
-                  <td className="leave-reason" title={l.reason || undefined}>
+                  <td data-label={t('leaves.col.fromDate')} className="nowrap">
+                    {formatDate(l.from_date)}
+                  </td>
+                  <td data-label={t('leaves.col.toDate')} className="nowrap">
+                    {formatDate(l.to_date)}
+                  </td>
+                  <td
+                    data-label={t('leaves.col.reason')}
+                    className="leave-reason"
+                    title={l.reason || undefined}
+                  >
                     {l.reason || <EmptyCell />}
                   </td>
-                  <td>
+                  <td data-label={t('leaves.col.status')}>
                     <span className={`badge badge-${l.status}`}>{t(`leaves.status.${l.status}`)}</span>
                   </td>
                   <td className="td-right">

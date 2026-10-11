@@ -778,8 +778,10 @@ const LOCKING_IF_NOT_EXISTS =
 
 /**
  * R4-2: CREATE OR REPLACE VIEW (ACCESS EXCLUSIVE trên view — chờ sau mọi transaction đang đọc view) và
- * CREATE OR REPLACE FUNCTION (không tham số). Boot ghi hash câu lệnh vào COMMENT của object; lần sau hash
- * khớp thì bỏ qua. Đổi định nghĩa = đổi text câu lệnh -> hash khác -> chạy lại.
+ * CREATE OR REPLACE FUNCTION (không tham số). Boot ghi vào COMMENT của object
+ * `boot-ddl:<hash câu lệnh>:<md5 định nghĩa thực tế ngay sau khi tạo>`; lần sau bỏ qua CHỈ KHI cả hai khớp.
+ * Đổi định nghĩa trong code = hash câu lệnh khác -> chạy lại. N5-1: code cũ / hotfix psql CREATE OR REPLACE
+ * thân khác (giữ nguyên COMMENT) -> md5 pg_get_functiondef/pg_get_viewdef khác -> chạy lại.
  */
 const REPLACEABLE =
   /CREATE\s+OR\s+REPLACE\s+(?:VIEW\s+(\w+)\s+AS[^;]*|FUNCTION\s+(\w+)\(\)[\s\S]*?\$\$[\s\S]*?\$\$[^;]*);/gi;
@@ -820,14 +822,14 @@ export function bootDdlDb(db: Db): Db {
             (
               (await tx
                 .prepare(
-                  `SELECT 'v:' || relname AS n, obj_description(oid, 'pg_class') AS d FROM pg_class
-                   WHERE relkind = 'v' AND relnamespace = current_schema()::regnamespace
+                  `SELECT 'v:' || relname AS n, obj_description(oid, 'pg_class') AS d, md5(pg_get_viewdef(oid)) AS fp
+                   FROM pg_class WHERE relkind = 'v' AND relnamespace = current_schema()::regnamespace
                    UNION ALL
-                   SELECT 'f:' || proname, obj_description(oid, 'pg_proc') FROM pg_proc
-                   WHERE pronamespace = current_schema()::regnamespace AND pronargs = 0`
+                   SELECT 'f:' || proname, obj_description(oid, 'pg_proc'), md5(pg_get_functiondef(oid))
+                   FROM pg_proc WHERE pronamespace = current_schema()::regnamespace AND pronargs = 0 AND prokind = 'f'`
                 )
-                .all()) as { n: string; d: string | null }[]
-            ).map((r) => [r.n, r.d])
+                .all()) as { n: string; d: string | null; fp: string }[]
+            ).map((r) => [r.n, r])
           );
           const rest = sql
             .replace(LOCKING_IF_NOT_EXISTS, (stmt, index?: string, table?: string, column?: string) =>
@@ -838,8 +840,14 @@ export function bootDdlDb(db: Db): Db {
             .replace(REPLACEABLE, (stmt, view?: string, fn?: string) => {
               const tag = `boot-ddl:${createHash('sha256').update(stmt).digest('hex').slice(0, 16)}`;
               const key = view ? `v:${view.toLowerCase()}` : `f:${fn!.toLowerCase()}`;
-              if (comments.get(key) === tag) return '';
-              return `${stmt}\nCOMMENT ON ${view ? `VIEW ${view}` : `FUNCTION ${fn}()`} IS '${tag}';`;
+              const cur = comments.get(key);
+              if (cur && cur.d === `${tag}:${cur.fp}`) return '';
+              // Ghi md5 định nghĩa SAU khi tạo (dạng Postgres lưu) — lần sau so với định nghĩa đang có
+              const target = view ? `VIEW ${view}` : `FUNCTION ${fn}()`;
+              const def = view
+                ? `pg_get_viewdef('${view}'::regclass)`
+                : `pg_get_functiondef('${fn}()'::regprocedure)`;
+              return `${stmt}\nDO $boot$ BEGIN EXECUTE format('COMMENT ON ${target} IS %L', '${tag}:' || md5(${def})); END $boot$;`;
             });
           if (rest.trim()) await tx.exec(rest);
         })

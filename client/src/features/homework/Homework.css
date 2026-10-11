@@ -233,6 +233,23 @@ a:hover .submission-thumb {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+/* B5-4: URL nhường chỗ cho tên (trước: 40 ký tự URL đẩy tên thành "A…"); màn hẹp ẩn hẳn URL */
+.att-row .att-url {
+  flex: 0 1 40%;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+@media (max-width: 480px) {
+  .att-row .att-url {
+    display: none;
+  }
+}
+/* B5-3: lỗi cụm đính kèm chỉ viền đỏ ô thực sự sai (aria-invalid), không phải mọi ô */
+.field-invalid .att-inputs input:not([aria-invalid='true']) {
+  border-color: var(--border);
+}
 
 /* ---------- Mobile ---------- */
 @media (max-width: 640px) {

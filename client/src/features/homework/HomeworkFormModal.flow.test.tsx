@@ -69,6 +69,13 @@ describe('HomeworkFormModal: link gõ dở khi lưu (B4-1)', () => {
     expect(sent('POST', '/homework')).toBeUndefined();
     expect(document.body.textContent).toContain(t('form.errors.attUrlInvalid'));
     expect(document.activeElement).toBe(ph('form.attUrlPh'));
+    // B5-3: lỗi gắn vào đúng ô URL (aria-invalid + aria-describedby trỏ tới dòng lỗi), ô tên không bị đánh dấu
+    const url = ph('form.attUrlPh')!;
+    expect(url.getAttribute('aria-invalid')).toBe('true');
+    expect(document.getElementById(url.getAttribute('aria-describedby')!)!.textContent).toBe(
+      t('form.errors.attUrlInvalid')
+    );
+    expect(ph('form.attNamePh')!.hasAttribute('aria-invalid')).toBe(false);
   });
 
   it('"+ Thêm" vẫn bắt nhập tên; thêm xong ô nhập được xóa', async () => {

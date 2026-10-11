@@ -2668,6 +2668,10 @@ paths:
       tags:
         - Payroll
       summary: Bảng lương giáo viên (tự tính từ điểm danh; tháng đã chốt trả bảng chụp lúc chốt)
+      description: >-
+        Mỗi dòng: teacher_id, teacher_name, sessions, per_session (đơn giá HIỆN HÀNH), total (tổng theo đơn giá hiệu lực
+        tại ngày từng buổi), avg_rate (round(total / sessions), 0 nếu không có buổi), mixed_rates (true khi
+        total ≠ sessions × per_session — có buổi tính theo đơn giá khác đơn giá hiện hành).
       parameters:
         - in: query
           name: month
@@ -3584,11 +3588,19 @@ paths:
       responses:
         '200':
           description: OK
+  /api/v1/roles/users:
+    get:
+      tags:
+        - Roles
+      summary: Nhân sự có thể gán custom role (roles.manage, trong trung tâm)
+      responses:
+        '200':
+          description: OK
   /api/v1/roles/{id}:
     get:
       tags:
         - Roles
-      summary: Chi tiết vai trò
+      summary: Chi tiết vai trò (permissions + users đang có vai trò)
       parameters:
         - in: path
           name: id
@@ -3844,7 +3856,7 @@ paths:
           required: true
           schema:
             type: string
-          description: "Tên file do server sinh (vd: hw_<uuid>.png)"
+          description: 'Tên file do server sinh (vd: hw_<uuid>.png)'
       responses:
         '200':
           description: Đã xóa

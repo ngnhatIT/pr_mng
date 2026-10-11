@@ -32,6 +32,7 @@ import './Tuition.css';
 import { ReceiptModal } from '../../shared/components/ReceiptModal';
 import { EmptyCell } from '../../shared/components/EmptyCell';
 import { getUser } from '../../shared/api/client';
+import { Tabs, tabPanelProps } from '../../shared/components/Tabs';
 
 /** ADM-15: so với ngày hôm nay theo giờ VN (không phải UTC) để 0:00-7:00 không chọn nhầm mẫu 'upcoming'. */
 export function remindKind(dueDate: string | null, today = todayVN()): 'overdue' | 'upcoming' {
@@ -54,26 +55,21 @@ export function Tuition() {
   return (
     <div className="page">
       <PageHeader title={t('title')} desc={t('desc')} />
-      <div className="tabs" role="tablist">
-        {(['invoices', 'debt', 'pending'] as const).map((k) => (
-          <button
-            key={k}
-            role="tab"
-            aria-selected={tab === k}
-            className={`tab${tab === k ? ' active' : ''}`}
-            onClick={() => switchTab(k)}
-          >
-            {t(`${k}.tab`)}
-          </button>
-        ))}
+      <Tabs
+        id="tuition"
+        tabs={(['invoices', 'debt', 'pending'] as const).map((k) => ({ key: k, label: t(`${k}.tab`) }))}
+        value={tab}
+        onChange={switchTab}
+      />
+      <div {...tabPanelProps('tuition', tab)}>
+        {tab === 'invoices' ? (
+          <InvoiceList />
+        ) : tab === 'debt' ? (
+          <DebtList />
+        ) : (
+          <PendingPayments onViewInvoices={() => switchTab('invoices')} />
+        )}
       </div>
-      {tab === 'invoices' ? (
-        <InvoiceList />
-      ) : tab === 'debt' ? (
-        <DebtList />
-      ) : (
-        <PendingPayments onViewInvoices={() => switchTab('invoices')} />
-      )}
     </div>
   );
 }
@@ -128,7 +124,7 @@ function PendingPayments({ onViewInvoices }: { onViewInvoices: () => void }) {
         />
       ) : (
         <div className="table-wrap sticky" aria-busy={loading || undefined}>
-          <table className="table">
+          <table className="table table-stack">
             <thead>
               <tr>
                 <th scope="col">{t('pending.table.student')}</th>
@@ -147,10 +143,14 @@ function PendingPayments({ onViewInvoices }: { onViewInvoices: () => void }) {
                   <td>
                     {p.student_name} <span className="muted mono">({p.student_code})</span>
                   </td>
-                  <td className="num">{formatVND(p.amount)}</td>
-                  <td>{paymentMethodLabel(p.method, (k) => t(k)) || t('pending.defaultMethod')}</td>
-                  <td>{formatDate(p.paid_at)}</td>
-                  <td>{p.note || <EmptyCell />}</td>
+                  <td data-label={t('pending.table.amount')} className="num">
+                    {formatVND(p.amount)}
+                  </td>
+                  <td data-label={t('pending.table.method')}>
+                    {paymentMethodLabel(p.method, (k) => t(k)) || t('pending.defaultMethod')}
+                  </td>
+                  <td data-label={t('pending.table.reportedAt')}>{formatDate(p.paid_at)}</td>
+                  <td data-label={t('pending.table.note')}>{p.note || <EmptyCell />}</td>
                   <td className="td-right">
                     {canApprove && (
                       <span className="tuition-actions">
@@ -341,7 +341,7 @@ function InvoiceList() {
         />
       ) : (
         <div className="table-wrap sticky" aria-busy={loading || undefined}>
-          <table className="table">
+          <table className="table table-stack">
             <thead>
               <tr>
                 <th scope="col">{t('invoice.table.student')}</th>
@@ -373,12 +373,18 @@ function InvoiceList() {
                       </Link>{' '}
                       {inv.student_name} <span className="muted mono">({inv.student_code})</span>
                     </td>
-                    <td>{inv.class_name || <EmptyCell />}</td>
-                    <td className="num">{formatVND(inv.amount)}</td>
-                    <td className="num">{formatVND(paid)}</td>
-                    <td className="num debt-amount">{formatVND(remainingOf(inv))}</td>
-                    <td>{formatDate(inv.due_date)}</td>
-                    <td>
+                    <td data-label={t('invoice.table.class')}>{inv.class_name || <EmptyCell />}</td>
+                    <td data-label={t('invoice.table.amount')} className="num">
+                      {formatVND(inv.amount)}
+                    </td>
+                    <td data-label={t('invoice.table.paid')} className="num">
+                      {formatVND(paid)}
+                    </td>
+                    <td data-label={t('invoice.table.debt')} className="num debt-amount">
+                      {formatVND(remainingOf(inv))}
+                    </td>
+                    <td data-label={t('invoice.table.dueDate')}>{formatDate(inv.due_date)}</td>
+                    <td data-label={t('invoice.table.status')}>
                       <span className={`badge badge-${inv.status}`}>{t(`invoiceStatus.${inv.status}`)}</span>
                     </td>
                     <td className="td-right nowrap">
@@ -1030,7 +1036,7 @@ function DebtList() {
         <EmptyState icon="check-circle" title={t('debt.emptyTitle')} desc={t('debt.emptyDesc')} />
       ) : (
         <div className="table-wrap sticky" aria-busy={loading || undefined}>
-          <table className="table">
+          <table className="table table-stack">
             <thead>
               <tr>
                 <th scope="col">{t('debt.table.student')}</th>
@@ -1055,10 +1061,16 @@ function DebtList() {
                   <td>
                     {d.name} <span className="muted mono">({d.code})</span>
                   </td>
-                  <td>{d.phone || <EmptyCell />}</td>
-                  <td className="num">{formatVND(d.total)}</td>
-                  <td className="num">{formatVND(d.paid)}</td>
-                  <td className="num debt-amount">{formatVND(d.debt)}</td>
+                  <td data-label={t('debt.table.phone')}>{d.phone || <EmptyCell />}</td>
+                  <td data-label={t('debt.table.total')} className="num">
+                    {formatVND(d.total)}
+                  </td>
+                  <td data-label={t('debt.table.paid')} className="num">
+                    {formatVND(d.paid)}
+                  </td>
+                  <td data-label={t('debt.table.debt')} className="num debt-amount">
+                    {formatVND(d.debt)}
+                  </td>
                   <td className="td-right">
                     <button
                       className="btn btn-sm"

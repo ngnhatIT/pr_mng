@@ -51,6 +51,8 @@ describe('PasswordChangeGate', () => {
     await renderAt('/app');
     expect(await dialog()).not.toBeNull();
     expect(document.querySelector('.modal-close')).toBeNull();
+    // B5-3: focus ngay ô mật khẩu hiện tại
+    expect(document.activeElement).toBe(document.querySelector('input[autocomplete="current-password"]'));
   });
 
   it('event 403 từ api() mở form ngay trên trang đang đứng', async () => {

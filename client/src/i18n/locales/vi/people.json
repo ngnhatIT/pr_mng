@@ -48,7 +48,8 @@
     },
     "title": "Lương giáo viên",
     "totalSpent": "Tổng chi",
-    "viewAttendance": "Ghi nhận buổi dạy"
+    "viewAttendance": "Ghi nhận buổi dạy",
+    "mixedRate": "Đơn giá đổi trong tháng, bình quân {{avg}}/buổi"
   },
   "rate": {
     "title": "Đơn giá dạy - {{name}}",

@@ -1,7 +1,18 @@
 // @vitest-environment happy-dom
 import { describe, it, expect, afterEach } from 'vitest';
 import i18n from '../../i18n';
-import { $, $$, byText, cleanup, click, json, mockFetch, renderPage, type Call } from '../../test-utils';
+import {
+  $,
+  $$,
+  byText,
+  cleanup,
+  click,
+  json,
+  mockFetch,
+  renderPage,
+  type,
+  type Call,
+} from '../../test-utils';
 import { setAuth } from '../../shared/api/client';
 import { Roles } from './Roles';
 
@@ -99,5 +110,59 @@ describe('Roles', () => {
     await click($$('[role="dialog"] .modal-actions .btn').at(-1)!);
     expect(writes(calls)).toEqual([expect.objectContaining({ method: 'DELETE', path: '/roles/2' })]);
     expect(calls.filter((c) => c.method === 'GET' && c.path === '/roles')).toHaveLength(2);
+  });
+
+  it('B5-1: gán / gỡ người dùng cho vai trò; lỗi 403 của server hiện nguyên văn', async () => {
+    const lan = { id: 5, name: 'Lan', username: 'lan', role: 'staff' };
+    const minh = { id: 6, name: 'Minh', username: 'minh', role: 'teacher' };
+    let members = [lan];
+    let denyRemove = true;
+    const calls = setup({
+      'GET /roles/me/permissions': [{ code: 'roles.manage', scope: 'center' }],
+      'GET /roles/users': [lan, minh],
+      'GET /roles/2': () => ({ ...role(2, 'KeToan', false), permissions: [], users: members }),
+      'POST /roles/assign': () => {
+        members = [lan, minh];
+        return { ok: true };
+      },
+      'DELETE /roles/assign': () => {
+        if (denyRemove) return json(403, { error: 'Vai trò mạnh hơn quyền của bạn', code: 'FORBIDDEN' });
+        members = [minh];
+        return { ok: true };
+      },
+    });
+    setAuth('roles-members', { id: 1, username: 'a', role: 'admin', name: 'A' });
+    await renderPage(<Roles />);
+    await click(byText('KeToan'));
+    const names = () => $$('.role-members .perm-name').map((e) => e.textContent);
+    expect(names()).toEqual(['Lan']);
+    const select = $<HTMLSelectElement>(`.role-members select`)!;
+    expect([...select.options].map((o) => o.value)).toEqual(['', '6']); // Lan đã có -> không nằm trong danh sách chọn
+
+    await type(select, '6');
+    await click(byText(t('members.add')));
+    expect(writes(calls).at(-1)).toMatchObject({
+      method: 'POST',
+      path: '/roles/assign',
+      body: { user_id: 6, role_id: 2 },
+    });
+    expect(names()).toEqual(['Lan', 'Minh']);
+    expect($('.toast-success')!.textContent).toBe(t('members.assigned', { name: 'Minh' }));
+    expect(calls.filter((c) => c.method === 'GET' && c.path === '/roles')).toHaveLength(2); // user_count mới
+
+    const removeLan = $(`[aria-label="${t('members.removeAria', { name: 'Lan' })}"]`);
+    await click(removeLan);
+    expect($('[role="dialog"]')!.textContent).toContain(t('members.confirmTitle'));
+    await click(byText(t('members.confirmLabel'), '[role="dialog"] button'));
+    const del = writes(calls).at(-1)!;
+    expect(del).toMatchObject({ method: 'DELETE', path: '/roles/assign' });
+    expect(Object.fromEntries(del.query)).toEqual({ user_id: '5', role_id: '2' });
+    expect($('.toast-error')!.textContent).toContain('Vai trò mạnh hơn quyền của bạn');
+    expect(names()).toEqual(['Lan', 'Minh']);
+
+    denyRemove = false;
+    await click(byText(t('members.confirmLabel'), '[role="dialog"] button'));
+    expect($('[role="dialog"]')).toBeNull();
+    expect(names()).toEqual(['Minh']);
   });
 });

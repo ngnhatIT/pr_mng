@@ -98,6 +98,8 @@ export function ChangePasswordModal({ onClose, forced }: Props) {
               }}
               required
               autoComplete="current-password"
+              // B5-3: bị buộc đổi mật khẩu thì đây là việc duy nhất -> focus ngay ô đầu (kể cả màn cảm ứng)
+              autoFocus={forced}
             />
           </Field>
           <Field label={t('changePassword.new')} required error={errors.new}>

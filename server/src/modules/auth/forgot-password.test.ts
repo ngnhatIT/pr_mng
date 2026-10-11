@@ -696,6 +696,25 @@ describe('quên mật khẩu qua admin', () => {
     assert.notEqual((bad.body as { code: string }).code, 'VALIDATION_ID');
   });
 
+  it('B5-1: GET /roles/users chỉ nhân sự trung tâm mình; GET /roles/:id kèm danh sách thành viên', async () => {
+    await addUser(46, 'nv46', 'staff');
+    const adminToken = await login('admin');
+    const roleId = await grantRole(adminToken, 46, 'sv46', [{ code: 'students.view', scope: 'center' }]);
+    const users = await request('GET', '/api/v1/roles/users', auth(adminToken));
+    assert.equal(users.status, 200, JSON.stringify(users.body));
+    const names = (users.body as { username: string }[]).map((u) => u.username);
+    assert.ok(names.includes('nv46') && names.includes('admin'));
+    assert.ok(!names.includes('adminb'), 'không lộ nhân sự trung tâm khác');
+    const detail = await request('GET', `/api/v1/roles/${roleId}`, auth(adminToken));
+    assert.equal(detail.status, 200);
+    assert.deepEqual(
+      (detail.body as { users: { username: string }[] }).users.map((u) => u.username),
+      ['nv46']
+    );
+    // Thiếu roles.manage -> 403
+    assert.equal((await request('GET', '/api/v1/roles/users', auth(await login('nv46')))).status, 403);
+  });
+
   it('B4-6: token có tv MỚI hơn cache (đổi ở instance khác) -> đọc lại DB, không 401; token cũ hơn -> 401', async () => {
     await addUser(45, 'nv45', 'staff');
     const li = await request('POST', '/api/v1/auth/login', {}, { username: 'nv45', password: ADMIN_PASS });

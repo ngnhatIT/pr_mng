@@ -345,8 +345,12 @@ export interface PayrollRow {
   teacher_id: number;
   teacher_name: string;
   sessions: number;
+  /** Đơn giá hiện hành (buổi cũ có thể tính theo đơn giá lịch sử). */
   per_session: number;
   total: number;
+  /** N5-3: total / sessions; mixed_rates = có buổi tính theo đơn giá khác per_session. */
+  avg_rate?: number;
+  mixed_rates?: boolean;
 }
 
 export interface TrialItem {

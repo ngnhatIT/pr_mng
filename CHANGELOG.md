@@ -1,5 +1,32 @@
 # Changelog — EduCenterPro
 
+## 2026-10-11 — Review fixes, vòng 6
+
+Không có migration mới (vẫn v25).
+
+### Tính đúng đắn / vận hành
+
+- Boot DDL: `COMMENT` của view/function giờ lưu `boot-ddl:<hash câu lệnh>:<md5 định nghĩa>`; boot chỉ bỏ qua khi CẢ HAI
+  khớp. Trước đây code cũ (sau rollback) hay hotfix psql `CREATE OR REPLACE` thân cũ mà giữ nguyên COMMENT thì bản mới
+  bỏ qua, trigger audit tiền (`audit_payment`/`audit_invoice`) mất `changed_by_role`. Lần boot đầu sau nâng cấp tạo lại
+  5 object một lần (tag cũ không có md5).
+- `scripts/migrate-down.ts` xóa tag `boot-ddl:` sau khi rollback (lớp phòng thứ hai; DEPLOYMENT.md "Rollback").
+- Chốt tháng lương chụp bảng lương trên chính transaction đang giữ lock, không mượn thêm connection từ pool (pool cạn
+  vì writer xếp hàng sau lock không còn làm chốt lỗi 500).
+- `GET /payroll` và `GET /teacher/payroll` thêm `avg_rate` (round(total / sessions)) và `mixed_rates` (total ≠
+  sessions × per_session). `per_session` vẫn là đơn giá hiện hành — UI dùng 2 trường mới để không đặt đơn giá hiện
+  hành cạnh tổng tính theo đơn giá lịch sử. Tương thích ngược (chỉ thêm trường).
+- `GET /roles/users` và `members` trong `GET /roles/:id`.
+
+### UI/UX (client)
+
+- Phân quyền: mục "Người dùng có vai trò này" trong chi tiết role — gán/gỡ người dùng (có xác nhận), lỗi 403 hiện nguyên văn.
+- Component `Tabs` chung theo WAI-ARIA (←/→/Home/End) cho Học phí, Bài tập, Đánh giá, chi tiết con; tab con lưu `?tab=`.
+- Bảng danh sách ≤600px hiển thị dạng thẻ (`.table-stack` + `data-label`), hết cuộn ngang ~1250px trên điện thoại.
+- Lỗi đính kèm gắn đúng ô (`aria-invalid` + `aria-describedby`); Điểm danh có "Thử lại"; Lương ẩn tổng chi khi tải lỗi.
+- Tiêu đề tab không mất khi đổi ngôn ngữ; lương hiện "bình quân/buổi" khi đơn giá đổi trong tháng.
+- Client 160 test, coverage 37,7% (ngưỡng CI 37/36/33/31).
+
 ## 2026-10-11 — Review fixes, vòng 5
 
 Không có migration mới (vẫn v25).
@@ -7,7 +34,7 @@ Không có migration mới (vẫn v25).
 ### Tính đúng đắn / bảo mật
 
 - `DELETE /roles/assign` gỡ được vai trò khỏi người dùng. Trước đây route bị `DELETE /roles/:id` nuốt (luôn 400
-  `VALIDATION_ID`) nên nút "Gỡ vai trò" không bao giờ chạy. Test mới duyệt mọi route của app và báo route nào bị route
+  `VALIDATION_ID`) nên API gỡ vai trò không bao giờ chạy (giao diện gán/gỡ có từ vòng 6). Test mới duyệt mọi route của app và báo route nào bị route
   đăng ký trước nuốt mất (`app.routes.test.ts`).
 - Người được ủy quyền `roles.manage` không đổi được tên/mô tả của role chứa quyền mà mình không có (403, cùng kiểm tra
   như sửa quyền/xóa role).
@@ -28,6 +55,7 @@ Không có migration mới (vẫn v25).
   giá — nâng cấp lại thì đơn giá áp ngược cho tháng cũ).
 
 ### UI/UX (client)
+
 - Link đính kèm đã gõ nhưng chưa bấm "+ Thêm" được tự thêm khi lưu (URL sai → báo lỗi tại chỗ).
 - Sau đăng nhập chỉ theo deep link thuộc đúng cổng của vai trò; trang giáo viên có lề ở màn hình hẹp.
 - Không toast cho phiên hết hạn / bắt đổi mật khẩu (đã có UI riêng); gộp toast trùng trong 2 giây.

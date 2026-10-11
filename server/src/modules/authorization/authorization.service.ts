@@ -321,9 +321,36 @@ async function rolePermissions(
     .all(roleId)) as { code: string; name: string; module: string; scope: Scope }[];
 }
 
+export interface RoleMember {
+  id: number;
+  name: string;
+  username: string;
+  role: string;
+}
+
 export async function getRoleDetail(cid: number | null, id: number): Promise<Record<string, unknown>> {
   const role = await getVisibleRole(cid, id);
-  return { ...role, permissions: await rolePermissions(id) };
+  // Role hệ thống dùng chung: chỉ liệt kê thành viên thuộc trung tâm đang xem (superadmin: tất cả)
+  const users = (await db
+    .prepare(
+      `SELECT u.id, u.name, u.username, u.role
+       FROM user_roles ur JOIN users u ON u.id = ur.user_id
+       WHERE ur.role_id = ? AND (?::int IS NULL OR u.center_id = ?)
+       ORDER BY u.name`
+    )
+    .all(id, cid, cid)) as RoleMember[];
+  return { ...role, permissions: await rolePermissions(id), users };
+}
+
+/** Nhân sự (không phải superadmin) có thể được gán custom role — trong trung tâm cid (superadmin: tất cả). */
+export async function listAssignableUsers(cid: number | null): Promise<RoleMember[]> {
+  return (await db
+    .prepare(
+      `SELECT id, name, username, role FROM users
+       WHERE role <> 'superadmin' AND is_active AND (?::int IS NULL OR center_id = ?)
+       ORDER BY name`
+    )
+    .all(cid, cid)) as RoleMember[];
 }
 
 export async function createRole(

@@ -100,7 +100,7 @@ export function Teachers() {
         />
       ) : (
         <div className="table-wrap sticky" aria-busy={loading || undefined}>
-          <table className="table">
+          <table className="table table-stack">
             <thead>
               <tr>
                 <th scope="col">{t('table.name')}</th>
@@ -126,10 +126,12 @@ export function Teachers() {
                       </Link>
                     </span>
                   </td>
-                  <td>{tch.subject || <EmptyCell />}</td>
-                  <td>{tch.phone || <EmptyCell />}</td>
-                  <td>{tch.email || <EmptyCell />}</td>
-                  <td className="num">{tch.class_count ?? 0}</td>
+                  <td data-label={t('table.subject')}>{tch.subject || <EmptyCell />}</td>
+                  <td data-label={t('table.phone')}>{tch.phone || <EmptyCell />}</td>
+                  <td data-label={t('table.email')}>{tch.email || <EmptyCell />}</td>
+                  <td data-label={t('table.classes')} className="num">
+                    {tch.class_count ?? 0}
+                  </td>
                   <td className="td-right">
                     <span className="row-actions">
                       {perms.has('teachers.update') && (

@@ -124,4 +124,20 @@ describe('Attendance', () => {
     expect(post(calls).at(-1)!.body).toEqual({ topic: 'Unit 2' });
     expect($('.att-savebar [role="alert"]')).toBeNull();
   });
+
+  it('B5-5: tải danh sách lớp lỗi -> LoadError, "Thử lại" tải lại được', async () => {
+    let fail = true;
+    const classes = {
+      data: [{ id: 1, name: 'A1', status: 'active' }],
+      pagination: { page: 1, limit: 100, total: 1, totalPages: 1 },
+    };
+    setup([], { 'GET /classes': () => (fail ? json(500, { error: 'x' }) : classes) });
+    await render();
+    const retry = byText(String(i18n.t('actions.retry', { ns: 'common' })));
+    expect($$('select')[0].querySelectorAll('option')).toHaveLength(1);
+    fail = false;
+    await click(retry);
+    expect($$('select')[0].querySelectorAll('option')).toHaveLength(2);
+    expect(document.body.textContent).not.toContain(String(i18n.t('actions.retry', { ns: 'common' })));
+  });
 });

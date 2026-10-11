@@ -464,3 +464,23 @@
   font-size: 13px;
   color: var(--text-muted);
 }
+
+/* B5-1: người dùng có vai trò này */
+.role-members h3 {
+  margin: 0;
+}
+.role-members > p {
+  margin: 0;
+  padding: var(--sp-3) var(--sp-4);
+}
+.role-members-add {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+  padding: var(--sp-3) var(--sp-4);
+  border-top: 1px solid var(--border);
+}
+.role-members-add select {
+  flex: 1 1 200px;
+  min-width: 0;
+}

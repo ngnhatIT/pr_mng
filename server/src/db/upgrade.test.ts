@@ -13,7 +13,7 @@ process.env.DATABASE_URL =
 
 import { describe, it, before, after } from 'node:test';
 import assert from 'node:assert/strict';
-import { db, type Db, type Tx } from './pg-compat';
+import { db, requestActor, type Db, type Tx } from './pg-compat';
 import { runMigrations, MIGRATIONS, bootDdlDb } from './migrations';
 import { createSchema, createTriggers, createHistoryTables, createViews } from './schema';
 import { createIndexes } from './indexes';
@@ -197,13 +197,66 @@ describe('migrations PostgreSQL', () => {
       assert.ok(ran.some((s) => /CREATE OR REPLACE FUNCTION audit_payment\(\)/.test(s)));
       assert.ok(!ran.some((s) => /CREATE OR REPLACE FUNCTION maintain_row\(\)/.test(s)), 'chỉ object đổi');
       const c = await db.query("SELECT obj_description('v_invoice_balance'::regclass, 'pg_class') AS d");
-      assert.match((c.rows[0] as { d: string }).d, /^boot-ddl:[0-9a-f]{16}$/);
+      assert.match((c.rows[0] as { d: string }).d, /^boot-ddl:[0-9a-f]{16}:[0-9a-f]{32}$/);
     } finally {
       await holder.query('ROLLBACK').catch(() => undefined);
       if (prev === undefined) delete process.env.MIGRATION_LOCK_TIMEOUT;
       else process.env.MIGRATION_LOCK_TIMEOUT = prev;
       await holder.end();
     }
+  });
+
+  it('N5-1: code cũ CREATE OR REPLACE thân cũ (COMMENT giữ nguyên) -> boot vẫn khôi phục thân mới', async () => {
+    const bootDdl = async () => {
+      const ddl = bootDdlDb(db as never);
+      await createSchema(ddl);
+      await createIndexes(ddl);
+      await createTriggers(ddl);
+      await createHistoryTables(ddl);
+      await createViews(ddl);
+    };
+    await bootDdl(); // gắn tag
+    const comment = async () =>
+      (
+        (await db.query("SELECT obj_description('audit_payment()'::regprocedure, 'pg_proc') AS d"))
+          .rows[0] as {
+          d: string;
+        }
+      ).d;
+    const tagged = await comment();
+    // Như bản 6e09f1e: thân không có changed_by_role, không đụng COMMENT
+    await db.exec(`CREATE OR REPLACE FUNCTION audit_payment() RETURNS TRIGGER AS $$
+      BEGIN
+        INSERT INTO payment_history (payment_id, action, new_data) VALUES (NEW.id, lower(TG_OP), row_to_json(NEW)::text);
+        RETURN NEW;
+      END $$ LANGUAGE plpgsql`);
+    assert.equal(await comment(), tagged, 'CREATE OR REPLACE giữ COMMENT — đúng kịch bản lỗi');
+    await bootDdl();
+    const src = await db.query("SELECT prosrc FROM pg_proc WHERE proname = 'audit_payment'");
+    assert.match((src.rows[0] as { prosrc: string }).prosrc, /changed_by_role/);
+
+    const ctr = Number(
+      (await db.prepare("INSERT INTO centers (name) VALUES ('TT N5-1')").run()).lastInsertRowid
+    );
+    const st = Number(
+      (await db.prepare("INSERT INTO students (code, name, center_id) VALUES ('N51', 'A', ?)").run(ctr))
+        .lastInsertRowid
+    );
+    const inv = Number(
+      (
+        await db
+          .prepare('INSERT INTO invoices (student_id, amount, center_id) VALUES (?, 1000, ?)')
+          .run(st, ctr)
+      ).lastInsertRowid
+    );
+    const pid = await requestActor.run('9:admin', async () =>
+      Number(
+        (await db.prepare('INSERT INTO payments (invoice_id, amount) VALUES (?, 1000)').run(inv))
+          .lastInsertRowid
+      )
+    );
+    const h = await db.prepare('SELECT changed_by_role FROM payment_history WHERE payment_id = ?').get(pid);
+    assert.deepEqual(h, { changed_by_role: 'admin' });
   });
 
   describe('migration v19 - submissions unique (P1-6)', () => {

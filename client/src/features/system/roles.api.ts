@@ -26,8 +26,18 @@ export interface Role {
   user_count: number;
 }
 
+/** Tài khoản nhân sự (thành viên của vai trò / ứng viên để gán). */
+export interface RoleUser {
+  id: number;
+  name: string;
+  username: string;
+  role: string;
+}
+
 export interface RoleDetail extends Role {
   permissions: { code: string; name: string; module: string; scope: Scope }[];
+  /** Người dùng đang được gán vai trò này (user_roles). */
+  users?: RoleUser[];
 }
 
 export interface MyPermission {
@@ -62,6 +72,8 @@ export const rolesApi = {
   remove: (id: number) => http.del<{ ok: boolean }>(`/roles/${id}`),
   setPermissions: (id: number, permissions: { code: string; scope: Scope }[]) =>
     http.put<{ ok: boolean; count: number }>(`/roles/${id}/permissions`, { permissions }),
+  /** Tài khoản nhân sự của trung tâm có thể gán vai trò (cần roles.manage). */
+  users: () => http.get<RoleUser[]>('/roles/users'),
   assign: (user_id: number, role_id: number) =>
     http.post<{ ok: boolean }>('/roles/assign', { user_id, role_id }),
   unassign: (user_id: number, role_id: number) =>

@@ -176,7 +176,7 @@ export function Students() {
         />
       ) : (
         <div className="table-wrap sticky" aria-busy={loading || undefined}>
-          <table className="table">
+          <table className="table table-stack">
             <thead>
               <tr>
                 <th scope="col">{t('table.code')}</th>
@@ -191,7 +191,9 @@ export function Students() {
             <tbody>
               {students.map((s) => (
                 <tr key={s.id}>
-                  <td className="mono">{s.code}</td>
+                  <td data-label={t('table.code')} className="mono">
+                    {s.code}
+                  </td>
                   <td>
                     <span className="name-cell">
                       <span className="avatar avatar-sm" aria-hidden="true">
@@ -202,8 +204,8 @@ export function Students() {
                       </Link>
                     </span>
                   </td>
-                  <td>{s.phone || <EmptyCell />}</td>
-                  <td>
+                  <td data-label={t('table.phone')}>{s.phone || <EmptyCell />}</td>
+                  <td data-label={t('table.status')}>
                     <span className={`badge badge-${s.status}`}>{t(`status.${s.status}`)}</span>
                   </td>
                   <td className="td-right">

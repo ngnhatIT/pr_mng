@@ -114,7 +114,7 @@ export function Trials() {
         />
       ) : (
         <div className="table-wrap sticky" aria-busy={loading || undefined}>
-          <table className="table">
+          <table className="table table-stack">
             <thead>
               <tr>
                 <th scope="col">{t('trials.col.name')}</th>
@@ -132,11 +132,13 @@ export function Trials() {
               {trials.map((tr) => (
                 <tr key={tr.id}>
                   <td>{tr.name}</td>
-                  <td>{tr.phone}</td>
-                  <td>{tr.class_name || <EmptyCell />}</td>
-                  <td>{formatDate(tr.desired_date)}</td>
-                  <td className="mono">{tr.referral_code || <EmptyCell />}</td>
-                  <td>
+                  <td data-label={t('trials.col.phone')}>{tr.phone}</td>
+                  <td data-label={t('trials.col.desiredClass')}>{tr.class_name || <EmptyCell />}</td>
+                  <td data-label={t('trials.col.desiredDate')}>{formatDate(tr.desired_date)}</td>
+                  <td data-label={t('trials.col.referral')} className="mono">
+                    {tr.referral_code || <EmptyCell />}
+                  </td>
+                  <td data-label={t('trials.col.status')}>
                     <span className={`badge badge-${tr.status} trial-badge`}>{statusLabel(tr.status)}</span>
                   </td>
                   <td className="td-right">

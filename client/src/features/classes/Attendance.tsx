@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams, useLocation, Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { classesApi, sessionsApi, ClassItem, SessionItem, AttendanceRow } from './classes.api';
@@ -8,7 +8,8 @@ import { toastApiError, useToast } from '../../shared/ui/toast';
 import { Modal, ConfirmDialog } from '../../shared/components/Modal';
 import { Field, useFieldErrors } from '../../shared/components/Form';
 import { PageHeader } from '../../shared/components/PageHeader';
-import { EmptyState } from '../../shared/components/EmptyState';
+import { EmptyState, LoadError } from '../../shared/components/EmptyState';
+import { useLoad } from '../../shared/hooks/useLoad';
 import { Skeleton } from '../../shared/components/Skeleton';
 import { Icon } from '../../shared/components/icons';
 import './Attendance.css';
@@ -24,7 +25,6 @@ export function Attendance() {
   // Trang điểm danh dùng chung cho portal giáo viên (/teacher) và quản trị (/app):
   // route /app/classes chỉ tồn tại ở layout quản trị nên ẩn link này với giáo viên
   const isTeacherPortal = location.pathname.startsWith('/teacher');
-  const [classes, setClasses] = useState<ClassItem[]>([]);
   const [sessions, setSessions] = useState<SessionItem[]>([]);
   const [rows, setRows] = useState<AttendanceRow[]>([]);
   const [topic, setTopic] = useState('');
@@ -47,12 +47,20 @@ export function Attendance() {
   const sessionRef = useRef(sessionId);
   const toast = useToast();
 
+  // ADM-6: server chặn limit tối đa 100 -> tải đủ mọi trang để dropdown thấy hết lớp.
+  // B5-5: lỗi -> LoadError có "Thử lại" (trước chỉ toast, dropdown trống không cách nào tải lại)
+  const {
+    data: allClasses,
+    error: classesError,
+    reload: reloadClasses,
+  } = useLoad(() => fetchAllPages((p) => classesApi.list('', p)), []);
+  const classes = useMemo<ClassItem[]>(
+    () => (allClasses ?? []).filter((x) => x.status === 'active'),
+    [allClasses]
+  );
   useEffect(() => {
-    // ADM-6: server chặn limit tối đa 100 -> tải đủ mọi trang để dropdown thấy hết lớp
-    fetchAllPages((p) => classesApi.list('', p))
-      .then((all) => setClasses(all.filter((x) => x.status === 'active')))
-      .catch((err: unknown) => toastApiError(toast, err, t('states.loadError', { ns: 'common' })));
-  }, [toast]);
+    if (classesError) toastApiError(toast, classesError, t('states.loadError', { ns: 'common' }));
+  }, [classesError, toast, t]);
 
   const loadSessions = useCallback(
     async (cid: string) => {
@@ -289,6 +297,8 @@ export function Attendance() {
           </span>
         )}
       </div>
+
+      {!!classesError && !allClasses && <LoadError onRetry={reloadClasses} />}
 
       {sessionId ? (
         <>

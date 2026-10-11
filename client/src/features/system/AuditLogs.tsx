@@ -105,7 +105,7 @@ export function AuditLogs() {
         <EmptyState icon="shield" title={t('audit.empty.title')} desc={t('audit.empty.desc')} />
       ) : (
         <div className="table-wrap sticky" aria-busy={loading || undefined}>
-          <table className="table">
+          <table className="table table-stack">
             <thead>
               <tr>
                 <th scope="col">{t('audit.col.time')}</th>
@@ -117,17 +117,19 @@ export function AuditLogs() {
             <tbody>
               {logs.map((l) => (
                 <tr key={l.id}>
-                  <td className="mono nowrap">{formatDateTime(l.created_at)}</td>
+                  <td data-label={t('audit.col.time')} className="mono nowrap">
+                    {formatDateTime(l.created_at)}
+                  </td>
                   <td>
                     <span className="audit-actor">{l.actor_name || <EmptyCell />}</span>
                     {l.actor_role && <span className="muted"> ({l.actor_role})</span>}
                   </td>
-                  <td>
+                  <td data-label={t('audit.col.action')}>
                     <span className={`badge ${actionBadge(l.action)}`}>
                       {t(`audit.action.${l.action}`, { defaultValue: l.action })}
                     </span>
                   </td>
-                  <td className="audit-detail" title={l.summary}>
+                  <td data-label={t('audit.col.detail')} className="audit-detail" title={l.summary}>
                     {l.summary}
                   </td>
                 </tr>

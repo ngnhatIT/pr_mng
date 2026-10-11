@@ -106,7 +106,7 @@ export function ResetRequestsSection() {
         <EmptyState icon="key" title={t('reset.empty')} />
       ) : (
         <div className="table-wrap">
-          <table className="table">
+          <table className="table table-stack">
             <thead>
               <tr>
                 <th scope="col">{t('reset.identifier')}</th>
@@ -121,8 +121,10 @@ export function ResetRequestsSection() {
               {pending.map((r) => (
                 <tr key={r.id}>
                   <td>{r.identifier}</td>
-                  <td>{r.kind === 'staff' ? t('reset.kindStaff') : t('reset.kindParent')}</td>
-                  <td>{formatDateTime(r.created_at)}</td>
+                  <td data-label={t('reset.kind')}>
+                    {r.kind === 'staff' ? t('reset.kindStaff') : t('reset.kindParent')}
+                  </td>
+                  <td data-label={t('reset.requestedAt')}>{formatDateTime(r.created_at)}</td>
                   <td>
                     <button type="button" className="btn btn-sm btn-inline" onClick={() => setProcessing(r)}>
                       <Icon name="key" size={14} />

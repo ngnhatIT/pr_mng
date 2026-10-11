@@ -11,6 +11,7 @@ import { EmptyState, LoadError } from '../../shared/components/EmptyState';
 import { TableSkeleton } from '../../shared/components/Skeleton';
 import { Pagination } from '../../shared/components/Pagination';
 import { Icon } from '../../shared/components/icons';
+import { Tabs, tabPanelProps } from '../../shared/components/Tabs';
 import { HomeworkItem, formatDate, todayVN } from '../../shared/types';
 import { useLoad } from '../../shared/hooks/useLoad';
 import { useUrlSearch, useUrlState } from '../../shared/hooks/useUrlState';
@@ -251,240 +252,238 @@ export function Homework() {
         </div>
       )}
 
-      <div className="tabs hw-tabs">
-        {tabs.map((tab) => (
-          <button
-            key={tab.id}
-            className={`tab ${statusTab === tab.id ? 'active' : ''}`}
-            onClick={() => setQ({ status: tab.id, page: '1' })}
-          >
-            {tab.label}
-          </button>
-        ))}
-      </div>
+      <Tabs
+        id="hw"
+        className="hw-tabs"
+        tabs={tabs.map((tb) => ({ key: tb.id, label: tb.label }))}
+        value={statusTab}
+        onChange={(status) => setQ({ status, page: '1' })}
+      />
 
-      <div className="toolbar hw-toolbar">
-        <span className={`search-wrap${search ? ' has-clear' : ''}`}>
-          <span className="search-icon">
-            <Icon name="search" size={15} />
+      <div {...tabPanelProps('hw', statusTab)}>
+        <div className="toolbar hw-toolbar">
+          <span className={`search-wrap${search ? ' has-clear' : ''}`}>
+            <span className="search-icon">
+              <Icon name="search" size={15} />
+            </span>
+            <input
+              className="text-input search-input"
+              aria-label={t('filters.searchPlaceholder')}
+              placeholder={t('filters.searchPlaceholder')}
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+            {search !== '' &&
+              (loading || search !== debouncedSearch ? (
+                <span className="search-clear" aria-hidden="true">
+                  <span className="spinner spinner-dark" />
+                </span>
+              ) : (
+                <button
+                  type="button"
+                  className="search-clear"
+                  onClick={() => setSearch('')}
+                  aria-label={t('filters.clearSearch')}
+                >
+                  <Icon name="x" size={14} />
+                </button>
+              ))}
           </span>
-          <input
-            className="text-input search-input"
-            aria-label={t('filters.searchPlaceholder')}
-            placeholder={t('filters.searchPlaceholder')}
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-          {search !== '' &&
-            (loading || search !== debouncedSearch ? (
-              <span className="search-clear" aria-hidden="true">
-                <span className="spinner spinner-dark" />
-              </span>
-            ) : (
-              <button
-                type="button"
-                className="search-clear"
-                onClick={() => setSearch('')}
-                aria-label={t('filters.clearSearch')}
-              >
-                <Icon name="x" size={14} />
-              </button>
+          <select
+            aria-label={t('filters.classFilterLabel')}
+            className="text-input"
+            value={q.class_id}
+            onChange={(e) => setFilter({ class_id: e.target.value })}
+          >
+            <option value="">{t('filters.allClasses')}</option>
+            {classes.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+              </option>
             ))}
-        </span>
-        <select
-          aria-label={t('filters.classFilterLabel')}
-          className="text-input"
-          value={q.class_id}
-          onChange={(e) => setFilter({ class_id: e.target.value })}
-        >
-          <option value="">{t('filters.allClasses')}</option>
-          {classes.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.name}
-            </option>
-          ))}
-        </select>
-        <select
-          aria-label={t('filters.kindFilterLabel')}
-          className="text-input"
-          value={q.kind}
-          onChange={(e) => setFilter({ kind: e.target.value })}
-        >
-          <option value="">{t('filters.allKinds')}</option>
-          <option value="homework">{t('filters.kindHomework')}</option>
-          <option value="quiz">{t('filters.kindQuiz')}</option>
-        </select>
-        <select
-          aria-label={t('filters.dueFilterLabel')}
-          className="text-input"
-          value={q.due}
-          onChange={(e) => setFilter({ due: e.target.value })}
-        >
-          <option value="">{t('filters.allDues')}</option>
-          <option value="upcoming">{t('filters.upcoming')}</option>
-          <option value="overdue">{t('filters.overdue')}</option>
-          <option value="nodate">{t('filters.noDate')}</option>
-        </select>
-      </div>
+          </select>
+          <select
+            aria-label={t('filters.kindFilterLabel')}
+            className="text-input"
+            value={q.kind}
+            onChange={(e) => setFilter({ kind: e.target.value })}
+          >
+            <option value="">{t('filters.allKinds')}</option>
+            <option value="homework">{t('filters.kindHomework')}</option>
+            <option value="quiz">{t('filters.kindQuiz')}</option>
+          </select>
+          <select
+            aria-label={t('filters.dueFilterLabel')}
+            className="text-input"
+            value={q.due}
+            onChange={(e) => setFilter({ due: e.target.value })}
+          >
+            <option value="">{t('filters.allDues')}</option>
+            <option value="upcoming">{t('filters.upcoming')}</option>
+            <option value="overdue">{t('filters.overdue')}</option>
+            <option value="nodate">{t('filters.noDate')}</option>
+          </select>
+        </div>
 
-      <div className="card" aria-busy={loading || undefined}>
-        {loading && !data ? (
-          <TableSkeleton rows={6} cols={6} />
-        ) : error && !data ? (
-          <LoadError onRetry={load} />
-        ) : items.length === 0 ? (
-          <EmptyState
-            icon="file"
-            title={t('empty.title')}
-            desc={t('empty.desc')}
-            action={
-              <button className="btn btn-primary hw-action-icon" onClick={() => setEditing('new')}>
-                <Icon name="plus" size={15} /> {t('actions.create')}
-              </button>
-            }
-          />
-        ) : (
-          <div className="table-wrap sticky">
-            <table className="table">
-              <thead>
-                <tr>
-                  <th scope="col">{t('table.title')}</th>
-                  <th scope="col">{t('table.class')}</th>
-                  <th scope="col">{t('table.status')}</th>
-                  <th scope="col">{t('table.due')}</th>
-                  <th scope="col" className="th-right">
-                    {t('table.progress')}
-                  </th>
-                  <th scope="col" className="th-right">
-                    {t('table.actions')}
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {items.map((h) => {
-                  const due = dueStatus(h.due_date, t);
-                  const st = STATUS_BADGE[h.status] || STATUS_BADGE.published;
-                  const done = h.completed_count ?? 0;
-                  const totalStudents = h.student_count ?? 0;
-                  const pct = totalStudents > 0 ? Math.round((done / totalStudents) * 100) : 0;
-                  return (
-                    <tr key={h.id}>
-                      <td>
-                        <div className="hw-item-title">
-                          {h.kind === 'quiz' && (
-                            <span className="badge badge-plan-premium hw-quiz-badge">
-                              {t('filters.kindQuiz')}
-                            </span>
-                          )}
-                          {h.title}
-                        </div>
-                        {h.max_score != null && (
-                          <div className="muted hw-sub">{t('table.maxScore', { max: h.max_score })}</div>
-                        )}
-                      </td>
-                      <td>
-                        <span className="badge badge-general">{h.class_name}</span>
-                      </td>
-                      <td>
-                        <span className={`badge ${st.cls}`}>{st.label}</span>
-                        {h.status === 'scheduled' && h.publish_at && (
-                          <div className="muted hw-sub-sm">{formatDate(h.publish_at)}</div>
-                        )}
-                      </td>
-                      <td>
-                        {due ? (
-                          <span className={`badge ${due.badge}`}>{due.label}</span>
-                        ) : (
-                          <span className="muted">-</span>
-                        )}
-                      </td>
-                      <td className="td-right">
-                        <div className="hw-progress">
-                          <div className="hw-progress-track" aria-hidden="true">
-                            <div className="hw-progress-fill" style={{ width: `${pct}%` }} />
+        <div className="card" aria-busy={loading || undefined}>
+          {loading && !data ? (
+            <TableSkeleton rows={6} cols={6} />
+          ) : error && !data ? (
+            <LoadError onRetry={load} />
+          ) : items.length === 0 ? (
+            <EmptyState
+              icon="file"
+              title={t('empty.title')}
+              desc={t('empty.desc')}
+              action={
+                <button className="btn btn-primary hw-action-icon" onClick={() => setEditing('new')}>
+                  <Icon name="plus" size={15} /> {t('actions.create')}
+                </button>
+              }
+            />
+          ) : (
+            <div className="table-wrap sticky">
+              <table className="table table-stack">
+                <thead>
+                  <tr>
+                    <th scope="col">{t('table.title')}</th>
+                    <th scope="col">{t('table.class')}</th>
+                    <th scope="col">{t('table.status')}</th>
+                    <th scope="col">{t('table.due')}</th>
+                    <th scope="col" className="th-right">
+                      {t('table.progress')}
+                    </th>
+                    <th scope="col" className="th-right">
+                      {t('table.actions')}
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {items.map((h) => {
+                    const due = dueStatus(h.due_date, t);
+                    const st = STATUS_BADGE[h.status] || STATUS_BADGE.published;
+                    const done = h.completed_count ?? 0;
+                    const totalStudents = h.student_count ?? 0;
+                    const pct = totalStudents > 0 ? Math.round((done / totalStudents) * 100) : 0;
+                    return (
+                      <tr key={h.id}>
+                        <td>
+                          <div className="hw-item-title">
+                            {h.kind === 'quiz' && (
+                              <span className="badge badge-plan-premium hw-quiz-badge">
+                                {t('filters.kindQuiz')}
+                              </span>
+                            )}
+                            {h.title}
                           </div>
-                          <span className="num">
-                            {done}/{totalStudents}
-                          </span>
-                        </div>
-                      </td>
-                      <td className="td-right nowrap">
-                        {h.status !== 'published' ? (
-                          <button
-                            className="btn btn-sm btn-primary"
-                            onClick={() => doPublish(h)}
-                            disabled={busyId === h.id}
-                            title={t('actions.publishNow')}
-                          >
-                            {busyId === h.id && <span className="spinner" aria-hidden="true" />}
-                            {t('actions.publish')}
-                          </button>
-                        ) : (
+                          {h.max_score != null && (
+                            <div className="muted hw-sub">{t('table.maxScore', { max: h.max_score })}</div>
+                          )}
+                        </td>
+                        <td data-label={t('table.class')}>
+                          <span className="badge badge-general">{h.class_name}</span>
+                        </td>
+                        <td data-label={t('table.status')}>
+                          <span className={`badge ${st.cls}`}>{st.label}</span>
+                          {h.status === 'scheduled' && h.publish_at && (
+                            <div className="muted hw-sub-sm">{formatDate(h.publish_at)}</div>
+                          )}
+                        </td>
+                        <td data-label={t('table.due')}>
+                          {due ? (
+                            <span className={`badge ${due.badge}`}>{due.label}</span>
+                          ) : (
+                            <span className="muted">-</span>
+                          )}
+                        </td>
+                        <td data-label={t('table.progress')} className="td-right">
+                          <div className="hw-progress">
+                            <div className="hw-progress-track" aria-hidden="true">
+                              <div className="hw-progress-fill" style={{ width: `${pct}%` }} />
+                            </div>
+                            <span className="num">
+                              {done}/{totalStudents}
+                            </span>
+                          </div>
+                        </td>
+                        <td className="td-right nowrap">
+                          {h.status !== 'published' ? (
+                            <button
+                              className="btn btn-sm btn-primary"
+                              onClick={() => doPublish(h)}
+                              disabled={busyId === h.id}
+                              title={t('actions.publishNow')}
+                            >
+                              {busyId === h.id && <span className="spinner" aria-hidden="true" />}
+                              {t('actions.publish')}
+                            </button>
+                          ) : (
+                            <button
+                              className="btn btn-sm"
+                              onClick={() => doUnpublish(h)}
+                              disabled={busyId === h.id}
+                              title={t('actions.unpublishTitle')}
+                            >
+                              {t('actions.unpublish')}
+                            </button>
+                          )}{' '}
                           <button
                             className="btn btn-sm"
-                            onClick={() => doUnpublish(h)}
+                            onClick={() => doReuse(h)}
                             disabled={busyId === h.id}
-                            title={t('actions.unpublishTitle')}
+                            title={t('actions.reuseTitle')}
                           >
-                            {t('actions.unpublish')}
-                          </button>
-                        )}{' '}
-                        <button
-                          className="btn btn-sm"
-                          onClick={() => doReuse(h)}
-                          disabled={busyId === h.id}
-                          title={t('actions.reuseTitle')}
-                        >
-                          {busyId === h.id && <span className="spinner" aria-hidden="true" />}
-                          {t('actions.reuse')}
-                        </button>{' '}
-                        {h.kind === 'quiz' ? (
-                          <button className="btn btn-sm" onClick={() => setAttempts(h)}>
-                            {t('actions.viewResults')}
-                          </button>
-                        ) : (
-                          <button className="btn btn-sm" onClick={() => setGrading(h)}>
-                            {t('actions.grade')}
-                          </button>
-                        )}{' '}
-                        {h.kind === 'homework' && (
-                          <>
-                            <button className="btn btn-sm" onClick={() => setViewSubs(h)}>
-                              {t('actions.viewSubmissions')}
-                            </button>{' '}
-                          </>
-                        )}
-                        <span className="row-actions">
-                          <button
-                            type="button"
-                            className="btn btn-sm btn-ghost"
-                            onClick={() => setEditing(h)}
-                          >
-                            <Icon name="pencil" size={15} />
-                            {t('actions.edit', { ns: 'common' })}
-                          </button>
-                          <button
-                            type="button"
-                            className="btn btn-sm btn-danger-ghost"
-                            onClick={() => setDeleting(h)}
-                          >
-                            <Icon name="trash" size={15} />
-                            {t('actions.delete', { ns: 'common' })}
-                          </button>
-                        </span>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+                            {busyId === h.id && <span className="spinner" aria-hidden="true" />}
+                            {t('actions.reuse')}
+                          </button>{' '}
+                          {h.kind === 'quiz' ? (
+                            <button className="btn btn-sm" onClick={() => setAttempts(h)}>
+                              {t('actions.viewResults')}
+                            </button>
+                          ) : (
+                            <button className="btn btn-sm" onClick={() => setGrading(h)}>
+                              {t('actions.grade')}
+                            </button>
+                          )}{' '}
+                          {h.kind === 'homework' && (
+                            <>
+                              <button className="btn btn-sm" onClick={() => setViewSubs(h)}>
+                                {t('actions.viewSubmissions')}
+                              </button>{' '}
+                            </>
+                          )}
+                          <span className="row-actions">
+                            <button
+                              type="button"
+                              className="btn btn-sm btn-ghost"
+                              onClick={() => setEditing(h)}
+                            >
+                              <Icon name="pencil" size={15} />
+                              {t('actions.edit', { ns: 'common' })}
+                            </button>
+                            <button
+                              type="button"
+                              className="btn btn-sm btn-danger-ghost"
+                              onClick={() => setDeleting(h)}
+                            >
+                              <Icon name="trash" size={15} />
+                              {t('actions.delete', { ns: 'common' })}
+                            </button>
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+
+        {pagination && (
+          <Pagination pagination={pagination} onChange={(p) => setQ({ page: String(p) })} loading={loading} />
         )}
       </div>
-
-      {pagination && (
-        <Pagination pagination={pagination} onChange={(p) => setQ({ page: String(p) })} loading={loading} />
-      )}
 
       {editing && (
         <HomeworkFormModal

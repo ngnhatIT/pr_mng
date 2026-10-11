@@ -33,7 +33,7 @@ const render = () =>
           </>
         ),
       },
-      { path: '/login', element: <UnauthorizedListener /> },
+      { path: '/parent/login', element: <UnauthorizedListener /> },
     ],
     '/parent'
   );
@@ -96,7 +96,9 @@ describe('ParentHome', () => {
     expect($$('.toast').map((e) => e.textContent)).toEqual([
       String(i18n.t('api.sessionExpired', { ns: 'common' })),
     ]);
-    expect(router.state.location.pathname).toBe('/login');
+    // B5-6: phụ huynh về trang login của portal phụ huynh, deep-link được lưu để quay lại sau khi đăng nhập
+    expect(router.state.location.pathname).toBe('/parent/login');
+    expect(sessionStorage.getItem('edu_next')).toBe('/parent');
   });
 
   it('B4-4: 403 PASSWORD_CHANGE_REQUIRED -> không toast đè lên form đổi mật khẩu, hiện Thử lại', async () => {

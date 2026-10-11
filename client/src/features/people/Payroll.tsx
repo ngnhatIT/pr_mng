@@ -36,11 +36,15 @@ export function Payroll() {
         title={t('payroll.title')}
         desc={t('payroll.desc')}
         actions={
-          <span className="payroll-total">
-            <Icon name="banknote" size={16} />
-            {t('payroll.totalSpent')}
-            <strong className="debt-amount">{formatVND(total)}</strong>
-          </span>
+          // B5-5: tải lỗi -> không hiện "Tổng chi 0đ" (hoặc tổng của tháng cũ) phía trên LoadError
+          !error &&
+          data && (
+            <span className="payroll-total">
+              <Icon name="banknote" size={16} />
+              {t('payroll.totalSpent')}
+              <strong className="debt-amount">{formatVND(total)}</strong>
+            </span>
+          )
         }
       />
 
@@ -73,7 +77,7 @@ export function Payroll() {
         />
       ) : (
         <div className="table-wrap sticky" aria-busy={loading || undefined}>
-          <table className="table">
+          <table className="table table-stack">
             <thead>
               <tr>
                 <th scope="col">{t('payroll.table.teacher')}</th>
@@ -96,9 +100,18 @@ export function Payroll() {
                       {r.teacher_name}
                     </span>
                   </td>
-                  <td className="num">{r.sessions}</td>
-                  <td className="num">{formatVND(r.per_session)}</td>
-                  <td className="num">
+                  <td data-label={t('payroll.table.sessions')} className="num">
+                    {r.sessions}
+                  </td>
+                  <td data-label={t('payroll.table.perSession')} className="num">
+                    {formatVND(r.per_session)}
+                    {r.mixed_rates && (
+                      <div className="muted-xs">
+                        {t('payroll.mixedRate', { avg: formatVND(r.avg_rate ?? 0) })}
+                      </div>
+                    )}
+                  </td>
+                  <td data-label={t('payroll.table.total')} className="num">
                     <strong>{formatVND(r.total)}</strong>
                   </td>
                   <td className="td-right">

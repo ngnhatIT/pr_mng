@@ -398,7 +398,7 @@ export function ZaloReminders() {
         ) : (
           <>
             <div className="table-wrap sticky" aria-busy={loadingHistory || undefined}>
-              <table className="table">
+              <table className="table table-stack">
                 <thead>
                   <tr>
                     <th scope="col">{t('zalo.col.time')}</th>
@@ -417,21 +417,25 @@ export function ZaloReminders() {
                     .slice((historyPage - 1) * HISTORY_LIMIT, historyPage * HISTORY_LIMIT)
                     .map((r) => (
                       <tr key={r.id}>
-                        <td className="mono">{formatDateTime(r.created_at)}</td>
+                        <td data-label={t('zalo.col.time')} className="mono">
+                          {formatDateTime(r.created_at)}
+                        </td>
                         <td>
                           {r.student_name || <EmptyCell />}
                           {r.student_code && <span className="muted mono"> ({r.student_code})</span>}
                         </td>
-                        <td className="mono">{r.phone || <EmptyCell />}</td>
-                        <td className="num">
+                        <td data-label={t('zalo.col.phone')} className="mono">
+                          {r.phone || <EmptyCell />}
+                        </td>
+                        <td data-label={t('zalo.col.amount')} className="num">
                           {r.invoice_amount != null ? formatVND(r.invoice_amount) : '-'}
                         </td>
-                        <td>
+                        <td data-label={t('zalo.col.kind')}>
                           <span className={`badge badge-${r.kind}`}>
                             {t(`zalo.kind.${r.kind}`, { defaultValue: r.kind })}
                           </span>
                         </td>
-                        <td>
+                        <td data-label={t('zalo.col.status')}>
                           <span className={`badge badge-${r.status}`}>
                             {t(`zalo.reminderStatus.${r.status}`, { defaultValue: r.status })}
                           </span>

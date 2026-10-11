@@ -18,6 +18,8 @@ export interface SalaryInfo {
   sessions: number;
   per_session: number;
   total: number;
+  avg_rate?: number;
+  mixed_rates?: boolean;
 }
 
 export interface GradeInput {

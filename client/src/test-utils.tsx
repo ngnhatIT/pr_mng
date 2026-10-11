@@ -58,6 +58,12 @@ let root: Root | null = null;
 /** Render `routes` (bọc ToastProvider) tại `at`; trả router để đọc location sau điều hướng. */
 export async function renderRoutes(routes: RouteObject[], at: string) {
   const router = createMemoryRouter(routes, { initialEntries: [at] });
+  // B5-6: window.location đi theo router như production (client.ts đọc window.location.pathname để chọn trang
+  // login của portal và lưu deep-link edu_next)
+  const syncUrl = ({ pathname, search, hash }: { pathname: string; search: string; hash: string }) =>
+    history.replaceState(null, '', pathname + search + hash);
+  syncUrl(router.state.location);
+  router.subscribe((s) => syncUrl(s.location));
   const el = document.createElement('div');
   document.body.appendChild(el);
   await act(async () => {
@@ -88,6 +94,7 @@ export function cleanup() {
   root = null;
   document.body.innerHTML = '';
   clearAuth();
+  history.replaceState(null, '', '/');
   localStorage.clear();
   sessionStorage.clear();
   vi.unstubAllGlobals();

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useId, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { homeworkApi, uploadFile, UPLOAD_ACCEPT } from './homework.api';
 import { HomeworkItem } from '../../shared/types';
@@ -23,6 +23,8 @@ export function useAttachments(initial: HomeworkItem | null, fe: HwFieldErrors) 
   const [attUrl, setAttUrl] = useState('');
   const attNameRef = useRef<HTMLInputElement>(null);
   const attUrlRef = useRef<HTMLInputElement>(null);
+  // B5-3: ô nào của cụm "thêm link" đang sai (để gắn aria-invalid/viền đỏ đúng ô, không phải cả cụm)
+  const [attInvalid, setAttInvalid] = useState<'name' | 'url' | null>(null);
   // File đã upload trong phiên này nhưng chưa lưu bài (mồ côi nếu hủy modal)
   const orphanUrls = useRef<Set<string>>(new Set());
   // Upload file: tiến trình % + trạng thái đang tải
@@ -60,17 +62,14 @@ export function useAttachments(initial: HomeworkItem | null, fe: HwFieldErrors) 
     const url = attUrl.trim();
     if (!name) {
       show({ ...errors, attachment: t('form.errors.attRequired') });
+      setAttInvalid('name');
       attNameRef.current?.focus();
       return;
     }
-    if (!url) {
-      show({ ...errors, attachment: t('form.errors.attRequired') });
-      attUrlRef.current?.focus();
-      return;
-    }
-    // P0-3: URL phải đúng định dạng http/https
-    if (!isValidHttpUrl(url)) {
-      show({ ...errors, attachment: t('form.errors.attUrlInvalid') });
+    // P0-3: URL phải có và đúng định dạng http/https
+    if (!url || !isValidHttpUrl(url)) {
+      show({ ...errors, attachment: t(url ? 'form.errors.attUrlInvalid' : 'form.errors.attRequired') });
+      setAttInvalid('url');
       attUrlRef.current?.focus();
       return;
     }
@@ -101,6 +100,7 @@ export function useAttachments(initial: HomeworkItem | null, fe: HwFieldErrors) 
   const handleFileSelect = async (file: File | undefined) => {
     if (!file || uploading) return;
     const problem = validateLocalUpload(file.name, file.size);
+    setAttInvalid(null);
     if (problem === 'size') {
       show({ ...errors, attachment: t('form.errors.attTooBig') });
       return;
@@ -130,6 +130,7 @@ export function useAttachments(initial: HomeworkItem | null, fe: HwFieldErrors) 
   const pending = pendingLink(attName, attUrl);
   const pendingError = (): string | undefined => {
     if (!pending) return undefined;
+    setAttInvalid('error' in pending ? 'url' : null); // lỗi link gõ dở luôn nằm ở ô URL
     if ('error' in pending) return t(`form.errors.${pending.error}`);
     // Sửa bài mà chưa tải được đính kèm hiện có: không gửi attachments -> link sẽ mất, chặn luôn
     return attLoad === 'ok' ? undefined : t('form.errors.attPendingLocked');
@@ -164,6 +165,7 @@ export function useAttachments(initial: HomeworkItem | null, fe: HwFieldErrors) 
     setAttUrl,
     attNameRef,
     attUrlRef,
+    attInvalid,
     uploadPct,
     uploading,
     fileInputRef,
@@ -195,17 +197,21 @@ export function AttachmentsField({
 }) {
   const { t } = useTranslation(['homework', 'common']);
   const { attachments, attLoad, uploading, uploadPct, fileInputRef } = att;
+  const errorId = useId();
+  const invalidProps = (which: 'name' | 'url') =>
+    error && att.attInvalid === which ? { 'aria-invalid': true, 'aria-describedby': errorId } : {};
   return (
     <Field
       label={t('form.attachments')}
       error={error ?? (attLoad === 'error' ? t('form.attLoadFailed') : undefined)}
+      errorId={errorId}
       group
     >
       {attachments.map((a, i) => (
         <div key={i} className="att-row">
           <Icon name={a.kind === 'file' ? 'file' : 'paperclip'} size={14} />
           <span>{a.name}</span>
-          <span className="muted hw-text-12">{a.url.slice(0, 40)}...</span>
+          <span className="muted hw-text-12 att-url">{a.url}</span>
           <button
             type="button"
             className="btn btn-sm btn-danger-ghost"
@@ -263,9 +269,10 @@ export function AttachmentsField({
         </div>
       )}
       <div className="muted hw-text-12 hw-mt-8">{t('form.uploadHint')}</div>
-      <div className="hw-flex-wrap hw-mt-8">
+      <div className="hw-flex-wrap hw-mt-8 att-inputs">
         <input
           ref={att.attNameRef}
+          {...invalidProps('name')}
           className="text-input"
           placeholder={t('form.attNamePh')}
           value={att.attName}
@@ -273,6 +280,7 @@ export function AttachmentsField({
         />
         <input
           ref={att.attUrlRef}
+          {...invalidProps('url')}
           className="text-input"
           placeholder={t('form.attUrlPh')}
           value={att.attUrl}

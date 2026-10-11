@@ -61,7 +61,7 @@ export function System() {
         />
       ) : (
         <div className="table-wrap sticky" aria-busy={loading || undefined}>
-          <table className="table">
+          <table className="table table-stack">
             <thead>
               <tr>
                 <th scope="col">{t('system.col.center')}</th>
@@ -81,12 +81,14 @@ export function System() {
                     <div className="center-name">{c.name}</div>
                     <div className="center-sub mono">{c.subdomain}</div>
                   </td>
-                  <td>{c.phone || <EmptyCell />}</td>
-                  <td>
+                  <td data-label={t('system.col.phone')}>{c.phone || <EmptyCell />}</td>
+                  <td data-label={t('system.col.plan')}>
                     <span className={`badge badge-plan-${c.plan}`}>{t(`system.plan.${c.plan}`)}</span>
                   </td>
-                  <td className="plan-expiry">{formatDate(c.plan_expires_at)}</td>
-                  <td className="num">
+                  <td data-label={t('system.col.planExpiry')} className="plan-expiry">
+                    {formatDate(c.plan_expires_at)}
+                  </td>
+                  <td data-label={t('system.col.counts')} className="num">
                     {c.student_count ?? 0} / {c.class_count ?? 0} / {c.user_count ?? 0}
                   </td>
                   <td className="td-right">

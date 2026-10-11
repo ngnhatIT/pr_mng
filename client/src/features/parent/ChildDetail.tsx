@@ -6,6 +6,7 @@ import { toastApiError, useToast } from '../../shared/ui/toast';
 import { useLoad } from '../../shared/hooks/useLoad';
 import { useDocumentTitle } from '../../shared/hooks/useDocumentTitle';
 import { Modal } from '../../shared/components/Modal';
+import { Tabs, tabPanelProps } from '../../shared/components/Tabs';
 import { Icon, IconName } from '../../shared/components/icons';
 import './parent.css';
 import { EmptyState, LoadError } from '../../shared/components/EmptyState';
@@ -40,14 +41,14 @@ export function ChildDetail() {
     { id: 'grades', label: t('child.tabs.grades'), icon: 'cap' },
     { id: 'homework', label: t('child.tabs.homework'), icon: 'file' },
   ];
-  // Deep-link ?tab=tuition từ nút "Đóng học phí" ở ParentHome; không có param thì giữ tab mặc định
-  const [searchParams] = useSearchParams();
+  // Tab suy ra từ ?tab= (deep-link "Đóng học phí" ở ParentHome); đổi tab ghi lại URL -> refresh/Back giữ tab (B5-3)
+  const [searchParams, setSearchParams] = useSearchParams();
   const tabParam = searchParams.get('tab');
-  const [tab, setTab] = useState<Tab>(
+  const tab: Tab =
     tabParam === 'tuition' || tabParam === 'attendance' || tabParam === 'grades' || tabParam === 'homework'
       ? tabParam
-      : 'schedule'
-  );
+      : 'schedule';
+  const setTab = (k: Tab) => setSearchParams(k === 'schedule' ? {} : { tab: k }, { replace: true });
   const toast = useToast();
 
   const {
@@ -130,24 +131,29 @@ export function ChildDetail() {
         </div>
       </div>
 
-      <div className="tabs parent-tabs pill-tabs">
-        {TABS.map((tb) => (
-          <button
-            key={tb.id}
-            className={`tab${tab === tb.id ? ' active' : ''}`}
-            onClick={() => setTab(tb.id)}
-          >
-            <Icon name={tb.icon} size={15} />
-            {tb.label}
-          </button>
-        ))}
-      </div>
+      <Tabs
+        id="child"
+        className="parent-tabs pill-tabs"
+        tabs={TABS.map((tb) => ({
+          key: tb.id,
+          label: (
+            <>
+              <Icon name={tb.icon} size={15} />
+              {tb.label}
+            </>
+          ),
+        }))}
+        value={tab}
+        onChange={setTab}
+      />
 
-      {tab === 'schedule' && <ScheduleTab data={data} />}
-      {tab === 'attendance' && <AttendanceTab data={data} />}
-      {tab === 'tuition' && <TuitionTab data={data} onPaid={load} />}
-      {tab === 'grades' && <GradesTab data={data} />}
-      {tab === 'homework' && <HomeworkTab data={data} onChanged={load} />}
+      <div {...tabPanelProps('child', tab)}>
+        {tab === 'schedule' && <ScheduleTab data={data} />}
+        {tab === 'attendance' && <AttendanceTab data={data} />}
+        {tab === 'tuition' && <TuitionTab data={data} onPaid={load} />}
+        {tab === 'grades' && <GradesTab data={data} />}
+        {tab === 'homework' && <HomeworkTab data={data} onChanged={load} />}
+      </div>
     </div>
   );
 }

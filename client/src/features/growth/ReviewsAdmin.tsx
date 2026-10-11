@@ -13,6 +13,7 @@ import { Icon } from '../../shared/components/icons';
 import { ReviewItem, formatDate } from '../../shared/types';
 import './Growth.css';
 import { EmptyCell } from '../../shared/components/EmptyCell';
+import { Tabs, tabPanelProps } from '../../shared/components/Tabs';
 
 function Stars({ rating }: { rating: number }) {
   const { t } = useTranslation(['ops', 'common']);
@@ -81,99 +82,93 @@ export function ReviewsAdmin() {
     <div className="page">
       <PageHeader title={t('reviews.title')} desc={t('reviews.desc')} />
 
-      <div className="tabs" role="tablist">
-        <button
-          role="tab"
-          aria-selected={tab === 'pending'}
-          className={`tab${tab === 'pending' ? ' active' : ''}`}
-          onClick={() => switchTab('pending')}
-        >
-          {t('reviews.tabs.pending')}
-          {tab === 'pending' && pagination && pagination.total > 0 && (
-            <span className="tab-count">{pagination.total}</span>
-          )}
-        </button>
-        <button
-          role="tab"
-          aria-selected={tab === 'approved'}
-          className={`tab${tab === 'approved' ? ' active' : ''}`}
-          onClick={() => switchTab('approved')}
-        >
-          {t('reviews.tabs.approved')}
-          {tab === 'approved' && pagination && pagination.total > 0 && (
-            <span className="tab-count">{pagination.total}</span>
-          )}
-        </button>
+      <Tabs
+        id="reviews"
+        tabs={(['pending', 'approved'] as const).map((k) => ({
+          key: k,
+          label: (
+            <>
+              {t(`reviews.tabs.${k}`)}
+              {tab === k && pagination && pagination.total > 0 && (
+                <span className="tab-count">{pagination.total}</span>
+              )}
+            </>
+          ),
+        }))}
+        value={tab}
+        onChange={switchTab}
+      />
+
+      <div {...tabPanelProps('reviews', tab)}>
+        {loading && !data ? (
+          <CardGridSkeleton count={3} />
+        ) : error && !data ? (
+          <LoadError onRetry={reload} />
+        ) : reviews.length === 0 ? (
+          <EmptyState
+            icon="star"
+            title={t('reviews.empty.title')}
+            desc={tab === 'pending' ? t('reviews.empty.pendingDesc') : t('reviews.empty.approvedDesc')}
+          />
+        ) : (
+          <div className="card-grid" aria-busy={loading || undefined}>
+            {reviews.map((r) => (
+              <div key={r.id} className="card review-card">
+                <div className="review-head">
+                  <Stars rating={r.rating} />
+                  <span className={`badge badge-${r.status}`}>{t(`reviews.status.${r.status}`)}</span>
+                </div>
+                <p className="review-comment">{r.comment || <EmptyCell />}</p>
+                <div className="review-meta">
+                  <Icon name="user" size={13} />
+                  <span>{r.parent_name || t('reviews.anonymousParent')}</span>
+                  <span aria-hidden="true">·</span>
+                  <span>{formatDate(r.created_at)}</span>
+                </div>
+                <div className="review-foot">
+                  {tab === 'pending' ? (
+                    <>
+                      <button
+                        className="btn btn-sm btn-primary"
+                        onClick={() => void moderate(r, 'approve')}
+                        disabled={busyId === r.id}
+                      >
+                        {busyId === r.id ? (
+                          <span className="spinner" aria-hidden="true" />
+                        ) : (
+                          <Icon name="check" size={14} />
+                        )}
+                        {t('reviews.approve')}
+                      </button>
+                      <button
+                        className="btn btn-sm btn-danger-ghost"
+                        onClick={() => void moderate(r, 'reject')}
+                        disabled={busyId === r.id}
+                      >
+                        {busyId === r.id ? (
+                          <span className="spinner spinner-dark" aria-hidden="true" />
+                        ) : (
+                          <Icon name="x" size={14} />
+                        )}
+                        {t('reviews.reject')}
+                      </button>
+                    </>
+                  ) : (
+                    <button className="btn btn-sm btn-danger-ghost" onClick={() => setDeleting(r)}>
+                      <Icon name="trash" size={14} />
+                      {t('actions.delete', { ns: 'common' })}
+                    </button>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {pagination && (
+          <Pagination pagination={pagination} onChange={(p) => setQ({ page: String(p) })} loading={loading} />
+        )}
       </div>
-
-      {loading && !data ? (
-        <CardGridSkeleton count={3} />
-      ) : error && !data ? (
-        <LoadError onRetry={reload} />
-      ) : reviews.length === 0 ? (
-        <EmptyState
-          icon="star"
-          title={t('reviews.empty.title')}
-          desc={tab === 'pending' ? t('reviews.empty.pendingDesc') : t('reviews.empty.approvedDesc')}
-        />
-      ) : (
-        <div className="card-grid" aria-busy={loading || undefined}>
-          {reviews.map((r) => (
-            <div key={r.id} className="card review-card">
-              <div className="review-head">
-                <Stars rating={r.rating} />
-                <span className={`badge badge-${r.status}`}>{t(`reviews.status.${r.status}`)}</span>
-              </div>
-              <p className="review-comment">{r.comment || <EmptyCell />}</p>
-              <div className="review-meta">
-                <Icon name="user" size={13} />
-                <span>{r.parent_name || t('reviews.anonymousParent')}</span>
-                <span aria-hidden="true">·</span>
-                <span>{formatDate(r.created_at)}</span>
-              </div>
-              <div className="review-foot">
-                {tab === 'pending' ? (
-                  <>
-                    <button
-                      className="btn btn-sm btn-primary"
-                      onClick={() => void moderate(r, 'approve')}
-                      disabled={busyId === r.id}
-                    >
-                      {busyId === r.id ? (
-                        <span className="spinner" aria-hidden="true" />
-                      ) : (
-                        <Icon name="check" size={14} />
-                      )}
-                      {t('reviews.approve')}
-                    </button>
-                    <button
-                      className="btn btn-sm btn-danger-ghost"
-                      onClick={() => void moderate(r, 'reject')}
-                      disabled={busyId === r.id}
-                    >
-                      {busyId === r.id ? (
-                        <span className="spinner spinner-dark" aria-hidden="true" />
-                      ) : (
-                        <Icon name="x" size={14} />
-                      )}
-                      {t('reviews.reject')}
-                    </button>
-                  </>
-                ) : (
-                  <button className="btn btn-sm btn-danger-ghost" onClick={() => setDeleting(r)}>
-                    <Icon name="trash" size={14} />
-                    {t('actions.delete', { ns: 'common' })}
-                  </button>
-                )}
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {pagination && (
-        <Pagination pagination={pagination} onChange={(p) => setQ({ page: String(p) })} loading={loading} />
-      )}
 
       {deleting && (
         <ConfirmDialog

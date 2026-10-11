@@ -1,9 +1,11 @@
 // @vitest-environment happy-dom
+import { act } from 'react';
 import { describe, it, expect, afterEach, beforeEach } from 'vitest';
 import i18n from '../../i18n';
 import { $, $$, byText, cleanup, click, json, mockFetch, renderRoutes, type Call } from '../../test-utils';
 import { setAuth } from '../../shared/api/client';
 import { ChildDetail } from './ChildDetail';
+import { ParentLayout } from './ParentLayout';
 import type { HomeworkItem } from '../../shared/types';
 
 const t = (k: string, o?: Record<string, unknown>) => String(i18n.t(k, { ns: 'parent', ...o }));
@@ -54,18 +56,41 @@ function overview(homework: HomeworkItem[]) {
 let calls: Call[];
 const render = (tab = '') =>
   renderRoutes([{ path: '/parent/children/:id', element: <ChildDetail /> }], `/parent/children/3${tab}`);
+// Trong ParentLayout thật (layout cũng đặt title -> bắt được B5-2)
+const renderInLayout = () =>
+  renderRoutes(
+    [
+      {
+        path: '/parent',
+        element: <ParentLayout />,
+        children: [{ path: 'children/:id', element: <ChildDetail /> }],
+      },
+    ],
+    '/parent/children/3'
+  );
 beforeEach(() => setAuth('ptok', { id: 9, username: '0901', role: 'parent', name: 'P' }));
 afterEach(cleanup);
 
 describe('ChildDetail', () => {
   it('hiện tên con, đặt tiêu đề tab (B4-5) và chuyển qua các tab', async () => {
     calls = mockFetch({ 'GET /parent/children/3/overview': overview([]) });
-    await render();
+    const router = await renderInLayout();
     expect($('h1')!.textContent).toBe('Nguyễn An');
+    expect(document.title).toBe('Nguyễn An - EduCenter Pro');
+    // B5-2: đổi ngôn ngữ không làm mất tên con trên tab trình duyệt
+    await act(() => i18n.changeLanguage('en'));
+    expect(document.title).toBe('Nguyễn An - EduCenter Pro');
+    await act(() => i18n.changeLanguage('vi'));
     expect(document.title).toBe('Nguyễn An - EduCenter Pro');
     expect(document.body.textContent).toContain('Unit 6');
     await click(byText(t('child.tabs.attendance')));
     expect(document.body.textContent).toContain('80');
+    // B5-3: tab ARIA + ghi vào URL (refresh/Back giữ tab)
+    const tab = byText(t('child.tabs.attendance'));
+    expect(tab.getAttribute('role')).toBe('tab');
+    expect(tab.getAttribute('aria-selected')).toBe('true');
+    expect($(`#${tab.getAttribute('aria-controls')}`)!.getAttribute('role')).toBe('tabpanel');
+    expect(router.state.location.search).toBe('?tab=attendance');
     await click(byText(t('child.tabs.tuition')));
     expect(document.body.textContent).toMatch(/1\.000\.000/); // còn nợ = 1.5tr − 0.5tr
     await click(byText(t('child.tabs.grades')));

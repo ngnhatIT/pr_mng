@@ -20,6 +20,7 @@ export function Field({
   required,
   hint,
   group,
+  errorId: errorIdProp,
 }: {
   label: string;
   children: ReactNode;
@@ -34,9 +35,11 @@ export function Field({
    * thay vì <label> — click chữ trong <label> sẽ kích hoạt nút đầu tiên bên trong.
    */
   group?: boolean;
+  /** id cho lỗi, để control trong cụm (group) tự gắn aria-describedby vào đúng ô sai (B5-3). */
+  errorId?: string;
 }) {
   const uid = useId();
-  const errorId = `${uid}-error`;
+  const errorId = errorIdProp ?? `${uid}-error`;
   const labelId = `${uid}-label`;
   // Gắn aria-invalid + aria-describedby vào input con để screen reader đọc lỗi
   const enhanced = isValidElement(children)
@@ -49,7 +52,9 @@ export function Field({
   return (
     <Wrapper
       className={`field${span ? ' field-span' : ''}${error ? ' field-invalid' : ''}`}
-      {...(group ? { role: 'group', 'aria-labelledby': labelId } : {})}
+      {...(group
+        ? { role: 'group', 'aria-labelledby': labelId, 'aria-describedby': error ? errorId : undefined }
+        : {})}
     >
       <span className="field-label" id={labelId}>
         {label}

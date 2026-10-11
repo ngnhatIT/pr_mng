@@ -52,7 +52,8 @@
     "sessionsDone": "{{count}} buổi đã chấm công",
     "title": "Lương của tôi",
     "totalOfMonth": "Tổng lương tháng {{month}}",
-    "loadErrorDesc": "Vui lòng thử tải lại."
+    "loadErrorDesc": "Vui lòng thử tải lại.",
+    "mixedRate": "Đơn giá đổi trong tháng, bình quân {{avg}}/buổi"
   },
   "today": {
     "attendanceCount": "{{count}} học viên đã điểm danh",

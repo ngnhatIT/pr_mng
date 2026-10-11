@@ -101,6 +101,23 @@ useLoad(() => api.list(q.search, q.status, { page: Number(q.page) }), [q.search,
 
 `useMyPermissions()` (dùng trong React) và `loadMyPermissions()` (trả về Promise, dùng ngoài React) cache theo access token. Layout và mọi trang dùng chung một request duy nhất.
 
+Gán/gỡ vai trò tùy chỉnh cho tài khoản: trang Phân quyền, mục "Người dùng có vai trò này" ở panel chi tiết vai trò
+(`RoleMembers` trong `Roles.tsx`): danh sách thành viên lấy từ `GET /roles/:id` (`users[]`), chọn tài khoản từ
+`GET /roles/users`, gán `POST /roles/assign`, gỡ `DELETE /roles/assign` (có ConfirmDialog). Cần `roles.manage`; vai trò
+hệ thống chỉ superadmin gán/gỡ được. Lỗi 403 của server (vd vai trò mạnh hơn quyền người gán) hiện nguyên văn qua toast.
+
+## Tab (`shared/components/Tabs.tsx`)
+
+`<Tabs id tabs={[{key,label}]} value onChange />` render đúng mẫu WAI-ARIA: `role=tablist/tab`, `aria-selected`,
+`aria-controls`, roving `tabIndex`, phím ←/→/Home/End. Nội dung bọc `<div {...tabPanelProps(id, value)}>`. Tab nên nằm
+trên URL (`?tab=` / `useUrlState`) để refresh/Back giữ tab (Tuition, ReviewsAdmin, Homework, ChildDetail).
+
+## Bảng trên điện thoại (`.table-stack`, `styles.css`)
+
+Bảng danh sách thêm class `table-stack` và `data-label={cùng t(...) với <th>}` trên từng `<td>`. Ở ≤600px mỗi dòng
+thành một thẻ: nhãn bên trái, giá trị bên phải; ô không có `data-label` (tên/tiêu đề làm "đầu thẻ", ô nút thao tác)
+chiếm cả dòng. Không còn cuộn ngang ~1200px để tới nút Sửa/Thu tiền.
+
 ## i18n
 
 - Bundle entry chỉ chứa namespace `common`. Các namespace khác được tải lazy khi `useTranslation([...ns])` chạy; lúc đó component suspend trong Suspense của layout.
@@ -115,7 +132,7 @@ useLoad(() => api.list(q.search, q.status, { page: Number(q.page) }), [q.search,
 
 ## Đổi mật khẩu bắt buộc (`shared/components/ChangePasswordModal.tsx`)
 
-`PasswordChangeGate` (đặt trong `Root` của `app/App.tsx`) mở `ChangePasswordModal forced` khi user đã lưu có `must_change_password` (login/refresh trả về), hoặc khi `api()` nhận 403 `PASSWORD_CHANGE_REQUIRED` (bật cờ trên user + phát event `PASSWORD_CHANGE_EVENT`). Chỉ hiện trong khu vực cần đăng nhập (`/app`, `/teacher`, `/parent` trừ login/register). Form bắt buộc không có X/Hủy, chỉ có Đổi mật khẩu hoặc Đăng xuất. Đổi xong thì tắt cờ và gọi `tryRefresh()` để lấy token/user mới. Endpoint theo cổng: `authPath('change-password')`.
+`PasswordChangeGate` (đặt trong `Root` của `app/App.tsx`) mở `ChangePasswordModal forced` khi user đã lưu có `must_change_password` (login/refresh trả về), hoặc khi `api()` nhận 403 `PASSWORD_CHANGE_REQUIRED` (bật cờ trên user + phát event `PASSWORD_CHANGE_EVENT`). Form bắt buộc focus ngay ô mật khẩu hiện tại (`autoFocus`, kể cả màn cảm ứng). Chỉ hiện trong khu vực cần đăng nhập (`/app`, `/teacher`, `/parent` trừ login/register). Form bắt buộc không có X/Hủy, chỉ có Đổi mật khẩu hoặc Đăng xuất. Đổi xong thì tắt cờ và gọi `tryRefresh()` để lấy token/user mới. Endpoint theo cổng: `authPath('change-password')`.
 
 ## Test có DOM
 
@@ -132,9 +149,11 @@ useLoad(() => api.list(q.search, q.status, { page: Number(q.page) }), [q.search,
   method + path và trả mảng `calls` (method, path, query, body, headers) để assert request shape; request đi qua
   api module + `client.ts` thật. `renderRoutes/renderPage` render trong `ToastProvider` + data router (cố định
   tiếng Việt). `type()` / `click()` / `byText()` / `flush()`; `cleanup` trong `afterEach`. Quyền
-  (`/roles/me/permissions`) cache theo token, nên mỗi test dùng một token khác nếu đổi quyền.
+  (`/roles/me/permissions`) cache theo token, nên mỗi test dùng một token khác nếu đổi quyền. `renderRoutes` đồng bộ
+  `window.location` theo router (như production), nên logic đọc `window.location` (chọn trang login theo portal, lưu
+  `edu_next`) được test đúng đường thật; `cleanup` trả URL về `/`.
 - Coverage: `npm run test:coverage -w client` (v8, in text-summary). CI chạy lệnh này trong job test.
-  `coverage.thresholds` trong `client/vite.config.ts` đặt sát dưới số hiện tại (lines 36%); tụt dưới ngưỡng thì fail.
+  `coverage.thresholds` trong `client/vite.config.ts` đặt sát dưới số hiện tại (lines 37%); tụt dưới ngưỡng thì fail.
   Thêm test thì nâng ngưỡng theo.
 
 ## Ngân sách bundle

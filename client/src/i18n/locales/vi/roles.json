@@ -109,5 +109,24 @@
   "discard": {
     "title": "Bỏ thay đổi quyền chưa lưu?",
     "message": "Có {{count}} thay đổi quyền chưa lưu. Chuyển sang vai trò khác sẽ mất các thay đổi này."
+  },
+  "members": {
+    "title": "Người dùng có vai trò này",
+    "empty": "Chưa có ai được gán vai trò này.",
+    "pick": "Chọn người dùng để gán",
+    "pickPh": "- Chọn tài khoản nhân sự -",
+    "add": "Gán vai trò",
+    "adding": "Đang gán...",
+    "noCandidates": "Mọi tài khoản nhân sự đều đã có vai trò này.",
+    "remove": "Gỡ",
+    "removeAria": "Gỡ vai trò khỏi {{name}}",
+    "systemOnly": "Chỉ liệt kê người được gán thêm vai trò này (vai trò chính của tài khoản không tính). Chỉ superadmin được gán/gỡ vai trò hệ thống.",
+    "assigned": "Đã gán vai trò cho {{name}}",
+    "unassigned": "Đã gỡ vai trò khỏi {{name}}",
+    "assignFail": "Không gán được vai trò, vui lòng thử lại",
+    "unassignFail": "Không gỡ được vai trò, vui lòng thử lại",
+    "confirmTitle": "Gỡ vai trò?",
+    "confirmMessage": "{{name}} sẽ mất các quyền đi kèm vai trò \"{{role}}\" (quyền từ vai trò chính vẫn giữ nguyên).",
+    "confirmLabel": "Gỡ vai trò"
   }
 }

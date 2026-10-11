@@ -109,5 +109,24 @@
   "discard": {
     "title": "Discard unsaved permission changes?",
     "message": "There are {{count}} unsaved permission changes. Switching role will discard them."
+  },
+  "members": {
+    "title": "Users with this role",
+    "empty": "No one has been assigned this role yet.",
+    "pick": "Pick a user to assign",
+    "pickPh": "- Pick a staff account -",
+    "add": "Assign role",
+    "adding": "Assigning...",
+    "noCandidates": "Every staff account already has this role.",
+    "remove": "Remove",
+    "removeAria": "Remove role from {{name}}",
+    "systemOnly": "Lists only users given this role as an extra role (an account's main role is not counted). Only a superadmin can assign or remove system roles.",
+    "assigned": "Assigned the role to {{name}}",
+    "unassigned": "Removed the role from {{name}}",
+    "assignFail": "Couldn't assign the role, please try again",
+    "unassignFail": "Couldn't remove the role, please try again",
+    "confirmTitle": "Remove role?",
+    "confirmMessage": "{{name}} will lose the permissions of \"{{role}}\" (permissions from their main role are kept).",
+    "confirmLabel": "Remove role"
   }
 }

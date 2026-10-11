@@ -70,6 +70,16 @@ async function main(): Promise<void> {
       });
     console.log(`Đã rollback v${m.version} ${m.name}`);
   }
+  // N5-1: xóa tag boot-ddl — code cũ CREATE OR REPLACE thân cũ nhưng giữ COMMENT; lên lại bản mới thì boot
+  // tạo lại mọi view/function (bootDdlDb cũng so md5 định nghĩa, đây là lớp phòng thứ hai).
+  await db.exec(`DO $$ DECLARE r record; BEGIN
+    FOR r IN SELECT oid FROM pg_proc WHERE obj_description(oid, 'pg_proc') LIKE 'boot-ddl:%' LOOP
+      EXECUTE format('COMMENT ON FUNCTION %s IS NULL', r.oid::regprocedure);
+    END LOOP;
+    FOR r IN SELECT oid FROM pg_class WHERE relkind = 'v' AND obj_description(oid, 'pg_class') LIKE 'boot-ddl:%' LOOP
+      EXECUTE format('COMMENT ON VIEW %s IS NULL', r.oid::regclass);
+    END LOOP;
+  END $$`);
   console.log(`Xong. DB ở version ${to}. Triển khai lại code tương ứng rồi khởi động app.`);
 }
 

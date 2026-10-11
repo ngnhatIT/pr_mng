@@ -85,7 +85,7 @@ export function ReferralsAdmin() {
             <EmptyState icon="gift" title={t('referrals.empty.title')} desc={t('referrals.empty.desc')} />
           ) : (
             <div className="table-wrap sticky" aria-busy={loading || undefined}>
-              <table className="table">
+              <table className="table table-stack">
                 <thead>
                   <tr>
                     <th scope="col">{t('referrals.col.referrer')}</th>
@@ -102,23 +102,23 @@ export function ReferralsAdmin() {
                         {r.referrer_name || <span className="muted">{t('referrals.noName')}</span>}
                         <div className="muted mono">{r.referrer_phone}</div>
                       </td>
-                      <td>
+                      <td data-label={t('referrals.col.referred')}>
                         {r.referred_student_name || r.referred_name || (
                           <span className="muted">{t('referrals.noName')}</span>
                         )}
                         <div className="muted mono">{r.referred_phone}</div>
                       </td>
-                      <td>
+                      <td data-label={t('referrals.col.status')}>
                         <span className={`badge badge-${r.status === 'rewarded' ? 'rewarded' : 'pending'}`}>
                           {r.status === 'rewarded'
                             ? t('referrals.status.rewarded')
                             : t('referrals.status.pending')}
                         </span>
                       </td>
-                      <td className="num">
+                      <td data-label={t('referrals.col.reward')} className="num">
                         {r.reward_amount != null ? formatVND(r.reward_amount) : <EmptyCell />}
                       </td>
-                      <td>{formatDate(r.created_at)}</td>
+                      <td data-label={t('referrals.col.createdAt')}>{formatDate(r.created_at)}</td>
                     </tr>
                   ))}
                 </tbody>

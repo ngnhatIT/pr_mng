@@ -2059,6 +2059,54 @@ button.search-clear:active {
 .table tbody tr {
   transition: background-color 0.12s ease;
 }
+/* B5-4: bảng danh sách (.table-stack) ở ≤600px -> mỗi dòng là 1 thẻ, nhãn cột lấy từ td[data-label]
+   (thay vì cuộn ngang ~1200px). Ô không có data-label (tên/tiêu đề, nút thao tác) chiếm cả dòng. */
+@media (max-width: 600px) {
+  .table-stack thead {
+    display: none;
+  }
+  .table-stack,
+  .table-stack tbody,
+  .table-stack tr,
+  .table-stack td {
+    display: block;
+    width: 100%;
+  }
+  .table-stack tbody tr {
+    padding: var(--sp-2) 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .table-stack tbody tr:last-child {
+    border-bottom: none;
+  }
+  .table-stack td,
+  .table-stack tbody tr:last-child td {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--sp-1) var(--sp-3);
+    padding: 6px var(--sp-4);
+    border-bottom: none;
+    white-space: normal;
+    text-align: right;
+    min-height: 0;
+  }
+  .table-stack td[data-label]::before {
+    content: attr(data-label);
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-faint);
+    text-align: left;
+  }
+  .table-stack td:not([data-label]) {
+    justify-content: flex-start;
+    text-align: left;
+  }
+  .table-wrap.sticky:has(.table-stack) {
+    max-height: none;
+  }
+}
 
 /* ---------- Forms ---------- */
 .field-error {

@@ -155,8 +155,10 @@ dùng cùng thiết lập. **Chạy nâng cấp lúc ít tải** (v23 khóa `pay
 **DDL mỗi lần khởi động** (`createSchema`/`createIndexes`/trigger/view — chạy cả khi không có migration mới, tức mọi lần
 `pm2 start/reload` hay crash-restart): chỉ chạy `CREATE INDEX` / `ADD COLUMN IF NOT EXISTS` còn **thiếu** (tra
 `pg_indexes`/`information_schema`), nên lần boot bình thường không xin lock bảng nào. View/function (`CREATE OR REPLACE`)
-chỉ chạy lại khi định nghĩa đổi: hash câu lệnh lưu trong `COMMENT` của object (`boot-ddl:<hash>`) — báo cáo/BI đang
-đọc `v_invoice_balance` lâu không làm boot chờ. Đừng tự `COMMENT ON` các object đó. Phần còn thiếu chạy cùng
+chỉ chạy lại khi định nghĩa đổi: `COMMENT` của object lưu `boot-ddl:<hash câu lệnh>:<md5 định nghĩa>` — báo cáo/BI
+đang đọc `v_invoice_balance` lâu không làm boot chờ. Bị code cũ hay hotfix psql `CREATE OR REPLACE` thân khác (COMMENT
+giữ nguyên) thì md5 định nghĩa lệch -> lần boot sau tạo lại đúng bản của code. Muốn ép tạo lại: `COMMENT ON FUNCTION
+<tên>() IS NULL` (hoặc `COMMENT ON VIEW`) rồi restart. Phần còn thiếu chạy cùng
 `lock_timeout` như migration; bảng đang bị giữ lâu thì boot lỗi `[MIGRATION] DDL lúc khởi động: không lấy được lock bảng`
 (đã rollback) và PM2 thử lại.
 
@@ -253,6 +255,8 @@ npx tsx scripts/migrate-down.ts --to 21 --yes    # thực hiện: chạy down c�
     nên đơn giá đầu tiên/đổi giá áp NGƯỢC cho mọi tháng cũ (lương tháng cũ thay đổi); mất cả `payments.credit_id` /
     `credits.voided_at` (v23 gắn lại credit theo note khi nâng cấp lại, payment note tự gõ không gắn lại được).
 - Mỗi migration chạy trong 1 transaction và xóa dòng tương ứng trong `schema_migrations`; lỗi thì dừng tại đó.
+- Xong rollback, script xóa tag `boot-ddl:` trong `COMMENT` của view/function: bản cũ tạo lại thân cũ, nâng cấp lại thì
+  boot tạo lại toàn bộ (vd trigger audit tiền ghi lại `changed_by_role`).
 - Sau đó deploy lại code của version tương ứng.
 
 ## Tính năng vận hành đã có

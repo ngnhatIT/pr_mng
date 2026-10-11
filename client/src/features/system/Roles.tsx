@@ -22,7 +22,11 @@ import {
   type RoleDetail,
   type Permission,
   type Scope,
+  type RoleUser,
+  useMyPermissions,
 } from './roles.api';
+import { useLoad } from '../../shared/hooks/useLoad';
+import { getUser } from '../../shared/api/client';
 import './Roles.css';
 
 const SCOPES: (Scope | null)[] = [null, 'own', 'center', 'all'];
@@ -136,6 +140,143 @@ function RoleForm({
   );
 }
 
+/**
+ * B5-1: thành viên của vai trò + gán/gỡ (POST/DELETE /roles/assign). Server chặn thật (role hệ thống chỉ superadmin,
+ * S-2 không gán vai trò mạnh hơn mình) -> lỗi 403 hiện nguyên message qua toastApiError.
+ * State thành viên tách khỏi `detail` của trang để gán/gỡ không reset ma trận quyền đang sửa dở.
+ */
+function RoleMembers({
+  role,
+  canManage,
+  onChanged,
+}: {
+  role: RoleDetail;
+  canManage: boolean;
+  onChanged: () => void;
+}) {
+  const { t } = useTranslation(['roles', 'common']);
+  const toast = useToast();
+  const [members, setMembers] = useState<RoleUser[]>(role.users ?? []);
+  useEffect(() => setMembers(role.users ?? []), [role.users]);
+  const [pick, setPick] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [removing, setRemoving] = useState<RoleUser | null>(null);
+  const editable = canManage && (!role.is_system || getUser()?.role === 'superadmin');
+  const {
+    data: users,
+    error: usersError,
+    reload: reloadUsers,
+  } = useLoad(() => (editable ? rolesApi.users() : Promise.resolve([])), [editable]);
+  const candidates = (users ?? []).filter((u) => !members.some((m) => m.id === u.id));
+
+  const refresh = async () => {
+    const d = await rolesApi.detail(role.id);
+    setMembers(d.users ?? []);
+    onChanged(); // cập nhật số người dùng ở danh sách vai trò
+  };
+
+  const assign = async () => {
+    const user = candidates.find((u) => String(u.id) === pick);
+    if (!user || busy) return;
+    setBusy(true);
+    try {
+      await rolesApi.assign(user.id, role.id);
+      toast(t('members.assigned', { name: user.name }), 'success');
+      setPick('');
+      await refresh();
+    } catch (err) {
+      toastApiError(toast, err, t('members.assignFail'));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const unassign = async () => {
+    if (!removing) return;
+    try {
+      await rolesApi.unassign(removing.id, role.id);
+      toast(t('members.unassigned', { name: removing.name }), 'success');
+      setRemoving(null);
+      await refresh();
+    } catch (err) {
+      toastApiError(toast, err, t('members.unassignFail'));
+    }
+  };
+
+  return (
+    <section className="perm-group role-members" aria-labelledby="role-members-title">
+      <div className="perm-group-head">
+        <h3 className="perm-group-name" id="role-members-title">
+          {t('members.title')}
+        </h3>
+        <span className="muted">{members.length}</span>
+      </div>
+      {members.length === 0 ? (
+        <p className="muted">{t('members.empty')}</p>
+      ) : (
+        <ul className="perm-list">
+          {members.map((m) => (
+            <li key={m.id} className="perm-row readonly">
+              <div className="perm-info">
+                <div className="perm-name">{m.name}</div>
+                <div className="perm-code mono muted">@{m.username}</div>
+              </div>
+              {editable && (
+                <button
+                  type="button"
+                  className="btn btn-sm btn-danger-ghost"
+                  onClick={() => setRemoving(m)}
+                  aria-label={t('members.removeAria', { name: m.name })}
+                >
+                  {t('members.remove')}
+                </button>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+      {canManage && role.is_system && !editable && <p className="muted">{t('members.systemOnly')}</p>}
+      {editable &&
+        (usersError && !users ? (
+          <LoadError onRetry={reloadUsers} />
+        ) : users && candidates.length === 0 ? (
+          <p className="muted">{t('members.noCandidates')}</p>
+        ) : (
+          <div className="role-members-add">
+            <select
+              className="text-input"
+              value={pick}
+              onChange={(e) => setPick(e.target.value)}
+              aria-label={t('members.pick')}
+              disabled={!users || busy}
+            >
+              <option value="">{t('members.pickPh')}</option>
+              {candidates.map((u) => (
+                <option key={u.id} value={u.id}>
+                  {u.name} (@{u.username})
+                </option>
+              ))}
+            </select>
+            <button type="button" className="btn btn-primary" onClick={assign} disabled={!pick || busy}>
+              {busy && <span className="spinner" aria-hidden="true" />}
+              {busy ? t('members.adding') : t('members.add')}
+            </button>
+          </div>
+        ))}
+      {removing && (
+        <ConfirmDialog
+          title={t('members.confirmTitle')}
+          message={t('members.confirmMessage', { name: removing.name, role: role.name })}
+          confirmLabel={t('members.confirmLabel')}
+          danger
+          onClose={() => setRemoving(null)}
+          onConfirm={unassign}
+        />
+      )}
+    </section>
+  );
+}
+
 export function Roles() {
   const { t } = useTranslation(['roles', 'common']);
   const toast = useToast();
@@ -156,6 +297,7 @@ export function Roles() {
   // CORR-8: role đang chờ chuyển sang khi còn thay đổi quyền chưa lưu; id detail mới nhất để bỏ response cũ
   const [pendingRoleId, setPendingRoleId] = useState<number | null>(null);
   const detailReq = useRef<number | null>(null);
+  const canManage = useMyPermissions().has('roles.manage');
 
   const SCOPE_SHORT: Record<string, string> = {
     '': t('scopeShort.off'),
@@ -456,6 +598,13 @@ export function Roles() {
                   </div>
                 )}
               </div>
+
+              <RoleMembers
+                key={detail.id}
+                role={detail}
+                canManage={canManage}
+                onChanged={() => void loadRoles()}
+              />
 
               {detail.is_system ? (
                 <div className="perm-groups">

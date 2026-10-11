@@ -14,6 +14,7 @@ import {
   listPermissionCatalog,
   listRoles,
   getRoleDetail,
+  listAssignableUsers,
   getEditableRole,
   createRole,
   updateRole,
@@ -41,6 +42,15 @@ router.get(
   requirePermission('roles.view'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     res.json(await listRoles(reqCenterId(req)));
+  })
+);
+
+/** Nhân sự có thể gán custom role (route tĩnh — đăng ký trước '/:id') */
+router.get(
+  '/users',
+  requirePermission('roles.manage'),
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    res.json(await listAssignableUsers(reqCenterId(req)));
   })
 );
 

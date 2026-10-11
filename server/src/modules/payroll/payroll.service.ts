@@ -21,6 +21,10 @@ export interface PayrollResult {
   sessions: number;
   per_session: number;
   total: number;
+  /** N5-3: đơn giá bình quân thực trả = round(total / sessions) (0 nếu không có buổi). */
+  avg_rate: number;
+  /** N5-3: total ≠ sessions × per_session — có buổi tính theo đơn giá khác đơn giá hiện hành (lịch sử). */
+  mixed_rates: boolean;
 }
 
 /** Tháng hiện tại (YYYY-MM) */
@@ -58,21 +62,24 @@ const PAYROLL_SELECT = `SELECT t.id as teacher_id, t.name as teacher_name, t.cen
   COALESCE(sr.per_session_amount, 0) as per_session, COALESCE(SUM(r.rate), 0) as total
   ${PAYROLL_FROM}`;
 
-export interface PayrollRow {
+export interface PayrollRow extends PayrollResult {
   teacher_id: number;
   teacher_name: string;
-  sessions: number;
-  per_session: number;
-  total: number;
 }
 
-function toPayrollRow(r: PayrollRow): PayrollRow {
+/** Chuẩn hóa số + tính avg_rate/mixed_rates (cả với bản chốt cũ chưa có 2 trường này). */
+function toPayrollRow(r: Omit<PayrollRow, 'avg_rate' | 'mixed_rates'>): PayrollRow {
+  const sessions = Number(r.sessions) || 0;
+  const per_session = Number(r.per_session) || 0;
+  const total = Number(r.total) || 0;
   return {
     teacher_id: r.teacher_id,
     teacher_name: r.teacher_name,
-    sessions: Number(r.sessions) || 0,
-    per_session: Number(r.per_session) || 0,
-    total: Number(r.total) || 0,
+    sessions,
+    per_session,
+    total,
+    avg_rate: sessions ? Math.round(total / sessions) : 0,
+    mixed_rates: total !== sessions * per_session,
   };
 }
 
@@ -86,17 +93,21 @@ export async function calcPayroll(teacherId: number, month: string): Promise<Pay
     : ((await db
         .prepare(`${PAYROLL_SELECT} WHERE t.id = ? GROUP BY t.id, t.name, t.center_id, sr.per_session_amount`)
         .get(month, toISODate(new Date()), teacherId)) as PayrollRow | undefined);
-  if (!row) return { sessions: 0, per_session: 0, total: 0 };
-  const { sessions, per_session, total } = toPayrollRow(row);
-  return { sessions, per_session, total };
+  if (!row) return { sessions: 0, per_session: 0, total: 0, avg_rate: 0, mixed_rates: false };
+  const { sessions, per_session, total, avg_rate, mixed_rates } = toPayrollRow(row);
+  return { sessions, per_session, total, avg_rate, mixed_rates };
 }
 
-/** Bảng lương tính từ dữ liệu hiện tại (không xét chốt tháng). Giữ center_id để ghép với bản chốt. */
+/**
+ * Bảng lương tính từ dữ liệu hiện tại (không xét chốt tháng). Giữ center_id để ghép với bản chốt.
+ * q: transaction đang giữ lock (N5-2: setPayrollClosed chụp trên cùng connection, không mượn thêm từ pool).
+ */
 async function livePayroll(
   centerId: number | null,
-  month: string
+  month: string,
+  q: Pick<Tx, 'prepare'> = db
 ): Promise<(PayrollRow & { center_id: number | null })[]> {
-  const rows = (await db
+  const rows = (await q
     .prepare(
       `${PAYROLL_SELECT}
        ${centerId !== null ? 'WHERE t.center_id = ?' : ''}
@@ -200,7 +211,7 @@ export async function setPayrollClosed(
   const r = closed
     ? await db.transaction(async (tx) => {
         await tx.prepare(`SELECT pg_advisory_xact_lock(hashtext('payroll-close'), ?)`).get(centerId);
-        const snapshot = JSON.stringify((await livePayroll(centerId, month)).map(toPayrollRow));
+        const snapshot = JSON.stringify((await livePayroll(centerId, month, tx)).map(toPayrollRow));
         return tx
           .prepare(
             'INSERT INTO payroll_closures (center_id, month, closed_by, snapshot) VALUES (?, ?, ?, ?) ON CONFLICT DO NOTHING'

@@ -48,7 +48,8 @@
     },
     "title": "Teacher payroll",
     "totalSpent": "Total payout",
-    "viewAttendance": "Record teaching sessions"
+    "viewAttendance": "Record teaching sessions",
+    "mixedRate": "Rate changed this month, average {{avg}}/session"
   },
   "rate": {
     "title": "Teaching rate - {{name}}",
