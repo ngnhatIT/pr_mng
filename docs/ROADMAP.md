@@ -28,7 +28,9 @@ Nguồn: 3 audit (tính năng so với Teachworks/TutorBird/Classe365, khả nă
 
 ## Gói 5 — Nhập liệu & điều hướng (S–M)
 - [x] Nhập học viên từ CSV (kiểm tra trước, lỗi theo dòng có mã dịch được, nhận file Xuất CSV của app)
-- [ ] Command palette Ctrl+K, breadcrumb chung, menu tài khoản trên topbar, URL tiếng Anh + redirect
+- [x] Tìm nhanh Ctrl/Cmd+K (trang theo quyền, học viên, lớp; combobox ARIA)
+- [ ] Breadcrumb chung + tiêu đề topbar đúng ở trang chi tiết, menu tài khoản trên topbar, URL tiếng Anh + redirect
+- [ ] Tìm kiếm không dấu phía server ("hoc" khớp "Học") — hiện LIKE phân biệt dấu
 - [ ] Sắp xếp cột bảng (`sort` allowlist server + `aria-sort`)
 
 ## Gói 6 — API & bảo mật chuẩn quốc tế (S–M)

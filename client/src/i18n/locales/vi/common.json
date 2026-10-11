@@ -186,6 +186,19 @@
     "last": "Trang cuối",
     "pageOf": "Trang {{page}} / {{totalPages}}"
   },
+  "palette": {
+    "empty": "Không có kết quả. Gõ ít nhất 2 ký tự để tìm học viên và lớp.",
+    "groups": {
+      "classes": "Lớp học",
+      "pages": "Trang",
+      "students": "Học viên"
+    },
+    "keys": "↑↓ để chọn · Enter để mở · Esc để đóng",
+    "open": "Tìm nhanh (Ctrl+K)",
+    "placeholder": "Đi tới trang, hoặc tìm học viên, lớp học...",
+    "short": "Tìm",
+    "title": "Tìm nhanh"
+  },
   "roles": {
     "superadmin": "Quản trị hệ thống",
     "admin": "Quản trị viên",

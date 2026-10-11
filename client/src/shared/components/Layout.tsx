@@ -7,6 +7,7 @@ import { initials, type CenterItem } from '../types';
 import { Icon, IconName } from './icons';
 import { ThemeLangSwitch } from '../ui/ThemeLangSwitch';
 import { NotificationBell } from '../../features/notifications/NotificationBell';
+import { CommandPalette } from './CommandPalette';
 import { Menu } from './Menu';
 import { ChangePasswordModal } from './ChangePasswordModal';
 import { ConfirmDialog } from './Modal';
@@ -181,6 +182,20 @@ export function Layout() {
     if (myPerms === null) return true;
     return myPerms.has(item.perm);
   };
+
+  // Tìm nhanh: Ctrl/Cmd+K ở mọi trang (kể cả đang gõ trong ô nhập — phím tắt quen thuộc của web app)
+  const [paletteOpen, setPaletteOpen] = useState(false);
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        setPaletteOpen((o) => !o);
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
+  const isMac = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform);
 
   // Tải số badge từ API thật, chỉ cho menu user được phép thấy (limit 1: chỉ cần total).
   useEffect(() => {
@@ -386,12 +401,35 @@ export function Layout() {
               ))}
             </select>
           )}
+          <button
+            type="button"
+            className="btn btn-ghost topbar-search"
+            onClick={() => setPaletteOpen(true)}
+            aria-label={t('palette.open')}
+            aria-keyshortcuts="Control+K Meta+K"
+          >
+            <Icon name="search" size={16} />
+            <span className="topbar-search-text">{t('palette.short')}</span>
+            <kbd className="topbar-kbd">{isMac ? '⌘K' : 'Ctrl K'}</kbd>
+          </button>
           <NotificationBell />
           <ThemeLangSwitch />
         </header>
         <main className="page-scroll" id="main-content" tabIndex={-1}>
           <Outlet />
         </main>
+        {paletteOpen && (
+          <CommandPalette
+            pages={SECTIONS.flatMap((sec) => sec.items)
+              .filter(visible)
+              .map((it) => ({ to: it.to, label: t(it.labelKey), icon: it.icon }))}
+            canSearch={{
+              students: !!myPerms?.has('students.view'),
+              classes: !!myPerms?.has('classes.view'),
+            }}
+            onClose={() => setPaletteOpen(false)}
+          />
+        )}
       </div>
       {showChangePw && <ChangePasswordModal onClose={() => setShowChangePw(false)} />}
       {showLogoutConfirm && (

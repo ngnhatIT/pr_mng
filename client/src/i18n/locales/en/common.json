@@ -186,6 +186,19 @@
     "last": "Last page",
     "pageOf": "Page {{page}} / {{totalPages}}"
   },
+  "palette": {
+    "empty": "No matches. Type at least 2 letters to search students and classes.",
+    "groups": {
+      "classes": "Classes",
+      "pages": "Pages",
+      "students": "Students"
+    },
+    "keys": "↑↓ to move · Enter to open · Esc to close",
+    "open": "Quick search (Ctrl+K)",
+    "placeholder": "Go to a page, or search students and classes...",
+    "short": "Search",
+    "title": "Quick search"
+  },
   "roles": {
     "superadmin": "System admin",
     "admin": "Admin",
