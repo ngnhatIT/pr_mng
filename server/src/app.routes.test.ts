@@ -70,3 +70,39 @@ describe('thứ tự route Express', () => {
     );
   });
 });
+
+/** Route dạng OpenAPI: /api/v1/x/:id -> /api/v1/x/{id} (mỗi router mount 1 lần, bỏ alias /api cũ). */
+function collectTemplates(stack: Layer[], prefix: string, out: Set<string>) {
+  for (const l of stack) {
+    if (l.route && typeof l.route.path === 'string') {
+      const path = prefix + l.route.path.replace(/:(\w+)(\([^)]*\))?\??/g, '{$1}');
+      for (const m of Object.keys(l.route.methods)) if (m !== '_all') out.add(`${m.toUpperCase()} ${path}`);
+    } else if (l.handle.stack) {
+      collectTemplates(l.handle.stack, prefix + mountPrefix(l), out);
+    }
+  }
+}
+
+describe('OpenAPI không lệch so với route thật', () => {
+  it('mọi route /api/v1 đều có trong src/docs/openapi.yaml (và ngược lại)', async () => {
+    const YAML = (await import('yamljs')).default as unknown as {
+      load(p: string): { paths: Record<string, object> };
+    };
+    const spec = YAML.load(require('path').resolve(process.cwd(), 'src/docs/openapi.yaml'));
+    const documented = new Set<string>();
+    for (const [p, ops] of Object.entries(spec.paths)) {
+      for (const m of Object.keys(ops)) if (m !== 'parameters') documented.add(`${m.toUpperCase()} ${p}`);
+    }
+    const actual = new Set<string>();
+    collectTemplates((createApp() as unknown as { _router: { stack: Layer[] } })._router.stack, '', actual);
+    const norm = (s: string) => s.replace(/\{[^}]+\}/g, '{}').replace(/\/$/, '');
+    const docN = new Set([...documented].map(norm));
+    const actN = new Set([...actual].filter((r) => r.split(' ')[1].startsWith('/api/v1/')).map(norm));
+    assert.deepEqual([...actN].filter((r) => !docN.has(r)).sort(), [], 'route chưa có trong openapi.yaml');
+    assert.deepEqual(
+      [...docN].filter((r) => r.includes('/api/v1/') && !actN.has(r)).sort(),
+      [],
+      'spec có path không tồn tại'
+    );
+  });
+});
