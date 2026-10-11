@@ -287,7 +287,8 @@
     "statTotal": "Lượt giới thiệu",
     "subtitle": "Chia sẻ mã giới thiệu cho bạn bè đăng ký học thử - cả bạn và người được giới thiệu đều nhận ưu đãi credits.",
     "title": "Giới thiệu bạn bè",
-    "yourCode": "Mã giới thiệu của bạn"
+    "yourCode": "Mã giới thiệu của bạn",
+    "linkLabel": "Link giới thiệu"
   },
   "status": {
     "invoice": {

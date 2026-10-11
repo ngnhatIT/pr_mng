@@ -70,6 +70,7 @@ export function ParentReferral() {
         <div className="referral-link-row">
           <input
             className="text-input mono"
+            aria-label={t('referral.linkLabel')}
             value={data.share_link}
             readOnly
             onFocus={(e) => e.target.select()}

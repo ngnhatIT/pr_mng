@@ -283,7 +283,14 @@ export const routes = createRoutesFromElements(
         <Route path="teachers" element={<Teachers />} />
         <Route path="teachers/:id" element={<TeacherDetail />} />
         <Route path="cau-hinh-thanh-toan" element={<PaymentConfig />} />
-        <Route path="system" element={<System />} />
+        <Route
+          path="system"
+          element={
+            <RoleGuard roles={['superadmin']} loginPath="/login">
+              <System />
+            </RoleGuard>
+          }
+        />
         <Route path="nhat-ky" element={<AuditLogs />} />
         <Route path="phan-quyen" element={<Roles />} />
         <Route path="*" element={<NotFound />} />

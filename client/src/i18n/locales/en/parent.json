@@ -287,7 +287,8 @@
     "statTotal": "Referrals",
     "subtitle": "Share your referral code when friends sign up for a trial - both of you earn credit rewards.",
     "title": "Refer friends",
-    "yourCode": "Your referral code"
+    "yourCode": "Your referral code",
+    "linkLabel": "Referral link"
   },
   "status": {
     "invoice": {

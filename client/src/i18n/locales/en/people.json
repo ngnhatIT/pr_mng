@@ -58,7 +58,8 @@
     "updated": "Rate updated for {{name}}",
     "errors": {
       "amountInvalid": "Rate must be a non-negative number"
-    }
+    },
+    "hint": "Current rate, applied to sessions from today. Past months keep their old rate."
   },
   "table": {
     "actions": "Actions",

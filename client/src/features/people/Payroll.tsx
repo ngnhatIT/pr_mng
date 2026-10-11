@@ -175,7 +175,7 @@ function RateModal({ row, onClose, onDone }: { row: PayrollRow; onClose: () => v
   return (
     <Modal title={t('rate.title', { name: row.teacher_name })} onClose={onClose} dirty={amount !== initial}>
       <form onSubmit={submit}>
-        <Field label={t('rate.unit')} error={errors.amount}>
+        <Field label={t('rate.unit')} error={errors.amount} hint={t('rate.hint')}>
           <MoneyInput
             ref={refFor('amount')}
             className="text-input"

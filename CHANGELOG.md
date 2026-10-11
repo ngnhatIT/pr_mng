@@ -2,7 +2,11 @@
 
 ## 2026-10-11 — Review fixes, vòng 7
 
-Không có migration mới (vẫn v25).
+Không có migration mới (vẫn v25). Re-review sau vòng 7: 96,5 (production) và 95,5 (kỹ thuật/UX).
+
+Bổ sung sau chấm điểm: hộp tạo/sửa vai trò là `<form>` thật (Enter để lưu, nút ở `modal-actions`, mô tả
+chiếm cả hàng); `/app/system` chỉ superadmin (admin thấy trang 403 thay vì lỗi tải); hộp đơn giá ghi rõ áp dụng từ hôm
+nay; ô tìm vai trò và ô link giới thiệu có nhãn cho trình đọc màn hình.
 
 ### Bảo mật / tính đúng đắn
 

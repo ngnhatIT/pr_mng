@@ -58,7 +58,8 @@
     "updated": "Đã cập nhật đơn giá cho {{name}}",
     "errors": {
       "amountInvalid": "Đơn giá phải là số không âm"
-    }
+    },
+    "hint": "Đơn giá hiện hành, áp dụng cho các buổi từ hôm nay. Tháng đã qua giữ đơn giá cũ."
   },
   "table": {
     "actions": "Thao tác",

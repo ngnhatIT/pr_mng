@@ -59,7 +59,8 @@ function RoleForm({
   const [description, setDescription] = useState(initial?.description ?? '');
   const [saving, setSaving] = useState(false);
 
-  const save = async () => {
+  const save = async (e?: React.FormEvent) => {
+    e?.preventDefault();
     if (!name.trim()) {
       toast(t('form.needName'), 'error');
       return;
@@ -87,48 +88,50 @@ function RoleForm({
 
   return (
     <Modal title={title} onClose={onClose} dirty={dirty}>
-      <div className="form-grid">
-        {!initial && (
+      <form onSubmit={save}>
+        <div className="form-grid">
+          {!initial && (
+            <label className="form-field">
+              <span>{t('form.code')}</span>
+              <input
+                className="text-input"
+                value={code}
+                onChange={(e) => setCode(e.target.value)}
+                placeholder={toRoleCode(name) || t('form.codePh')}
+              />
+            </label>
+          )}
           <label className="form-field">
-            <span>{t('form.code')}</span>
+            <span>{t('form.name')}</span>
             <input
               className="text-input"
-              value={code}
-              onChange={(e) => setCode(e.target.value)}
-              placeholder={toRoleCode(name) || t('form.codePh')}
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder={t('form.namePh')}
+              autoFocus
             />
           </label>
-        )}
-        <label className="form-field">
-          <span>{t('form.name')}</span>
-          <input
-            className="text-input"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder={t('form.namePh')}
-            autoFocus
-          />
-        </label>
-        <label className="form-field">
-          <span>{t('form.desc')}</span>
-          <textarea
-            className="text-input"
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            placeholder={t('form.descPh')}
-            rows={3}
-          />
-        </label>
-        <div className="form-actions">
-          <button className="btn btn-ghost" onClick={onClose} disabled={saving}>
+          <label className="form-field field-span">
+            <span>{t('form.desc')}</span>
+            <textarea
+              className="text-input"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder={t('form.descPh')}
+              rows={3}
+            />
+          </label>
+        </div>
+        <div className="modal-actions">
+          <button type="button" className="btn btn-ghost" onClick={onClose} disabled={saving}>
             {t('actions.cancel', { ns: 'common' })}
           </button>
-          <button className="btn btn-primary" onClick={save} disabled={saving}>
+          <button type="submit" className="btn btn-primary" disabled={saving}>
             {saving && <span className="spinner" aria-hidden="true" />}
             {saving ? t('saving') : initial ? t('form.save') : t('form.create')}
           </button>
         </div>
-      </div>
+      </form>
     </Modal>
   );
 }
@@ -516,6 +519,8 @@ export function Roles() {
             <Icon name="search" size={16} className="search-icon" />
             <input
               className="text-input roles-search-input"
+              type="search"
+              aria-label={t('searchPh')}
               placeholder={t('searchPh')}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
