@@ -7,6 +7,7 @@ process.env.DATABASE_URL || (process.env.DATABASE_URL = 'postgres://u:p@localhos
 
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
+import { resolve } from 'node:path';
 import { createApp } from './app';
 
 interface Layer {
@@ -88,7 +89,7 @@ describe('OpenAPI không lệch so với route thật', () => {
     const YAML = (await import('yamljs')).default as unknown as {
       load(p: string): { paths: Record<string, object> };
     };
-    const spec = YAML.load(require('path').resolve(process.cwd(), 'src/docs/openapi.yaml'));
+    const spec = YAML.load(resolve(process.cwd(), 'src/docs/openapi.yaml'));
     const documented = new Set<string>();
     for (const [p, ops] of Object.entries(spec.paths)) {
       for (const m of Object.keys(ops)) if (m !== 'parameters') documented.add(`${m.toUpperCase()} ${p}`);
