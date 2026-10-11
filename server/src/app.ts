@@ -40,6 +40,7 @@ import homeworkRoutes from './modules/homework/homework.routes';
 import uploadRoutes from './modules/uploads/uploads.routes';
 import roomRoutes from './modules/rooms/rooms.routes';
 import payrollRoutes from './modules/payroll/payroll.routes';
+import exportRoutes from './modules/exports/exports.routes';
 import trialRoutes from './modules/trials/trials.routes';
 import teacherPortalRoutes from './modules/teacher/teacher.routes';
 import publicRoutes from './modules/public/public.routes';
@@ -258,6 +259,7 @@ export function createApp(): Express {
   v1.use('/homework', ...staff, homeworkRoutes);
   v1.use('/uploads', ...staff, uploadRoutes); // staff: giáo viên/admin tải file đính kèm bài tập
   v1.use('/rooms', ...staff, roomRoutes);
+  v1.use('/exports', ...staff, exportRoutes); // CSV: quyền xem + reports.export
   v1.use('/payroll', ...staff, payrollRoutes); // C1: denyParents — parent không chạm API lương
   v1.use('/trials', ...staff, trialRoutes);
   v1.use('/teacher', ...staff, teacherPortalRoutes); // C1: denyParents — parent không chạm portal giáo viên

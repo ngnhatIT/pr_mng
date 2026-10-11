@@ -7,6 +7,7 @@ import { useLoad } from '../../shared/hooks/useLoad';
 import { Modal } from '../../shared/components/Modal';
 import { Field, MoneyInput, moneyDigits, useFieldErrors } from '../../shared/components/Form';
 import { PageHeader } from '../../shared/components/PageHeader';
+import { ExportButton } from '../../shared/components/ExportButton';
 import { EmptyState, LoadError } from '../../shared/components/EmptyState';
 import { TableSkeleton } from '../../shared/components/Skeleton';
 import { Icon } from '../../shared/components/icons';
@@ -57,6 +58,8 @@ export function Payroll() {
             onChange={(e) => setMonth(e.target.value)}
           />
         </Field>
+        <span className="spacer" />
+        <ExportButton kind="payroll" query={{ month }} />
       </div>
 
       {loading && !data ? (

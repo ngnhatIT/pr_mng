@@ -42,6 +42,8 @@
     "detail": "Chi tiết",
     "download": "Tải xuống",
     "edit": "Sửa",
+    "exportCsv": "Xuất CSV",
+    "exportError": "Không xuất được file",
     "finish": "Hoàn thành",
     "loading": "Đang tải...",
     "more": "Thao tác khác",

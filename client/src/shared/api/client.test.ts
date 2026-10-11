@@ -190,3 +190,17 @@ describe('B4-4: 401 hết phiên gắn code SESSION_EXPIRED', () => {
     expect(window.dispatchEvent).toHaveBeenCalledTimes(1);
   });
 });
+
+describe('api() file CSV', () => {
+  it('text/csv 200 -> trả Blob; lỗi vẫn ném theo JSON envelope', async () => {
+    client.setAuth('t', staff);
+    fetchMock
+      .mockResolvedValueOnce(
+        new Response('a,b', { status: 200, headers: { 'Content-Type': 'text/csv; charset=utf-8' } })
+      )
+      .mockResolvedValueOnce(json(403, { error: 'no', code: 'FORBIDDEN' }));
+    const blob = await client.api<Blob>('/exports/students.csv');
+    expect(await blob.text()).toBe('a,b');
+    await expect(client.api('/exports/students.csv')).rejects.toMatchObject({ code: 'FORBIDDEN' });
+  });
+});

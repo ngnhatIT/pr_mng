@@ -290,6 +290,8 @@ export async function api<T>(path: string, options: RequestInit = {}): Promise<T
     throw Object.assign(new Error(tApi('api.sessionExpired')), { code: SESSION_EXPIRED });
   }
 
+  // File xuất báo cáo (CSV): trả Blob, lỗi vẫn là JSON envelope như thường
+  if (res.ok && res.headers.get('content-type')?.startsWith('text/csv')) return (await res.blob()) as T;
   let data: unknown;
   try {
     data = await res.json();
@@ -309,6 +311,16 @@ export async function api<T>(path: string, options: RequestInit = {}): Promise<T
     throw err;
   }
   return data as T;
+}
+
+/** Tải file qua api() (giữ Bearer, refresh 401, center_id superadmin, thông báo lỗi chuẩn). */
+export async function downloadFile(path: string, filename: string): Promise<void> {
+  const url = URL.createObjectURL(await api<Blob>(path));
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
 export const http = {

@@ -16,6 +16,7 @@ import { useToast, toastApiError } from '../../shared/ui/toast';
 import { Modal } from '../../shared/components/Modal';
 import { Field, MoneyInput, moneyDigits, useFieldErrors } from '../../shared/components/Form';
 import { PageHeader } from '../../shared/components/PageHeader';
+import { ExportButton } from '../../shared/components/ExportButton';
 import { EmptyState, LoadError } from '../../shared/components/EmptyState';
 import { TableSkeleton } from '../../shared/components/Skeleton';
 import {
@@ -303,6 +304,7 @@ function InvoiceList() {
             </>
           )}
         </span>
+        <ExportButton kind="invoices" query={{ search: debouncedSearch, status }} />
         {perms.has('invoices.create') && (
           <button className="btn btn-primary btn-inline" onClick={() => setShowCreate(true)}>
             <Icon name="plus" size={14} />
@@ -1050,6 +1052,8 @@ function DebtList() {
             />
           </span>
         )}
+        <span className="spacer" />
+        <ExportButton kind="debt" />
       </div>
       {loading && !res ? (
         <TableSkeleton cols={6} />

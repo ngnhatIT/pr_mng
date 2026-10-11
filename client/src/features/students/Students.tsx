@@ -7,6 +7,7 @@ import { Modal, ConfirmDialog } from '../../shared/components/Modal';
 import { Field, useFieldErrors } from '../../shared/components/Form';
 import { isValidVNPhone } from '../../shared/validation';
 import { PageHeader } from '../../shared/components/PageHeader';
+import { ExportButton } from '../../shared/components/ExportButton';
 import { EmptyState, LoadError } from '../../shared/components/EmptyState';
 import { TableSkeleton } from '../../shared/components/Skeleton';
 import { useLoad } from '../../shared/hooks/useLoad';
@@ -143,6 +144,8 @@ export function Students() {
           <option value="paused">{t('status.paused')}</option>
           <option value="quit">{t('status.quit')}</option>
         </select>
+        <span className="spacer" />
+        <ExportButton kind="students" query={{ search: debouncedSearch, status }} />
       </div>
 
       {loading && !res ? (

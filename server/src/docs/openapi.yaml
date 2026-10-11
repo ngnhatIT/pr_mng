@@ -22,6 +22,8 @@ servers:
 security:
   - bearerAuth: []
 tags:
+  - name: Exports
+    description: Xuất CSV (Excel/Google Sheets)
   - name: Homework
     description: CRUD bài tập, đăng/gỡ đăng, tái sử dụng
   - name: Quiz
@@ -2663,6 +2665,122 @@ paths:
       responses:
         '200':
           description: OK
+  /api/v1/exports/students.csv:
+    get:
+      tags:
+        - Exports
+      summary: 'Xuất CSV — Học viên (filter search, status như GET /students)'
+      description: >-
+        Cần quyền xem dữ liệu tương ứng + reports.export. File UTF-8 có BOM (mở thẳng bằng Excel), ô bắt đầu bằng
+        = + - @ được thêm dấu ' để chặn formula injection. Tối đa 20.000 dòng.
+      parameters:
+        - in: query
+          name: lang
+          schema:
+            type: string
+            enum: [vi, en]
+          description: Ngôn ngữ tiêu đề cột + nhãn trạng thái (mặc định vi)
+        - in: query
+          name: search
+          schema:
+            type: string
+        - in: query
+          name: status
+          schema:
+            type: string
+      responses:
+        '200':
+          description: File CSV
+          content:
+            text/csv:
+              schema:
+                type: string
+        '403':
+          description: Thiếu quyền
+  /api/v1/exports/invoices.csv:
+    get:
+      tags:
+        - Exports
+      summary: 'Xuất CSV — Hóa đơn (filter search, status như GET /invoices)'
+      description: >-
+        Cần quyền xem dữ liệu tương ứng + reports.export. File UTF-8 có BOM (mở thẳng bằng Excel), ô bắt đầu bằng
+        = + - @ được thêm dấu ' để chặn formula injection. Tối đa 20.000 dòng.
+      parameters:
+        - in: query
+          name: lang
+          schema:
+            type: string
+            enum: [vi, en]
+          description: Ngôn ngữ tiêu đề cột + nhãn trạng thái (mặc định vi)
+        - in: query
+          name: search
+          schema:
+            type: string
+        - in: query
+          name: status
+          schema:
+            type: string
+      responses:
+        '200':
+          description: File CSV
+          content:
+            text/csv:
+              schema:
+                type: string
+        '403':
+          description: Thiếu quyền
+  /api/v1/exports/debt.csv:
+    get:
+      tags:
+        - Exports
+      summary: 'Xuất CSV — Công nợ theo học viên'
+      description: >-
+        Cần quyền xem dữ liệu tương ứng + reports.export. File UTF-8 có BOM (mở thẳng bằng Excel), ô bắt đầu bằng
+        = + - @ được thêm dấu ' để chặn formula injection. Tối đa 20.000 dòng.
+      parameters:
+        - in: query
+          name: lang
+          schema:
+            type: string
+            enum: [vi, en]
+          description: Ngôn ngữ tiêu đề cột + nhãn trạng thái (mặc định vi)
+      responses:
+        '200':
+          description: File CSV
+          content:
+            text/csv:
+              schema:
+                type: string
+        '403':
+          description: Thiếu quyền
+  /api/v1/exports/payroll.csv:
+    get:
+      tags:
+        - Exports
+      summary: 'Xuất CSV — Bảng lương tháng'
+      description: >-
+        Cần quyền xem dữ liệu tương ứng + reports.export. File UTF-8 có BOM (mở thẳng bằng Excel), ô bắt đầu bằng
+        = + - @ được thêm dấu ' để chặn formula injection. Tối đa 20.000 dòng.
+      parameters:
+        - in: query
+          name: lang
+          schema:
+            type: string
+            enum: [vi, en]
+          description: Ngôn ngữ tiêu đề cột + nhãn trạng thái (mặc định vi)
+        - in: query
+          name: month
+          schema:
+            type: string
+      responses:
+        '200':
+          description: File CSV
+          content:
+            text/csv:
+              schema:
+                type: string
+        '403':
+          description: Thiếu quyền
   /api/v1/payroll:
     get:
       tags:

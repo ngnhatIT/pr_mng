@@ -42,6 +42,8 @@
     "detail": "Details",
     "download": "Download",
     "edit": "Edit",
+    "exportCsv": "Export CSV",
+    "exportError": "Could not export file",
     "finish": "Finish",
     "loading": "Loading...",
     "more": "More actions",
