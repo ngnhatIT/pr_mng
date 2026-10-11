@@ -35,7 +35,7 @@ Nguồn: 3 audit (tính năng so với Teachworks/TutorBird/Classe365, khả nă
 - [x] Sắp xếp cột bảng: parseSort allowlist (server) + SortHeader aria-sort, áp cho Học viên và Hóa đơn; sort trên URL
 
 ## Gói 6 — API & bảo mật chuẩn quốc tế (S–M)
-- [ ] Mã lỗi cụ thể + `details[]` theo field → client dịch theo code
+- [x] Mã lỗi server đều có bản dịch vi/en (thêm 51 mã) + test quét mã nguồn server chặn mã mới thiếu dịch. Còn: `details[]` theo field cho lỗi validate
 - [x] Test đối chiếu route Express ↔ OpenAPI (app.routes.test.ts) + bổ sung 8 operation còn thiếu
 - [x] 2FA TOTP cho nhân sự (RFC 6238 không thư viện, secret AES-GCM, mã khôi phục, chống dùng lại mã; migration v30)
 - [x] Xuất dữ liệu cá nhân (JSON) + ẩn danh học viên giữ chứng từ (GDPR/NĐ 13/2023, migration v31)
