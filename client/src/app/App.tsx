@@ -66,6 +66,7 @@ const StudentDetail = lazyPage(() => import('../features/students/StudentDetail'
 const Classes = lazyPage(() => import('../features/classes/Classes'), 'Classes');
 const ClassDetail = lazyPage(() => import('../features/classes/ClassDetail'), 'ClassDetail');
 const Attendance = lazyPage(() => import('../features/classes/Attendance'), 'Attendance');
+const Schedule = lazyPage(() => import('../features/classes/Schedule'), 'Schedule');
 const Tuition = lazyPage(() => import('../features/tuition/Tuition'), 'Tuition');
 const InvoiceDetail = lazyPage(() => import('../features/tuition/InvoiceDetail'), 'InvoiceDetail');
 const ZaloReminders = lazyPage(() => import('../features/notifications/ZaloReminders'), 'ZaloReminders');
@@ -285,6 +286,7 @@ export const routes = createRoutesFromElements(
         <Route path="classes" element={<Classes />} />
         <Route path="classes/:id" element={<ClassDetail />} />
         <Route path="attendance" element={<Attendance />} />
+        <Route path="schedule" element={<Schedule />} />
         <Route path="tuition" element={<Tuition />} />
         <Route path="tuition/invoices/:id" element={<InvoiceDetail />} />
         <Route path="rooms" element={<Rooms />} />

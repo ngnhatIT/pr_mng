@@ -8,7 +8,7 @@ import { PageHeader } from '../../shared/components/PageHeader';
 import { EmptyState } from '../../shared/components/EmptyState';
 import { Skeleton } from '../../shared/components/Skeleton';
 import { Icon } from '../../shared/components/icons';
-import { TeacherTodayItem, formatDate, slotOn } from '../../shared/types';
+import { TeacherTodayItem, formatDate, sessionSlot } from '../../shared/types';
 import './TeacherToday.css';
 
 export function TeacherToday() {
@@ -108,7 +108,7 @@ export function TeacherToday() {
                 <div className="today-time-chip">
                   <Icon name="clock" size={15} />
                   {(() => {
-                    const slot = slotOn(s.schedule, s.date);
+                    const slot = sessionSlot(s);
                     return slot ? `${slot.start}–${slot.end}` : formatDate(s.date);
                   })()}
                   {s.room_name && <span className="today-room">· {s.room_name}</span>}

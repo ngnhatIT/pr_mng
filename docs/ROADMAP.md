@@ -13,8 +13,8 @@ Nguồn: 3 audit (tính năng so với Teachworks/TutorBird/Classe365, khả nă
 - [x] Focus `main` khi đổi trang; toast lỗi `role=alert`, dừng khi hover
 
 ## Gói 2 — Lịch & vận hành buổi học (M)
-- [ ] Trang Lịch (tuần/tháng, lọc giáo viên/phòng) trên dữ liệu `sessions`
-- [ ] Đổi lịch/học bù/dạy thay từng buổi (giờ riêng, `teacher_id` riêng, bỏ `UNIQUE(class_id,date)`)
+- [x] Trang Lịch `/app/schedule` (tuần/tháng, lọc giáo viên/phòng, mobile thành danh sách)
+- [x] Dạy thay / đổi phòng / đổi giờ / dời buổi từng buổi (migration v26; giữ `UNIQUE(class_id,date)`, dời = hủy mềm gốc + tạo buổi mới)
 
 ## Gói 3 — Thông báo (M)
 - [ ] Bảng `notifications` + chuông/inbox in-app (staff + phụ huynh), thông báo chung (announcement)

@@ -366,9 +366,10 @@ async function syncSessionsAfterUpdate(
     await tx
       .prepare(
         `UPDATE sessions SET teacher_id = ? WHERE class_id = ? AND date >= ?
+           AND teacher_id IS NOT DISTINCT FROM ? -- giữ buổi đã phân dạy thay cho giáo viên khác
            AND NOT EXISTS (SELECT 1 FROM teacher_checkins tc WHERE tc.session_id = sessions.id)`
       )
-      .run(teacherId, id, today);
+      .run(teacherId, id, today, old.teacher_id ?? null);
   }
   const newDays = new Set(n.schedule.map((e) => e.day));
   const removed = scheduleDays(old.schedule as string).filter((d) => !newDays.has(d));

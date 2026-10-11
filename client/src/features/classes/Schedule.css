@@ -1,0 +1,243 @@
+/* Lịch buổi học: tuần (7 cột, mỗi ngày là danh sách theo giờ) + tháng (lưới 7x5/6). Chỉ dùng token. */
+
+.sched-toolbar {
+  flex-wrap: wrap;
+}
+.sched-toolbar select.text-input {
+  width: auto;
+  min-width: 160px;
+}
+.sched-nav {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-1);
+}
+.sched-title {
+  margin: 0 0 0 var(--sp-2);
+  font-size: var(--font-size-lg);
+  font-weight: 600;
+  white-space: nowrap;
+}
+.sched-week,
+.sched-month {
+  transition: opacity 0.15s ease;
+}
+.is-loading {
+  opacity: 0.6;
+}
+
+/* ---------- Tuần ---------- */
+.sched-week {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(128px, 1fr));
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  overflow-x: auto; /* màn hẹp: cuộn ngang trong lịch thay vì bóp cột */
+}
+.sched-day {
+  min-height: 360px;
+  border-left: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+}
+.sched-day:first-child {
+  border-left: none;
+}
+.sched-day-head {
+  display: flex;
+  align-items: baseline;
+  gap: var(--sp-2);
+  padding: var(--sp-2) var(--sp-3);
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-muted);
+}
+.sched-wd {
+  font-size: var(--font-size-sm);
+  color: var(--text-muted);
+  text-transform: capitalize;
+}
+.sched-dn {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.is-today .sched-day-head {
+  background: var(--primary-soft);
+}
+.is-today .sched-dn {
+  color: var(--primary);
+}
+.sched-day-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  padding: var(--sp-2);
+}
+.sched-empty {
+  font-size: var(--font-size-sm);
+  color: var(--text-faint);
+  padding: var(--sp-1);
+}
+
+/* ---------- Thẻ buổi học ---------- */
+.sched-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 100%;
+  text-align: left;
+  padding: var(--sp-2);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--primary);
+  border-radius: var(--radius-md);
+  background: var(--bg-soft);
+  color: var(--text);
+  font: inherit;
+  cursor: pointer;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease;
+}
+.sched-item:hover {
+  background: var(--bg-hover);
+}
+.sched-item:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 1px;
+}
+.sched-item.is-sub {
+  border-left-color: var(--warning);
+}
+.sched-time {
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.sched-class {
+  font-size: var(--font-size-sm);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.sched-meta {
+  font-size: var(--font-size-xs);
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sched-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-1);
+  margin-top: 2px;
+}
+.sched-item.compact {
+  flex-direction: row;
+  gap: var(--sp-1);
+  padding: 2px var(--sp-1);
+  border-left-width: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+}
+.sched-item.compact .sched-time,
+.sched-item.compact .sched-class {
+  font-size: var(--font-size-xs);
+}
+.sched-item.compact .sched-class {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ---------- Tháng ---------- */
+.sched-month {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  overflow: hidden;
+}
+.sched-month-wd {
+  padding: var(--sp-2);
+  font-size: var(--font-size-sm);
+  color: var(--text-muted);
+  text-transform: capitalize;
+  background: var(--bg-muted);
+  border-bottom: 1px solid var(--border);
+}
+.sched-cell {
+  min-height: 110px;
+  padding: var(--sp-1);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  border-top: 1px solid var(--border);
+  border-left: 1px solid var(--border);
+  min-width: 0;
+}
+.sched-cell:nth-child(7n + 1) {
+  border-left: none;
+}
+.sched-cell .sched-dn {
+  font-size: var(--font-size-sm);
+  padding: 2px var(--sp-1);
+}
+.sched-cell.is-out {
+  background: var(--bg-muted);
+}
+.sched-cell.is-out .sched-dn {
+  color: var(--text-faint);
+}
+.sched-more {
+  border: none;
+  background: none;
+  padding: 2px var(--sp-1);
+  text-align: left;
+  font: inherit;
+  font-size: var(--font-size-xs);
+  color: var(--primary);
+  cursor: pointer;
+}
+
+/* ---------- Modal ---------- */
+.sched-dl {
+  margin-bottom: var(--sp-4);
+}
+.sched-actions {
+  flex-wrap: wrap;
+}
+
+/* ---------- Mobile: tuần thành danh sách dọc, tháng thu gọn ---------- */
+@media (max-width: 768px) {
+  .sched-week {
+    grid-template-columns: 1fr;
+  }
+  .sched-day {
+    min-height: 0;
+    border-left: none;
+    border-top: 1px solid var(--border);
+  }
+  .sched-day:first-child {
+    border-top: none;
+  }
+  .sched-cell {
+    min-height: 64px;
+  }
+  .sched-item.compact .sched-class {
+    display: none;
+  }
+  .sched-toolbar select.text-input {
+    flex: 1 1 140px;
+  }
+  .sched-nav {
+    flex-wrap: wrap;
+  }
+  .sched-title {
+    white-space: normal;
+    font-size: var(--font-size-md);
+  }
+}

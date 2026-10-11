@@ -32,6 +32,7 @@ const SECTIONS: { labelKey: string; items: NavItem[] }[] = [
       { to: '/app', labelKey: 'nav.dashboard', end: true, icon: 'grid', perm: 'reports.view' },
       { to: '/app/students', labelKey: 'nav.students', icon: 'users', perm: 'students.view' },
       { to: '/app/classes', labelKey: 'nav.classes', icon: 'book', perm: 'classes.view' },
+      { to: '/app/schedule', labelKey: 'nav.schedule', icon: 'calendar', perm: 'sessions.view' },
       { to: '/app/attendance', labelKey: 'nav.attendance', icon: 'clipboard', perm: 'attendance.view' },
       { to: '/app/tuition', labelKey: 'nav.tuition', icon: 'banknote', perm: 'invoices.view' },
     ],

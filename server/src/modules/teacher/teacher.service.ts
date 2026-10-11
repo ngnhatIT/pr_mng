@@ -45,11 +45,12 @@ export async function getTodaySessions(teacherId: number): Promise<TodaySession[
   const rows = (await db
     .prepare(
       `SELECT s.id as session_id, s.date, s.class_id, c.name as class_name, s.topic, c.schedule, r.name as room_name,
+         s.start_time, s.end_time,
          (SELECT COUNT(*) FROM attendance a WHERE a.session_id = s.id) as attendance_count,
          CASE WHEN EXISTS (SELECT 1 FROM teacher_checkins tc WHERE tc.session_id = s.id AND tc.teacher_id = ?)
            THEN 1 ELSE 0 END as checked_in
        FROM sessions s JOIN classes c ON c.id = s.class_id
-       LEFT JOIN rooms r ON r.id = c.room_id
+       LEFT JOIN rooms r ON r.id = COALESCE(s.room_id, c.room_id)
        WHERE s.date = ? AND s.teacher_id = ? AND s.status <> 'cancelled'
        ORDER BY s.id ASC`
     )
@@ -61,6 +62,8 @@ export async function getTodaySessions(teacherId: number): Promise<TodaySession[
     topic: string | null;
     schedule: string;
     room_name: string | null;
+    start_time: string | null;
+    end_time: string | null;
     attendance_count: number;
     checked_in: number;
   }[];

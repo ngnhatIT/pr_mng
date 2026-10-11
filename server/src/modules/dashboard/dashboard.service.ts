@@ -103,10 +103,10 @@ export async function getDashboard(cid: number | null, tid: number | null, own: 
     db
       .prepare(
         `SELECT s.id, s.date, s.topic, c.id as class_id, c.name as class_name, c.schedule, t.name as teacher_name,
-            r.name as room_name
+            r.name as room_name, s.start_time, s.end_time
      FROM sessions s JOIN classes c ON c.id = s.class_id
      LEFT JOIN teachers t ON t.id = COALESCE(s.teacher_id, c.teacher_id)
-     LEFT JOIN rooms r ON r.id = c.room_id
+     LEFT JOIN rooms r ON r.id = COALESCE(s.room_id, c.room_id)
      WHERE s.date = ? AND s.status <> 'cancelled' ${cid !== null ? 'AND c.center_id = ?' : ''}
        ${tid !== null ? 'AND COALESCE(s.teacher_id, c.teacher_id) = ?' : ''} ORDER BY c.name`
       )
@@ -120,6 +120,8 @@ export async function getDashboard(cid: number | null, tid: number | null, own: 
         schedule: string;
         teacher_name: string | null;
         room_name: string | null;
+        start_time: string | null;
+        end_time: string | null;
       }[]
     >,
     // Doanh thu 6 tháng gần nhất (kể cả tháng này) cho biểu đồ xu hướng

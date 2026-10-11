@@ -105,7 +105,42 @@ export const sessionsApi = {
   ) => http.post<{ saved: number }>(`/sessions/${sessionId}/attendance`, { records }),
   generateCheckinCode: (sessionId: number | string) =>
     http.post<{ code: string }>(`/sessions/${sessionId}/checkin-code`),
+  /** Lịch theo khoảng ngày (tối đa 62 ngày). */
+  calendar: (q: { from: string; to: string; teacher_id?: string; room_id?: string }) => {
+    const p = new URLSearchParams(Object.entries(q).filter(([, v]) => v) as [string, string][]);
+    return http.get<CalendarItem[]>(`/sessions?${p}`);
+  },
+  /** Chỉ trường có trong patch bị đổi; null = về mặc định của lớp. */
+  update: (sessionId: number, patch: SessionPatch) => http.put<CalendarItem>(`/sessions/${sessionId}`, patch),
+  reschedule: (sessionId: number, body: { date: string; start_time?: string; end_time?: string }) =>
+    http.post<CalendarItem>(`/sessions/${sessionId}/reschedule`, body),
+  cancel: (sessionId: number) => http.del<{ ok: boolean }>(`/sessions/${sessionId}`),
 };
+
+export interface CalendarItem {
+  id: number;
+  class_id: number;
+  class_name: string;
+  date: string;
+  start: string | null;
+  end: string | null;
+  topic: string | null;
+  teacher_id: number | null;
+  teacher_name: string | null;
+  room_id: number | null;
+  room_name: string | null;
+  substitute: boolean;
+  rescheduled_from: number | null;
+  attendance_count: number;
+}
+
+export interface SessionPatch {
+  topic?: string | null;
+  teacher_id?: number | null;
+  room_id?: number | null;
+  start_time?: string | null;
+  end_time?: string | null;
+}
 
 export const roomsApi = {
   list: (page?: PageParams) => {

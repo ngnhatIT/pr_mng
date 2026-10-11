@@ -5,7 +5,7 @@ import type { TFunction } from 'i18next';
 import { dashboardApi } from './dashboard.api';
 import { DebtRow } from '../tuition/tuition.api';
 import { useToast, toastApiError } from '../../shared/ui/toast';
-import { DashboardData, appLocale, formatVND, slotOn } from '../../shared/types';
+import { DashboardData, appLocale, formatVND, sessionSlot } from '../../shared/types';
 import { getUser } from '../../shared/api/client';
 import { PageHeader } from '../../shared/components/PageHeader';
 import { Skeleton } from '../../shared/components/Skeleton';
@@ -317,7 +317,7 @@ export function Dashboard() {
           ) : (
             <ul className="list">
               {[...data.todaySessions]
-                .map((s) => ({ ...s, slot: slotOn(s.schedule, s.date) }))
+                .map((s) => ({ ...s, slot: sessionSlot(s) }))
                 .sort((a, b) => (a.slot?.start ?? '99').localeCompare(b.slot?.start ?? '99'))
                 .map((s) => (
                   <li key={s.id} className="list-item">

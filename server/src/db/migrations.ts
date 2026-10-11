@@ -744,6 +744,32 @@ export const MIGRATIONS: Migration[] = [
       await tx.exec('ALTER TABLE users DROP COLUMN IF EXISTS must_change_password');
     },
   },
+  {
+    version: 26,
+    name: 'session_overrides_and_reschedule',
+    up: async (tx) => {
+      // Lịch/dạy thay/dời buổi: giờ + phòng riêng từng buổi, liên kết buổi dời lịch. Cột mới đều NULL được.
+      await tx.exec(`ALTER TABLE sessions ADD COLUMN IF NOT EXISTS start_time TEXT
+        CONSTRAINT chk_sessions_start_time CHECK (start_time ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$')`);
+      await tx.exec(`ALTER TABLE sessions ADD COLUMN IF NOT EXISTS end_time TEXT
+        CONSTRAINT chk_sessions_end_time CHECK (end_time ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$')`);
+      await tx.exec(`ALTER TABLE sessions ADD COLUMN IF NOT EXISTS room_id INTEGER
+        CONSTRAINT fk_sessions_room REFERENCES rooms(id) ON DELETE SET NULL`);
+      await tx.exec(`ALTER TABLE sessions ADD COLUMN IF NOT EXISTS rescheduled_from INTEGER
+        CONSTRAINT fk_sessions_rescheduled_from REFERENCES sessions(id) ON DELETE SET NULL`);
+      await tx.exec(`DO $$ BEGIN
+        IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'chk_sessions_time_order') THEN
+          ALTER TABLE sessions ADD CONSTRAINT chk_sessions_time_order
+            CHECK (start_time IS NULL OR end_time IS NULL OR start_time < end_time);
+        END IF; END $$;`);
+    },
+    down: async (tx) => {
+      await tx.exec('ALTER TABLE sessions DROP CONSTRAINT IF EXISTS chk_sessions_time_order');
+      for (const c of ['rescheduled_from', 'room_id', 'end_time', 'start_time']) {
+        await tx.exec(`ALTER TABLE sessions DROP COLUMN IF EXISTS ${c}`);
+      }
+    },
+  },
 ];
 
 /**

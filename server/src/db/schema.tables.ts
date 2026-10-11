@@ -204,7 +204,17 @@ CREATE TABLE IF NOT EXISTS sessions (
     CONSTRAINT fk_sessions_teacher REFERENCES teachers(id) ON DELETE SET NULL,
   status TEXT NOT NULL DEFAULT 'scheduled'
     CONSTRAINT chk_sessions_status CHECK (status IN ('scheduled', 'cancelled')),
+  -- v26: giờ/phòng riêng của buổi (NULL = theo lịch tuần + phòng của lớp); buổi dời lịch trỏ về buổi gốc
+  start_time TEXT
+    CONSTRAINT chk_sessions_start_time CHECK (start_time ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$'),
+  end_time TEXT
+    CONSTRAINT chk_sessions_end_time CHECK (end_time ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$'),
+  room_id INTEGER
+    CONSTRAINT fk_sessions_room REFERENCES rooms(id) ON DELETE SET NULL,
+  rescheduled_from INTEGER
+    CONSTRAINT fk_sessions_rescheduled_from REFERENCES sessions(id) ON DELETE SET NULL,
   updated_at TEXT NOT NULL DEFAULT (to_char(NOW(), 'YYYY-MM-DD HH24:MI:SS')),
+  CONSTRAINT chk_sessions_time_order CHECK (start_time IS NULL OR end_time IS NULL OR start_time < end_time),
   UNIQUE(class_id, date),
   -- Chống race trùng mã điểm danh (2 request đồng thời sinh cùng mã)
   UNIQUE(checkin_date, checkin_code)

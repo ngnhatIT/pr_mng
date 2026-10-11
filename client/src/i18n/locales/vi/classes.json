@@ -85,18 +85,12 @@
     "full": "Đã đầy",
     "title": "Lớp học"
   },
+  "clearSearch": "Xóa từ khóa tìm kiếm",
   "delete": {
     "message": "Bạn có chắc muốn xóa lớp \"{{name}}\"? Buổi học, điểm danh và ghi danh liên quan sẽ bị xóa theo.",
     "title": "Xóa lớp học"
   },
   "desc": "Tạo lớp, xếp lịch, phân công giáo viên và ghi danh",
-  "searchPlaceholder": "Tìm theo tên lớp...",
-  "clearSearch": "Xóa từ khóa tìm kiếm",
-  "emptyFiltered": {
-    "title": "Không tìm thấy lớp học",
-    "desc": "Thử từ khóa khác hoặc xóa bộ lọc để xem toàn bộ danh sách.",
-    "clear": "Xóa bộ lọc"
-  },
   "detail": {
     "back": "Danh sách lớp học",
     "dateRange": "Thời gian",
@@ -149,6 +143,11 @@
   "empty": {
     "desc": "Tạo lớp học đầu tiên với lịch học, giáo viên và học phí.",
     "title": "Chưa có lớp học nào"
+  },
+  "emptyFiltered": {
+    "title": "Không tìm thấy lớp học",
+    "desc": "Thử từ khóa khác hoặc xóa bộ lọc để xem toàn bộ danh sách.",
+    "clear": "Xóa bộ lọc"
   },
   "enrollStudent": {
     "title": "Ghi danh học viên vào lớp",
@@ -226,6 +225,57 @@
     },
     "title": "Phòng học"
   },
+  "schedule": {
+    "allRooms": "Tất cả phòng",
+    "allTeachers": "Tất cả giáo viên",
+    "cancelMessage": "Buổi ngày {{date}} sẽ bị bỏ khỏi lịch và xóa điểm danh. Việc này ảnh hưởng lương giáo viên.",
+    "cancelSession": "Hủy buổi",
+    "cancelTitle": "Hủy buổi học này?",
+    "checkedIn_one": "{{count}} học viên đã điểm danh",
+    "checkedIn_other": "{{count}} học viên đã điểm danh",
+    "desc": "Toàn bộ buổi học theo tuần hoặc tháng. Bấm vào buổi để phân dạy thay, đổi phòng, đổi giờ hoặc dời buổi.",
+    "filterRoom": "Lọc theo phòng",
+    "filterTeacher": "Lọc theo giáo viên",
+    "form": {
+      "attendance": "Điểm danh",
+      "classRoom": "Phòng mặc định của lớp",
+      "date": "Ngày",
+      "end": "Kết thúc",
+      "newDate": "Ngày mới",
+      "room": "Phòng",
+      "start": "Bắt đầu",
+      "teacher": "Giáo viên",
+      "teacherHint": "Chọn giáo viên khác để phân dạy thay riêng buổi này.",
+      "time": "Giờ",
+      "topic": "Chủ đề"
+    },
+    "free": "Không có buổi",
+    "loadError": "Không tải được lịch học, vui lòng thử lại",
+    "more_one": "+{{count}} buổi nữa",
+    "more_other": "+{{count}} buổi nữa",
+    "move": "Dời buổi",
+    "next": "Sau",
+    "noTime": "Chưa có giờ",
+    "prev": "Trước",
+    "rescheduled": "Đã dời",
+    "sessionCount_one": "{{count}} buổi",
+    "sessionCount_other": "{{count}} buổi",
+    "substitute": "Dạy thay",
+    "takeAttendance": "Điểm danh",
+    "title": "Lịch học",
+    "toast": {
+      "cancelled": "Đã hủy buổi học",
+      "moved": "Đã dời buổi học",
+      "saved": "Đã cập nhật buổi học"
+    },
+    "today": "Hôm nay",
+    "view": {
+      "month": "Tháng",
+      "week": "Tuần"
+    },
+    "viewLabel": "Kiểu xem lịch"
+  },
+  "searchPlaceholder": "Tìm theo tên lớp...",
   "table": {
     "actions": "Thao tác",
     "fee": "Học phí",

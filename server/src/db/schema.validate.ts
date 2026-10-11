@@ -20,7 +20,7 @@ const EXPECTED_FK_COUNT: Record<string, number> = {
   rooms: 1,
   classes: 3,
   enrollments: 2,
-  sessions: 2,
+  sessions: 4, // v26: + room_id, rescheduled_from
   attendance: 2,
   teacher_checkins: 2,
   salary_rules: 1,

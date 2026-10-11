@@ -120,6 +120,8 @@ export interface TodaySession {
   /** JSON lịch tuần của lớp: dùng lấy giờ học của riêng hôm nay. */
   schedule?: string;
   scheduleText: string;
+  start_time?: string | null;
+  end_time?: string | null;
 }
 
 export interface DashboardData {
@@ -237,6 +239,18 @@ export function formatDateTime(iso: string | null, locale?: string): string {
   if (!iso) return '-';
   const time = iso.slice(11, 16);
   return `${formatDate(iso, locale)}${time ? ` ${time}` : ''}`;
+}
+
+/** Giờ thực của 1 buổi: giờ riêng (dời/đổi giờ, v26) nếu có, không thì theo lịch tuần của lớp. */
+export function sessionSlot(s: {
+  schedule?: string | null;
+  date: string;
+  start_time?: string | null;
+  end_time?: string | null;
+}): ScheduleEntry | null {
+  return s.start_time && s.end_time
+    ? { day: 0, start: s.start_time, end: s.end_time }
+    : slotOn(s.schedule, s.date);
 }
 
 /** Khung giờ của lớp vào đúng ngày `date` (YYYY-MM-DD) theo lịch tuần JSON; null nếu hôm đó không có. */
@@ -513,6 +527,8 @@ export interface TeacherTodayItem {
   topic: string | null;
   schedule?: string;
   room_name?: string | null;
+  start_time?: string | null;
+  end_time?: string | null;
   attendance_count: number;
   checked_in: boolean;
 }

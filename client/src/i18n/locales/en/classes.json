@@ -85,18 +85,12 @@
     "full": "Full",
     "title": "Classes"
   },
+  "clearSearch": "Clear search",
   "delete": {
     "message": "Are you sure you want to delete class \"{{name}}\"? Related sessions, attendance and enrollments will also be deleted.",
     "title": "Delete class"
   },
   "desc": "Create classes, schedule sessions, assign teachers and enroll students",
-  "searchPlaceholder": "Search classes by name...",
-  "clearSearch": "Clear search",
-  "emptyFiltered": {
-    "title": "No classes found",
-    "desc": "Try a different keyword or clear the search to see the full list.",
-    "clear": "Clear search"
-  },
   "detail": {
     "back": "Class list",
     "dateRange": "Duration",
@@ -149,6 +143,11 @@
   "empty": {
     "desc": "Create your first class with a schedule, teacher and tuition.",
     "title": "No classes yet"
+  },
+  "emptyFiltered": {
+    "title": "No classes found",
+    "desc": "Try a different keyword or clear the search to see the full list.",
+    "clear": "Clear search"
   },
   "enrollStudent": {
     "title": "Enroll student in a class",
@@ -226,6 +225,57 @@
     },
     "title": "Rooms"
   },
+  "schedule": {
+    "allRooms": "All rooms",
+    "allTeachers": "All teachers",
+    "cancelMessage": "The session on {{date}} will be removed from the schedule and its attendance cleared. This affects teacher payroll.",
+    "cancelSession": "Cancel session",
+    "cancelTitle": "Cancel this session?",
+    "checkedIn_one": "{{count}} student checked",
+    "checkedIn_other": "{{count}} students checked",
+    "desc": "Every session by week or month. Click a session to assign a substitute, change room or time, or move it.",
+    "filterRoom": "Filter by room",
+    "filterTeacher": "Filter by teacher",
+    "form": {
+      "attendance": "Attendance",
+      "classRoom": "Class default room",
+      "date": "Date",
+      "end": "End",
+      "newDate": "New date",
+      "room": "Room",
+      "start": "Start",
+      "teacher": "Teacher",
+      "teacherHint": "Choose another teacher to assign a substitute for this session only.",
+      "time": "Time",
+      "topic": "Topic"
+    },
+    "free": "No sessions",
+    "loadError": "Could not load the schedule, please try again",
+    "more_one": "+{{count}} more",
+    "more_other": "+{{count}} more",
+    "move": "Move session",
+    "next": "Next",
+    "noTime": "No time set",
+    "prev": "Previous",
+    "rescheduled": "Moved",
+    "sessionCount_one": "{{count}} session",
+    "sessionCount_other": "{{count}} sessions",
+    "substitute": "Substitute",
+    "takeAttendance": "Take attendance",
+    "title": "Schedule",
+    "toast": {
+      "cancelled": "Session cancelled",
+      "moved": "Session moved",
+      "saved": "Session updated"
+    },
+    "today": "Today",
+    "view": {
+      "month": "Month",
+      "week": "Week"
+    },
+    "viewLabel": "Calendar view"
+  },
+  "searchPlaceholder": "Search classes by name...",
   "table": {
     "actions": "Actions",
     "fee": "Tuition",

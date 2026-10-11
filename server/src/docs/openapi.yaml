@@ -2032,6 +2032,24 @@ paths:
         '200':
           description: OK
   /api/v1/sessions:
+    get:
+      tags:
+        - Sessions
+      summary: Lịch buổi học theo khoảng ngày (tối đa 62 ngày)
+      description: >-
+        Mỗi buổi trả giờ/giáo viên/phòng THỰC (giờ riêng của buổi nếu có, không thì theo lịch tuần của lớp),
+        substitute=true khi giáo viên buổi khác giáo viên lớp. Scope own: lớp mình dạy hoặc buổi mình dạy thay.
+      parameters:
+        - { in: query, name: from, required: true, schema: { type: string, format: date } }
+        - { in: query, name: to, required: true, schema: { type: string, format: date } }
+        - { in: query, name: teacher_id, schema: { type: integer } }
+        - { in: query, name: room_id, schema: { type: integer } }
+        - { in: query, name: class_id, schema: { type: integer } }
+      responses:
+        '200':
+          description: Danh sách CalendarItem
+        '400':
+          description: RANGE_TOO_LARGE / INVALID_RANGE / sai định dạng ngày
     post:
       tags:
         - Sessions
@@ -2060,16 +2078,64 @@ paths:
     put:
       tags:
         - Sessions
-      summary: Cập nhật buổi học
+      summary: Sửa buổi học (chủ đề, dạy thay, phòng, giờ riêng)
+      description: >-
+        Chỉ trường có trong body bị đổi; null = về mặc định của lớp. Đổi giáo viên bị chặn khi tháng lương đã chốt
+        (PAYROLL_CLOSED) và ghi audit. Trùng giờ cùng giáo viên/phòng -> 409 TEACHER_CONFLICT / ROOM_CONFLICT.
       parameters:
         - in: path
           name: id
           required: true
           schema:
             type: integer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                topic: { type: string, nullable: true }
+                teacher_id: { type: integer, nullable: true }
+                room_id: { type: integer, nullable: true }
+                start_time: { type: string, example: '18:00', nullable: true }
+                end_time: { type: string, example: '19:30', nullable: true }
       responses:
         '200':
-          description: OK
+          description: CalendarItem sau khi sửa
+        '409':
+          description: TEACHER_CONFLICT / ROOM_CONFLICT / PAYROLL_CLOSED
+  /api/v1/sessions/{id}/reschedule:
+    post:
+      tags:
+        - Sessions
+      summary: Dời buổi sang ngày khác
+      description: >-
+        Hủy mềm buổi gốc (job sinh lịch không tạo lại) và tạo buổi mới có rescheduled_from = id gốc, giữ giờ cũ
+        nếu không chỉ định. Buổi đã điểm danh không dời được.
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [date]
+              properties:
+                date: { type: string, format: date }
+                start_time: { type: string, example: '18:00' }
+                end_time: { type: string, example: '19:30' }
+                teacher_id: { type: integer }
+                room_id: { type: integer }
+      responses:
+        '201':
+          description: CalendarItem của buổi mới
+        '409':
+          description: SESSION_EXISTS / SESSION_HAS_ATTENDANCE / TEACHER_CONFLICT / ROOM_CONFLICT / PAYROLL_CLOSED
     delete:
       tags:
         - Sessions

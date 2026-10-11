@@ -162,6 +162,11 @@ export const TABLE_DOCS: Record<string, TableDoc> = {
       teacher_id:
         'v22: giáo viên thực dạy buổi này (chốt lúc sinh buổi/điểm danh/check-in) — lương tính theo cột này. SET NULL khi xóa GV.',
       status: "v22: 'scheduled' | 'cancelled' (hủy mềm — sinh lịch lại sẽ bỏ qua ngày đã hủy).",
+      start_time: 'v26: giờ bắt đầu riêng HH:MM (NULL = theo lịch tuần của lớp).',
+      end_time: 'v26: giờ kết thúc riêng HH:MM (NULL = theo lịch tuần của lớp).',
+      room_id: 'v26: phòng riêng của buổi (NULL = phòng của lớp). SET NULL khi xóa phòng.',
+      rescheduled_from:
+        'v26: buổi gốc đã bị dời sang buổi này (buổi gốc giữ status cancelled để job sinh lịch không tạo lại).',
       updated_at: 'Tự động cập nhật bởi trigger.',
     },
   },

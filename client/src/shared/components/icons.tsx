@@ -142,6 +142,7 @@ const PATHS: Record<string, ReactNode> = {
     </>
   ),
   'chevron-right': <path d="m9 18 6-6-6-6" />,
+  'chevron-left': <path d="m15 18-6-6 6-6" />,
   calendar: (
     <>
       <rect x="3" y="4" width="18" height="18" rx="2" />
