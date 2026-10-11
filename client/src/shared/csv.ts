@@ -3,7 +3,7 @@
  * Tự nhận dấu phân cách ',' hoặc ';' (Excel bản châu Âu) theo dòng tiêu đề.
  */
 export function parseCsv(text: string): string[][] {
-  const src = text.replace(/^﻿/, '');
+  const src = text.replace(/^\uFEFF/, '');
   const firstLine = src.slice(0, src.search(/\r?\n|$/));
   const delim = (firstLine.match(/;/g)?.length ?? 0) > (firstLine.match(/,/g)?.length ?? 0) ? ';' : ',';
   const rows: string[][] = [];

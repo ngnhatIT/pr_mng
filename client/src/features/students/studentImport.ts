@@ -59,4 +59,4 @@ export function rowsFromCsv(text: string): { rows: ImportRow[]; unknownColumns: 
   };
 }
 
-export const TEMPLATE_CSV = `﻿${IMPORT_FIELDS.join(',')}\r\n,Nguyễn Văn A,0901234567,a@example.com,15/08/2012,"12 Lê Lợi, Q1",studying,\r\n`;
+export const TEMPLATE_CSV = `\uFEFF${IMPORT_FIELDS.join(',')}\r\n,Nguyễn Văn A,0901234567,a@example.com,15/08/2012,"12 Lê Lợi, Q1",studying,\r\n`;

@@ -4,7 +4,7 @@ import { rowsFromCsv } from './studentImport';
 
 describe('parseCsv', () => {
   it('nháy kép, "" trong ô, xuống dòng trong ô, CRLF, BOM, bỏ dòng trống', () => {
-    expect(parseCsv('﻿a,b\r\n"x, y","say ""hi"""\r\n\r\n"line1\nline2",z\n')).toEqual([
+    expect(parseCsv('\uFEFFa,b\r\n"x, y","say ""hi"""\r\n\r\n"line1\nline2",z\n')).toEqual([
       ['a', 'b'],
       ['x, y', 'say "hi"'],
       ['line1\nline2', 'z'],
