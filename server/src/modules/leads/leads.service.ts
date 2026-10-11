@@ -1,6 +1,6 @@
 import { db } from '../../db';
 import { parsePagination, paginate, type PageOptions, type Paginated } from '../../shared/pagination';
-import { escapeLike } from '../../shared/like';
+import { searchCond } from '../../shared/like';
 import { AppError } from '../../shared/errors';
 import { audit, type AuditActor } from '../../shared/audit';
 import { normalizePhone } from '../../services/zalo';
@@ -44,9 +44,9 @@ export async function listLeads(
     params.push(centerId);
   }
   if (search) {
-    conds.push("(name LIKE ? ESCAPE '\\' OR phone LIKE ? ESCAPE '\\')");
-    const kw = `%${escapeLike(search)}%`;
-    params.push(kw, kw);
+    const c = searchCond(['name', 'phone'], search);
+    conds.push(c.sql);
+    params.push(...c.params);
   }
   const baseWhere = conds.length ? `WHERE ${conds.join(' AND ')}` : '';
   const countRows = (await db

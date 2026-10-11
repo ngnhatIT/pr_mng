@@ -1,6 +1,6 @@
 import { db } from '../../db';
 import { AppError } from '../../shared/errors';
-import { escapeLike } from '../../shared/like';
+import { escapeLike, searchCond } from '../../shared/like';
 import {
   sumQuestionPoints,
   normalizePoints,
@@ -64,8 +64,9 @@ export async function listBankQuestions(
     params.push(centerId);
   }
   if (search.trim()) {
-    conds.push("question LIKE ? ESCAPE '\\'");
-    params.push(`%${escapeLike(search.trim())}%`);
+    const c = searchCond(['question'], search);
+    conds.push(c.sql);
+    params.push(...c.params);
   }
   if (tag) {
     conds.push('tag = ?');

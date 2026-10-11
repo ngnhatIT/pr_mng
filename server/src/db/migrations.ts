@@ -842,6 +842,20 @@ export const MIGRATIONS: Migration[] = [
       }
     },
   },
+  {
+    version: 29,
+    name: 'f_unaccent_search',
+    up: async (tx) => {
+      // Tìm kiếm không dấu tiếng Việt ("nguyen" khớp "Nguyễn") không cần extension unaccent (host có thể cấm
+      // CREATE EXTENSION). IMMUTABLE để dùng được trong index biểu thức sau này.
+      await tx.exec(`CREATE OR REPLACE FUNCTION f_unaccent(t TEXT) RETURNS TEXT AS $$
+        SELECT translate(lower(t), 'àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ', 'aaaaaaaaaaaaaaaaaeeeeeeeeeeeiiiiiooooooooooooooooouuuuuuuuuuuyyyyyd')
+      $$ LANGUAGE sql IMMUTABLE PARALLEL SAFE`);
+    },
+    down: async (tx) => {
+      await tx.exec('DROP FUNCTION IF EXISTS f_unaccent(TEXT)');
+    },
+  },
 ];
 
 /**

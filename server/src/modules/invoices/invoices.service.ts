@@ -1,7 +1,7 @@
 import { db } from '../../db';
 import { afterInvoicePaid, applyCreditToInvoice } from '../referrals/rewards.service';
 import { AppError } from '../../shared/errors';
-import { escapeLike } from '../../shared/like';
+import { searchCond } from '../../shared/like';
 import { parsePagination, paginate, type PageOptions, type Paginated } from '../../shared/pagination';
 import { audit, formatVND, type AuditActor } from '../../shared/audit';
 import { nowVNSql } from '../../shared/vnTime';
@@ -168,9 +168,9 @@ export async function listInvoices(
     params.push(status);
   }
   if (search) {
-    conds.push("(s.name LIKE ? ESCAPE '\\' OR s.code LIKE ? ESCAPE '\\')");
-    const kw = `%${escapeLike(search)}%`;
-    params.push(kw, kw);
+    const c = searchCond(['s.name', 's.code'], search);
+    conds.push(c.sql);
+    params.push(...c.params);
   }
   const where = conds.length ? `WHERE ${conds.join(' AND ')}` : '';
   const { page, limit, offset } = parsePagination(pageOpts);

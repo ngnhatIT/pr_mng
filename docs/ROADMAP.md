@@ -30,7 +30,7 @@ Nguồn: 3 audit (tính năng so với Teachworks/TutorBird/Classe365, khả nă
 - [x] Nhập học viên từ CSV (kiểm tra trước, lỗi theo dòng có mã dịch được, nhận file Xuất CSV của app)
 - [x] Tìm nhanh Ctrl/Cmd+K (trang theo quyền, học viên, lớp; combobox ARIA)
 - [ ] Breadcrumb chung + tiêu đề topbar đúng ở trang chi tiết, menu tài khoản trên topbar, URL tiếng Anh + redirect
-- [ ] Tìm kiếm không dấu phía server ("hoc" khớp "Học") — hiện LIKE phân biệt dấu
+- [x] Tìm kiếm không dấu phía server (hàm f_unaccent, migration v29) cho học viên, hóa đơn, lead, lớp, bài tập, ngân hàng câu hỏi
 - [ ] Sắp xếp cột bảng (`sort` allowlist server + `aria-sort`)
 
 ## Gói 6 — API & bảo mật chuẩn quốc tế (S–M)

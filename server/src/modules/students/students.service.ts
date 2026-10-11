@@ -1,7 +1,7 @@
 import { db } from '../../db';
 import type { Tx } from '../../db';
 import { AppError } from '../../shared/errors';
-import { escapeLike } from '../../shared/like';
+import { searchCond } from '../../shared/like';
 import { findByIdOr404 } from '../../shared/repository';
 import { parsePagination, paginate, type PageOptions, type Paginated } from '../../shared/pagination';
 import { audit, type AuditActor } from '../../shared/audit';
@@ -69,9 +69,9 @@ export async function listStudents(
   }
   const { search = '', status = '' } = query;
   if (search) {
-    conds.push("(name LIKE ? ESCAPE '\\' OR code LIKE ? ESCAPE '\\' OR phone LIKE ? ESCAPE '\\')");
-    const kw = `%${escapeLike(search)}%`;
-    params.push(kw, kw, kw);
+    const c = searchCond(['name', 'code', 'phone'], search);
+    conds.push(c.sql);
+    params.push(...c.params);
   }
   if (status && (STUDENT_STATUS as readonly string[]).includes(status)) {
     conds.push('status = ?');

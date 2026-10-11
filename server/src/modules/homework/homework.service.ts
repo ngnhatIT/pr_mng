@@ -15,7 +15,7 @@ import {
 import { todayVN } from '../../shared/vnTime';
 import { homeworkRepo, deleteHomeworkCascade } from './homework.repo';
 import { eventBus } from '../../shared/events/eventBus';
-import { escapeLike } from '../../shared/like';
+import { searchCond } from '../../shared/like';
 import { copyUploadedFileByUrl, deleteUploadFileByUrl, recordUpload } from '../../shared/upload';
 import { getRubric } from './rubric.service';
 import {
@@ -71,9 +71,9 @@ export async function listHomework(
     params.push(Number(class_id));
   }
   if (search.trim()) {
-    const term = escapeLike(search.trim());
-    conds.push("(h.title LIKE ? ESCAPE '\\' OR h.content LIKE ? ESCAPE '\\')");
-    params.push(`%${term}%`, `%${term}%`);
+    const c = searchCond(['h.title', 'h.content'], search);
+    conds.push(c.sql);
+    params.push(...c.params);
   }
   if (due) dueCond(due, conds, params);
   if (status) {

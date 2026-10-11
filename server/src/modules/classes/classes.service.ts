@@ -5,7 +5,7 @@ import { AppError } from '../../shared/errors';
 import { homeworkRepo } from '../homework/homework.repo';
 import { parsePagination, paginate, type PageOptions, type Paginated } from '../../shared/pagination';
 import { audit, type AuditActor } from '../../shared/audit';
-import { escapeLike } from '../../shared/like';
+import { searchCond } from '../../shared/like';
 
 /* ---------------------------------- Types ---------------------------------- */
 
@@ -248,11 +248,12 @@ export async function listClasses(
   const scope = classScopeWhere(ctx);
   // Tìm theo tên lớp: escape wildcard để %, _ trong input không match toàn bộ DB
   const { search = '' } = query;
-  const searchClause = search ? " AND c.name LIKE ? ESCAPE '\\'" : '';
+  const sc = search ? searchCond(['c.name'], search) : null;
+  const searchClause = sc ? ` AND ${sc.sql}` : '';
   const teacherClause = query.teacherId !== undefined ? ' AND c.teacher_id = ?' : '';
   const params = [
     ...scope.params,
-    ...(search ? [`%${escapeLike(search)}%`] : []),
+    ...(sc ? sc.params : []),
     ...(query.teacherId !== undefined ? [query.teacherId] : []),
   ];
   const { page, limit, offset } = parsePagination(pageOpts);
