@@ -237,6 +237,35 @@ export const TABLE_DOCS: Record<string, TableDoc> = {
       value: 'Giá trị.',
     },
   },
+  notifications: {
+    description: 'v27: thông báo trong app (chuông) cho nhân sự và phụ huynh.',
+    columns: {
+      id: 'Khóa chính.',
+      center_id: 'Trung tâm. CASCADE khi xóa trung tâm.',
+      recipient_type: "'user' (bảng users) | 'parent' (bảng parents).",
+      recipient_id: 'Id người nhận theo recipient_type (không FK vì đa hình).',
+      kind: 'Loại: absence | leave_result | payment_confirmed | payment_rejected | leave_request | payment_claim | trial_new | lead_new | announcement.',
+      params: 'Tham số để client dịch nội dung theo ngôn ngữ (JSONB).',
+      title: 'Tiêu đề do người gửi soạn (announcement); NULL với thông báo hệ thống.',
+      body: 'Nội dung soạn tay hoặc câu dự phòng tiếng Việt.',
+      link: 'Đường dẫn trong app khi bấm vào thông báo.',
+      read_at: 'Thời điểm đã đọc (NULL = chưa đọc).',
+      created_at: 'Thời điểm tạo.',
+    },
+  },
+  announcements: {
+    description: 'v27: thông báo chung gửi phụ huynh (toàn trung tâm hoặc 1 lớp).',
+    columns: {
+      id: 'Khóa chính.',
+      center_id: 'Trung tâm. CASCADE khi xóa trung tâm.',
+      class_id: 'Lớp nhận (NULL = mọi phụ huynh của trung tâm). SET NULL khi xóa lớp.',
+      title: 'Tiêu đề.',
+      body: 'Nội dung.',
+      recipient_count: 'Số phụ huynh nhận lúc gửi.',
+      created_by: 'Người gửi. SET NULL khi xóa user.',
+      created_at: 'Thời điểm gửi.',
+    },
+  },
   reminders: {
     description: 'Lịch sử nhắc học phí qua Zalo (ZNS).',
     columns: {

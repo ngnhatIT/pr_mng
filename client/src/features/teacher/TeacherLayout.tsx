@@ -5,6 +5,7 @@ import { getUser, logout as doLogout } from '../../shared/api/client';
 import { Icon, IconName } from '../../shared/components/icons';
 import { ThemeLangSwitch } from '../../shared/ui/ThemeLangSwitch';
 import './TeacherLayout.css';
+import { NotificationBell } from '../notifications/NotificationBell';
 
 const TABS: { to: string; labelKey: string; end?: boolean; icon: IconName }[] = [
   { to: '/teacher', labelKey: 'bottomNav.today', end: true, icon: 'home' },
@@ -44,6 +45,7 @@ export function TeacherLayout() {
           </div>
         </div>
         <div className="parent-topbar-actions">
+          <NotificationBell />
           <ThemeLangSwitch />
           <button
             className="btn btn-ghost btn-sm"

@@ -6,6 +6,7 @@ import { systemApi } from '../../features/system/system.api';
 import { initials, type CenterItem } from '../types';
 import { Icon, IconName } from './icons';
 import { ThemeLangSwitch } from '../ui/ThemeLangSwitch';
+import { NotificationBell } from '../../features/notifications/NotificationBell';
 import { Menu } from './Menu';
 import { ChangePasswordModal } from './ChangePasswordModal';
 import { ConfirmDialog } from './Modal';
@@ -66,6 +67,7 @@ const SECTIONS: { labelKey: string; items: NavItem[] }[] = [
       { to: '/app/leads', labelKey: 'nav.leads', icon: 'filter', perm: 'leads.view' },
       { to: '/app/danh-gia', labelKey: 'nav.reviews', icon: 'star', perm: 'reviews.view' },
       { to: '/app/gioi-thieu', labelKey: 'nav.referrals', icon: 'gift', perm: 'referrals.view' },
+      { to: '/app/announcements', labelKey: 'nav.announcements', icon: 'send', perm: 'notifications.view' },
       { to: '/app/zalo-reminders', labelKey: 'nav.zalo', icon: 'bell', perm: 'notifications.view' },
     ],
   },
@@ -384,6 +386,7 @@ export function Layout() {
               ))}
             </select>
           )}
+          <NotificationBell />
           <ThemeLangSwitch />
         </header>
         <main className="page-scroll" id="main-content" tabIndex={-1}>

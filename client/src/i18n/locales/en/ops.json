@@ -1,4 +1,33 @@
 {
+  "announcements": {
+    "allParents": "All parents of the center",
+    "classParents": "Parents of class {{name}}",
+    "col": {
+      "audience": "Audience",
+      "recipients": "Recipients",
+      "sent": "Sent",
+      "title": "Announcement"
+    },
+    "compose": "New announcement",
+    "desc": "Send a notice to every parent of the center or to the parents of one class. It appears in the parent's notification bell.",
+    "emptyDesc": "Holiday schedules, events or reminders sent to parents will be listed here.",
+    "emptyTitle": "No announcements yet",
+    "errors": {
+      "body": "Enter a message",
+      "title": "Enter a title"
+    },
+    "form": {
+      "audience": "Send to",
+      "body": "Message",
+      "title": "Title"
+    },
+    "loadError": "Could not load announcements, please try again",
+    "send": "Send",
+    "sendError": "Could not send the announcement, please try again",
+    "sent_one": "Sent to {{count}} parent",
+    "sent_other": "Sent to {{count}} parents",
+    "title": "Announcements"
+  },
   "audit": {
     "action": {
       "apply_credit": "Credit applied",

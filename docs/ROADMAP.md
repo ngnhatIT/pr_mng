@@ -17,8 +17,9 @@ Nguồn: 3 audit (tính năng so với Teachworks/TutorBird/Classe365, khả nă
 - [x] Dạy thay / đổi phòng / đổi giờ / dời buổi từng buổi (migration v26; giữ `UNIQUE(class_id,date)`, dời = hủy mềm gốc + tạo buổi mới)
 
 ## Gói 3 — Thông báo (M)
-- [ ] Bảng `notifications` + chuông/inbox in-app (staff + phụ huynh), thông báo chung (announcement)
+- [x] Bảng `notifications` + chuông in-app (nhân sự, GV, phụ huynh) + trang `/parent/notifications`, thông báo chung `/app/announcements` (migration v27)
 - [ ] Kênh email (SMTP, tùy chọn) + tự đặt lại mật khẩu qua email; chuyển `notifyParents` sang listener sự kiện
+- [ ] Refresh token: khoảng ân hạn tái dùng (~30s) — request refresh bị hủy giữa chừng (đóng tab/reload) hiện làm đăng xuất
 
 ## Gói 4 — Tài chính (M)
 - [ ] Dòng hóa đơn + giảm giá (anh chị em/khuyến mãi)

@@ -67,6 +67,8 @@ const Classes = lazyPage(() => import('../features/classes/Classes'), 'Classes')
 const ClassDetail = lazyPage(() => import('../features/classes/ClassDetail'), 'ClassDetail');
 const Attendance = lazyPage(() => import('../features/classes/Attendance'), 'Attendance');
 const Schedule = lazyPage(() => import('../features/classes/Schedule'), 'Schedule');
+const Announcements = lazyPage(() => import('../features/notifications/Announcements'), 'Announcements');
+const InboxPage = lazyPage(() => import('../features/notifications/InboxPage'), 'InboxPage');
 const Tuition = lazyPage(() => import('../features/tuition/Tuition'), 'Tuition');
 const InvoiceDetail = lazyPage(() => import('../features/tuition/InvoiceDetail'), 'InvoiceDetail');
 const ZaloReminders = lazyPage(() => import('../features/notifications/ZaloReminders'), 'ZaloReminders');
@@ -236,6 +238,7 @@ export const routes = createRoutesFromElements(
         <Route index element={<ParentHome />} />
         <Route path="children/:id" element={<ChildDetail />} />
         <Route path="leaves" element={<ParentLeaves />} />
+        <Route path="notifications" element={<InboxPage />} />
         <Route path="referral" element={<ParentReferral />} />
         <Route path="toi" element={<ParentProfile />} />
         <Route path="thanh-toan-ket-qua" element={<PaymentResult />} />
@@ -287,6 +290,7 @@ export const routes = createRoutesFromElements(
         <Route path="classes/:id" element={<ClassDetail />} />
         <Route path="attendance" element={<Attendance />} />
         <Route path="schedule" element={<Schedule />} />
+        <Route path="announcements" element={<Announcements />} />
         <Route path="tuition" element={<Tuition />} />
         <Route path="tuition/invoices/:id" element={<InvoiceDetail />} />
         <Route path="rooms" element={<Rooms />} />

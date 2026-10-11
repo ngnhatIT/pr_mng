@@ -236,7 +236,8 @@ export async function saveAttendance(
         r.student_id,
         'absence',
         `Học viên ${st?.name || ''} vắng mặt buổi học ngày ${sc.date} — lớp ${sc.class_name}.`,
-        null
+        null,
+        { params: { student: st?.name ?? '', date: sc.date, class: sc.class_name } }
       ).catch((err) => log.warn('notifyParents failed', { error: String(err) }));
     }
   }

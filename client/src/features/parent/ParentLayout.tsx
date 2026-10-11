@@ -5,6 +5,7 @@ import { getUser, logout as doLogout } from '../../shared/api/client';
 import { Icon, IconName } from '../../shared/components/icons';
 import { ThemeLangSwitch } from '../../shared/ui/ThemeLangSwitch';
 import './parent.css';
+import { NotificationBell } from '../notifications/NotificationBell';
 
 const TABS: { to: string; labelKey: string; end?: boolean; icon: IconName }[] = [
   { to: '/parent', labelKey: 'bottomNav.home', end: true, icon: 'home' },
@@ -43,6 +44,7 @@ export function ParentLayout() {
           </div>
         </div>
         <div className="parent-topbar-actions">
+          <NotificationBell allHref={'/parent/notifications'} />
           <ThemeLangSwitch />
           <button
             className="btn btn-ghost btn-sm"

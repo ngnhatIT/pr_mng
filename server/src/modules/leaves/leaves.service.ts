@@ -118,11 +118,15 @@ export async function decideLeave(
     summary: `${approved ? 'Duyệt' : 'Từ chối'} đơn nghỉ của ${leave.student_name} (${range})`,
   });
   const head = `Đơn xin nghỉ từ ${leave.from_date} đến ${leave.to_date} của học viên ${leave.student_name}`;
+  const inApp = {
+    kind: approved ? 'leave_approved' : 'leave_rejected',
+    params: { student: leave.student_name, from: leave.from_date, to: leave.to_date },
+  };
   const msg = approved
     ? `${head} đã được duyệt.`
     : `${head} đã bị từ chối. Vui lòng liên hệ trung tâm để biết thêm chi tiết.`;
   if (!approved) {
-    await notifyParents(leave.student_id, 'leave_result', msg, null).catch((err) =>
+    await notifyParents(leave.student_id, 'leave_result', msg, null, inApp).catch((err) =>
       log.warn('notifyParents failed', { error: String(err) })
     );
     return { ok: true };
@@ -141,7 +145,7 @@ export async function decideLeave(
       )
       .all(leave.class_id, leave.from_date, leave.to_date, leave.student_id)) as LeaveSuggestion[];
   }
-  await notifyParents(leave.student_id, 'leave_result', msg, null).catch((err) =>
+  await notifyParents(leave.student_id, 'leave_result', msg, null, inApp).catch((err) =>
     log.warn('notifyParents failed', { error: String(err) })
   );
   return { ok: true, suggestions };

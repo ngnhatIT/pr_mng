@@ -64,15 +64,101 @@ export async function logParentNotice(opts: {
   }
 }
 
-/** Gửi (ghi log) thông báo tới mọi phụ huynh của học viên */
+/** Nội dung thông báo trong app: kind + params để client dịch theo ngôn ngữ; body là câu dự phòng (tiếng Việt). */
+export interface InAppNotice {
+  kind: string;
+  params?: Record<string, unknown>;
+  title?: string | null;
+  body?: string | null;
+  link?: string | null;
+}
+
+/**
+ * Ghi thông báo trong app (chuông) cho danh sách người nhận. Lỗi chỉ log, không làm hỏng nghiệp vụ chính
+ * (thông báo là side-effect sau khi đã commit).
+ */
+export async function pushInApp(
+  centerId: number | null,
+  recipientType: 'user' | 'parent',
+  recipientIds: number[],
+  n: InAppNotice
+): Promise<number> {
+  const ids = [...new Set(recipientIds)];
+  if (!ids.length) return 0;
+  try {
+    const r = await db
+      .prepare(
+        `INSERT INTO notifications (center_id, recipient_type, recipient_id, kind, params, title, body, link)
+         SELECT ?, ?, rid, ?, ?::jsonb, ?, ?, ? FROM unnest(?::int[]) AS rid`
+      )
+      .run(
+        centerId,
+        recipientType,
+        n.kind,
+        JSON.stringify(n.params ?? {}),
+        n.title ?? null,
+        n.body ?? null,
+        n.link ?? null,
+        ids
+      );
+    return r.changes ?? ids.length;
+  } catch (err) {
+    log.error('pushInApp failed', { kind: n.kind, recipientType, error: formatError(err) });
+    return 0;
+  }
+}
+
+/**
+ * Nhân sự của trung tâm có permission (scope center/all) qua role chính hoặc custom role, tài khoản còn hoạt động.
+ * Superadmin không nhận (không thuộc trung tâm).
+ */
+export async function staffWithPermission(centerId: number, permission: string): Promise<number[]> {
+  const rows = (await db
+    .prepare(
+      `SELECT DISTINCT u.id FROM users u
+       JOIN roles r ON (r.code = u.role AND r.center_id IS NULL)
+         OR r.id IN (SELECT role_id FROM user_roles ur WHERE ur.user_id = u.id)
+       JOIN role_permissions rp ON rp.role_id = r.id AND rp.scope IN ('center', 'all')
+       JOIN permissions p ON p.id = rp.permission_id AND p.code = ?
+       WHERE u.center_id = ? AND u.is_active`
+    )
+    .all(permission, centerId)) as { id: number }[];
+  return rows.map((r) => r.id);
+}
+
+/** Báo cho nhân sự có quyền xử lý việc này (vd leaves.manage khi có đơn nghỉ mới). */
+export async function notifyStaff(
+  centerId: number | null,
+  permission: string,
+  n: InAppNotice
+): Promise<void> {
+  if (centerId === null) return;
+  try {
+    await pushInApp(centerId, 'user', await staffWithPermission(centerId, permission), n);
+  } catch (err) {
+    log.error('notifyStaff failed', { kind: n.kind, permission, error: formatError(err) });
+  }
+}
+
+/** Gửi thông báo tới mọi phụ huynh của học viên: log nhắc (Zalo/demo) + chuông trong app. */
 export async function notifyParents(
   studentId: number,
   kind: NoticeKind,
   message: string,
-  invoiceId?: number | null
+  invoiceId?: number | null,
+  /** kind riêng cho chuông (vd payment_rejected) + params dịch được */
+  inApp?: Partial<InAppNotice>
 ): Promise<void> {
   const contacts = await getParentContacts(studentId);
   for (const c of contacts) {
     await logParentNotice({ studentId, invoiceId: invoiceId ?? null, phone: c.phone, kind, message });
   }
+  const center = (await db.prepare('SELECT center_id FROM students WHERE id = ?').get(studentId)) as
+    { center_id: number | null } | undefined;
+  await pushInApp(
+    center?.center_id ?? null,
+    'parent',
+    contacts.map((c) => c.parent_id),
+    { kind, body: message, link: `/parent/children/${studentId}`, ...inApp }
+  );
 }

@@ -1,4 +1,33 @@
 {
+  "announcements": {
+    "allParents": "Mọi phụ huynh của trung tâm",
+    "classParents": "Phụ huynh lớp {{name}}",
+    "col": {
+      "audience": "Gửi tới",
+      "recipients": "Số người nhận",
+      "sent": "Thời gian gửi",
+      "title": "Thông báo"
+    },
+    "compose": "Soạn thông báo",
+    "desc": "Gửi thông báo tới mọi phụ huynh của trung tâm hoặc phụ huynh của một lớp. Phụ huynh nhận ở chuông thông báo.",
+    "emptyDesc": "Lịch nghỉ lễ, sự kiện hay nhắc nhở gửi phụ huynh sẽ hiện ở đây.",
+    "emptyTitle": "Chưa có thông báo nào",
+    "errors": {
+      "body": "Nhập nội dung",
+      "title": "Nhập tiêu đề"
+    },
+    "form": {
+      "audience": "Gửi tới",
+      "body": "Nội dung",
+      "title": "Tiêu đề"
+    },
+    "loadError": "Không tải được danh sách thông báo, vui lòng thử lại",
+    "send": "Gửi",
+    "sendError": "Không gửi được thông báo, vui lòng thử lại",
+    "sent_one": "Đã gửi tới {{count}} phụ huynh",
+    "sent_other": "Đã gửi tới {{count}} phụ huynh",
+    "title": "Thông báo chung"
+  },
   "audit": {
     "action": {
       "apply_credit": "Trừ credit",

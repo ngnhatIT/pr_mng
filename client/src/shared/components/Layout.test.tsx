@@ -9,6 +9,9 @@ import { NotFound } from '../../app/ErrorPages';
 import i18n from '../../i18n';
 
 vi.mock('../../features/system/roles.api', () => ({ loadMyPermissions: () => Promise.resolve(new Set()) }));
+vi.mock('../../features/notifications/notifications.api', () => ({
+  inboxApi: { unreadCount: () => Promise.resolve({ unread: 0 }) },
+}));
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 HTMLElement.prototype.getClientRects = () => [{}] as unknown as DOMRectList;

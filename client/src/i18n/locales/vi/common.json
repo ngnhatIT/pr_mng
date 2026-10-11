@@ -1,33 +1,4 @@
 {
-  "clear": "Xóa",
-  "api": {
-    "timeout": "Yêu cầu quá thời gian, vui lòng thử lại",
-    "network": "Không thể kết nối máy chủ, vui lòng kiểm tra mạng và thử lại",
-    "sessionExpired": "Phiên đăng nhập đã hết hạn, vui lòng đăng nhập lại",
-    "error": "Đã xảy ra lỗi",
-    "errors": {
-      "NOT_FOUND": "Không tìm thấy dữ liệu yêu cầu",
-      "BAD_REQUEST": "Yêu cầu không hợp lệ",
-      "VALIDATION_INVALID": "Dữ liệu nhập chưa hợp lệ",
-      "VALIDATION_REQUIRED": "Thiếu thông tin bắt buộc",
-      "FORBIDDEN": "Bạn không có quyền thực hiện thao tác này",
-      "UNAUTHORIZED": "Phiên đăng nhập đã hết hạn, vui lòng đăng nhập lại",
-      "NO_TOKEN": "Phiên đăng nhập đã hết hạn, vui lòng đăng nhập lại",
-      "INVALID_TOKEN": "Phiên đăng nhập không hợp lệ, vui lòng đăng nhập lại",
-      "PARENT_AUTH_REQUIRED": "Vui lòng đăng nhập tài khoản phụ huynh",
-      "RATE_LIMITED": "Thao tác quá nhanh, vui lòng thử lại sau",
-      "DUPLICATE": "Dữ liệu đã tồn tại",
-      "CONFLICT": "Dữ liệu đã tồn tại hoặc đang được sử dụng",
-      "INTERNAL_ERROR": "Hệ thống đang bận, vui lòng thử lại sau",
-      "PAYLOAD_TOO_LARGE": "Dữ liệu gửi lên quá lớn",
-      "WEAK_PASSWORD": "Mật khẩu quá yếu",
-      "WRONG_PASSWORD": "Mật khẩu hiện tại không đúng",
-      "SAME_PASSWORD": "Mật khẩu mới phải khác mật khẩu hiện tại",
-      "ZALO_SEND_FAILED": "Không gửi được tin Zalo, vui lòng thử lại",
-      "REMINDER_COOLDOWN": "Hóa đơn này vừa được nhắc, vui lòng thử lại sau",
-      "REMINDER_IN_PROGRESS": "Đang có yêu cầu nhắc khác cho hóa đơn này"
-    }
-  },
   "actions": {
     "add": "Thêm",
     "apply": "Áp dụng",
@@ -61,11 +32,71 @@
     "upload": "Tải lên",
     "viewAll": "Xem tất cả"
   },
+  "api": {
+    "timeout": "Yêu cầu quá thời gian, vui lòng thử lại",
+    "network": "Không thể kết nối máy chủ, vui lòng kiểm tra mạng và thử lại",
+    "sessionExpired": "Phiên đăng nhập đã hết hạn, vui lòng đăng nhập lại",
+    "error": "Đã xảy ra lỗi",
+    "errors": {
+      "NOT_FOUND": "Không tìm thấy dữ liệu yêu cầu",
+      "BAD_REQUEST": "Yêu cầu không hợp lệ",
+      "VALIDATION_INVALID": "Dữ liệu nhập chưa hợp lệ",
+      "VALIDATION_REQUIRED": "Thiếu thông tin bắt buộc",
+      "FORBIDDEN": "Bạn không có quyền thực hiện thao tác này",
+      "UNAUTHORIZED": "Phiên đăng nhập đã hết hạn, vui lòng đăng nhập lại",
+      "NO_TOKEN": "Phiên đăng nhập đã hết hạn, vui lòng đăng nhập lại",
+      "INVALID_TOKEN": "Phiên đăng nhập không hợp lệ, vui lòng đăng nhập lại",
+      "PARENT_AUTH_REQUIRED": "Vui lòng đăng nhập tài khoản phụ huynh",
+      "RATE_LIMITED": "Thao tác quá nhanh, vui lòng thử lại sau",
+      "DUPLICATE": "Dữ liệu đã tồn tại",
+      "CONFLICT": "Dữ liệu đã tồn tại hoặc đang được sử dụng",
+      "INTERNAL_ERROR": "Hệ thống đang bận, vui lòng thử lại sau",
+      "PAYLOAD_TOO_LARGE": "Dữ liệu gửi lên quá lớn",
+      "WEAK_PASSWORD": "Mật khẩu quá yếu",
+      "WRONG_PASSWORD": "Mật khẩu hiện tại không đúng",
+      "SAME_PASSWORD": "Mật khẩu mới phải khác mật khẩu hiện tại",
+      "ZALO_SEND_FAILED": "Không gửi được tin Zalo, vui lòng thử lại",
+      "REMINDER_COOLDOWN": "Hóa đơn này vừa được nhắc, vui lòng thử lại sau",
+      "REMINDER_IN_PROGRESS": "Đang có yêu cầu nhắc khác cho hóa đơn này"
+    }
+  },
+  "changePassword": {
+    "title": "Đổi mật khẩu",
+    "old": "Mật khẩu hiện tại",
+    "new": "Mật khẩu mới",
+    "confirm": "Nhập lại mật khẩu mới",
+    "submit": "Đổi mật khẩu",
+    "success": "Đổi mật khẩu thành công",
+    "fail": "Không đổi được mật khẩu, vui lòng thử lại",
+    "mismatch": "Mật khẩu mới không khớp",
+    "tooShort": "Mật khẩu phải từ 8 ký tự",
+    "logoutAll": "Đăng xuất các thiết bị khác",
+    "logoutAllConfirm": "Đăng xuất khỏi tất cả thiết bị khác?",
+    "logoutAllSuccess": "Đã đăng xuất khỏi các thiết bị khác",
+    "forcedNotice": "Tài khoản đang dùng mật khẩu tạm. Vui lòng đặt mật khẩu mới để tiếp tục."
+  },
+  "clear": "Xóa",
   "confirm": {
     "deleteMessage": "Hành động này không thể hoàn tác.",
     "deleteTitle": "Xóa mục này?",
     "no": "Hủy",
     "yes": "Xóa"
+  },
+  "discard": {
+    "title": "Bỏ các thay đổi chưa lưu?",
+    "message": "Bạn đã nhập dữ liệu nhưng chưa lưu. Đóng và bỏ các thay đổi này?",
+    "confirm": "Bỏ thay đổi"
+  },
+  "error": {
+    "title": "Đã xảy ra lỗi",
+    "message": "Không hiển thị được trang này. Thử tải lại trang hoặc quay về trang chủ.",
+    "retry": "Thử lại",
+    "home": "Về trang chủ"
+  },
+  "errorCode": "Mã lỗi",
+  "forbidden": {
+    "title": "Không có quyền truy cập",
+    "desc": "Tài khoản của bạn không có quyền xem trang này. Liên hệ quản trị viên nếu bạn cần quyền."
   },
   "lang": {
     "en": "English",
@@ -76,6 +107,7 @@
     "account": "Tài khoản",
     "actingCenter": "Trung tâm đang thao tác",
     "allCenters": "Tất cả trung tâm (chỉ xem)",
+    "announcements": "Thông báo chung",
     "attendance": "Điểm danh",
     "audit": "Nhật ký",
     "changePassword": "Đổi mật khẩu",
@@ -115,6 +147,52 @@
     "tuition": "Học phí",
     "zalo": "Nhắc Zalo"
   },
+  "network": {
+    "offline": "Mất kết nối mạng. Kiểm tra Wi-Fi/4G của bạn.",
+    "backOnline": "Đã kết nối lại."
+  },
+  "notFound": {
+    "title": "Không tìm thấy trang",
+    "desc": "Trang bạn tìm không tồn tại hoặc đã bị di chuyển.",
+    "back": "Quay lại",
+    "home": "Về trang chủ"
+  },
+  "notifications": {
+    "bell": "Thông báo",
+    "bellUnread_one": "Thông báo, {{count}} chưa đọc",
+    "bellUnread_other": "Thông báo, {{count}} chưa đọc",
+    "empty": "Bạn đã xem hết thông báo.",
+    "kinds": {
+      "absence": "{{student}} vắng mặt buổi học ngày {{date}} ({{class}}).",
+      "lead_new": "Lead mới từ website: {{name}}.",
+      "leave_approved": "Đơn xin nghỉ của {{student}} ({{from}} → {{to}}) đã được duyệt.",
+      "leave_rejected": "Đơn xin nghỉ của {{student}} ({{from}} → {{to}}) bị từ chối. Vui lòng liên hệ trung tâm để biết thêm.",
+      "leave_request": "Đơn xin nghỉ mới của {{student}} ({{from}} → {{to}}).",
+      "payment_claim": "Phụ huynh báo đã chuyển {{amount}} cho hóa đơn HD{{invoice}}. Duyệt trong tab Chờ duyệt.",
+      "payment_confirmed": "Trung tâm đã xác nhận thanh toán {{amount}} cho hóa đơn HD{{invoice}}. Xin cảm ơn!",
+      "payment_rejected": "Khoản thanh toán {{amount}} cho hóa đơn HD{{invoice}} bị từ chối. Vui lòng liên hệ trung tâm.",
+      "trial_new": "Đăng ký học thử mới: {{name}}."
+    },
+    "loadError": "Không tải được thông báo, vui lòng thử lại",
+    "markAll": "Đánh dấu đã đọc hết",
+    "title": "Thông báo",
+    "unread": "Chưa đọc",
+    "viewAll": "Xem tất cả thông báo"
+  },
+  "pagination": {
+    "first": "Trang đầu",
+    "prev": "Trang trước",
+    "next": "Trang sau",
+    "last": "Trang cuối",
+    "pageOf": "Trang {{page}} / {{totalPages}}"
+  },
+  "roles": {
+    "superadmin": "Quản trị hệ thống",
+    "admin": "Quản trị viên",
+    "staff": "Nhân viên",
+    "teacher": "Giáo viên",
+    "parent": "Phụ huynh"
+  },
   "states": {
     "deleteError": "Không xóa được, vui lòng thử lại",
     "deleteSuccess": "Đã xóa",
@@ -130,60 +208,5 @@
     "dark": "Tối",
     "light": "Sáng",
     "toggle": "Chuyển giao diện sáng/tối"
-  },
-  "roles": {
-    "superadmin": "Quản trị hệ thống",
-    "admin": "Quản trị viên",
-    "staff": "Nhân viên",
-    "teacher": "Giáo viên",
-    "parent": "Phụ huynh"
-  },
-  "pagination": {
-    "first": "Trang đầu",
-    "prev": "Trang trước",
-    "next": "Trang sau",
-    "last": "Trang cuối",
-    "pageOf": "Trang {{page}} / {{totalPages}}"
-  },
-  "error": {
-    "title": "Đã xảy ra lỗi",
-    "message": "Không hiển thị được trang này. Thử tải lại trang hoặc quay về trang chủ.",
-    "retry": "Thử lại",
-    "home": "Về trang chủ"
-  },
-  "notFound": {
-    "title": "Không tìm thấy trang",
-    "desc": "Trang bạn tìm không tồn tại hoặc đã bị di chuyển.",
-    "back": "Quay lại",
-    "home": "Về trang chủ"
-  },
-  "forbidden": {
-    "title": "Không có quyền truy cập",
-    "desc": "Tài khoản của bạn không có quyền xem trang này. Liên hệ quản trị viên nếu bạn cần quyền."
-  },
-  "network": {
-    "offline": "Mất kết nối mạng. Kiểm tra Wi-Fi/4G của bạn.",
-    "backOnline": "Đã kết nối lại."
-  },
-  "errorCode": "Mã lỗi",
-  "changePassword": {
-    "title": "Đổi mật khẩu",
-    "old": "Mật khẩu hiện tại",
-    "new": "Mật khẩu mới",
-    "confirm": "Nhập lại mật khẩu mới",
-    "submit": "Đổi mật khẩu",
-    "success": "Đổi mật khẩu thành công",
-    "fail": "Không đổi được mật khẩu, vui lòng thử lại",
-    "mismatch": "Mật khẩu mới không khớp",
-    "tooShort": "Mật khẩu phải từ 8 ký tự",
-    "logoutAll": "Đăng xuất các thiết bị khác",
-    "logoutAllConfirm": "Đăng xuất khỏi tất cả thiết bị khác?",
-    "logoutAllSuccess": "Đã đăng xuất khỏi các thiết bị khác",
-    "forcedNotice": "Tài khoản đang dùng mật khẩu tạm. Vui lòng đặt mật khẩu mới để tiếp tục."
-  },
-  "discard": {
-    "title": "Bỏ các thay đổi chưa lưu?",
-    "message": "Bạn đã nhập dữ liệu nhưng chưa lưu. Đóng và bỏ các thay đổi này?",
-    "confirm": "Bỏ thay đổi"
   }
 }

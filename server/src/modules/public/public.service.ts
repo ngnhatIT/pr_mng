@@ -2,6 +2,7 @@ import { db, formatSchedule } from '../../db';
 import { AppError } from '../../shared/errors';
 import { normalizePhone } from '../../services/zalo';
 import { createReferral } from '../referrals/rewards.service';
+import { notifyStaff } from '../../services/notify';
 
 /** Cửa sổ chống gửi trùng form công khai theo (trung tâm, SĐT đã chuẩn hóa). */
 const DEDUPE_MINUTES = 10;
@@ -88,6 +89,12 @@ export async function createPublicLead(
   await db
     .prepare("INSERT INTO leads (center_id, name, phone, source, status, note) VALUES (?, ?, ?, ?, 'new', ?)")
     .run(centerId, d.name, d.phone, d.source, d.note);
+  await notifyStaff(centerId, 'leads.manage', {
+    kind: 'lead_new',
+    params: { name: d.name },
+    body: `Lead mới: ${d.name}`,
+    link: '/app/leads',
+  });
 }
 
 /** Đăng ký học thử từ form công khai (kèm mã giới thiệu nếu có). */
@@ -126,4 +133,10 @@ export async function createPublicTrial(
     .run(centerId, d.name, d.phone, d.classId, d.desiredDate, d.note, d.referralCode || null);
   // REF-1: referral gắn trung tâm, bỏ qua SĐT đã là học viên/phụ huynh/đã pending (modules/referrals/rewards.service.ts)
   if (referrer) await createReferral(centerId, referrer.id, d.phone);
+  await notifyStaff(centerId, 'trials.manage', {
+    kind: 'trial_new',
+    params: { name: d.name, date: d.desiredDate },
+    body: `Đăng ký học thử mới: ${d.name}`,
+    link: '/app/trials',
+  });
 }

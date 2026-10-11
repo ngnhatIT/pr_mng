@@ -41,6 +41,7 @@ import uploadRoutes from './modules/uploads/uploads.routes';
 import roomRoutes from './modules/rooms/rooms.routes';
 import payrollRoutes from './modules/payroll/payroll.routes';
 import exportRoutes from './modules/exports/exports.routes';
+import { inboxRouter, announcementRouter } from './modules/notifications/notifications.routes';
 import trialRoutes from './modules/trials/trials.routes';
 import teacherPortalRoutes from './modules/teacher/teacher.routes';
 import publicRoutes from './modules/public/public.routes';
@@ -247,6 +248,9 @@ export function createApp(): Express {
   /* ------------------------- Quản trị trung tâm ------------------------- */
   // denyParents: phụ huynh chỉ được dùng /api/parent, không chạm API nhân sự
   const staff = [requireAuth, denyParents];
+  // Chuông thông báo: nhân sự + phụ huynh (người nhận lấy từ token, không theo quyền)
+  v1.use('/notifications', requireAuth, inboxRouter);
+  v1.use('/announcements', ...staff, announcementRouter);
   v1.use('/students', ...staff, studentRoutes);
   v1.use('/teachers', ...staff, teacherRoutes);
   v1.use('/classes', ...staff, classRoutes);

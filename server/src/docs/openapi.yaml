@@ -22,6 +22,8 @@ servers:
 security:
   - bearerAuth: []
 tags:
+  - name: Notifications
+    description: Chuông thông báo trong app + thông báo chung gửi phụ huynh
   - name: Exports
     description: Xuất CSV (Excel/Google Sheets)
   - name: Homework
@@ -2847,6 +2849,66 @@ paths:
                 type: string
         '403':
           description: Thiếu quyền
+  /api/v1/notifications:
+    get:
+      tags: [Notifications]
+      summary: Thông báo trong app của người đang đăng nhập (nhân sự hoặc phụ huynh)
+      description: >-
+        Người nhận lấy từ token (không theo quyền). Thông báo hệ thống trả kind + params để client dịch;
+        announcement trả title/body soạn tay. Kèm unread = tổng chưa đọc.
+      parameters:
+        - { in: query, name: page, schema: { type: integer } }
+        - { in: query, name: limit, schema: { type: integer } }
+        - { in: query, name: unread, schema: { type: string, enum: ['1'] }, description: Chỉ chưa đọc }
+      responses:
+        '200': { description: 'Paginated<Notification> & { unread }' }
+  /api/v1/notifications/unread-count:
+    get:
+      tags: [Notifications]
+      summary: Số thông báo chưa đọc (chuông poll mỗi 60s)
+      responses:
+        '200': { description: '{ unread }' }
+  /api/v1/notifications/read-all:
+    post:
+      tags: [Notifications]
+      summary: Đánh dấu đã đọc mọi thông báo của mình
+      responses:
+        '200': { description: '{ updated }' }
+  /api/v1/notifications/{id}/read:
+    post:
+      tags: [Notifications]
+      summary: Đánh dấu đã đọc 1 thông báo của mình
+      parameters:
+        - { in: path, name: id, required: true, schema: { type: integer } }
+      responses:
+        '200': { description: OK }
+        '404': { description: NOTIFICATION_NOT_FOUND (không phải của mình) }
+  /api/v1/announcements:
+    get:
+      tags: [Notifications]
+      summary: Lịch sử thông báo chung đã gửi (notifications.view)
+      parameters:
+        - { in: query, name: page, schema: { type: integer } }
+      responses:
+        '200': { description: Paginated<Announcement> }
+    post:
+      tags: [Notifications]
+      summary: Gửi thông báo chung tới phụ huynh (notifications.send)
+      description: class_id bỏ trống = mọi phụ huynh của trung tâm; có class_id = phụ huynh của học viên đang học lớp đó.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [title, body]
+              properties:
+                title: { type: string, maxLength: 150 }
+                body: { type: string, maxLength: 2000 }
+                class_id: { type: integer }
+      responses:
+        '201': { description: '{ id, recipient_count }' }
+        '400': { description: INVALID_CLASS / thiếu tiêu đề hoặc nội dung }
   /api/v1/payroll:
     get:
       tags:

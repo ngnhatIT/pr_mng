@@ -336,7 +336,11 @@ async function notifyPaymentResult(
     approved
       ? `Trung tâm đã xác nhận thanh toán ${money}đ cho hóa đơn HD${invoiceId}. Xin cảm ơn!`
       : `Khoản thanh toán ${money}đ cho hóa đơn HD${invoiceId} đã bị từ chối. Vui lòng liên hệ trung tâm để được hỗ trợ.`,
-    invoiceId
+    invoiceId,
+    {
+      kind: approved ? 'payment_confirmed' : 'payment_rejected',
+      params: { amount: Number(amount), invoice: invoiceId },
+    }
   );
 }
 

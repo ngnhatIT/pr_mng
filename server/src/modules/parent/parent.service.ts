@@ -8,6 +8,7 @@ import { issueTokenPair, TokenPair } from '../auth/refresh.service';
 import { ensureParentReferralCode } from '../referrals/rewards.service';
 import { buildVnpayUrl, vnpDate } from '../../services/vnpay';
 import { normalizePhone } from '../../services/zalo';
+import { notifyStaff } from '../../services/notify';
 import { AppError } from '../../shared/errors';
 import { targetScopeCond } from '../homework/homework.helpers';
 import { v, validate } from '../../shared/validate';
@@ -448,6 +449,12 @@ export async function claimPaid(
         "INSERT INTO payments (invoice_id, amount, method, note, status) VALUES (?, ?, 'bank_transfer', ?, 'pending')"
       )
       .run(invoiceId, remaining, 'Phụ huynh báo đã chuyển khoản');
+    await notifyStaff(inv.center_id, 'payments.approve', {
+      kind: 'payment_claim',
+      params: { invoice: invoiceId, amount: remaining },
+      body: `Phụ huynh báo đã chuyển khoản ${remaining} cho hóa đơn HD${invoiceId}`,
+      link: '/app/tuition?tab=pending',
+    });
     return { payment_id: Number(r.lastInsertRowid), status: 'pending' };
   });
   // Lỗi nghiệp vụ (404/400...) ném bên trong lock giữ nguyên status, không biến thành 503
@@ -600,6 +607,12 @@ export async function createLeave(
         "INSERT INTO leave_requests (center_id, student_id, class_id, from_date, to_date, reason, status) VALUES (?, ?, ?, ?, ?, ?, 'pending')"
       )
       .run(student.center_id, student.id, classId, from_date, to_date, input.reason || null);
+    await notifyStaff(student.center_id, 'leaves.manage', {
+      kind: 'leave_request',
+      params: { student: student.name, from: from_date, to: to_date },
+      body: `Đơn xin nghỉ mới của ${student.name} (${from_date} → ${to_date})`,
+      link: '/app/leaves',
+    });
     return { id: Number(r.lastInsertRowid), status: 'pending' };
   });
   if (outcome.status === 'locked') {

@@ -54,6 +54,8 @@ const EXPECTED_FK_COUNT: Record<string, number> = {
   trial_registrations: 2,
   leads: 1,
   reminders: 3,
+  notifications: 1, // v27: recipient đa hình, chỉ FK center
+  announcements: 3,
   audit_logs: 0,
   reset_requests: 1,
   uploads: 2,
