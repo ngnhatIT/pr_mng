@@ -1,4 +1,4 @@
-import { useState, type ChangeEvent } from 'react';
+import { useRef, useState, type ChangeEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Modal } from '../../shared/components/Modal';
 import { Field } from '../../shared/components/Form';
@@ -31,9 +31,12 @@ export function ImportStudentsModal({ onClose, onDone }: { onClose: () => void; 
   const [check, setCheck] = useState<ImportResult | null>(null);
   const [fileError, setFileError] = useState('');
   const [busy, setBusy] = useState(false);
+  // Chọn file khác khi lần kiểm tra trước chưa về: bỏ kết quả cũ (không nhập file B theo kết quả của file A)
+  const reqId = useRef(0);
 
   const pick = async (e: ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0];
+    reqId.current++;
     setRows(null);
     setCheck(null);
     setFileError('');
@@ -44,13 +47,15 @@ export function ImportStudentsModal({ onClose, onDone }: { onClose: () => void; 
     if (!parsed.rows.length) return setFileError(t('import.empty'));
     setRows(parsed.rows);
     setUnknown(parsed.unknownColumns);
+    const my = ++reqId.current;
     setBusy(true);
     try {
-      setCheck(await studentsApi.importRows(parsed.rows, true));
+      const r = await studentsApi.importRows(parsed.rows, true);
+      if (my === reqId.current) setCheck(r);
     } catch (err) {
-      toastApiError(toast, err, t('import.checkError'));
+      if (my === reqId.current) toastApiError(toast, err, t('import.checkError'));
     } finally {
-      setBusy(false);
+      if (my === reqId.current) setBusy(false);
     }
   };
 

@@ -239,6 +239,7 @@
     "form": {
       "attendance": "Attendance",
       "classRoom": "Class default room",
+      "classTeacher": "Class teacher",
       "date": "Date",
       "end": "End",
       "newDate": "New date",

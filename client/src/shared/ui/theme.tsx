@@ -8,7 +8,8 @@ interface ThemeCtx {
   toggle: () => void;
 }
 
-const KEY = 'educenter-theme';
+// Khóa mới: bản cũ tự ghi theme lúc mount nên mọi người dùng cũ đều có giá trị -> không phân biệt được lựa chọn tay
+const KEY = 'educenter-theme-choice';
 
 const Ctx = createContext<ThemeCtx>({ theme: 'light', toggle: () => {} });
 

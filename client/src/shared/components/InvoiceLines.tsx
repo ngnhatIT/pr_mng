@@ -18,7 +18,11 @@ export function InvoiceLines({
 }) {
   const { t } = useTranslation('tuition');
   if (!items.length && !discount) return null;
-  const subtotal = amount + discount;
+  // Tạm tính lấy từ dòng (không suy từ amount: hoàn tiền làm amount giảm mà dòng giữ nguyên)
+  const subtotal = items.length
+    ? Math.round(items.reduce((s, it) => s + it.quantity * it.unit_price, 0))
+    : amount + discount;
+  const adjustment = amount - (subtotal - discount);
   return (
     <table className="table invoice-lines">
       <thead>
@@ -60,6 +64,17 @@ export function InvoiceLines({
                 : t('lines.discount')}
             </th>
             <td className="num">−{formatVND(discount)}</td>
+          </tr>
+        )}
+        {adjustment !== 0 && (
+          <tr>
+            <th scope="row" colSpan={3}>
+              {t('lines.adjustment')}
+            </th>
+            <td className="num">
+              {adjustment < 0 ? '−' : '+'}
+              {formatVND(Math.abs(adjustment))}
+            </td>
           </tr>
         )}
         <tr className="invoice-lines-total">

@@ -2,7 +2,7 @@
 // File riêng (không inline trong index.html) để CSP không cần script-src 'unsafe-inline' (SEC-3).
 (function () {
   try {
-    var t = localStorage.getItem('educenter-theme');
+    var t = localStorage.getItem('educenter-theme-choice');
     if (t !== 'light' && t !== 'dark') {
       t = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
     }

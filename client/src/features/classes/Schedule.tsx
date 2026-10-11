@@ -407,6 +407,7 @@ function SessionModal({
               <>
                 <Field label={t('schedule.form.teacher')} span hint={t('schedule.form.teacherHint')}>
                   <select className="text-input" value={teacher} onChange={(e) => setTeacher(e.target.value)}>
+                    <option value="">{t('schedule.form.classTeacher')}</option>
                     {!teachers.some((x) => String(x.id) === teacher) && teacher && (
                       <option value={teacher}>{item.teacher_name}</option>
                     )}

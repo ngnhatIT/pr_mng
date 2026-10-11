@@ -8,6 +8,7 @@ import { NotificationBell } from './NotificationBell';
 
 const readAll = vi.fn(() => Promise.resolve({ updated: 1 }));
 vi.mock('./notifications.api', () => ({
+  INBOX_CHANGED: 'edu:inbox-changed',
   inboxApi: {
     unreadCount: () => Promise.resolve({ unread: 1 }),
     list: () =>

@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Modal } from './Modal';
 import { Field } from './Form';
 import { Icon } from './icons';
+import { LoadError } from './EmptyState';
 import { http } from '../api/client';
 import { useLoad } from '../hooks/useLoad';
 import { toastApiError, useToast } from '../ui/toast';
@@ -19,7 +20,7 @@ const grouped = (s: string) => s.replace(/(.{4})/g, '$1 ').trim();
 export function TwoFactorModal({ onClose }: { onClose: () => void }) {
   const { t } = useTranslation('auth');
   const toast = useToast();
-  const { data: status, reload } = useLoad(() => http.get<Status>('/auth/2fa'), []);
+  const { data: status, error: loadError, reload } = useLoad(() => http.get<Status>('/auth/2fa'), []);
   const [setup, setSetup] = useState<{ secret: string; otpauth_url: string } | null>(null);
   const [recovery, setRecovery] = useState<string[] | null>(null);
   const [code, setCode] = useState('');
@@ -106,6 +107,8 @@ export function TwoFactorModal({ onClose }: { onClose: () => void }) {
             </button>
           </div>
         </div>
+      ) : loadError && !status ? (
+        <LoadError onRetry={reload} />
       ) : !status ? (
         <p className="muted">
           <span className="spinner" aria-hidden="true" /> {t('actions.loading', { ns: 'common' })}

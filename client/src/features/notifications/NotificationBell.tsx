@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { Icon } from '../../shared/components/icons';
 import { appLocale } from '../../shared/types';
-import { inboxApi, type InAppNotification } from './notifications.api';
+import { inboxApi, INBOX_CHANGED, type InAppNotification } from './notifications.api';
 import { noticeText, timeAgo } from './notice';
 import './NotificationBell.css';
 
@@ -41,9 +41,11 @@ export function NotificationBell({ allHref }: { allHref?: string }) {
     }, POLL_MS);
     const onVisible = () => document.visibilityState === 'visible' && refreshCount();
     document.addEventListener('visibilitychange', onVisible);
+    window.addEventListener(INBOX_CHANGED, refreshCount);
     return () => {
       window.clearInterval(timer);
       document.removeEventListener('visibilitychange', onVisible);
+      window.removeEventListener(INBOX_CHANGED, refreshCount);
     };
   }, [refreshCount]);
 
@@ -141,7 +143,11 @@ export function NotificationBell({ allHref }: { allHref?: string }) {
                       className={`notif-item${n.read_at ? '' : ' is-unread'}`}
                       onClick={() => select(n)}
                     >
-                      {!n.read_at && <span className="notif-dot" aria-label={t('notifications.unread')} />}
+                      {!n.read_at && (
+                        <span className="notif-dot">
+                          <span className="sr-only">{t('notifications.unread')}</span>
+                        </span>
+                      )}
                       <span className="notif-text">
                         {title && <span className="notif-title">{title}</span>}
                         <span className="notif-body">{body}</span>

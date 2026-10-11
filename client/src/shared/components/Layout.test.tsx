@@ -10,6 +10,7 @@ import i18n from '../../i18n';
 
 vi.mock('../../features/system/roles.api', () => ({ loadMyPermissions: () => Promise.resolve(new Set()) }));
 vi.mock('../../features/notifications/notifications.api', () => ({
+  INBOX_CHANGED: 'edu:inbox-changed',
   inboxApi: { unreadCount: () => Promise.resolve({ unread: 0 }) },
 }));
 

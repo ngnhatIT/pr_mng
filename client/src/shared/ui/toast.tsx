@@ -62,7 +62,13 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   const { t } = useTranslation('common');
 
   const lastShown = useRef(new Map<string, number>());
-  const paused = useRef(false);
+  const wrapRef = useRef<HTMLDivElement>(null);
+  // Đang hover/focus vùng toast thì chưa đóng; đọc trạng thái thật lúc hết giờ (không dựa cờ enter/leave: nút đóng
+  // bị gỡ khi đang focus không phát blur, chạm trên mobile không có mouseleave -> cờ kẹt).
+  const isPaused = () => {
+    const w = wrapRef.current;
+    return !!w && (w.matches(':hover') || w.contains(document.activeElement));
+  };
 
   const push = useCallback((message: string, type: ToastType = 'info') => {
     const key = `${type}|${message}`;
@@ -73,7 +79,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     setToasts((prev) => [...prev, { id, message, type }]);
     // Toast lỗi ở lại lâu hơn để user kịp đọc; đang hover/focus vùng toast thì chưa đóng (WCAG 2.2.1)
     const close = () => {
-      if (paused.current) window.setTimeout(close, 1000);
+      if (isPaused()) window.setTimeout(close, 1000);
       else setToasts((prev) => prev.filter((t) => t.id !== id));
     };
     window.setTimeout(close, type === 'error' ? 6000 : 3200);
@@ -86,14 +92,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   return (
     <ToastContext.Provider value={push}>
       {children}
-      <div
-        className="toast-wrap"
-        aria-live="polite"
-        onMouseEnter={() => (paused.current = true)}
-        onMouseLeave={() => (paused.current = false)}
-        onFocus={() => (paused.current = true)}
-        onBlur={() => (paused.current = false)}
-      >
+      <div className="toast-wrap" aria-live="polite" ref={wrapRef}>
         {toasts.map((item) => (
           // Lỗi: role=alert (đọc ngay); còn lại để vùng polite đọc
           <div

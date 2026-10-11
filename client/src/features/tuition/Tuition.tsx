@@ -680,7 +680,9 @@ function BulkInvoiceModal({ onClose, onDone }: { onClose: () => void; onDone: ()
   const [period, setPeriod] = useState(todayVN().slice(0, 7));
   const [classId, setClassId] = useState('');
   const [dueDate, setDueDate] = useState('');
-  const [preview, setPreview] = useState<BulkInvoiceResult | null>(null);
+  const [preview, setPreview] = useState<(BulkInvoiceResult & { key: string }) | null>(null);
+  // Bản xem trước chỉ hợp lệ cho đúng bộ tham số đã gửi (đổi tham số khi đang tải -> bỏ kết quả về muộn)
+  const paramsKey = `${period}|${classId}|${dueDate}`;
   const [busy, setBusy] = useState(false);
   const { data: classes } = useLoad(() => fetchAllPages((p) => classesApi.list('', p)), []);
 
@@ -694,8 +696,9 @@ function BulkInvoiceModal({ onClose, onDone }: { onClose: () => void; onDone: ()
   const run = async (dry: boolean) => {
     setBusy(true);
     try {
+      const key = paramsKey;
       const r = await invoicesApi.bulk(body(dry));
-      if (dry) setPreview(r);
+      if (dry) setPreview((cur) => (key === keyRef.current ? { ...r, key } : cur));
       else {
         toast(t('bulk.created', { count: r.created }), 'success');
         onDone();
@@ -707,7 +710,9 @@ function BulkInvoiceModal({ onClose, onDone }: { onClose: () => void; onDone: ()
     }
   };
   // Đổi tham số thì bản xem trước cũ không còn đúng
-  useEffect(() => setPreview(null), [period, classId, dueDate]);
+  const keyRef = useRef(paramsKey);
+  keyRef.current = paramsKey;
+  useEffect(() => setPreview(null), [paramsKey]);
 
   return (
     <Modal title={t('bulk.title')} onClose={onClose} wide>
@@ -786,7 +791,7 @@ function BulkInvoiceModal({ onClose, onDone }: { onClose: () => void; onDone: ()
         <button type="button" className="btn" onClick={onClose}>
           {t('actions.cancel', { ns: 'common' })}
         </button>
-        {preview && preview.created > 0 ? (
+        {preview && preview.key === paramsKey && preview.created > 0 ? (
           <button type="button" className="btn btn-primary" disabled={busy} onClick={() => void run(false)}>
             {busy && <span className="spinner" aria-hidden="true" />}
             {t('bulk.confirm', { count: preview.created })}

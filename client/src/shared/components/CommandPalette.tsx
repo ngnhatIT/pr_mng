@@ -81,8 +81,10 @@ export function CommandPalette({
     const pageItems: PaletteItem[] = pages
       .filter((p) => !k || norm(p.label).includes(k))
       .map((p) => ({ id: `p${p.to}`, label: p.label, icon: p.icon, to: p.to, group: 'pages' }));
-    return [...pageItems.slice(0, k ? 6 : 8), ...remote];
-  }, [q, pages, remote]);
+    // Kết quả tìm kiếm của truy vấn cũ (chưa hết debounce) không được hiện/Enter mở nhầm
+    const fresh = q.trim() === dq ? remote : [];
+    return [...pageItems.slice(0, k ? 6 : 8), ...fresh];
+  }, [q, dq, pages, remote]);
 
   useEffect(() => setActive(0), [q, remote]);
 

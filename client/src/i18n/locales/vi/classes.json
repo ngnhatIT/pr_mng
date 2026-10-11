@@ -239,6 +239,7 @@
     "form": {
       "attendance": "Điểm danh",
       "classRoom": "Phòng mặc định của lớp",
+      "classTeacher": "Giáo viên của lớp",
       "date": "Ngày",
       "end": "Kết thúc",
       "newDate": "Ngày mới",

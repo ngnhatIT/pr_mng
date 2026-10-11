@@ -4,6 +4,7 @@ import { downloadFile } from '../api/client';
 import { useToast, toastApiError } from '../ui/toast';
 import { useMyPermissions } from '../../features/system/roles.api';
 import { Icon } from './icons';
+import { todayVN } from '../types';
 
 /**
  * Nút "Xuất CSV" cho /exports/*.csv. Ẩn khi thiếu quyền reports.export.
@@ -28,10 +29,7 @@ export function ExportButton({
       lang: i18n.language.startsWith('en') ? 'en' : 'vi',
     });
     try {
-      await downloadFile(
-        `/exports/${kind}.csv?${qs}`,
-        `${kind}-${new Date().toISOString().slice(0, 10)}.csv`
-      );
+      await downloadFile(`/exports/${kind}.csv?${qs}`, `${kind}-${todayVN()}.csv`);
     } catch (err) {
       toastApiError(toast, err, t('actions.exportError'));
     } finally {

@@ -42,6 +42,9 @@ export interface Announcement {
   created_by_name: string | null;
 }
 
+/** Sự kiện window: số chưa đọc vừa đổi ở nơi khác (trang thông báo) -> chuông tải lại số. */
+export const INBOX_CHANGED = 'edu:inbox-changed';
+
 export const inboxApi = {
   list: (q: { page?: number; limit?: number; unread?: boolean } = {}) => {
     const p = new URLSearchParams();
