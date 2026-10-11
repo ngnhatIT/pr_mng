@@ -44,7 +44,8 @@
     "add": "Thêm lead",
     "convert": "Thành HV",
     "convertTitle": "Chuyển thành học viên",
-    "countTitle": "{{count}} lead",
+    "countTitle_one": "{{count}} lead",
+    "countTitle_other": "{{count}} lead",
     "delete": {
       "message": "Xóa lead \"{{name}}\"?",
       "title": "Xóa lead"
@@ -100,8 +101,6 @@
       "saved": "Đã lưu lead",
       "updateFail": "Không cập nhật được lead, vui lòng thử lại"
     },
-    "countTitle_one": "{{count}} lead",
-    "countTitle_other": "{{count}} lead",
     "markLost": "Đánh dấu mất",
     "markLostAria": "Đánh dấu {{name}} là mất",
     "colMore": "Đang hiện {{shown}}/{{total}}, tìm kiếm để thu hẹp"

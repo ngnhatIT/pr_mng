@@ -66,7 +66,8 @@
     },
     "import_one": "Add {{count}} question to quiz",
     "import_other": "Add {{count}} questions to quiz",
-    "meta": "{{points}} pts · {{count}} answers",
+    "meta_one": "{{points}} pts · {{count}} answer",
+    "meta_other": "{{points}} pts · {{count}} answers",
     "searchPh": "Search questions...",
     "selected_one": "{{count}} question selected",
     "selected_other": "{{count}} questions selected",
@@ -76,10 +77,8 @@
       "loadFail": "Could not load the bank, please try again",
       "staleSelection_one": "{{count}} selected question is no longer in the list",
       "staleSelection_other": "{{count}} selected questions are no longer in the list",
-      "staleSelection": "{{count}} selected questions are no longer in the list",
       "deleted": "Question deleted"
     },
-    "import": "Add {{count}} questions to quiz",
     "selected": "{{count}} selected",
     "deleteTitle": "Delete question",
     "emptyFiltered": {
@@ -122,8 +121,7 @@
     "loadErrorDesc": "Check your connection and try again.",
     "pageDesc": "Prepare questions by subject, topic and difficulty to reuse in quizzes",
     "count_one": "{{count}} question",
-    "count_other": "{{count}} questions",
-    "count": "{{count}} questions"
+    "count_other": "{{count}} questions"
   },
   "delete": {
     "message": "Delete \"{{title}}\"?",
@@ -132,11 +130,9 @@
   "due": {
     "daysLeft_one": "{{count}} day left",
     "daysLeft_other": "{{count}} days left",
-    "overdueDays_one": "Overdue by {{count}} day",
-    "overdueDays_other": "Overdue by {{count}} days",
-    "today": "Due today",
-    "daysLeft": "{{count}} days left",
-    "overdueDays": "{{count}} days overdue"
+    "overdueDays_one": "{{count}} day overdue",
+    "overdueDays_other": "{{count}} days overdue",
+    "today": "Due today"
   },
   "editor": {
     "bold": "Bold",
@@ -186,7 +182,10 @@
     "correctAnswer": "Correct answer",
     "criterion": "Criterion",
     "criterionScore": "{{score}} pts",
-    "defaultCriteria": ["Pronunciation", "Vocabulary"],
+    "defaultCriteria": [
+      "Pronunciation",
+      "Vocabulary"
+    ],
     "deselectAll": "Deselect",
     "dueDate": "Due date",
     "dueNextWeek": "Next week",
@@ -223,8 +222,8 @@
     "quickDue": "Quick due date",
     "quickTemplates": "Quick templates",
     "quizLocked": "Students have already taken this quiz - questions are locked. Create a new quiz to make changes.",
-    "quizQuestions_one": "{{count}} quiz question, {{total}} pts total",
-    "quizQuestions_other": "{{count}} quiz questions, {{total}} pts total",
+    "quizQuestions_one": "Quiz questions ({{count}} question, {{total}} pts total)",
+    "quizQuestions_other": "Quiz questions ({{count}} questions, {{total}} pts total)",
     "rubric": "Grading rubric",
     "rubricNamePh": "Rubric name (e.g. Speaking)",
     "rubricOption": "{{name}} ({{score}} pts)",
@@ -267,23 +266,17 @@
     "toast": {
       "assigned_one": "Assigned to {{count}} class",
       "assigned_other": "Assigned to {{count}} classes",
-      "bankImported_one": "Added {{count}} question from the bank",
-      "bankImported_other": "Added {{count}} questions from the bank",
+      "bankImported_one": "Added {{count}} question from bank",
+      "bankImported_other": "Added {{count}} questions from bank",
       "rubricCreated": "Rubric created",
       "rubricFail": "Couldn't create the rubric, please try again",
       "saveFail": "Couldn't save the assignment, please try again",
       "savedDraft": "Draft saved",
       "scheduled_one": "Scheduled for {{count}} class",
       "scheduled_other": "Scheduled for {{count}} classes",
-      "updated": "Updated",
-      "assigned": "Assigned to {{count}} classes",
-      "bankImported": "Added {{count}} questions from bank",
-      "scheduled": "Scheduled for {{count}} classes"
+      "updated": "Updated"
     },
     "wholeClass": "Whole class",
-    "publishFor": "Publish to {{count}} classes",
-    "quizQuestions": "Quiz questions ({{count}} questions, {{total}} pts total)",
-    "scheduleFor": "Schedule ({{count}} classes)",
     "selectedCount": "{{count}} selected",
     "errors": {
       "classRequired": "Please select at least 1 class",
@@ -299,7 +292,8 @@
       "duePast": "Due date cannot be in the past",
       "publishAtRequired": "Please choose a publish time",
       "studentsRequired": "Please select at least 1 student",
-      "quizInvalid": "{{count}} question(s) are invalid (missing content, options, correct answer or points)",
+      "quizInvalid_one": "{{count}} question is invalid (missing content, options, correct answer or points)",
+      "quizInvalid_other": "{{count}} questions are invalid (missing content, options, correct answer or points)",
       "rubricNameRequired": "Enter a rubric name",
       "rubricCriteriaRequired": "Need at least 1 criterion with a name and score > 0",
       "pointsInvalid": "Each question must be worth more than 0 and at most 1000 points",
@@ -372,7 +366,6 @@
     "submittedAt": "Submitted {{time}}",
     "title": "Submissions - {{title}}",
     "viewLarge": "View full image",
-    "count": "{{count}} submissions",
     "late": "Late"
   },
   "table": {

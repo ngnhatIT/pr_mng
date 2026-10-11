@@ -101,7 +101,6 @@
       "saved": "Lead saved",
       "updateFail": "Could not update the lead, please try again"
     },
-    "countTitle": "{{count}} leads",
     "markLost": "Mark as lost",
     "markLostAria": "Mark {{name}} as lost",
     "colMore": "Showing {{shown}} of {{total}}, search to narrow down"

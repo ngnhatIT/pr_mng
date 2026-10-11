@@ -2,6 +2,7 @@ import {
   lazy,
   Suspense,
   useEffect,
+  useRef,
   useState,
   type ComponentType,
   type JSX,
@@ -144,6 +145,15 @@ export function RoleGuard({
  */
 function PageOutlet() {
   const { pathname } = useLocation();
+  // a11y: đổi trang -> đưa focus về <main> để trình đọc màn hình đọc trang mới (bỏ qua lần vào đầu tiên)
+  const first = useRef(true);
+  useEffect(() => {
+    if (first.current) {
+      first.current = false;
+      return;
+    }
+    document.getElementById('main-content')?.focus({ preventScroll: true });
+  }, [pathname]);
   return (
     <ErrorBoundary key={pathname} name="page">
       <Suspense fallback={<RouteFallback />}>

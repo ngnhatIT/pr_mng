@@ -5,7 +5,7 @@ import type { TFunction } from 'i18next';
 import { dashboardApi } from './dashboard.api';
 import { DebtRow } from '../tuition/tuition.api';
 import { useToast, toastApiError } from '../../shared/ui/toast';
-import { DashboardData, formatVND, slotOn } from '../../shared/types';
+import { DashboardData, appLocale, formatVND, slotOn } from '../../shared/types';
 import { getUser } from '../../shared/api/client';
 import { PageHeader } from '../../shared/components/PageHeader';
 import { Skeleton } from '../../shared/components/Skeleton';
@@ -73,10 +73,10 @@ function RevenueChart({
 }
 
 function todayLine(lang: string): string {
-  return new Intl.DateTimeFormat(lang === 'en' ? 'en-US' : 'vi-VN', {
+  return new Intl.DateTimeFormat(appLocale(lang), {
     weekday: 'long',
     day: 'numeric',
-    month: 'numeric',
+    month: lang === 'en' ? 'long' : 'numeric',
     year: 'numeric',
   }).format(new Date());
 }

@@ -1,11 +1,13 @@
 {
   "courses": {
     "capacity": "Enrolled",
-    "count": "{{count}} open courses",
+    "count_one": "{{count}} open course",
+    "count_other": "{{count}} open courses",
     "empty": "No courses are open for enrolment right now.",
     "schedule": "Schedule",
     "scheduleTbd": "Being scheduled",
-    "students": "{{count}} students",
+    "students_one": "{{count}} student",
+    "students_other": "{{count}} students",
     "sub": "Full-course fees, stated up front. Try a class first, decide later.",
     "teacher": "Teacher",
     "teacherTbd": "To be assigned",
@@ -77,7 +79,8 @@
     "title": "Who teaches"
   },
   "ticket": {
-    "more": "{{count}} more courses",
+    "more_one": "{{count}} more course",
+    "more_other": "{{count}} more courses",
     "title": "Starting soon"
   },
   "trial": {
@@ -100,7 +103,8 @@
     },
     "small": {
       "body": "Few students per class, so teachers correct each child's work during the lesson instead of sending it home.",
-      "bodyCount": "{{count}} students per class on average. Few enough for teachers to correct each child's work during the lesson.",
+      "bodyCount_one": "{{count}} student per class on average. Few enough for teachers to correct each child's work during the lesson.",
+      "bodyCount_other": "{{count}} students per class on average. Few enough for teachers to correct each child's work during the lesson.",
       "title": "Genuinely small classes"
     },
     "title": "What parents actually need to know",

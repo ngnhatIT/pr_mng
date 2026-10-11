@@ -5,12 +5,12 @@ Nguồn: 3 audit (tính năng so với Teachworks/TutorBird/Classe365, khả nă
 
 ## Gói 1 — Xuất dữ liệu + sửa nhanh UI quốc tế (S)
 - [x] Xuất CSV (học viên, hóa đơn, công nợ, bảng lương) — `GET /api/v1/exports/*.csv`, quyền `reports.export`
-- [ ] Tương phản WCAG: viền input ≥3:1, badge danger, banner online
-- [ ] Số nhiều tiếng Anh (`_one`) + test locales chặn thiếu
-- [ ] Ngày/tiền theo locale (`Intl`), 1 helper `appLocale()`
-- [ ] Theme: light/dark/system, không đóng băng lựa chọn OS
-- [ ] Dark mode rò màu (`.alert-warning`, `.rubric-banner`)
-- [ ] Focus `main` khi đổi trang; toast lỗi `role=alert`, dừng khi hover
+- [x] Tương phản WCAG: viền input ≥3:1, badge danger, banner online
+- [x] Số nhiều tiếng Anh (`_one`) + test locales chặn thiếu
+- [x] Ngày theo locale (`Intl`, en "Oct 9, 2026"), helper `appLocale()`; tiền giữ "1,000,000 VND"
+- [x] Theme: theo OS tới khi người dùng tự chọn (chưa có nút "System" riêng)
+- [x] Dark mode rò màu (`.alert-warning`, `.rubric-banner`)
+- [x] Focus `main` khi đổi trang; toast lỗi `role=alert`, dừng khi hover
 
 ## Gói 2 — Lịch & vận hành buổi học (M)
 - [ ] Trang Lịch (tuần/tháng, lọc giáo viên/phòng) trên dữ liệu `sessions`

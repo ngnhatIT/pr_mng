@@ -62,6 +62,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   const { t } = useTranslation('common');
 
   const lastShown = useRef(new Map<string, number>());
+  const paused = useRef(false);
 
   const push = useCallback((message: string, type: ToastType = 'info') => {
     const key = `${type}|${message}`;
@@ -70,13 +71,12 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     lastShown.current.set(key, now);
     const id = nextId++;
     setToasts((prev) => [...prev, { id, message, type }]);
-    // Toast lỗi ở lại lâu hơn để user kịp đọc
-    window.setTimeout(
-      () => {
-        setToasts((prev) => prev.filter((t) => t.id !== id));
-      },
-      type === 'error' ? 6000 : 3200
-    );
+    // Toast lỗi ở lại lâu hơn để user kịp đọc; đang hover/focus vùng toast thì chưa đóng (WCAG 2.2.1)
+    const close = () => {
+      if (paused.current) window.setTimeout(close, 1000);
+      else setToasts((prev) => prev.filter((t) => t.id !== id));
+    };
+    window.setTimeout(close, type === 'error' ? 6000 : 3200);
   }, []);
 
   const dismiss = useCallback((id: number) => {
@@ -86,9 +86,21 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   return (
     <ToastContext.Provider value={push}>
       {children}
-      <div className="toast-wrap" aria-live="polite">
+      <div
+        className="toast-wrap"
+        aria-live="polite"
+        onMouseEnter={() => (paused.current = true)}
+        onMouseLeave={() => (paused.current = false)}
+        onFocus={() => (paused.current = true)}
+        onBlur={() => (paused.current = false)}
+      >
         {toasts.map((item) => (
-          <div key={item.id} className={`toast toast-${item.type}`} role="status">
+          // Lỗi: role=alert (đọc ngay); còn lại để vùng polite đọc
+          <div
+            key={item.id}
+            className={`toast toast-${item.type}`}
+            role={item.type === 'error' ? 'alert' : undefined}
+          >
             <span className="toast-icon">
               <Icon name={TOAST_ICON[item.type]} size={18} />
             </span>

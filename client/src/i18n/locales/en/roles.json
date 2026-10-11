@@ -4,8 +4,10 @@
     "system": "System"
   },
   "card": {
-    "permCount": "{{count}} permissions",
-    "userCount": "{{count}} users"
+    "permCount_one": "{{count}} permission",
+    "permCount_other": "{{count}} permissions",
+    "userCount_one": "{{count}} user",
+    "userCount_other": "{{count}} users"
   },
   "confirmDelete": {
     "message": "Role \"{{name}}\" will be deleted. Users with this role will lose its permissions. This cannot be undone.",
@@ -69,11 +71,13 @@
     "trials": "Trials",
     "users": "Accounts"
   },
-  "modulePermCount": "{{count}} permissions",
+  "modulePermCount_one": "{{count}} permission",
+  "modulePermCount_other": "{{count}} permissions",
   "noDesc": "No description yet.",
   "onCount": "{{on}}/{{total}} enabled",
   "savePerms": "Save permissions",
-  "savebar": "{{count}} unsaved changes",
+  "savebar_one": "{{count}} unsaved change",
+  "savebar_other": "{{count}} unsaved changes",
   "saving": "Saving...",
   "scope": {
     "all": "All",
@@ -101,14 +105,16 @@
     "loadDetailFail": "Failed to load role details, please try again",
     "loadRolesFail": "Failed to load role list, please try again",
     "savePermsFail": "Couldn't save the permissions, please try again",
-    "savedPerms": "Saved {{count}} permissions for the role",
+    "savedPerms_one": "Saved {{count}} permission for the role",
+    "savedPerms_other": "Saved {{count}} permissions for the role",
     "updated": "Role updated"
   },
   "turnOffAll": "Turn all off",
   "turnOnAll": "Turn all on",
   "discard": {
     "title": "Discard unsaved permission changes?",
-    "message": "There are {{count}} unsaved permission changes. Switching role will discard them."
+    "message_one": "There is {{count}} unsaved permission change. Switching role will discard it.",
+    "message_other": "There are {{count}} unsaved permission changes. Switching role will discard them."
   },
   "members": {
     "title": "Users with this role",

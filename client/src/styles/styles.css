@@ -13,6 +13,8 @@
   --text-faint: #67635b;
   --border: #e5e2db;
   --border-strong: #d2cec5;
+  /* WCAG 1.4.11: viền ô nhập >= 3:1 so với nền (3.67:1 trên trắng) */
+  --border-input: #8a857b;
   --primary: #2456e0;
   --primary-dark: #1b44b8;
   --primary-soft: #edf2fe;
@@ -21,7 +23,7 @@
   --ink: #121110;
   --ink-hover: #2e2c28;
   --on-ink: #f7f6f3;
-  --danger: #dc2626;
+  --danger: #b91c1c; /* 5.3:1 trên --danger-soft (badge), 6.5:1 chữ trắng */
   --danger-soft: #fee2e2;
   --success: #15803d;
   --success-soft: #dcfce7;
@@ -103,6 +105,7 @@
   --text-faint: #98948a;
   --border: #272623;
   --border-strong: #3a3934;
+  --border-input: #6b6962;
   --primary: #7d9bff;
   --primary-dark: #9db3ff;
   --primary-soft: #1b2142;
@@ -804,7 +807,7 @@ a.btn {
 /* ============================ Inputs (cùng chiều cao với button) ============================ */
 .text-input {
   height: var(--h-md);
-  border: 1px solid var(--border);
+  border: 1px solid var(--border-input);
   border-radius: var(--radius-md);
   padding: 0 var(--sp-3);
   font-size: var(--font-size-md);
@@ -817,7 +820,7 @@ a.btn {
     box-shadow 0.15s ease;
 }
 .text-input:hover:not(:disabled) {
-  border-color: var(--border-strong);
+  border-color: var(--text-muted);
 }
 .text-input:focus-visible {
   outline: 2px solid var(--primary);
@@ -3345,12 +3348,12 @@ button.search-clear:active {
   }
 }
 .alert-warning {
-  padding: 10px 12px;
-  background: #fef3c7;
-  border: 1px solid #fbbf24;
-  border-radius: 8px;
-  color: #92400e;
-  font-size: 14px;
+  padding: var(--sp-2) var(--sp-3);
+  background: var(--warning-soft);
+  border: 1px solid var(--warning);
+  border-radius: var(--radius-md);
+  color: var(--warning);
+  font-size: var(--font-size-md);
 }
 
 /* ============================ UI/UX UPGRADE 2026-10-09 (taste-ui, full pass) ============================ */
@@ -3532,11 +3535,11 @@ a:focus-visible,
   font-weight: 500;
 }
 .network-banner.offline {
-  background: #dc2626;
+  background: #b91c1c; /* cố định: --danger dark mode quá nhạt cho chữ trắng */
   color: #fff;
 }
 .network-banner.online {
-  background: #16a34a;
+  background: #15803d; /* 5:1 chữ trắng (cố định: --success dark mode là xanh nhạt) */
   color: #fff;
 }
 
@@ -3795,4 +3798,9 @@ a:focus-visible,
   textarea.text-input {
     font-size: 16px;
   }
+}
+
+/* Focus lập trình khi đổi trang (PageOutlet): không vẽ khung quanh cả vùng nội dung */
+main[tabindex='-1']:focus {
+  outline: none;
 }

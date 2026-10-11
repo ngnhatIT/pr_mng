@@ -49,14 +49,16 @@
     "month": "Tháng",
     "perSession": "Đơn giá / buổi",
     "sessions": "Số buổi đã chấm công",
-    "sessionsDone": "{{count}} buổi đã chấm công",
+    "sessionsDone_one": "{{count}} buổi đã chấm công",
+    "sessionsDone_other": "{{count}} buổi đã chấm công",
     "title": "Lương của tôi",
     "totalOfMonth": "Tổng lương tháng {{month}}",
     "loadErrorDesc": "Vui lòng thử tải lại.",
     "mixedRate": "Đơn giá đổi trong tháng, bình quân {{avg}}/buổi"
   },
   "today": {
-    "attendanceCount": "{{count}} học viên đã điểm danh",
+    "attendanceCount_one": "{{count}} học viên đã điểm danh",
+    "attendanceCount_other": "{{count}} học viên đã điểm danh",
     "checkedIn": "Đã chấm công",
     "desc": "Lịch dạy, điểm danh lớp và chấm công của bạn",
     "emptyDesc": "Lịch dạy của bạn sẽ hiện ở đây khi được phân công.",

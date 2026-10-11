@@ -10,7 +10,8 @@
     "createSession": "New session",
     "confirmUnmarked": {
       "title": "Save with unchecked students?",
-      "message": "{{count}} students are not checked yet. Save anyway?"
+      "message_one": "{{count}} student is not checked yet. Save anyway?",
+      "message_other": "{{count}} students are not checked yet. Save anyway?"
     },
     "creating": "Creating...",
     "emptyDesc": "No students are enrolled in this class yet.",
@@ -33,7 +34,8 @@
     "save": "Save attendance",
     "selectClass": "- Select class -",
     "selectSession": "- Select session -",
-    "sessionOption": "{{date}}{{topic}} ({{count}} checked in)",
+    "sessionOption_one": "{{date}}{{topic}} ({{count}} checked in)",
+    "sessionOption_other": "{{date}}{{topic}} ({{count}} checked in)",
     "status": {
       "absent": "Absent",
       "late": "Late",
@@ -135,7 +137,8 @@
     "tuition": "Tuition",
     "noTopic": "No topic yet",
     "takeAttendance": "Take attendance",
-    "attendanceCount": "{{count}} check-ins",
+    "attendanceCount_one": "{{count}} check-in",
+    "attendanceCount_other": "{{count}} check-ins",
     "sizeBadge": "{{count}}/{{max}} students",
     "upcoming": "Next",
     "viewAttendance": "View",

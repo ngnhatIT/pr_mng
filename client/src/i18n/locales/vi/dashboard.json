@@ -39,7 +39,8 @@
   },
   "today": {
     "attendance": "Điểm danh",
-    "count": "Hôm nay có {{count}} buổi học",
+    "count_one": "Hôm nay có {{count}} buổi học",
+    "count_other": "Hôm nay có {{count}} buổi học",
     "empty": "Hôm nay không có buổi học nào.",
     "title": "Buổi học hôm nay",
     "topic": "Chủ đề: {{topic}}",

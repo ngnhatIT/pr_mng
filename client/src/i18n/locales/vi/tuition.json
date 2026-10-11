@@ -65,7 +65,8 @@
     "remindTitle": "Gửi nhắc học phí qua Zalo cho các hóa đơn chưa thanh toán",
     "remindZalo": "Nhắc Zalo",
     "sending": "Đang gửi nhắc Zalo...",
-    "summary": "{{count}} học viên còn nợ. Tổng: <strong>{{total}}</strong>",
+    "summary_one": "{{count}} học viên còn nợ. Tổng: <strong>{{total}}</strong>",
+    "summary_other": "{{count}} học viên còn nợ. Tổng: <strong>{{total}}</strong>",
     "tab": "Công nợ",
     "table": {
       "actions": "Thao tác",
@@ -172,7 +173,8 @@
       "desc": "Thử từ khóa khác hoặc xóa bộ lọc để xem toàn bộ danh sách.",
       "clear": "Xóa bộ lọc"
     },
-    "debtStrip": "{{count}} học viên còn nợ, tổng {{total}}",
+    "debtStrip_one": "{{count}} học viên còn nợ, tổng {{total}}",
+    "debtStrip_other": "{{count}} học viên còn nợ, tổng {{total}}",
     "debtStripTitle": "Tổng công nợ chưa thu của toàn trung tâm"
   },
   "pay": {

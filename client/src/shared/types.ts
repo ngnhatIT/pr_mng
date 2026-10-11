@@ -168,7 +168,7 @@ export interface ReminderItem {
  */
 export function getDayNames(locale?: string): Record<number, string> {
   const lang = locale ?? i18n.language;
-  const fmt = new Intl.DateTimeFormat(lang === 'en' ? 'en-US' : 'vi-VN', { weekday: 'long' });
+  const fmt = new Intl.DateTimeFormat(appLocale(lang), { weekday: 'long' });
   const names: Record<number, string> = {};
   for (let day = 2; day <= 8; day++) {
     // 12/10/2026 là Thứ Hai -> day 2..8 ứng với 12..18/10/2026
@@ -197,11 +197,20 @@ export function formatVND(n: number, locale?: string): string {
   return `${Math.round(n).toLocaleString('vi-VN')}đ`;
 }
 
-export function formatDate(iso: string | null): string {
+/** Locale Intl theo ngôn ngữ app. */
+export function appLocale(lang: string = i18n.language): string {
+  return lang === 'en' ? 'en-US' : 'vi-VN';
+}
+
+/** vi: "09/10/2026"; en: "Oct 9, 2026" (DD/MM với người đọc tiếng Anh dễ hiểu nhầm thành MM/DD). */
+export function formatDate(iso: string | null, locale?: string): string {
   if (!iso) return '-';
   const d = iso.slice(0, 10);
   const [y, m, day] = d.split('-');
-  return `${day}/${m}/${y}`;
+  if ((locale ?? i18n.language) !== 'en' || !y || !m || !day) return `${day}/${m}/${y}`;
+  return new Intl.DateTimeFormat('en-US', { dateStyle: 'medium', timeZone: 'UTC' }).format(
+    new Date(Date.UTC(+y, +m - 1, +day))
+  );
 }
 
 /** Ngày hôm nay theo giờ Việt Nam (UTC+7, không DST), dạng YYYY-MM-DD.
@@ -224,10 +233,10 @@ export function isPastCloseDate(closeDate: string | null | undefined): boolean {
 }
 
 /** Định dạng ngày giờ đầy đủ: "08/10/2026 14:30" */
-export function formatDateTime(iso: string | null): string {
+export function formatDateTime(iso: string | null, locale?: string): string {
   if (!iso) return '-';
   const time = iso.slice(11, 16);
-  return `${formatDate(iso)}${time ? ` ${time}` : ''}`;
+  return `${formatDate(iso, locale)}${time ? ` ${time}` : ''}`;
 }
 
 /** Khung giờ của lớp vào đúng ngày `date` (YYYY-MM-DD) theo lịch tuần JSON; null nếu hôm đó không có. */

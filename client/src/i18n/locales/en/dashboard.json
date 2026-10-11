@@ -39,7 +39,8 @@
   },
   "today": {
     "attendance": "Take attendance",
-    "count": "{{count}} sessions today",
+    "count_one": "{{count}} session today",
+    "count_other": "{{count}} sessions today",
     "empty": "No sessions today.",
     "title": "Today's sessions",
     "topic": "Topic: {{topic}}",

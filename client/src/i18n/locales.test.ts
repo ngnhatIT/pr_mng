@@ -86,6 +86,27 @@ describe('i18n locales', () => {
   });
 });
 
+describe('i18n số nhiều tiếng Anh', () => {
+  it('chuỗi en "{{count}} <danh từ số nhiều>" phải tách _one/_other (tránh "1 sessions")', () => {
+    const bad: string[] = [];
+    const walk = (o: Record<string, unknown>, ns: string, path: string) => {
+      for (const [k, v] of Object.entries(o)) {
+        const p = path ? `${path}.${k}` : k;
+        if (v !== null && typeof v === 'object' && !Array.isArray(v))
+          walk(v as Record<string, unknown>, ns, p);
+        else if (
+          typeof v === 'string' &&
+          /\{\{count\}\}(<\/strong>)? [a-z ]*?[a-z]{2,}s\b/i.test(v) &&
+          !/_(one|other)$/.test(k)
+        )
+          bad.push(`${ns}.${p}`);
+      }
+    };
+    for (const [ns, d] of Object.entries(en)) walk(d as Record<string, unknown>, ns, '');
+    expect(bad).toEqual([]);
+  });
+});
+
 describe('i18n lazy load namespace', () => {
   it('namespace ngoài common tải qua backend lazy, cả vi lẫn en', async () => {
     await i18n.loadNamespaces('homework');

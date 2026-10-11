@@ -65,7 +65,8 @@
     "remindTitle": "Send Zalo tuition reminders for unpaid invoices",
     "remindZalo": "Remind via Zalo",
     "sending": "Sending reminders...",
-    "summary": "{{count}} students with outstanding debt. Total: <strong>{{total}}</strong>",
+    "summary_one": "{{count}} student with outstanding debt. Total: <strong>{{total}}</strong>",
+    "summary_other": "{{count}} students with outstanding debt. Total: <strong>{{total}}</strong>",
     "tab": "Debts",
     "table": {
       "actions": "Actions",
@@ -172,7 +173,8 @@
       "desc": "Try a different keyword or clear the filters to see the full list.",
       "clear": "Clear filters"
     },
-    "debtStrip": "{{count}} students still owe {{total}} in total",
+    "debtStrip_one": "{{count}} student still owes {{total}} in total",
+    "debtStrip_other": "{{count}} students still owe {{total}} in total",
     "debtStripTitle": "Total outstanding tuition across the center"
   },
   "pay": {

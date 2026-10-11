@@ -5,6 +5,7 @@
 import { useTranslation } from 'react-i18next';
 import type { Paginated, PageParams } from '../api/client';
 import './Pagination.css';
+import { appLocale } from '../types';
 
 export interface PaginationMeta {
   page: number;
@@ -58,7 +59,7 @@ export function Pagination({ pagination, onChange, loading = false }: Props) {
   return (
     <div className="pagination" aria-busy={loading || undefined}>
       <span className="pagination-info">
-        {from}–{to} / {total.toLocaleString(i18n.language === 'en' ? 'en-US' : 'vi-VN')} ·{' '}
+        {from}–{to} / {total.toLocaleString(appLocale(i18n.language))} ·{' '}
         {t('pagination.pageOf', { page, totalPages })}
       </span>
       <div className="pagination-buttons">

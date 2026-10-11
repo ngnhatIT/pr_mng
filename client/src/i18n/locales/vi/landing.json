@@ -1,11 +1,13 @@
 {
   "courses": {
     "capacity": "Sĩ số hiện tại",
-    "count": "{{count}} khóa đang mở",
+    "count_one": "{{count}} khóa đang mở",
+    "count_other": "{{count}} khóa đang mở",
     "empty": "Hiện chưa có khóa học nào mở đăng ký.",
     "schedule": "Lịch học",
     "scheduleTbd": "Đang xếp lịch",
-    "students": "{{count}} học viên",
+    "students_one": "{{count}} học viên",
+    "students_other": "{{count}} học viên",
     "sub": "Học phí ghi rõ cho cả khóa. Đăng ký học thử trước, quyết định sau.",
     "teacher": "Giáo viên",
     "teacherTbd": "Đang phân công",
@@ -77,7 +79,8 @@
     "title": "Người đứng lớp"
   },
   "ticket": {
-    "more": "Xem thêm {{count}} khóa",
+    "more_one": "Xem thêm {{count}} khóa",
+    "more_other": "Xem thêm {{count}} khóa",
     "title": "Lịch khai giảng"
   },
   "trial": {
@@ -100,7 +103,8 @@
     },
     "small": {
       "body": "Lớp ít học viên để giáo viên sửa bài cho từng em trong giờ học, không để dồn về nhà.",
-      "bodyCount": "Trung bình {{count}} học viên mỗi lớp. Đủ ít để giáo viên sửa bài cho từng em ngay trong giờ học.",
+      "bodyCount_one": "Trung bình {{count}} học viên mỗi lớp. Đủ ít để giáo viên sửa bài cho từng em ngay trong giờ học.",
+      "bodyCount_other": "Trung bình {{count}} học viên mỗi lớp. Đủ ít để giáo viên sửa bài cho từng em ngay trong giờ học.",
       "title": "Lớp nhỏ thật sự"
     },
     "title": "Những gì phụ huynh thực sự cần biết",

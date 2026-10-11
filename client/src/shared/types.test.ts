@@ -36,6 +36,11 @@ describe('formatDate', () => {
   it('cắt phần giờ nếu có', () => {
     expect(formatDate('2026-01-05T14:30:00')).toBe('05/01/2026');
   });
+
+  it('en: tháng bằng chữ, không lệch ngày theo múi giờ', () => {
+    expect(formatDate('2026-10-09', 'en')).toBe('Oct 9, 2026');
+    expect(formatDateTime('2026-01-05T14:30:00', 'en')).toBe('Jan 5, 2026 14:30');
+  });
 });
 
 describe('formatDateTime', () => {
