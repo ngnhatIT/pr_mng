@@ -204,3 +204,26 @@ describe('api() file CSV', () => {
     await expect(client.api('/exports/students.csv')).rejects.toMatchObject({ code: 'FORBIDDEN' });
   });
 });
+
+describe('tryRefresh lỗi tạm thời', () => {
+  it('server đang khởi động lại (502 / mất kết nối) -> thử lại rồi thành công, không đăng xuất', async () => {
+    vi.useFakeTimers();
+    client.setAuth('old', staff);
+    fetchMock
+      .mockResolvedValueOnce(json(502, {}))
+      .mockRejectedValueOnce(new TypeError('Failed to fetch'))
+      .mockResolvedValueOnce(json(200, { token: 'new' }));
+    const p = client.tryRefresh();
+    await vi.runAllTimersAsync();
+    await expect(p).resolves.toBe(true);
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+    expect(client.getToken()).toBe('new');
+  });
+
+  it('401 (phiên hết hạn thật) -> không thử lại', async () => {
+    client.setAuth('old', staff);
+    fetchMock.mockResolvedValueOnce(json(401, {}));
+    await expect(client.tryRefresh()).resolves.toBe(false);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+});

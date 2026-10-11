@@ -165,12 +165,23 @@ export function tryRefresh(): Promise<boolean> {
     try {
       const user = getUser();
       if (!user) return false;
-      const res = await fetch(API_BASE + authPath('refresh'), {
-        method: 'POST',
-        credentials: 'include', // D4: gửi HttpOnly cookie refresh_token
-        headers: { 'Content-Type': 'application/json' },
-      });
-      if (!res.ok) return false;
+      // Lỗi tạm thời (mất mạng, server đang khởi động lại khi deploy: 5xx/proxy) -> thử lại có giãn cách
+      // thay vì coi là hết phiên và đá người dùng về trang đăng nhập. Chỉ 4xx mới là phiên hết hạn thật.
+      let res: Response | null = null;
+      for (const wait of [0, 500, 1000, 2000]) {
+        if (wait) await sleep(wait);
+        try {
+          res = await fetch(API_BASE + authPath('refresh'), {
+            method: 'POST',
+            credentials: 'include', // D4: gửi HttpOnly cookie refresh_token
+            headers: { 'Content-Type': 'application/json' },
+          });
+          if (res.status < 500) break;
+        } catch {
+          res = null;
+        }
+      }
+      if (!res?.ok) return false;
       const data = (await res.json()) as { token: string; user?: Partial<StoredUser> };
       if (!data.token) return false;
       // Gộp user mới từ server (vd: center_name) — phiên cũ không phải đăng nhập lại mới có.
